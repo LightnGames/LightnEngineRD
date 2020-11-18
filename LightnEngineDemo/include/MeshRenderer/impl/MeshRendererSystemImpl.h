@@ -33,6 +33,11 @@ private:
 #if ENABLE_CLASSIC_VERTEX
 	void renderClassicVertex(CommandList* commandList, const ViewInfo* viewInfo);
 #endif
+private:
+	void computeLod(CommandList* commandList, ViewInfo* viewInfo);
+	void depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo);
+	void buildHiz(CommandList* commandList, ViewInfo* viewInfo);
+	void mainCulling(CommandList* commandList, ViewInfo* viewInfo);
 
 private:
 	bool _visible = true;

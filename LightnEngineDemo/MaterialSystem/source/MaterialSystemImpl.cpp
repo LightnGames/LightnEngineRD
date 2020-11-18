@@ -1,6 +1,7 @@
 #include <MaterialSystem/impl/MaterialSystemImpl.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/GraphicsApiInterface.h>
+#include <MeshRenderer/GpuStruct.h>
 #include <TextureSystem/impl/TextureSystemImpl.h>
 #include <fstream>
 
@@ -410,6 +411,27 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		vertexShader->terminate();
 		pixelShader->terminate();
 	}
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+		_classicShaderSet._multiDrawCommandSignature = allocator->allocateCommandSignature();
+
+		IndirectArgumentDesc argumentDescs[2] = {};
+		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+		argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
+		argumentDescs[0].Constant._num32BitValuesToSet = 1;
+		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		desc._rootSignature = _classicShaderSet._rootSignature;
+		_classicShaderSet._multiDrawCommandSignature->initialize(desc);
+	}
+#endif
 }
 
 void ShaderSetImpl::terminate() {
@@ -423,5 +445,8 @@ void ShaderSetImpl::terminate() {
 	_debugTexcoordsPipelineStateGroup->requestToDestroy();
 	_classicShaderSet._pipelineState->terminate();
 	_classicShaderSet._rootSignature->terminate();
+#if ENABLE_MULTI_INDIRECT_DRAW
+	_classicShaderSet._multiDrawCommandSignature->terminate();
+#endif
 	_shaderParams.terminate();
 }

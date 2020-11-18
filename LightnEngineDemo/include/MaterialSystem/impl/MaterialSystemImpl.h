@@ -29,6 +29,9 @@ enum ShaderSetMaterialStateFlags {
 struct ClassicShaderSet {
 	PipelineState* _pipelineState = nullptr;
 	RootSignature* _rootSignature = nullptr;
+#if ENABLE_MULTI_INDIRECT_DRAW
+	CommandSignature* _multiDrawCommandSignature;
+#endif
 };
 
 struct TempShaderParam {

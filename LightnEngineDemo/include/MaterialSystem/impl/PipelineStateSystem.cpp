@@ -70,9 +70,9 @@ PipelineStateSystem* PipelineStateSystem::Get() {
 }
 
 void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+	Device* device = GraphicsSystemImpl::Get()->getDevice();
+	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 #if ENABLE_MESH_SHADER
-    Device* device = GraphicsSystemImpl::Get()->getDevice();
-    GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 
     _pipelineState = allocator->allocatePipelineState();
     _rootSignature = allocator->allocateRootSignature();
@@ -131,25 +131,6 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
         _commandSignature->initialize(desc);
     }
 #endif
-#if ENABLE_MULTI_INDIRECT_DRAW
-    {
-        GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-        _multiDrawCommandSignature = allocator->allocateCommandSignature();
-
-        IndirectArgumentDesc argumentDescs[2] = {};
-        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-        argumentDescs[0].ShaderResourceView._rootParameterIndex = ROOT_DEFAULT_MESH_MESHLET_INFO;
-        argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-
-        CommandSignatureDesc desc = {};
-        desc._device = device;
-        desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
-        desc._argumentDescs = argumentDescs;
-        desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-        desc._rootSignature = _rootSignature;
-        _multiDrawCommandSignature->initialize(desc);
-    }
-#endif
 }
 
 u64 PipelineStateSystem::getPipelineStateGrpupHash(const PipelineStateGroup* group) const {
@@ -162,9 +143,6 @@ void PipelineStateGroup::terminate() {
     _pipelineState->terminate();
     _rootSignature->terminate();
     _commandSignature->terminate();
-#endif
-#if ENABLE_MULTI_INDIRECT_DRAW
-    _multiDrawCommandSignature->terminate();
 #endif
 }
 

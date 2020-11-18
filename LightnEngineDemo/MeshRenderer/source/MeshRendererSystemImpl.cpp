@@ -52,25 +52,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// Lod level 計算
 	if(!isFixedCullingView){
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
-
-		commandList->setComputeRootSignature(_computeLodRootSignature);
-		commandList->setPipelineState(_computeLodPipelineState);
-		_view.setComputeLodResource(commandList);
-		_view.resourceBarriersComputeLodToUAV(commandList);
-
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH, meshHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH_INSTANCE, meshInstanceHandle);
-
-		u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-		commandList->dispatch(dispatchCount, 1, 1);
-
-		_view.resetResourceComputeLodBarriers(commandList);
-
-		queryHeapSystem->setCurrentMarkerName("Compute Lod");
-		queryHeapSystem->setMarker(commandList);
+		computeLod(commandList, viewInfo);
 	}
 
 	// メッシュレットバウンディング　デバッグ表示
@@ -96,28 +78,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Depth Prepass Culling");
-
-		_view.resourceBarriersGpuCullingToUAV(commandList);
-		_view.resetCountBuffers(commandList);
-
-		commandList->setComputeRootSignature(_gpuCullingRootSignature);
-		commandList->setPipelineState(_gpuCullingPipelineState);
-		_view.setGpuFrustumCullingResources(commandList);
-
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_VIEW_INFO, viewInfo->_depthPrePassCbvHandle._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH, meshHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, meshInstanceHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, indirectArgumentOffsetHandle);
-
-		u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-		commandList->dispatch(dispatchCount, 1, 1);
-
-		_view.resetResourceGpuCullingBarriers(commandList);
-
-		queryHeapSystem->setCurrentMarkerName("Depth Prepass Culling");
-		queryHeapSystem->setMarker(commandList);
+		depthPrePassCulling(commandList, viewInfo);
 	}
 
 	// デプスプリパス
@@ -164,37 +125,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// build hiz
 	if (!isFixedCullingView) {
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
-
-		_view.resourceBarriersHizSrvToUav(commandList);
-		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		commandList->setComputeRootSignature(_buildHizRootSignature);
-		commandList->setPipelineState(_buildHizPipelineState);
-
-		// pass 0
-		{
-			commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
-			_view.setHizResourcesPass0(commandList);
-
-			u32 dispatchWidthCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._width), 16u);
-			u32 dispatchHeightCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._height), 16u);
-			commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1); 
-		}
-
-		// pass 1
-		{
-			_view.setHizResourcesPass1(commandList);
-
-			ResourceDesc hizLevel3Desc = _view.getHizTextureResourceDesc(3);
-			u32 dispatchWidthCount = RoundUp(static_cast<u32>(hizLevel3Desc._width), 16u);
-			u32 dispatchHeightCount = RoundUp(static_cast<u32>(hizLevel3Desc._height), 16u);
-			commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
-		}
-
-		_view.resourceBarriersHizUavtoSrv(commandList);
-
-		queryHeapSystem->setCurrentMarkerName("Build Hiz");
-		queryHeapSystem->setMarker(commandList);
+		buildHiz(commandList, viewInfo);
 	}
 
 	// GPUカリング
@@ -388,6 +319,99 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 	toNonPixelShaderResourceBarriers[1] = vertexTexcoordBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	toNonPixelShaderResourceBarriers[2] = indexBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
+}
+void MeshRendererSystemImpl::computeLod(CommandList* commandList, ViewInfo* viewInfo){
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
+
+	commandList->setComputeRootSignature(_computeLodRootSignature);
+	commandList->setPipelineState(_computeLodPipelineState);
+	_view.setComputeLodResource(commandList);
+	_view.resourceBarriersComputeLodToUAV(commandList);
+
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH, meshHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH_INSTANCE, meshInstanceHandle);
+
+	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
+
+	_view.resetResourceComputeLodBarriers(commandList);
+
+	queryHeapSystem->setCurrentMarkerName("Compute Lod");
+	queryHeapSystem->setMarker(commandList);
+}
+void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo) {
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+	GpuDescriptorHandle indirectArgumentOffsetHandle = _scene.getVramShaderSetSystem()->getOffsetHandle()._gpuHandle;
+	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Depth Prepass Culling");
+
+	_view.resourceBarriersGpuCullingToUAV(commandList);
+	_view.resetCountBuffers(commandList);
+
+	commandList->setComputeRootSignature(_gpuCullingRootSignature);
+	commandList->setPipelineState(_gpuCullingPipelineState);
+	_view.setGpuFrustumCullingResources(commandList);
+
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_VIEW_INFO, viewInfo->_depthPrePassCbvHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH, meshHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, meshInstanceHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, indirectArgumentOffsetHandle);
+
+	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
+
+	_view.resetResourceGpuCullingBarriers(commandList);
+
+	queryHeapSystem->setCurrentMarkerName("Depth Prepass Culling");
+	queryHeapSystem->setMarker(commandList);
+}
+void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewInfo) {
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
+
+	_view.resourceBarriersHizSrvToUav(commandList);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	commandList->setComputeRootSignature(_buildHizRootSignature);
+	commandList->setPipelineState(_buildHizPipelineState);
+
+	// pass 0
+	{
+		commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
+		_view.setHizResourcesPass0(commandList);
+
+		u32 dispatchWidthCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._width), 16u);
+		u32 dispatchHeightCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._height), 16u);
+		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
+	}
+
+	// pass 1
+	{
+		_view.setHizResourcesPass1(commandList);
+
+		ResourceDesc hizLevel3Desc = _view.getHizTextureResourceDesc(3);
+		u32 dispatchWidthCount = RoundUp(static_cast<u32>(hizLevel3Desc._width), 16u);
+		u32 dispatchHeightCount = RoundUp(static_cast<u32>(hizLevel3Desc._height), 16u);
+		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
+	}
+
+	_view.resourceBarriersHizUavtoSrv(commandList);
+
+	queryHeapSystem->setCurrentMarkerName("Build Hiz");
+	queryHeapSystem->setMarker(commandList);
+}
+void MeshRendererSystemImpl::mainCulling(CommandList * commandList, ViewInfo * viewInfo)
+{
 }
 #endif
 

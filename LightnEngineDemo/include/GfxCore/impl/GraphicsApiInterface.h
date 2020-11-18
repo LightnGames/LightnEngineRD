@@ -2,8 +2,8 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <Core/System.h>
 
-#define ENABLE_MESH_SHADER 1
-#define ENABLE_MULTI_INDIRECT_DRAW 0
+#define ENABLE_MESH_SHADER 0
+#define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
 
 struct Resource;

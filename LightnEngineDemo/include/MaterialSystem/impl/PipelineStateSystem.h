@@ -57,9 +57,6 @@ public:
 	PipelineState* getPipelineState() { return _pipelineState; }
 	RootSignature* getRootSignature() { return _rootSignature; }
 	CommandSignature* getCommandSignature() { return _commandSignature; }
-#if ENABLE_MULTI_INDIRECT_DRAW
-	CommandSignature* getMultiDrawCommandSignature() { return _multiDrawCommandSignature; }
-#endif
 
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 
@@ -70,9 +67,6 @@ private:
 	//ValueDynamicQueue _materialStructs;
 	//ShaderInfo _shaderInfo;
 	CommandSignature* _commandSignature;
-#if ENABLE_MULTI_INDIRECT_DRAW
-	CommandSignature* _multiDrawCommandSignature;
-#endif
 };
 
 class LTN_MATERIAL_SYSTEM_API PipelineStateSystem {
