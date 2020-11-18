@@ -1,0 +1,38 @@
+struct PS_INPUT {
+    float4 pos : SV_POSITION;
+    float4 col : COLOR0;
+    float2 uv  : TEXCOORD0;
+	uint channel : CHANNEL;
+    float2 color_range : COLORRANGE;
+    uint sampler_index : SAMPLER;
+};
+
+SamplerState sampler0 : register(s0);
+SamplerState sampler1 : register(s1);
+Texture2D texture0 : register(t0);
+
+float4 main(PS_INPUT input) : SV_Target {
+    uint sampler_index = input.sampler_index;
+    float4 tex_col = float4(0, 0, 0, 0);
+    if(input.sampler_index == 0){
+        tex_col = texture0.Sample(sampler0, input.uv);    
+    }
+    
+    if(input.sampler_index == 1){
+        tex_col = texture0.Sample(sampler1, input.uv);
+    }
+
+    if(input.color_range.y > 0.0){
+        float3 range_start = saturate(tex_col.rgb - input.color_range.x);
+        float3 range_scale = 1.0 / (input.color_range.y - input.color_range.x);
+        tex_col.rgb = range_start * range_scale;
+    }
+    
+    float4 out_col = input.col;
+	if(input.channel == 0){ out_col *= tex_col.rgba; }
+	if(input.channel == 1){ out_col.rgb *= tex_col.rrr; }
+	if(input.channel == 2){ out_col.rgb *= tex_col.ggg; }
+	if(input.channel == 3){ out_col.rgb *= tex_col.bbb; }
+	if(input.channel == 4){ out_col.rgb *= tex_col.rgb; }
+    return out_col;
+}

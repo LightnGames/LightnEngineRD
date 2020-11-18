@@ -1,0 +1,74 @@
+#include "../constant_buffer.sfh"
+#include "../shaderInput.sfh"
+#include "../gpu_driven.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+
+StructuredBuffer<CustomParameters> _customParameters : register(t0);
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<LodMesh> _lodMeshes : register(t2);
+StructuredBuffer<SubMesh> _subMeshes : register(t3);
+StructuredBuffer<Meshlet> _meshlets : register(t4);
+
+StructuredBuffer<MeshInstance> _meshInstances : register(t5);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
+
+StructuredBuffer<uint> _vertexIndices : register(t9);
+StructuredBuffer<uint> _primitives : register(t10);
+StructuredBuffer<float3> _vertexPositions : register(t11);
+StructuredBuffer<uint> _vertexNormalTangents : register(t12);
+StructuredBuffer<uint> _vertexTexcoords : register(t13);
+
+ByteAddressBuffer _currentLodLevels : register(t15);
+
+[NumThreads(128, 1, 1)]
+[OutputTopology("triangle")]
+void main(
+    uint gtid : SV_GroupThreadID,
+    uint3 gid : SV_GroupID,
+    in payload PayloadStruct meshPayload,
+    out indices uint3 tris[126],
+    out vertices VertexOut verts[64]
+){
+    uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid.x];
+    uint meshletIndex = meshPayload._meshletIndices[gid.x];
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Meshlet meshlet = _meshlets[meshletIndex];
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+
+    uint vertexCount = meshlet._vertexCount;
+    uint primitiveCount = meshlet._primitiveCount;
+    SetMeshOutputCounts(vertexCount, primitiveCount);
+
+    uint threadIndex = gtid;
+    if(threadIndex < primitiveCount){
+        uint primitiveIndex = meshlet._primitiveOffset + threadIndex;
+        uint packedIndex = _primitives[meshPayload._primitiveOffset + primitiveIndex];
+        tris[threadIndex] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
+    }
+
+    if(threadIndex < vertexCount){
+        uint vertexLocalIndex = meshlet._vertexOffset + threadIndex;
+        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset + vertexLocalIndex];
+        uint vertexOffset = meshPayload._vertexOffset + vertexIndex;
+        float3 positionVertex = _vertexPositions[vertexOffset];
+        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+
+        uint currentLodLevel = _currentLodLevels.Load(meshInstanceIndex * 4);
+        
+        VertexOut vertexOut;
+        vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
+        vertexOut._positionNdc = worldPos;
+        vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
+        vertexOut._meshletIndex = meshletIndex;
+        vertexOut._materialIndex = meshPayload._materialIndex;
+
+        vertexOut._lodLevel = 0.0;
+        if(mesh._lodMeshCount > 1){
+            vertexOut._lodLevel = currentLodLevel / (float)(mesh._lodMeshCount - 1);
+        }
+
+        verts[threadIndex] = vertexOut;
+    }
+}

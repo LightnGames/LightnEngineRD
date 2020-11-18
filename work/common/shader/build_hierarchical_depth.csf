@@ -1,0 +1,92 @@
+#include "constant_buffer.sfh"
+#include "gpu_driven.sfh"
+
+struct GenerateHierachicalDepthInfo{
+	uint _inputDepthWidth;
+	uint _inputDepthHeight;
+};
+
+ConstantBuffer<GenerateHierachicalDepthInfo> _info : register(b0);
+Texture2D<uint> _inputDepthTexture : register(t0);
+RWTexture2D<uint> _outputDepthTextures[] : register(u0);
+
+#define TILE_SIZE 8
+#define THREAD_NUM 8
+
+bool isWrite(uint2 id, uint index){
+    return (id.x % index) == 0 && (id.y % index) == 0;
+}
+
+uint2 computeCoords(uint2 offset, uint2 coords, uint level){
+    uint2 baseCoords = (offset * TILE_SIZE + coords) / level;
+    uint2 hizSize = uint2(_info._inputDepthWidth, _info._inputDepthHeight);
+    uint2 clampSize = hizSize / (level * 2);
+    clampSize += hizSize % 2;
+    return min(baseCoords, clampSize);
+}
+
+groupshared uint _level0;
+groupshared uint _level1[2][2];
+groupshared uint _level2[4][4];
+
+[numthreads(THREAD_NUM, THREAD_NUM, 1)]
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+    uint2 threadGroupOffset = groupID.xy;
+    uint2 coords = groupThreadID.xy; // (0, 0) ~ (8, 8)
+    
+    if(isWrite(coords, 8)){
+        _level0 = 0;
+    }
+    
+    if(isWrite(coords, 4)){
+        _level1[coords.x / 4][coords.y / 4] = 0;
+    }
+    
+    if(isWrite(coords, 2)){
+        _level2[coords.x / 2][coords.y / 2] = 0;
+    }
+    
+    GroupMemoryBarrierWithGroupSync();
+    
+    uint2 inputTextureSize = uint2(_info._inputDepthWidth, _info._inputDepthHeight) - 1;
+    uint2 orientationCoords = (threadGroupOffset * TILE_SIZE + coords) * 2;
+    uint2 rightTopCoords = min(orientationCoords + uint2(1, 0), inputTextureSize);
+    uint2 leftBotCoords = min(orientationCoords + uint2(0, 1), inputTextureSize);
+    uint2 rightBotCoords = min(orientationCoords + uint2(1, 1), inputTextureSize);
+    
+    uint depthValue = 0;
+    depthValue = max(depthValue, _inputDepthTexture[orientationCoords]);
+    depthValue = max(depthValue, _inputDepthTexture[rightTopCoords]);
+    depthValue = max(depthValue, _inputDepthTexture[leftBotCoords]);
+    depthValue = max(depthValue, _inputDepthTexture[rightBotCoords]);
+    
+    InterlockedMax(_level0, depthValue);
+    InterlockedMax(_level1[coords.x / 4][coords.y / 4], depthValue);
+    InterlockedMax(_level2[coords.x / 2][coords.y / 2], depthValue);
+    
+    GroupMemoryBarrierWithGroupSync();
+    
+    // 1/2
+    {
+        uint2 offset = computeCoords(threadGroupOffset, coords, 1);
+        _outputDepthTextures[0][offset] = depthValue;    
+    }
+    
+    // 1/4
+    if(isWrite(coords, 2)){
+        uint2 offset = computeCoords(threadGroupOffset, coords, 2);
+        _outputDepthTextures[1][offset] = _level2[coords.x / 2][coords.y / 2];
+    }
+    
+    // 1/8
+    if(isWrite(coords, 4)){    
+        uint2 offset = computeCoords(threadGroupOffset, coords, 4);
+        _outputDepthTextures[2][offset] = _level1[coords.x / 4][coords.y / 4];
+    }
+    
+    // 1/16
+    if(isWrite(coords, 8)){   
+        uint2 offset = computeCoords(threadGroupOffset, coords, 8);
+        _outputDepthTextures[3][offset] = _level0;
+    }
+}

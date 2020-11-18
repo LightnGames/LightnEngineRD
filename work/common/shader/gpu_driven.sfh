@@ -1,0 +1,109 @@
+#define INVALID_INDEX 0xffffffff
+#define UINT32_SIZE_IN_BYTE 4
+
+// レイアウトはgpu::CullingResult
+#define TEST_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 0
+#define PASSED_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 1
+#define TEST_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 2
+#define PASSED_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 3
+#define TEST_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 4
+#define PASSED_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 5
+#define TEST_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 6
+#define PASSED_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 7
+#define TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 8
+#define PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 9
+#define TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 10
+#define PASSED_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 11
+#define TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 12
+#define PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 13
+#define TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 14
+#define PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 15
+#define TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 16
+#define PASSED_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 17
+#define TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 18
+#define PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 19
+
+struct PayloadStruct { 
+    uint _meshletIndices[32]; 
+	uint _meshInstanceIndices[32];
+	uint _meshletCountMax;
+	uint _materialIndex;
+	uint _vertexOffset;
+    uint _vertexIndexOffset;
+    uint _primitiveOffset;
+}; 
+
+#define MESHLET_INFO_SIZE_IN_BYTE 28
+struct MeshletInfo {
+	uint _meshletIndex;
+    uint _meshInstanceIndex;
+    uint _meshletCountMax;
+	uint _materialIndex;
+	uint _vertexOffset;
+    uint _vertexIndexOffset;
+    uint _primitiveOffset;
+};
+
+#define MESH_STATE_NONE 0
+#define MESH_STATE_ALLOCATED 1
+#define MESH_STATE_LOADED 2
+struct Mesh {
+	uint _stateFlags;
+	uint _lodMeshOffset;
+	uint _lodMeshCount;
+};
+
+struct LodMesh {
+    uint _vertexOffset;
+    uint _vertexIndexOffset;
+    uint _primitiveOffset;
+	uint _subMeshOffset;
+	uint _subMeshCount;
+};
+
+struct SubMesh {
+	uint _meshletOffset;
+	uint _meshletCount;
+	uint _materialSlotIndex;
+};
+
+struct Meshlet {
+	uint _vertexOffset;
+	uint _vertexCount;
+	uint _primitiveOffset;
+	uint _primitiveCount;
+	float3 _aabbMin;
+	float3 _aabbMax;
+	uint _normalAndCutoff;
+	float _apexOffset;
+};
+
+struct MeshInstance {
+	uint _stateFlags;
+	uint _meshIndex;
+	uint _lodMeshInstanceOffset;
+	float _boundsRadius;
+	float3 _aabbMin;
+	float3 _aabbMax;
+	float4x4 _matrixWorld;
+	float _worldScale;
+};
+
+struct LodMeshInstance {
+	uint _subMeshInstanceOffset;
+	float _threshhold;
+};
+
+struct SubMeshInstance {
+	uint _materialIndex;
+	uint _shaderSetIndex;
+};
+
+struct CullingResult {
+	uint _drawMeshInstanceCount;
+	uint _drawMeshletCount;
+};
+
+struct SceneCullingInfo {
+	uint _meshInstanceCount;
+};

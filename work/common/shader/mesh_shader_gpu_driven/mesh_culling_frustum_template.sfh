@@ -1,0 +1,108 @@
+#include "../gpu_culling_function.sfh"
+
+struct DispatchMeshIndirectArgument {
+    uint2 _meshletInfoGpuAddress;
+    uint _dispatchX;
+    uint _dispatchY;
+    uint _dispatchZ;
+};
+
+ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
+ConstantBuffer<CullingViewInfo> _cullingViewInfo : register(b1);
+ConstantBuffer<ViewInfo> _viewInfo :register(b2);
+StructuredBuffer<Mesh> _meshes : register(t0);
+StructuredBuffer<LodMesh> _lodMeshes : register(t1);
+StructuredBuffer<SubMesh> _subMeshes : register(t2);
+StructuredBuffer<MeshInstance> _meshInstances : register(t3);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
+ByteAddressBuffer _indirectArgumentOffsets : register(t6);
+ByteAddressBuffer _currentLodLevels : register(t7);
+
+RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
+RWByteAddressBuffer _countBuffer : register(u1);
+RWStructuredBuffer<MeshletInfo> _meshletInfos : register(u2);
+
+#define THREAD_NUM 128
+#define AMPLIFICATION_DISPATCH_NUM 32
+
+bool isRangeMeshInstance(uint meshInstanceIndex) {
+    return meshInstanceIndex < _sceneCullingInfo._meshInstanceCount;
+}
+
+bool isTested(uint meshInstanceIndex) {
+    if (!isRangeMeshInstance(meshInstanceIndex)) {
+        return false;
+    }
+    
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    if (!isEnabledMeshInstance(meshInstance)) {
+        return false;
+    }
+    
+    return true;
+}
+
+Mesh getMesh(MeshInstance meshInstance) {
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+    if (mesh._stateFlags == MESH_STATE_ALLOCATED) {
+        mesh = _meshes[0];
+    }
+    return mesh;
+}
+
+LodMesh getLodMesh(Mesh mesh, uint lodLevel) {
+    uint lodMeshIndex = mesh._lodMeshOffset + lodLevel;
+    return _lodMeshes[lodMeshIndex];
+}
+
+uint getMeshInstanceIndex(uint groupId, uint groupThreadId) {
+    return groupId * THREAD_NUM + groupThreadId;
+}
+
+uint getCurrentLodLevel(uint meshInstanceIndex) {
+    return _currentLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);
+}
+
+void addIndirectArgument(uint meshInstanceIndex) {
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Mesh mesh = getMesh(meshInstance);
+    uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
+	
+    LodMesh lodMesh = getLodMesh(mesh, lodLevel);
+    uint subMeshCount = lodMesh._subMeshCount;
+    
+    LodMeshInstance lodMeshInstance = _lodMeshInstances[meshInstance._lodMeshInstanceOffset + lodLevel];
+    for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
+        SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
+        SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
+			
+        uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
+        uint currentCountIndex = 0;
+        _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
+	
+        uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset);
+        uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
+        uint dispatchCount = (subMesh._meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
+        uint2 meshletInfoAddress = _cullingViewInfo._meshletInfoGpuAddress;
+        addUint64(meshletInfoAddress, MESHLET_INFO_SIZE_IN_BYTE * indirectArgumentOffset);
+		
+        DispatchMeshIndirectArgument arguments;
+
+        arguments._meshletInfoGpuAddress = meshletInfoAddress;
+        arguments._dispatchX = dispatchCount;
+        arguments._dispatchY = 1;
+        arguments._dispatchZ = 1;
+        _indirectArguments[indirectArgumentOffset] = arguments;
+		
+        MeshletInfo meshletInfo;
+        meshletInfo._meshletIndex = subMesh._meshletOffset;
+        meshletInfo._meshInstanceIndex = meshInstanceIndex;
+        meshletInfo._meshletCountMax = subMesh._meshletCount;
+        meshletInfo._materialIndex = subMeshInstance._materialIndex;
+        meshletInfo._vertexOffset = lodMesh._vertexOffset;
+        meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
+        meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
+        _meshletInfos[indirectArgumentOffset] = meshletInfo;
+    }
+}

@@ -1,0 +1,37 @@
+#include "meshlet_culling_template.sfh"
+
+RWByteAddressBuffer _cullingResult : register(u0);
+
+[numthreads(THREAD_NUM, 1, 1)]
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+    bool visible = false;
+    uint meshletInstanceLocalIndex = groupID.x * THREAD_NUM + groupThreadID.x;
+    uint meshletInfoIndex = groupID.y;
+    MeshletInfo meshletInfo = _meshletInfos[meshletInfoIndex];
+    uint meshletIndex = meshletInfo._meshletIndex + meshletInstanceLocalIndex;
+     if (meshletInstanceLocalIndex < meshletInfo._meshletCountMax) {
+        visible = true;
+    }
+    
+    if (visible) {
+        uint index = WavePrefixCountBits(visible);
+        writePayloadStruct(index, meshletIndex, meshletInfo);
+        
+        uint currentCount = 0;
+        Meshlet meshlet = _meshlets[meshletIndex];
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, meshlet._primitiveCount, currentCount);
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+    
+        _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+    
+        _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+   
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, meshlet._primitiveCount, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+    }
+    
+    uint visibleCount = WaveActiveCountBits(visible);
+    DispatchMesh(visibleCount, 1, 1, _passMeshlets);
+}

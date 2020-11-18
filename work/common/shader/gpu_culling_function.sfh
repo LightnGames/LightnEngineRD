@@ -1,0 +1,104 @@
+#include "gpu_driven.sfh"
+#include "constant_buffer.sfh"
+
+struct CullingViewInfo {
+    uint2 _meshletInfoGpuAddress;
+};
+
+struct MeshletBounds {
+    float3 _boundsMin;
+    float3 _boundsMax;
+    float3 _normal;
+    float _apexOffset;
+    float _cutoff;
+};
+
+void addUint64(inout uint2 a, in uint b) {
+    uint t = a.x;
+    a.x += b;
+    if (a.x < t) {
+        a.y++;
+    }
+}
+
+float4 UnpackCone(uint packed) {
+    float4 v;
+    v.x = float((packed >> 0) & 0xFF);
+    v.y = float((packed >> 8) & 0xFF);
+    v.z = float((packed >> 16) & 0xFF);
+    v.w = float((packed >> 24) & 0xFF);
+
+    v = v / 255.0;
+    v.xyz = v.xyz * 2.0 - 1.0;
+
+    return v;
+}
+
+
+bool frustumCullingBoundingBox(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo) {
+    for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i) {
+        float4 planeNormal = viewInfo._frustumPlanes[i];
+        float3 positivePoint = getPositivePoint(boundsMin, boundsMax, planeNormal.xyz);
+        float planeDistance = planeNormal.w;
+        float length = dot(planeNormal.xyz, positivePoint) - planeDistance;
+
+        if (length < 0) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+bool isEnabledMeshInstance(MeshInstance meshInstance) {
+    return meshInstance._stateFlags != 0;
+}
+
+bool isEnableMeshletBounds(MeshletBounds meshletBounds) {
+    return true;
+    float sqrNormalLength = dot(meshletBounds._normal, meshletBounds._normal);
+    return sqrNormalLength > 0.1;
+}
+
+MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshlet) {
+    float4x4 worldMatrix = meshInstance._matrixWorld;
+    float3 boundsMin = meshlet._aabbMin;
+    float3 boundsMax = meshlet._aabbMax;
+    float3 boundsSize = boundsMax - boundsMin;
+    
+    float3 worldMatrixCol0 = worldMatrix[0].xyz * boundsSize.x;
+    float3 worldMatrixCol1 = worldMatrix[1].xyz * boundsSize.y;
+    float3 worldMatrixCol2 = worldMatrix[2].xyz * boundsSize.z;
+    float3 boundsWorldMin = mul(float4(boundsMin, 1.0), worldMatrix).xyz;
+    
+    const float3 points[8] =
+    {
+        worldMatrixCol0 + worldMatrixCol1 + worldMatrixCol2,
+        worldMatrixCol0 + worldMatrixCol1,
+        worldMatrixCol0,
+        float3(0, 0, 0),
+        worldMatrixCol0 + worldMatrixCol2,
+        worldMatrixCol2,
+        worldMatrixCol1 + worldMatrixCol2,
+        worldMatrixCol1
+    };
+    
+    float3 resultBoundsMin = float3(1, 1, 1) * 100000;
+    float3 resultBoundsMax = float3(1, 1, 1) * -100000;
+    for (uint pointIndex = 0; pointIndex < 8; ++pointIndex)
+    {
+        resultBoundsMin = min(resultBoundsMin, boundsWorldMin + points[pointIndex]);
+        resultBoundsMax = max(resultBoundsMax, boundsWorldMin + points[pointIndex]);
+    }
+    
+    float worldScale = meshInstance._worldScale;
+    float4 normalCone = UnpackCone(meshlet._normalAndCutoff);
+    float3 resultBoundsNormal = mul(normalCone.xyz, (float3x3) worldMatrix);
+    
+    MeshletBounds bounds;
+    bounds._boundsMin = resultBoundsMin;
+    bounds._boundsMax = resultBoundsMax;
+    bounds._normal = normalize(resultBoundsNormal);
+    bounds._apexOffset = meshlet._apexOffset * worldScale;
+    bounds._cutoff = normalCone.w * worldScale;
+    return bounds;
+}

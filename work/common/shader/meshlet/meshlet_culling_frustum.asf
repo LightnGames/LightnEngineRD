@@ -1,0 +1,31 @@
+#include "meshlet_culling_template.sfh"
+
+[numthreads(THREAD_NUM, 1, 1)]
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+    bool visible = false;
+    bool inFrustum = false;
+    bool isFrontFace = false;
+    uint meshletInstanceLocalIndex = groupID.x * THREAD_NUM + groupThreadID.x;
+    uint meshletInfoIndex = groupID.y;
+    MeshletInfo meshletInfo = _meshletInfos[meshletInfoIndex];
+    uint meshletIndex = meshletInfo._meshletIndex + meshletInstanceLocalIndex;
+     if (meshletInstanceLocalIndex < meshletInfo._meshletCountMax) {
+        MeshInstance meshInstance = _meshInstances[meshletInfo._meshInstanceIndex];
+        MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, _meshlets[meshletIndex]);
+        ViewInfo viewInfo = _viewInfo;
+        float3 boundsMin = meshletBounds._boundsMin;
+        float3 boundsMax = meshletBounds._boundsMax;
+        inFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
+        isFrontFace = doBackFaceCulling(meshletBounds); 
+            
+        visible = inFrustum && isFrontFace;
+    }
+    
+    if (visible) {
+        uint index = WavePrefixCountBits(visible);
+        writePayloadStruct(index, meshletIndex, meshletInfo);
+    }
+    
+    uint visibleCount = WaveActiveCountBits(visible);
+    DispatchMesh(visibleCount, 1, 1, _passMeshlets);
+}

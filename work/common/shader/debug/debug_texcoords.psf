@@ -1,0 +1,7 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+
+ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+float4 main(VertexOut input) : SV_TARGET {
+    return float4(input._texcoord, 0.0, 1.0);
+}

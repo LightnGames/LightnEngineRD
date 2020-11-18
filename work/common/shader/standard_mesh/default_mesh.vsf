@@ -1,0 +1,32 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
+
+struct VSInput{
+    float3 _position : POSITION;
+    uint _texcoord : PACKED_TEX0;
+};
+
+struct MeshInstanceInfo {
+    uint _meshInstanceIndex;
+    uint _materialIndex;
+};
+
+ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+ConstantBuffer<MeshInstanceInfo> _meshInstanceInfo : register(b1);
+
+StructuredBuffer<MeshInstance> _meshInstances : register(t0);
+
+VertexOut main(VSInput input){
+    float4x4 matrixWorld = _meshInstances[_meshInstanceInfo._meshInstanceIndex]._matrixWorld;
+    float4 worldPos = mul(float4(input._position, 1), matrixWorld);
+    
+    VertexOut vertexOut;
+    vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
+    vertexOut._positionNdc = float4(input._position, 1);
+    vertexOut._texcoord = unpackTexCoords(input._texcoord);
+    vertexOut._meshletIndex = 0;
+    vertexOut._lodLevel = 1.0;
+    vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
+    return vertexOut;
+}

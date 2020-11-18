@@ -1,0 +1,42 @@
+#include "../gpu_culling_function.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b1);
+
+StructuredBuffer<CustomParameters> _customParameters : register(t0);
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<LodMesh> _lodMeshes : register(t2);
+StructuredBuffer<SubMesh> _subMeshes : register(t3);
+StructuredBuffer<Meshlet> _meshlets : register(t4);
+
+StructuredBuffer<MeshInstance> _meshInstances : register(t5);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
+StructuredBuffer<MeshletInfo> _meshletInfos : register(t9);
+
+RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
+RWByteAddressBuffer _countBuffer : register(u1);
+ 
+#define THREADS_PER_WAVE 32
+#define THREAD_NUM THREADS_PER_WAVE
+groupshared PayloadStruct _passMeshlets;
+
+// バックフェースカリング
+bool doBackFaceCulling(MeshletBounds meshletBounds) {
+    float3 boundsCenter = (meshletBounds._boundsMin + meshletBounds._boundsMax) / 2.0;
+    float3 apexDirection = meshletBounds._normal * meshletBounds._apexOffset;
+    float3 offsetedBoundsCenter = boundsCenter - apexDirection;
+    float3 viewDirection = normalize(_viewInfo._position - offsetedBoundsCenter);
+    float3 axis = -meshletBounds._normal;
+    float viewAngle = dot(axis, viewDirection);
+    return !(viewAngle > meshletBounds._cutoff);
+}
+
+void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInfo meshletInfo) {
+    _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
+    _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
+    _passMeshlets._meshletCountMax = meshletInfo._meshletCountMax;
+    _passMeshlets._materialIndex = meshletInfo._materialIndex;
+    _passMeshlets._vertexOffset = meshletInfo._vertexOffset;
+    _passMeshlets._vertexIndexOffset = meshletInfo._vertexIndexOffset;
+    _passMeshlets._primitiveOffset = meshletInfo._primitiveOffset;
+}

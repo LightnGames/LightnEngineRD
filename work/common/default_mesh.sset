@@ -1,0 +1,2 @@
+mesh_shader: common/shader/standard_mesh/default_mesh.mso
+pixel_shader: common/shader/standard_mesh/default_mesh.pso

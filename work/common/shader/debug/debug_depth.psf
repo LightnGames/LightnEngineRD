@@ -1,0 +1,8 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+
+ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+float4 main(VertexOut input) : SV_TARGET {
+    float depth = input._position.z / input._position.w;
+    return float4(depth, depth, depth, 1.0);
+}

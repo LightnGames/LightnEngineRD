@@ -1,0 +1,27 @@
+struct SkyDomeVSInput{
+    uint _vertexId : SV_VertexId;
+};
+
+struct Debug3dVSInput {
+    uint _vertexId : SV_VertexId;
+    uint _InstanceId: SV_InstanceID;
+};
+
+struct VertexOut {
+    float4 _position : SV_Position;
+    float4 _positionNdc : SCREEN_POSITION;
+    float2 _texcoord : TEXCOORD0;
+    nointerpolation float _lodLevel : LOD_LEVEL;
+    nointerpolation uint _meshletIndex : MESHLET_INDEX;
+    nointerpolation uint _materialIndex : MATERIAL_INDEX;
+};
+
+struct SkyDomePSInput{
+    float4 _position : SV_POSITION;
+    float3 _directionView : DIRECTION_VIEW;
+};
+
+struct Debug3dPSInput {
+    float4 _position : SV_POSITION;
+    float3 _color : COLOR;
+};

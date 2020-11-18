@@ -1,0 +1,51 @@
+#include "constant_buffer.sfh"
+#include "gpu_driven.sfh"
+
+ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
+ConstantBuffer<ViewInfo> _viewInfo :register(b1);
+StructuredBuffer<Mesh> _meshes : register(t0);
+StructuredBuffer<LodMesh> _lodMeshes : register(t1);
+StructuredBuffer<MeshInstance> _meshInstances : register(t3);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
+
+RWByteAddressBuffer _resultLodLevels : register(u0);
+
+#define THREAD_NUM 128
+[numthreads(THREAD_NUM, 1, 1)] 
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+    uint meshInstanceIndex = groupID.x * THREAD_NUM + groupThreadID.x;
+    if (meshInstanceIndex > (_sceneCullingInfo._meshInstanceCount - 1)) {
+        return;
+    }
+	
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    if (meshInstance._stateFlags == 0) {
+        return;
+    }
+    
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+    if(mesh._stateFlags == MESH_STATE_ALLOCATED){
+        mesh = _meshes[0];
+    }
+	
+    float3 boundsCenter = (meshInstance._aabbMin + meshInstance._aabbMax) / 2.0;
+    float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._position;
+    float3 cameraDirection = _viewInfo._frustumPlanes[4].xyz;
+    float boundsDepth = max(dot(cameraDirection, viewSpaceBoundsCenter), 0.0);
+    float screenRadius = meshInstance._boundsRadius / (_viewInfo._halfFovTan.y * boundsDepth);
+    float screenDimeter = screenRadius * 2;
+    float screenArea = screenDimeter * screenDimeter;
+	
+    uint lodLevel = mesh._lodMeshCount - 1;
+    for (uint lodIndex = 0; lodIndex < mesh._lodMeshCount; ++lodIndex) {
+        uint lodMeshIndex = meshInstance._lodMeshInstanceOffset + lodIndex;
+        LodMeshInstance lodMeshInstance = _lodMeshInstances[lodMeshIndex];
+		
+        if (lodMeshInstance._threshhold < screenArea) {
+            lodLevel = lodIndex;
+            break;
+        }
+    }
+	
+    _resultLodLevels.Store(meshInstanceIndex * 4, lodLevel);
+}

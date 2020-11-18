@@ -1,0 +1,16 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+
+ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+
+float3 heatMap(float unormValue) {
+    float redValue = min(unormValue * 2.0, 1.0);
+    float blueValue = max((unormValue - 0.5) * 2.0, 0.0);
+    return lerp(float3(1, 0, 0), lerp(float3(0, 1, 0), float3(0, 0, 1), blueValue), redValue);
+}
+
+float4 main(VertexOut input) : SV_TARGET {
+    uint meshletIndex = input._meshletIndex;
+    float3 diffuseColor = heatMap(input._lodLevel);
+    return float4(diffuseColor, 1.0);
+}

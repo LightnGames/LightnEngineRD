@@ -1,0 +1,27 @@
+#include "mesh_culling_frustum_template.sfh"
+
+RWByteAddressBuffer _cullingResult : register(u3);
+
+[numthreads(THREAD_NUM, 1, 1)]
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+    uint meshInstanceIndex = getMeshInstanceIndex(groupID.x, groupThreadID.x);
+    if (!isTested(meshInstanceIndex)) {
+        return;
+    }
+    
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Mesh mesh = getMesh(meshInstance);
+    uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
+	
+    LodMesh lodMesh = getLodMesh(mesh, lodLevel);
+    uint subMeshCount = lodMesh._subMeshCount;
+    
+    uint currentCount = 0;
+    _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+    _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    
+    _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+    _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    
+    addIndirectArgument(meshInstanceIndex);
+}
