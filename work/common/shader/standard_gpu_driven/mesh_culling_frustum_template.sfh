@@ -1,12 +1,18 @@
 #include "../gpu_culling_function.sfh"
 
 struct StandardIndirectArgument {
+    uint _meshInstanceIndex;
     uint _materialIndex;
     uint _indexCountPerInstance;
     uint _instanceCount;
     uint _startIndexLocation;
     int _baseVertexLocation;
     uint _startInstanceLocation;
+};
+
+struct SubMeshDrawInfo {
+    uint _indexCount;
+    uint _indexOffset;
 };
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
@@ -20,6 +26,7 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
+StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
 
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
@@ -75,8 +82,10 @@ void addIndirectArgument(uint meshInstanceIndex) {
     
     LodMeshInstance lodMeshInstance = _lodMeshInstances[meshInstance._lodMeshInstanceOffset + lodLevel];
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
+        uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
-        SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
+        SubMeshInstance subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
+        SubMeshDrawInfo subMeshDrawInfo = _subMeshDrawInfos[subMeshInstanceIndex];
 			
         uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
@@ -86,11 +95,13 @@ void addIndirectArgument(uint meshInstanceIndex) {
         uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
 		
         StandardIndirectArgument arguments;
+        arguments._meshInstanceIndex = meshInstanceIndex;
         arguments._materialIndex = subMeshInstance._materialIndex;
-        arguments._indexCountPerInstance = 1;
+        arguments._indexCountPerInstance = subMeshDrawInfo._indexCount;
+        arguments._startIndexLocation = subMeshDrawInfo._indexOffset;
         arguments._instanceCount = 1;
         arguments._startInstanceLocation = 0;
-        arguments._baseVertexLocation = 0;
+        arguments._baseVertexLocation = lodMesh._vertexOffset;
         _indirectArguments[indirectArgumentOffset] = arguments;
     }
 }

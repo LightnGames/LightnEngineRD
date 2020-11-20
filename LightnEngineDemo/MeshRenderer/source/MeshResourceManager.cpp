@@ -388,6 +388,14 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex], sizeof(gpu::LodMesh) * meshInfo._totalLodMeshCount);
 	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
 
+	gpu::SubMeshDrawInfo* subMeshDrawInfos = vramUpdater->enqueueUpdate<gpu::SubMeshDrawInfo>(&_subMeshDrawInfoBuffer, sizeof(gpu::SubMeshDrawInfo) * meshInfo._subMeshStartIndex, meshInfo._totalSubMeshCount);
+	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
+		const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
+		gpu::SubMeshDrawInfo& info = subMeshDrawInfos[subMeshIndex];
+		info._indexCount = subMeshInfo._indexCount;
+		info._indexOffset = subMeshInfo._classiciindexOffset;
+	}
+
 	// “Ç‚Ýž‚ÝŠ®—¹
 	_meshAssets[meshIndex].freeFile();
 	_assetStateFlags[meshIndex] = ASSET_STATE_ENABLE;

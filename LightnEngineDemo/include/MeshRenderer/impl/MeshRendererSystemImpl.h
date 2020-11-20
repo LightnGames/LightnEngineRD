@@ -35,9 +35,11 @@ private:
 #endif
 private:
 	void computeLod(CommandList* commandList, ViewInfo* viewInfo);
-	void depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo);
+	void depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
+	void mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
 	void buildHiz(CommandList* commandList, ViewInfo* viewInfo);
 	void mainCulling(CommandList* commandList, ViewInfo* viewInfo);
+	void setFixedDebugView(CommandList * commandList, ViewInfo* viewInfo);
 
 private:
 	bool _visible = true;
@@ -54,6 +56,10 @@ private:
 	RootSignature* _buildHizRootSignature = nullptr;
 	PipelineState* _debugMeshletBoundsPipelineState = nullptr;
 	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
+#if ENABLE_MULTI_INDIRECT_DRAW
+	PipelineState* _multiDrawCullingPipelineState = nullptr;
+	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;
+#endif
 
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;

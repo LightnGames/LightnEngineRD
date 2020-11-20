@@ -89,6 +89,10 @@ public:
 	GpuBuffer* getClassicIndexBuffer() { return &_classicIndexBuffer; }
 #endif
 
+#if ENABLE_MULTI_INDIRECT_DRAW
+	DescriptorHandle getSubMeshInfoSrvHandle() const { return _subMeshDrawInfoSrv; }
+#endif
+
 private:
 	void deleteMesh(u32 meshIndex);
 

@@ -420,7 +420,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		IndirectArgumentDesc argumentDescs[2] = {};
 		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
 		argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
-		argumentDescs[0].Constant._num32BitValuesToSet = 1;
+		argumentDescs[0].Constant._num32BitValuesToSet = 2;
 		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
 		CommandSignatureDesc desc = {};

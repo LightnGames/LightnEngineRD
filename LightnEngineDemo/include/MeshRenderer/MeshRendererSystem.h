@@ -36,7 +36,6 @@ struct MeshInfo {
 };
 
 struct LodInfo {
-
 };
 
 struct SubMeshInfo {

@@ -1,14 +1,12 @@
 #include "mesh_culling_frustum_template.sfh"
 
 RWByteAddressBuffer _cullingResult : register(u3);
-Texture2D<float> _hizTextures[] : register(t8);
+Texture2D<float> _hizTextures[] : register(t9);
 
-[numthreads(128, 1, 1)]
-void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID)
-{
+[numthreads(THREAD_NUM, 1, 1)]
+void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
     uint meshInstanceIndex = getMeshInstanceIndex(groupID.x, groupThreadID.x);
-    if (!isTested(meshInstanceIndex))
-    {
+    if (!isTested(meshInstanceIndex)) {
         return;
     }
     
@@ -23,8 +21,7 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     float3 boundsMin = meshInstance._aabbMin;
     float3 boundsMax = meshInstance._aabbMax;
     bool inFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
-    if (inFrustum)
-    {
+    if (inFrustum) {
         uint hizLevel = 0;
         uint2 coords = uint2(0, 0);
         uint2 sampleCount = uint2(0, 0);
@@ -33,12 +30,10 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
         
         uint currentCount = 0;
         bool isPassed = true;
-        if (isTestedOcclusion)
-        {
+        if (isTestedOcclusion) {
             float hizDepthValue = sampleHiz(hizSize, sampleCount, coords, _hizTextures[hizLevel]);
             isPassed = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
-            if (isPassed)
-            {
+            if (isPassed) {
                 _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
                 _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
             }
@@ -47,8 +42,7 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
             _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
         }
         
-        if (isPassed)
-        {
+        if (isPassed) {
             addIndirectArgument(meshInstanceIndex);
         }
         

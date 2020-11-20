@@ -42,8 +42,6 @@ namespace gpu {
 	struct SubMeshDrawInfo {
 		u32 _indexCount = 0;
 		u32 _indexOffset = 0;
-		u32 _vertexOffset = 0;
-		u32 _vertexCount = 0;
 	};
 
 	struct Meshlet {
