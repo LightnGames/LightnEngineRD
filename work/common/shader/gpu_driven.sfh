@@ -107,3 +107,9 @@ struct CullingResult {
 struct SceneCullingInfo {
 	uint _meshInstanceCount;
 };
+
+struct SubMeshDrawInfo {
+    uint _indexCount;
+    uint _indexOffset;
+};
+

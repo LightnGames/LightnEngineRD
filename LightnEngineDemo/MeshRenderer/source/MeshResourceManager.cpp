@@ -357,7 +357,7 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	SubMeshInfo* subMeshInfos = &_subMeshInfos[meshInfo._subMeshStartIndex];
 	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
 		SubMeshInfo& info = subMeshInfos[subMeshIndex];
-		info._classiciindexOffset += classicIndex;
+		info._classiciIndexOffset += classicIndex;
 	}
 #endif
 
@@ -392,8 +392,8 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
 		const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
 		gpu::SubMeshDrawInfo& info = subMeshDrawInfos[subMeshIndex];
-		info._indexCount = subMeshInfo._indexCount;
-		info._indexOffset = subMeshInfo._classiciindexOffset;
+		info._indexCount = subMeshInfo._classicIndexCount;
+		info._indexOffset = subMeshInfo._classiciIndexOffset;
 	}
 
 	// “Ç‚Ýž‚ÝŠ®—¹
@@ -520,8 +520,8 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 		const SubMeshInfoE& inputInfo = inputSubMeshInfos[subMeshIndex];
 		SubMeshInfo& info = _subMeshInfos[subMeshStartIndex + subMeshIndex];
 		info._meshletOffset = inputInfo._meshletStartIndex;
-		info._indexCount = inputInfo._triangleStripIndexCount;
-		info._classiciindexOffset = inputInfo._triangleStripIndexOffset;
+		info._classicIndexCount = inputInfo._triangleStripIndexCount;
+		info._classiciIndexOffset = inputInfo._triangleStripIndexOffset;
 		info._meshletCount = inputInfo._meshletCount;
 	}
 

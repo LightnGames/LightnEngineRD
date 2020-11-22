@@ -39,8 +39,8 @@ struct LodInfo {
 };
 
 struct SubMeshInfo {
-	u32 _classiciindexOffset = 0;
-	u32 _indexCount = 0;
+	u32 _classiciIndexOffset = 0;
+	u32 _classicIndexCount = 0;
 	u32 _meshletOffset = 0;
 	u32 _meshletCount = 0;
 };

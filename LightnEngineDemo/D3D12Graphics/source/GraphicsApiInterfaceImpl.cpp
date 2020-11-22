@@ -1031,18 +1031,18 @@ u32 GetTextureBufferAligned(u32 sizeInByte) {
 void PipelineStateD3D12::iniaitlize(const GraphicsPipelineStateDesc& desc) {
 	ID3D12Device2* device = toD3d12(desc._device);
 
-	D3D12_SHADER_BYTECODE vs = { desc._vs._shaderBytecode, desc._vs._bytecodeLength };
-	D3D12_SHADER_BYTECODE ps = { desc._ps._shaderBytecode, desc._ps._bytecodeLength };
+	auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout.NumElements = desc._inputElementCount;
 	psoDesc.InputLayout.pInputElementDescs = toD3d12(desc._inputElements);
 	psoDesc.pRootSignature = toD3d12(desc._rootSignature);
-	psoDesc.VS = vs;
-	psoDesc.PS = ps;
+	psoDesc.VS = toD3d12(desc._vs);
+	psoDesc.PS = toD3d12(desc._ps);
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = depthStencilDesc;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = static_cast<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(desc._topologyType);
 	psoDesc.DSVFormat = toD3d12(desc._dsvFormat);

@@ -59,9 +59,9 @@ public:
 	static constexpr u32 LOD_MESH_COUNT_MAX = 1024;
 	static constexpr u32 SUB_MESH_COUNT_MAX = 2048;
 	static constexpr u32 MESHLET_COUNT_MAX = 1024 * 1024;
-	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 1024 * 16;
-	static constexpr u32 INDEX_COUNT_MAX = 1024 * 1024 * 32;
-	static constexpr u32 PRIMITIVE_COUNT_MAX = 1024 * 1024 * 32;
+	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 1024 * 4;
+	static constexpr u32 INDEX_COUNT_MAX = 1024 * 1024 * 8;
+	static constexpr u32 PRIMITIVE_COUNT_MAX = 1024 * 1024 * 8;
 	using VertexPosition = Float3;
 	using VertexNormalTangent = u32;
 	using VertexTexcoord = u32;
@@ -90,7 +90,7 @@ public:
 #endif
 
 #if ENABLE_MULTI_INDIRECT_DRAW
-	DescriptorHandle getSubMeshInfoSrvHandle() const { return _subMeshDrawInfoSrv; }
+	DescriptorHandle getSubMeshDrawInfoSrvHandle() const { return _subMeshDrawInfoSrv; }
 #endif
 
 private:

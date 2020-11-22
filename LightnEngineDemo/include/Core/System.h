@@ -189,7 +189,7 @@ public:
 		cleanUp();
 
 		_sizeCountMax = numElements;
-		_emptyIndices = new u32[_sizeCountMax]();
+		_emptyIndices = new u32[_sizeCountMax];
 	}
 
 	void terminate() {

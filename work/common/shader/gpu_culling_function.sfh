@@ -34,7 +34,6 @@ float4 UnpackCone(uint packed) {
     return v;
 }
 
-
 bool frustumCullingBoundingBox(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo) {
     for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i) {
         float4 planeNormal = viewInfo._frustumPlanes[i];
@@ -70,8 +69,7 @@ MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshle
     float3 worldMatrixCol2 = worldMatrix[2].xyz * boundsSize.z;
     float3 boundsWorldMin = mul(float4(boundsMin, 1.0), worldMatrix).xyz;
     
-    const float3 points[8] =
-    {
+    const float3 points[8] = {
         worldMatrixCol0 + worldMatrixCol1 + worldMatrixCol2,
         worldMatrixCol0 + worldMatrixCol1,
         worldMatrixCol0,
@@ -84,8 +82,7 @@ MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshle
     
     float3 resultBoundsMin = float3(1, 1, 1) * 100000;
     float3 resultBoundsMax = float3(1, 1, 1) * -100000;
-    for (uint pointIndex = 0; pointIndex < 8; ++pointIndex)
-    {
+    for (uint pointIndex = 0; pointIndex < 8; ++pointIndex) {
         resultBoundsMin = min(resultBoundsMin, boundsWorldMin + points[pointIndex]);
         resultBoundsMax = max(resultBoundsMax, boundsWorldMin + points[pointIndex]);
     }

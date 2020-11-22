@@ -18,8 +18,8 @@ void DebugRendererSystemImpl::initialize() {
 		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 		ShaderBlob* vertexShader = allocator->allocateShaderBlob();
 		ShaderBlob* pixelShader = allocator->allocateShaderBlob();
-		vertexShader->initialize("L:/LightnEngine/resource/common/shader/standard_mesh/screen_triangle.vso");
-		pixelShader->initialize("L:/LightnEngine/resource/common/shader/standard_mesh/screen_triangle.pso");
+		vertexShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.vso");
+		pixelShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.pso");
 
 		_pipelineState = allocator->allocatePipelineState();
 		_rootSignature = allocator->allocateRootSignature();

@@ -10,11 +10,6 @@ struct StandardIndirectArgument {
     uint _startInstanceLocation;
 };
 
-struct SubMeshDrawInfo {
-    uint _indexCount;
-    uint _indexOffset;
-};
-
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
 ConstantBuffer<CullingViewInfo> _cullingViewInfo : register(b1);
 ConstantBuffer<ViewInfo> _viewInfo :register(b2);
@@ -85,7 +80,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
         SubMeshInstance subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
-        SubMeshDrawInfo subMeshDrawInfo = _subMeshDrawInfos[subMeshInstanceIndex];
+        SubMeshDrawInfo subMeshDrawInfo = _subMeshDrawInfos[lodMesh._subMeshOffset + subMeshLocalIndex];
 			
         uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;

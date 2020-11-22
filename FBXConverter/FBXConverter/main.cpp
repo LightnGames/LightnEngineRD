@@ -1314,7 +1314,7 @@ void exportMesh(const char* fileName) {
 		std::vector<uint32> subMeshMaterialSlotIndices(subMeshCount);
 		std::vector<Subset> subSets(subMeshCount);
 		for (uint32 subSetIndex = 0; subSetIndex < subMeshCount; ++subSetIndex) {
-			subMeshMaterialSlotIndices[subSetIndex] = subSetIndex;
+			subMeshMaterialSlotIndices[subSetIndex] = globalRemapedMaterialIndices[subSetIndex];
 
 			Subset& subSet = subSets[subSetIndex];
 			subSet.Count = materialIndexSizes[subSetIndex];

@@ -12,9 +12,6 @@ StructuredBuffer<MeshInstance> _meshInstances : register(t5);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
 StructuredBuffer<MeshletInfo> _meshletInfos : register(t9);
-
-RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
-RWByteAddressBuffer _countBuffer : register(u1);
  
 #define THREADS_PER_WAVE 32
 #define THREAD_NUM THREADS_PER_WAVE

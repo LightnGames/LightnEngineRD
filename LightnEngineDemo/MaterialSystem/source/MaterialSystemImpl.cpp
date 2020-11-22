@@ -356,6 +356,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		vertexShader->initialize(vertexShaderPath);
 		pixelShader->initialize(pixelShaderPath);
 
+		_classicShaderSet._depthPipelineState = allocator->allocatePipelineState();
 		_classicShaderSet._pipelineState = allocator->allocatePipelineState();
 		_classicShaderSet._rootSignature = allocator->allocateRootSignature();
 
@@ -404,9 +405,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		pipelineStateDesc._rootSignature = _classicShaderSet._rootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
 		pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
+		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 		pipelineStateDesc._inputElements = inputElements;
 		pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
 		_classicShaderSet._pipelineState->iniaitlize(pipelineStateDesc);
+
+		pipelineStateDesc._ps = ShaderByteCode();
+		_classicShaderSet._depthPipelineState->iniaitlize(pipelineStateDesc);
 
 		vertexShader->terminate();
 		pixelShader->terminate();
@@ -444,6 +449,7 @@ void ShaderSetImpl::terminate() {
 	_debugDepthPipelineStateGroup->requestToDestroy();
 	_debugTexcoordsPipelineStateGroup->requestToDestroy();
 	_classicShaderSet._pipelineState->terminate();
+	_classicShaderSet._depthPipelineState->terminate();
 	_classicShaderSet._rootSignature->terminate();
 #if ENABLE_MULTI_INDIRECT_DRAW
 	_classicShaderSet._multiDrawCommandSignature->terminate();

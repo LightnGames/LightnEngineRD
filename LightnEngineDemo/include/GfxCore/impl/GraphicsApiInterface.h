@@ -2,7 +2,7 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <Core/System.h>
 
-#define ENABLE_MESH_SHADER 0
+#define ENABLE_MESH_SHADER 1
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
 
@@ -814,6 +814,7 @@ struct GraphicsPipelineStateDesc {
 	u32 _numRenderTarget = 0;
 	Format _rtvFormats[8] = {};
 	Format _dsvFormat;
+	ComparisonFunc _depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 	SampleDesc _sampleDesc;
 	PrimitiveTopologyType _topologyType;
 };
