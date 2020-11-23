@@ -26,20 +26,24 @@
 struct PayloadStruct { 
     uint _meshletIndices[32]; 
 	uint _meshInstanceIndices[32];
-	uint _meshletCountMax;
-	uint _materialIndex;
-	uint _vertexOffset;
-    uint _vertexIndexOffset;
-    uint _primitiveOffset;
+    uint _materialIndex[32];
+    uint _vertexOffset[32];
+    uint _vertexIndexOffset[32];
+    uint _primitiveOffset[32];
 }; 
 
-#define MESHLET_INFO_SIZE_IN_BYTE 28
-struct MeshletInfo {
-	uint _meshletIndex;
+#define MESHLET_INFO_SIZE_IN_BYTE 12
+struct BatchedMeshletInfo {
+    uint _packedMeshletOffset;
+    uint _packedMeshletCount;
+    uint _totalMeshletCountMax;
+};
+
+struct PackedMeshletInfo {
+    uint _meshletIndex;
     uint _meshInstanceIndex;
-    uint _meshletCountMax;
-	uint _materialIndex;
-	uint _vertexOffset;
+    uint _materialIndex;
+    uint _vertexOffset;
     uint _vertexIndexOffset;
     uint _primitiveOffset;
 };

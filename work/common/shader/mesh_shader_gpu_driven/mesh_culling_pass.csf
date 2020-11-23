@@ -1,6 +1,6 @@
 #include "mesh_culling_frustum_template.sfh"
 
-RWByteAddressBuffer _cullingResult : register(u3);
+RWByteAddressBuffer _cullingResult : register(u5);
 
 [numthreads(THREAD_NUM, 1, 1)]
 void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {

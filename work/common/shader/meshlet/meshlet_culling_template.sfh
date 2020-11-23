@@ -11,7 +11,8 @@ StructuredBuffer<Meshlet> _meshlets : register(t4);
 StructuredBuffer<MeshInstance> _meshInstances : register(t5);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
-StructuredBuffer<MeshletInfo> _meshletInfos : register(t9);
+StructuredBuffer<BatchedMeshletInfo> _batchedMeshletInfos : register(t9);
+StructuredBuffer<PackedMeshletInfo> _packedMeshletInfos : register(t10);
  
 #define THREADS_PER_WAVE 32
 #define THREAD_NUM THREADS_PER_WAVE
@@ -28,12 +29,11 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInfo meshletInfo) {
+void writePayloadStruct(uint visibleIndex, uint meshletIndex, BatchedMeshletInfo batchedInfo, PackedMeshletInfo meshletInfo){
     _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
-    _passMeshlets._meshletCountMax = meshletInfo._meshletCountMax;
-    _passMeshlets._materialIndex = meshletInfo._materialIndex;
-    _passMeshlets._vertexOffset = meshletInfo._vertexOffset;
-    _passMeshlets._vertexIndexOffset = meshletInfo._vertexIndexOffset;
-    _passMeshlets._primitiveOffset = meshletInfo._primitiveOffset;
+    _passMeshlets._materialIndex[visibleIndex] = meshletInfo._materialIndex;
+    _passMeshlets._vertexOffset[visibleIndex] = meshletInfo._vertexOffset;
+    _passMeshlets._vertexIndexOffset[visibleIndex] = meshletInfo._vertexIndexOffset;
+    _passMeshlets._primitiveOffset[visibleIndex] = meshletInfo._primitiveOffset;
 }

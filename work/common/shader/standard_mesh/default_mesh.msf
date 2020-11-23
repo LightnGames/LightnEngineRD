@@ -31,8 +31,9 @@ void main(
     out indices uint3 tris[126],
     out vertices VertexOut verts[64]
 ){
-    uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid.x];
-    uint meshletIndex = meshPayload._meshletIndices[gid.x];
+    uint meshletLocalIndex = gid.x;
+    uint meshInstanceIndex = meshPayload._meshInstanceIndices[meshletLocalIndex];
+    uint meshletIndex = meshPayload._meshletIndices[meshletLocalIndex];
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
     Mesh mesh = _meshes[meshInstance._meshIndex];
@@ -44,14 +45,14 @@ void main(
     uint threadIndex = gtid;
     if(threadIndex < primitiveCount){
         uint primitiveIndex = meshlet._primitiveOffset + threadIndex;
-        uint packedIndex = _primitives[meshPayload._primitiveOffset + primitiveIndex];
+        uint packedIndex = _primitives[meshPayload._primitiveOffset[meshletLocalIndex] + primitiveIndex];
         tris[threadIndex] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
     }
 
     if(threadIndex < vertexCount){
         uint vertexLocalIndex = meshlet._vertexOffset + threadIndex;
-        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset + vertexLocalIndex];
-        uint vertexOffset = meshPayload._vertexOffset + vertexIndex;
+        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset[meshletLocalIndex] + vertexLocalIndex];
+        uint vertexOffset = meshPayload._vertexOffset[meshletLocalIndex] + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
 
@@ -62,7 +63,7 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = meshPayload._materialIndex;
+        vertexOut._materialIndex = meshPayload._materialIndex[meshletLocalIndex];
 
         vertexOut._lodLevel = 0.0;
         if(mesh._lodMeshCount > 1){

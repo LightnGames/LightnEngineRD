@@ -10,12 +10,18 @@ namespace gpu {
 		MESH_STATE_LOADED,
 	};
 
-	struct MeshletInfo {
-		u32 _meshletInstanceOffset;
+	struct BatchedMeshletInfo {
+		u32 _packedMeshletOffset;
+		u32 _packedMeshletCount;
+		u32 _totalMeshletCountMax;
+	};
+
+	struct PackedMeshletInfo {
+		u32 _meshletIndex;
 		u32 _meshInstanceIndex;
-		u32 _meshletCountMax;
 		u32 _materialIndex;
 		u32 _vertexOffset;
+		u32 _vertexIndexOffset;
 		u32 _primitiveOffset;
 	};
 

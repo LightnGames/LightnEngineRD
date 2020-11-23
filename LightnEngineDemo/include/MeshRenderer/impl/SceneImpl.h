@@ -31,6 +31,7 @@ enum GpuCullingRootParameters {
 	ROOT_PARAM_GPU_LOD_LEVEL,
 	ROOT_PARAM_GPU_CULLING_VIEW_INFO,
 	ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO,
+	ROOT_PARAM_GPU_PACKED_MESHLET_OFFSET,
 	ROOT_PARAM_GPU_CULLING_RESULT,
 	ROOT_PARAM_GPU_HIZ,
 	ROOT_PARAM_GPU_COUNT
@@ -204,7 +205,7 @@ private:
 	GpuBuffer _countBuffer;
 	GpuBuffer _cullingResultBuffer;
 	GpuBuffer _cullingResultReadbackBuffer[BACK_BUFFER_COUNT] = {};
-	GpuBuffer _passedMeshletInfoBuffer;
+	GpuBuffer _batchedMeshletInfoBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[HIERACHICAL_DEPTH_COUNT] = {};
@@ -222,6 +223,11 @@ private:
 	gpu::CullingResult* _cullingResultMapPtr[BACK_BUFFER_COUNT] = {};
 	gpu::CullingResult* _currentFrameCullingResultMapPtr = nullptr;
 	const ViewInfo* _viewInfo = nullptr;
+
+	DescriptorHandle _packedMeshletSrv;
+	DescriptorHandle _packedMeshletCountCpuHandle;
+	GpuBuffer _packedMeshletCountBuffer;
+	GpuBuffer _packedMeshletBuffer;
 };
 
 class SubMeshInstanceImpl : public SubMeshInstance {
@@ -277,6 +283,7 @@ public:
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
+	static constexpr u32 PACKED_SUB_MESH_COUNT_MAX = 64;
 
 	void initialize();
 	void update();
@@ -291,6 +298,7 @@ public:
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	MeshInstance* createMeshInstance(const Mesh* mesh);
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
+	DescriptorHandle getPackedMeshletOffsetHandles() const { return _packedMeshletOffsetHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
@@ -313,6 +321,8 @@ private:
 	GpuBuffer _subMeshInstanceBuffer;
 
 	DescriptorHandle _meshInstanceHandles;
+	DescriptorHandle _packedMeshletOffsetHandle;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
+	GpuBuffer _packedMeshletOffsetBuffer;
 };
