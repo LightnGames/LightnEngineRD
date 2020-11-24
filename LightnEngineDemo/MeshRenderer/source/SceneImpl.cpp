@@ -496,6 +496,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		_countBuffer.initialize(desc);
 		_countBuffer.setDebugName("Indirect Argument Count");
 
+		desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
 		desc._sizeInByte = Scene::SUB_MESH_INSTANCE_COUNT_MAX * sizeof(gpu::PackedMeshletInfo);
 		_packedMeshletBuffer.initialize(desc);
 		_packedMeshletBuffer.setDebugName("Packed Meshlets");
