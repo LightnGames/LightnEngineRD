@@ -23,8 +23,7 @@ public:
 private:
 	GpuBuffer _timeStampBuffer;
 	QueryHeap* _queryHeap = nullptr;
-	u64* _mapedTimeStampPtr = nullptr;
-	u64* _currentTimeStamps = nullptr;
+	u64 _currentTimeStamps[GPU_TIME_STAMP_COUNT_MAX] = {};
 	u64 _currentFrameFrequency = 0;
 	u32 _currentFrameMarkerCount = 0;
 	char _debugMarkerNames[GPU_TIME_STAMP_COUNT_MAX][DEBUG_MARKER_NAME_COUNT_MAX] = {};

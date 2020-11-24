@@ -220,8 +220,7 @@ private:
 	DescriptorHandle _currentLodLevelUav;
 	DescriptorHandle _currentLodLevelSrv;
 	DescriptorHandle _countCpuUavHandle;
-	gpu::CullingResult* _cullingResultMapPtr[BACK_BUFFER_COUNT] = {};
-	gpu::CullingResult* _currentFrameCullingResultMapPtr = nullptr;
+	gpu::CullingResult _currentFrameCullingResultMapPtr;
 	const ViewInfo* _viewInfo = nullptr;
 
 	DescriptorHandle _packedMeshletSrv;

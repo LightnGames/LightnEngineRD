@@ -547,9 +547,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._device = device;
 		_cullingResultReadbackBuffer[frameIndex].initialize(desc);
 		_cullingResultReadbackBuffer[frameIndex].setDebugName("Culling Result Readback");
-		_cullingResultMapPtr[frameIndex] = _cullingResultReadbackBuffer[frameIndex].map<gpu::CullingResult>();
 	}
-	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[0];
 
 	// constant buffers
 	{
@@ -918,10 +916,15 @@ void GraphicsView::resetResultBuffers(CommandList* commandList) {
 void GraphicsView::readbackCullingResultBuffer(CommandList* commandList) {
 	// カリング結果をリードバックバッファへコピー 
 	u32 frameIndex = GraphicsSystemImpl::Get()->getFrameIndex();
+	GpuBuffer& currentReadbackBuffer = _cullingResultReadbackBuffer[frameIndex];
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-	commandList->copyBufferRegion(_cullingResultReadbackBuffer[frameIndex].getResource(), 0, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
+	commandList->copyBufferRegion(currentReadbackBuffer.getResource(), 0, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
-	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[frameIndex];
+
+	MemoryRange range = { 0, 1 };
+	gpu::CullingResult* currentFrameCullingResultMapPtr = currentReadbackBuffer.map<gpu::CullingResult>(&range);
+	memcpy(&_currentFrameCullingResultMapPtr, currentFrameCullingResultMapPtr, sizeof(gpu::CullingResult));
+	currentReadbackBuffer.unmap();
 }
 
 void GraphicsView::setDrawResultDescriptorTable(CommandList* commandList) {
@@ -945,5 +948,5 @@ ResourceDesc GraphicsView::getHizTextureResourceDesc(u32 level) const {
 }
 
 const CullingResult* GraphicsView::getCullingResult() const {
-	return reinterpret_cast<CullingResult*>(_currentFrameCullingResultMapPtr);
+	return reinterpret_cast<const CullingResult*>(&_currentFrameCullingResultMapPtr);
 }

@@ -452,7 +452,7 @@ struct ResourceD3D12 :public Resource {
 	void initialize(ID3D12Resource* resource) { _resource = resource; }
 	virtual void terminate() override;
 	virtual void* map(const MemoryRange* range) override;
-	virtual void unmap() override;
+	virtual void unmap(const MemoryRange* range) override;
 	virtual u64 getGpuVirtualAddress() const override;
 	virtual void setDebugName(const char* name) override;
 	ID3D12Resource* _resource = nullptr;

@@ -21,7 +21,7 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
-StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
+StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t9);
 
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
