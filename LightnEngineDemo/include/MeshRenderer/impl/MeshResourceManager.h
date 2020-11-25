@@ -84,6 +84,10 @@ public:
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
 	GpuBuffer* getTexcoordVertexBuffer() { return &_texcoordVertexBuffer; }
+	u32 getMeshCount() const { return _meshes.getInstanceCount(); }
+	u32 getLodMeshCount() const { return _lodMeshes.getInstanceCount(); }
+	u32 getSubMeshCount() const { return _subMeshes.getInstanceCount(); }
+	u32 getMeshletCount() const { return _meshlets.getInstanceCount(); }
 
 #if ENABLE_CLASSIC_VERTEX
 	GpuBuffer* getClassicIndexBuffer() { return &_classicIndexBuffer; }

@@ -405,6 +405,8 @@ public:
 		_instanceCount -= numElements;
 	}
 
+	u32 getInstanceCount() const { return _instanceCount; }
+
 private:
 	// 前方ブロックマージ
 	u32 mergePrev(u32 baseBlockIndex) {

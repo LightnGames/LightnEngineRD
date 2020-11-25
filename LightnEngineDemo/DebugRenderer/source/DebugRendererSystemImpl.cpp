@@ -2,6 +2,7 @@
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/GraphicsApiInterface.h>
 #include <GfxCore/impl/ViewSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 
 DebugRendererSystemImpl _debugSystem;
 
@@ -170,6 +171,9 @@ void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Debug Draw");
+
 	u32 instanceCount = _lineInstances.getCount();
 	if (instanceCount > 0) {
 		commandList->setViewports(1, &viewInfo->_viewPort);

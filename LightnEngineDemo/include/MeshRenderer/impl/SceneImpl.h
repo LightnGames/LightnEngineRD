@@ -302,6 +302,8 @@ public:
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
+	u32 getLodMeshInstanceCount() const { return _gpuLodMeshInstances.getInstanceCount(); }
+	u32 getSubMeshInstanceCount() const { return _gpuSubMeshInstances.getInstanceCount(); }
 
 private:
 	VramShaderSetSystem _vramShaderSetSystem;
