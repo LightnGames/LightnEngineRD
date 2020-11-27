@@ -22,6 +22,15 @@ StructuredBuffer<uint> _vertexTexcoords : register(t13);
 
 ByteAddressBuffer _currentLodLevels : register(t15);
 
+struct DebugPrimitive {
+	uint3 _dispatchAS;
+	uint3 _dispatchMS;
+	uint _meshletIndex;
+	uint2 _setMeshOutputCount;
+	uint _checkSum;
+};
+RWStructuredBuffer<DebugPrimitive> _debugOutputPrimitives : register(u0);
+
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void main(
@@ -41,6 +50,18 @@ void main(
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
     SetMeshOutputCounts(vertexCount, primitiveCount);
+
+	uint asOffset = debugPrimitive._dispatchAS.x * 32 + debugPrimitive._dispatchAS.y;
+	uint msOffset = debugPrimitive._dispatchMS.x * 128 + debugPrimitive._dispatchMS.y;
+	uint debugOffset = asOffset * 128 + msOffset;
+
+	DebugPrimitive debugPrimitive;
+	debugPrimitive._dispatchAS;
+	debugPrimitive._dispatchMS = uint3(gid.x, gtid, 0);
+	debugPrimitive._meshletIndex = meshletIndex;
+	debugPrimitive._setMeshOutputCount = uint2(vertexCount, primitiveCount);
+	debugPrimitive._checkSum = debugOffset;
+	_debugOutputPrimitives[debugOffset] = debugPrimitive;
 
     uint threadIndex = gtid;
     if(threadIndex < primitiveCount){

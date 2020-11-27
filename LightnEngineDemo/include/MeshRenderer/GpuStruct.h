@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/System.h>
+#include <GfxCore/impl/GraphicsApiInterface.h>
 
 namespace gpu {
 	constexpr u32 INVALID_INDEX = 0xffffffff;
@@ -121,4 +122,14 @@ namespace gpu {
 		u32 _testOcclusionCullingTriangleCount = 0;
 		u32 _passOcclusionCullingTriangleCount = 0;
 	};
+
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+	struct DebugPrimitive {
+		u32 _dispatchAS[3];
+		u32 _dispatchMS[3];
+		u32 _meshletIndex;
+		u32 _setMeshOutputCount[2];
+		u32 _checkSum;
+	};
+#endif
 }

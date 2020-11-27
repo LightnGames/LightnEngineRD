@@ -504,6 +504,12 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._sizeInByte = Scene::PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
 		_packedMeshletCountBuffer.initialize(desc);
 		_packedMeshletCountBuffer.setDebugName("Packed Meshlet Counts");
+
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+		desc._sizeInByte = Scene::MESHLET_INSTANCE_COUNT_MAX * sizeof(gpu::DebugPrimitive);
+		_debugOutputPrimitiveBuffer.initialize(desc);
+		_debugOutputPrimitiveBuffer.setDebugName("Debug Output Primitive");
+#endif
 	}
 
 	// srv buffers
@@ -610,6 +616,15 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 
 		_packedMeshletCountCpuHandle = cpuAllocator->allocateDescriptors(1);
 		device->createUnorderedAccessView(_packedMeshletCountBuffer.getResource(), nullptr, &desc, _packedMeshletCountCpuHandle._cpuHandle);
+
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+		_debugOutputPrimitiveUav = allocator->allocateDescriptors(1);
+		desc._format = FORMAT_UNKNOWN;
+		desc._buffer._numElements = Scene::MESHLET_INSTANCE_COUNT_MAX;
+		desc._buffer._flags = BUFFER_UAV_FLAG_NONE;
+		desc._buffer._structureByteStride = sizeof(gpu::DebugPrimitive);
+		device->createUnorderedAccessView(_debugOutputPrimitiveBuffer.getResource(), nullptr, &desc, _debugOutputPrimitiveUav._cpuHandle);
+#endif
 	}
 
 	// culling result uav descriptors
@@ -788,6 +803,11 @@ void GraphicsView::terminate() {
 	cpuAllocater->discardDescriptor(_countCpuUavHandle);
 	cpuAllocater->discardDescriptor(_cullingResultCpuUavHandle);
 	cpuAllocater->discardDescriptor(_packedMeshletCountCpuHandle);
+
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+	_debugOutputPrimitiveBuffer.terminate();
+	allocator->discardDescriptor(_debugOutputPrimitiveUav);
+#endif
 }
 
 void GraphicsView::update() {
@@ -936,6 +956,9 @@ void GraphicsView::setDrawResultDescriptorTable(CommandList* commandList) {
 void GraphicsView::setDrawCurrentLodDescriptorTable(CommandList* commandList) {
 	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
 	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_PACKED_MESHLET_INFO, _packedMeshletSrv._gpuHandle);
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_DEBUG_OUTPUT_PRIMITIVE, _debugOutputPrimitiveUav._gpuHandle);
+#endif
 }
 
 void GraphicsView::render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset) {

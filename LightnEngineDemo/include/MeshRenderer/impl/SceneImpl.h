@@ -227,6 +227,11 @@ private:
 	DescriptorHandle _packedMeshletCountCpuHandle;
 	GpuBuffer _packedMeshletCountBuffer;
 	GpuBuffer _packedMeshletBuffer;
+
+#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
+	GpuBuffer _debugOutputPrimitiveBuffer;
+	DescriptorHandle _debugOutputPrimitiveUav;
+#endif
 };
 
 class SubMeshInstanceImpl : public SubMeshInstance {

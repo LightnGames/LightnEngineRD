@@ -6,6 +6,8 @@
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
 
+#define ENABLE_DEBUG_OUTPUT_PRIMITIVE 1
+
 struct Resource;
 struct Device;
 struct CommandQueue;

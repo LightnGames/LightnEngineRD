@@ -1052,9 +1052,21 @@ void MeshRendererSystemImpl::update() {
 		}
 	}
 
+	constexpr char format1[] = "%-20s %-10d";
+	DebugWindow::StartWindow("Scene Instances");
+	DebugGui::Text(format1, "Mesh", _resourceManager.getMeshCount());
+	DebugGui::Text(format1, "LOD Mesh", _resourceManager.getLodMeshCount());
+	DebugGui::Text(format1, "Sub Mesh", _resourceManager.getSubMeshCount());
+	DebugGui::Text(format1, "Meshlet", _resourceManager.getMeshletCount());
+
+	DebugGui::Text(format1, "Mesh Instance", _scene.getMeshInstanceCount());
+	DebugGui::Text(format1, "LOD Mesh Instance", _scene.getLodMeshInstanceCount());
+	DebugGui::Text(format1, "Sub Mesh Instance", _scene.getSubMeshInstanceCount());
+	DebugWindow::End();
+
 	DebugWindow::StartWindow("Scene Meshs");
-	constexpr char format3[] = "%-7.3f%% ( %-6d/ %-6d)";
 	constexpr char format2[] = "%-12s";
+	constexpr char format3[] = "%-7.3f%% ( %-6d/ %-6d)";
 	char t[128];
 	const CullingResult* cullingResult = _view.getCullingResult();
 
