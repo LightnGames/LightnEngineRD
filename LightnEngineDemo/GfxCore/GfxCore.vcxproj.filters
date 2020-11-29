@@ -193,5 +193,8 @@
     <None Include="..\..\work\common\shader\debug\debug_draw_meshlet_bounds.csf">
       <Filter>shader\debug</Filter>
     </None>
+    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\build_indirect_arguments.csf">
+      <Filter>shader\mesh_shader_gpu_driven</Filter>
+    </None>
   </ItemGroup>
 </Project>
