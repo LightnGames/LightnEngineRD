@@ -118,8 +118,9 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
         _commandSignature = allocator->allocateCommandSignature();
 
         IndirectArgumentDesc argumentDescs[2] = {};
-        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_SHADER_RESOURCE_VIEW;
-        argumentDescs[0].ShaderResourceView._rootParameterIndex = ROOT_DEFAULT_MESH_MESHLET_INFO;
+        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+        argumentDescs[0].Constant._num32BitValuesToSet = 1;
+        argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_BATCHED_INDEX;
         argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 
         CommandSignatureDesc desc = {};

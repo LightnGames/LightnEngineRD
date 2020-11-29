@@ -3,19 +3,21 @@
 RWByteAddressBuffer _cullingResult : register(u0);
 
 [numthreads(THREAD_NUM, 1, 1)]
-void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
+{
     bool visible = false;
-    uint meshletInstanceLocalIndex = groupID.x * THREAD_NUM + groupThreadID.x;
-    uint meshletInfoIndex = groupID.y;
-    MeshletInfo meshletInfo = _meshletInfos[meshletInfoIndex];
-    uint meshletIndex = meshletInfo._meshletIndex + meshletInstanceLocalIndex;
-     if (meshletInstanceLocalIndex < meshletInfo._meshletCountMax) {
+    BatchedSubMeshInfo batchedSubMeshInfo = _batchedSubMeshInfos[_batchedSubMeshInfoIndex._index];
+    uint meshletLocalIndex = dtid % batchedSubMeshInfo._meshletCountMax;
+    uint meshInstanceOffset = dtid / batchedSubMeshInfo._meshletCountMax;
+    uint meshletIndex = batchedSubMeshInfo._meshletIndex + meshletLocalIndex;
+    if (meshInstanceOffset < batchedSubMeshInfo._meshletCountMax)
+    {
         visible = true;
     }
     
     if (visible) {
         uint index = WavePrefixCountBits(visible);
-        writePayloadStruct(index, meshletIndex, meshletInfo);
+        writePayloadStruct(index, meshletIndex, batchedSubMeshInfo);
         
         uint currentCount = 0;
         Meshlet meshlet = _meshlets[meshletIndex];

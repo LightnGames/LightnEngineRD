@@ -26,13 +26,13 @@ ByteAddressBuffer _currentLodLevels : register(t15);
 [OutputTopology("triangle")]
 void main(
     uint gtid : SV_GroupThreadID,
-    uint3 gid : SV_GroupID,
-    in payload PayloadStruct meshPayload,
+    uint gid : SV_GroupID,
+    in payload PayloadStruct payload,
     out indices uint3 tris[126],
     out vertices VertexOut verts[64]
 ){
-    uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid.x];
-    uint meshletIndex = meshPayload._meshletIndices[gid.x];
+    uint meshInstanceIndex = payload._meshInstanceIndices[gid];
+    uint meshletIndex = payload._meshletIndices[gid];
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
     Mesh mesh = _meshes[meshInstance._meshIndex];
@@ -41,19 +41,21 @@ void main(
     uint primitiveCount = meshlet._primitiveCount;
     SetMeshOutputCounts(vertexCount, primitiveCount);
 
-    uint threadIndex = gtid;
-    if(threadIndex < primitiveCount){
-        uint primitiveIndex = meshlet._primitiveOffset + threadIndex;
-        uint packedIndex = _primitives[meshPayload._primitiveOffset + primitiveIndex];
-        tris[threadIndex] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
+    if(gtid < primitiveCount){
+        uint primitiveIndex = meshlet._primitiveOffset + gtid;
+        uint packedIndex = _primitives[payload._primitiveOffset + primitiveIndex];
+        tris[gtid] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
     }
 
-    if(threadIndex < vertexCount){
-        uint vertexLocalIndex = meshlet._vertexOffset + threadIndex;
-        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset + vertexLocalIndex];
-        uint vertexOffset = meshPayload._vertexOffset + vertexIndex;
+    if(gtid < vertexCount){
+        uint vertexLocalIndex = meshlet._vertexOffset + gtid;
+        uint vertexIndex = _vertexIndices[payload._vertexIndexOffset + vertexLocalIndex];
+        uint vertexOffset = payload._vertexOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
-        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+
+        float3 offset = float3(payload._meshInstanceOffsets[gid] * 3.0, 0, 0);
+        //float3 offset = float3(0, 0, 0);
+        float4 worldPos = mul(float4(positionVertex + offset, 1), meshInstance._matrixWorld);
 
         uint currentLodLevel = _currentLodLevels.Load(meshInstanceIndex * 4);
         
@@ -62,13 +64,14 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = meshPayload._materialIndex;
+        vertexOut._materialIndex = payload._materialIndex;
 
         vertexOut._lodLevel = 0.0;
         if(mesh._lodMeshCount > 1){
             vertexOut._lodLevel = currentLodLevel / (float)(mesh._lodMeshCount - 1);
         }
 
-        verts[threadIndex] = vertexOut;
+        verts[gtid] =
+vertexOut;
     }
 }

@@ -170,6 +170,7 @@ class GraphicsView {
 public:
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
 	static constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
+	static constexpr u32 BATCHED_SUBMESH_COUNT_MAX = 1024 * 16;
 
 	void initialize(const ViewInfo* viewInfo);
 	void terminate();
@@ -204,7 +205,7 @@ private:
 	GpuBuffer _countBuffer;
 	GpuBuffer _cullingResultBuffer;
 	GpuBuffer _cullingResultReadbackBuffer[BACK_BUFFER_COUNT] = {};
-	GpuBuffer _passedMeshletInfoBuffer;
+	GpuBuffer _batchedSubMeshInfoBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[HIERACHICAL_DEPTH_COUNT] = {};
@@ -222,6 +223,11 @@ private:
 	gpu::CullingResult* _cullingResultMapPtr[BACK_BUFFER_COUNT] = {};
 	gpu::CullingResult* _currentFrameCullingResultMapPtr = nullptr;
 	const ViewInfo* _viewInfo = nullptr;
+
+	DescriptorHandle _batchedSubMeshInfoSrv;
+	DescriptorHandle _packedMeshletCountUav;
+	DescriptorHandle _packedMeshletCountCpuUav;
+	GpuBuffer _packedMeshletCountBuffer;
 };
 
 class SubMeshInstanceImpl : public SubMeshInstance {
@@ -277,6 +283,7 @@ public:
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
+	static constexpr u32 PACKED_SUB_MESH_COUNT_MAX = 64;
 
 	void initialize();
 	void update();
@@ -295,6 +302,7 @@ public:
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
+	DescriptorHandle getPackedMeshletOffsetHandles() const { return _packedMeshletOffsetHandle; }
 
 private:
 	VramShaderSetSystem _vramShaderSetSystem;
@@ -315,4 +323,7 @@ private:
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
+
+	DescriptorHandle _packedMeshletOffsetHandle;
+	GpuBuffer _packedMeshletOffsetBuffer;
 };

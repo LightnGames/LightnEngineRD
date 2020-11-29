@@ -1,6 +1,11 @@
 #include "../gpu_culling_function.sfh"
 
+struct BatchedSubMeshInfoIndex {
+    uint _index;
+};
+
 ConstantBuffer<ViewInfo> _viewInfo : register(b1);
+ConstantBuffer<BatchedSubMeshInfoIndex> _batchedSubMeshInfoIndex : register(b2);
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<Mesh> _meshes : register(t1);
@@ -11,7 +16,7 @@ StructuredBuffer<Meshlet> _meshlets : register(t4);
 StructuredBuffer<MeshInstance> _meshInstances : register(t5);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
-StructuredBuffer<MeshletInfo> _meshletInfos : register(t9);
+StructuredBuffer<BatchedSubMeshInfo> _batchedSubMeshInfos : register(t9);
  
 #define THREADS_PER_WAVE 32
 #define THREAD_NUM THREADS_PER_WAVE
@@ -28,7 +33,8 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInfo meshletInfo) {
+void writePayloadStruct(uint visibleIndex, uint meshletIndex, BatchedSubMeshInfo meshletInfo)
+{
     _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
     _passMeshlets._meshletCountMax = meshletInfo._meshletCountMax;

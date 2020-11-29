@@ -1184,8 +1184,8 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	ID3DBlob* error = nullptr;
 	D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error);
 	if (error != nullptr) {
-		char errorMessage[256];
-		memcpy(errorMessage, error->GetBufferPointer(), 256);
+		char errorMessage[512];
+		memcpy(errorMessage, error->GetBufferPointer(), 512);
 		error->Release();
 	}
 	LTN_ASSERT(error == nullptr);

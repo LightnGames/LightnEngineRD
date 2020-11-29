@@ -1,11 +1,11 @@
 #include "../gpu_culling_function.sfh"
 
-struct DispatchMeshIndirectArgument {
-    uint2 _meshletInfoGpuAddress;
-    uint _dispatchX;
-    uint _dispatchY;
-    uint _dispatchZ;
-};
+//struct DispatchMeshIndirectArgument {
+//    uint _batchedSubMeshInfoOffset;
+//    uint _dispatchX;
+//    uint _dispatchY;
+//    uint _dispatchZ;
+//};
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
 ConstantBuffer<CullingViewInfo> _cullingViewInfo : register(b1);
@@ -16,13 +16,15 @@ StructuredBuffer<SubMesh> _subMeshes : register(t2);
 StructuredBuffer<MeshInstance> _meshInstances : register(t3);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
-ByteAddressBuffer _indirectArgumentOffsets : register(t6);
+//ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
 StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
+ByteAddressBuffer _batchedSubMeshInfoOffsets : register(t9);
 
-RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
-RWByteAddressBuffer _countBuffer : register(u1);
-RWStructuredBuffer<MeshletInfo> _meshletInfos : register(u2);
+//RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
+//RWByteAddressBuffer _countBuffer : register(u1);
+RWStructuredBuffer<BatchedSubMeshInfo> _batchedSubMeshInfo : register(u0);
+RWByteAddressBuffer _batchedSubMeshInfoCounts : register(u1);
 
 #define THREAD_NUM 128
 #define AMPLIFICATION_DISPATCH_NUM 32
@@ -76,34 +78,41 @@ void addIndirectArgument(uint meshInstanceIndex) {
     LodMeshInstance lodMeshInstance = _lodMeshInstances[meshInstance._lodMeshInstanceOffset + lodLevel];
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
-        SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
-			
-        uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
-        uint currentCountIndex = 0;
-        _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
-	
-        uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset);
-        uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
-        uint dispatchCount = (subMesh._meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
-        uint2 meshletInfoAddress = _cullingViewInfo._meshletInfoGpuAddress;
-        addUint64(meshletInfoAddress, MESHLET_INFO_SIZE_IN_BYTE * indirectArgumentOffset);
+        if (subMesh._meshletCount < 64) {
+            SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
+            uint batchedSubMeshInfoOffsetAddress = (subMeshInstance._shaderSetIndex * 64 + subMesh._meshletCount) * UINT32_SIZE_IN_BYTE;
+            uint batchedSubMeshInfoOffset = _batchedSubMeshInfoOffsets.Load(batchedSubMeshInfoOffsetAddress);
+            uint batchedSubMeshInfoLocalOffset = 0;
+            _batchedSubMeshInfoCounts.InterlockedAdd(batchedSubMeshInfoOffsetAddress, 1, batchedSubMeshInfoLocalOffset);
 		
-        DispatchMeshIndirectArgument arguments;
+            BatchedSubMeshInfo info;
+            info._meshletIndex = subMesh._meshletOffset;
+            info._meshInstanceIndex = meshInstanceIndex;
+            info._meshletCountMax = subMesh._meshletCount;
+            info._materialIndex = subMeshInstance._materialIndex;
+            info._vertexOffset = lodMesh._vertexOffset;
+            info._vertexIndexOffset = lodMesh._vertexIndexOffset;
+            info._primitiveOffset = lodMesh._primitiveOffset;
+            
+            uint globalOffset = batchedSubMeshInfoOffset + batchedSubMeshInfoLocalOffset;
+            _batchedSubMeshInfo[globalOffset] = info;
+            
+            //uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
+            //uint currentCountIndex = 0;
+            //_countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
 
-        arguments._meshletInfoGpuAddress = meshletInfoAddress;
-        arguments._dispatchX = dispatchCount;
-        arguments._dispatchY = 1;
-        arguments._dispatchZ = 1;
-        _indirectArguments[indirectArgumentOffset] = arguments;
+            //uint instanceCount = 2;
+            //uint meshletCount = subMesh._meshletCount * instanceCount;
+            //uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset);
+            //uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
+            //uint dispatchCount = (meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
 		
-        MeshletInfo meshletInfo;
-        meshletInfo._meshletIndex = subMesh._meshletOffset;
-        meshletInfo._meshInstanceIndex = meshInstanceIndex;
-        meshletInfo._meshletCountMax = subMesh._meshletCount;
-        meshletInfo._materialIndex = subMeshInstance._materialIndex;
-        meshletInfo._vertexOffset = lodMesh._vertexOffset;
-        meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
-        meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
-        _meshletInfos[indirectArgumentOffset] = meshletInfo;
+            //DispatchMeshIndirectArgument arguments;
+            //arguments._batchedSubMeshInfoOffset = indirectArgumentOffset;
+            //arguments._dispatchX = dispatchCount;
+            //arguments._dispatchY = 1;
+            //arguments._dispatchZ = 1;
+            //_indirectArguments[indirectArgumentOffset] = arguments;
+        }
     }
 }

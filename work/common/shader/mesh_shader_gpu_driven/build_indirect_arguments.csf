@@ -1,0 +1,41 @@
+#include "../gpu_culling_function.sfh"
+
+struct DispatchMeshIndirectArgument {
+    uint _batchedSubMeshInfoOffset;
+    uint _instanceCount;
+    uint _dispatchX;
+    uint _dispatchY;
+    uint _dispatchZ;
+};
+
+ByteAddressBuffer _batchedSubMeshInfoOffsets : register(t0);
+ByteAddressBuffer _batchedSubMeshInfoCounts : register(t1);
+
+RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
+RWByteAddressBuffer _countBuffer : register(u1);
+
+#define INSTANCING_MESHLET_COUNT_MAX 64
+
+[numthreads(128, 1, 1)]
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
+    uint instanceCount = _batchedSubMeshInfoCounts.Load(dtid * UINT32_SIZE_IN_BYTE);
+    if (instanceCount == 0) {
+        return;
+    }
+    uint meshletCount = dtid % INSTANCING_MESHLET_COUNT_MAX;
+    uint shaderSetIndex = dtid / INSTANCING_MESHLET_COUNT_MAX;
+    
+    uint currentCount = 0;
+    uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
+    _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
+    
+    DispatchMeshIndirectArgument arguments;
+    arguments._batchedSubMeshInfoOffset = _batchedSubMeshInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
+    arguments._instanceCount = instanceCount;
+    arguments._dispatchX = (arguments._instanceCount / 32) + 1;
+    arguments._dispatchY = 1;
+    arguments._dispatchZ = 1;
+    
+    uint indirectArgumentOffset = shaderSetIndex * INSTANCING_MESHLET_COUNT_MAX + countOffset;
+    _indirectArguments[indirectArgumentOffset] = arguments;
+}
