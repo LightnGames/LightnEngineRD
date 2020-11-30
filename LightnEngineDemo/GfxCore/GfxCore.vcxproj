@@ -187,6 +187,7 @@
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_frustum_occlusion.asf" />
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_pass.asf" />
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_template.sfh" />
+    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\build_indirect_arguments.csf" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum.csf" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_occlusion.csf" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_template.sfh" />

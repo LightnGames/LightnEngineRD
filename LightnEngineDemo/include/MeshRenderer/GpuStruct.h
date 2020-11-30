@@ -1,6 +1,5 @@
 #pragma once
 #include <Core/System.h>
-#include <GfxCore/impl/GraphicsApiInterface.h>
 
 namespace gpu {
 	constexpr u32 INVALID_INDEX = 0xffffffff;
@@ -11,18 +10,13 @@ namespace gpu {
 		MESH_STATE_LOADED,
 	};
 
-	struct BatchedMeshletInfo {
-		u32 _packedMeshletOffset;
-		u32 _packedMeshletCount;
-		u32 _totalMeshletCountMax;
-	};
-
-	struct PackedMeshletInfo {
-		u32 _meshletIndex;
+	struct BatchedSubMeshInfo {
+		u32 _meshletInstanceOffset;
 		u32 _meshInstanceIndex;
+		u32 _meshInstanceOffset;
+		u32 _meshletCountMax;
 		u32 _materialIndex;
 		u32 _vertexOffset;
-		u32 _vertexIndexOffset;
 		u32 _primitiveOffset;
 	};
 
@@ -84,7 +78,7 @@ namespace gpu {
 	};
 
 	struct DispatchMeshIndirectArgument {
-		u32 _meshletInfoGpuAddress[2] = {};
+		u32 _batchedMeshletInfoIndex = 0;
 		u32 _dispatchX = 0;
 		u32 _dispatchY = 0;
 		u32 _dispatchZ = 0;
@@ -122,14 +116,4 @@ namespace gpu {
 		u32 _testOcclusionCullingTriangleCount = 0;
 		u32 _passOcclusionCullingTriangleCount = 0;
 	};
-
-#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
-	struct DebugPrimitive {
-		u32 _dispatchAS[3];
-		u32 _dispatchMS[3];
-		u32 _meshletIndex;
-		u32 _setMeshOutputCount[2];
-		u32 _checkSum;
-	};
-#endif
 }

@@ -41,7 +41,6 @@ void Scene::initialize() {
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshInstanceHandles = allocator->allocateDescriptors(3);
 		_packedMeshletOffsetHandle = allocator->allocateDescriptors(1);
-
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
 		ShaderResourceViewDesc desc = {};
@@ -67,6 +66,7 @@ void Scene::initialize() {
 			device->createShaderResourceView(_subMeshInstanceBuffer.getResource(), &desc, handle + incrimentSize * 2);
 		}
 
+
 		// packed meshlet offset
 		{
 			desc._buffer._numElements = PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
@@ -74,7 +74,6 @@ void Scene::initialize() {
 			device->createShaderResourceView(_packedMeshletOffsetBuffer.getResource(), &desc, _packedMeshletOffsetHandle._cpuHandle);
 		}
 	}
-
 
 	// default shader set
 	{
@@ -97,7 +96,7 @@ void Scene::update() {
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		if (_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX) {
-			updateMeshInstanceBounds(meshInstanceIndex);
+				updateMeshInstanceBounds(meshInstanceIndex);
 		}
 	}
 
@@ -122,36 +121,37 @@ void Scene::update() {
 		}
 	}
 
-	constexpr u32 ARRAY_COUNT = PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
-	u32* packedSubMeshOffsets = vramUpdater->enqueueUpdate<u32>(&_packedMeshletOffsetBuffer, 0, ARRAY_COUNT);
-	u32 packedMeshletCounts[ARRAY_COUNT] = {};
-	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
-		const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
-		const gpu::LodMesh* lodMeshes = mesh->getGpuLodMesh();
-		const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
-		gpu::SubMeshInstance* subMeshInstances = _meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
-		u32 subMeshCounter = 0;
-		u32 lodCount = mesh->getGpuMesh()->_lodMeshCount;
-		for (u32 lodIndex = 0; lodIndex < lodCount; ++lodIndex) {
-			u32 subMeshCount = lodMeshes[lodIndex]._subMeshCount;
-			for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-				u32 meshletCount = subMeshes[subMeshCounter]._meshletCount;
-				if (meshletCount < PACKED_SUB_MESH_COUNT_MAX) {
-					u32 shaderSetOffset = subMeshInstances[subMeshCounter]._shaderSetIndex * PACKED_SUB_MESH_COUNT_MAX;
-					packedMeshletCounts[shaderSetOffset + meshletCount]++;
-				}
-				++subMeshCounter;
-			}
-		}
-	}
-
-	packedSubMeshOffsets[0] = 0;
-	for (u32 packedIndex = 1; packedIndex < ARRAY_COUNT; ++packedIndex) {
-		u32 prevIndex = packedIndex - 1;
-		packedSubMeshOffsets[packedIndex] = packedSubMeshOffsets[prevIndex] + packedMeshletCounts[prevIndex];
-	}
-
 	_vramShaderSetSystem.update();
+
+	//constexpr u32 ARRAY_COUNT = PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+	//u32* packedSubMeshOffsets = vramUpdater->enqueueUpdate<u32>(&_packedMeshletOffsetBuffer, 0, ARRAY_COUNT);
+	//u32 packedMeshletCounts[ARRAY_COUNT] = {};
+	//for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
+	//	const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
+	//	const gpu::LodMesh* lodMeshes = mesh->getGpuLodMesh();
+	//	const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
+	//	gpu::SubMeshInstance* subMeshInstances = _meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
+	//	u32 subMeshCounter = 0;
+	//	u32 lodCount = mesh->getGpuMesh()->_lodMeshCount;
+	//	for (u32 lodIndex = 0; lodIndex < lodCount; ++lodIndex) {
+	//		u32 subMeshCount = lodMeshes[lodIndex]._subMeshCount;
+	//		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+	//			u32 meshletCount = subMeshes[subMeshCounter]._meshletCount;
+	//			if (meshletCount < PACKED_SUB_MESH_COUNT_MAX) {
+	//				u32 shaderSetOffset = subMeshInstances[subMeshCounter]._shaderSetIndex * PACKED_SUB_MESH_COUNT_MAX;
+	//				packedMeshletCounts[shaderSetOffset + meshletCount]++;
+	//			}
+	//			++subMeshCounter;
+	//		}
+	//	}
+	//}
+
+	//packedSubMeshOffsets[0] = 0;
+	//for (u32 packedIndex = 1; packedIndex < ARRAY_COUNT; ++packedIndex) {
+	//	u32 prevIndex = packedIndex - 1;
+	//	packedSubMeshOffsets[packedIndex] = packedSubMeshOffsets[prevIndex] + packedMeshletCounts[prevIndex];
+	//}
+
 }
 
 void Scene::processDeletion() {
@@ -495,32 +495,21 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX;
 		_countBuffer.initialize(desc);
 		_countBuffer.setDebugName("Indirect Argument Count");
-
-		desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
-		desc._sizeInByte = Scene::SUB_MESH_INSTANCE_COUNT_MAX * sizeof(gpu::PackedMeshletInfo);
-		_packedMeshletBuffer.initialize(desc);
-		_packedMeshletBuffer.setDebugName("Packed Meshlets");
-
-		desc._sizeInByte = Scene::PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
-		_packedMeshletCountBuffer.initialize(desc);
-		_packedMeshletCountBuffer.setDebugName("Packed Meshlet Counts");
-
-#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
-		desc._sizeInByte = Scene::MESHLET_INSTANCE_COUNT_MAX * sizeof(gpu::DebugPrimitive);
-		_debugOutputPrimitiveBuffer.initialize(desc);
-		_debugOutputPrimitiveBuffer.setDebugName("Debug Output Primitive");
-#endif
 	}
 
 	// srv buffers
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = sizeof(gpu::BatchedMeshletInfo) * INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._sizeInByte = sizeof(gpu::BatchedSubMeshInfo) * BATCHED_SUBMESH_COUNT_MAX;
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		desc._device = device;
-		_batchedMeshletInfoBuffer.initialize(desc);
-		_batchedMeshletInfoBuffer.setDebugName("Passed Meshlet Infos");
+		_batchedSubMeshInfoBuffer.initialize(desc);
+		_batchedSubMeshInfoBuffer.setDebugName("Passed Meshlet Infos");
+
+		desc._sizeInByte = Scene::PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
+		_packedMeshletCountBuffer.initialize(desc);
+		_packedMeshletCountBuffer.setDebugName("Packed Meshlet Counts");
 	}
 
 	// culling result buffers
@@ -554,7 +543,9 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._device = device;
 		_cullingResultReadbackBuffer[frameIndex].initialize(desc);
 		_cullingResultReadbackBuffer[frameIndex].setDebugName("Culling Result Readback");
+		_cullingResultMapPtr[frameIndex] = _cullingResultReadbackBuffer[frameIndex].map<gpu::CullingResult>();
 	}
+	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[0];
 
 	// constant buffers
 	{
@@ -574,13 +565,11 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 
 	// uav descriptors
 	{
-		_indirectArgumentUavHandle = allocator->allocateDescriptors(5);
-		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
+		_indirectArgumentUavHandle = allocator->allocateDescriptors(3);
+		u32 incrimentSize = allocator->getIncrimentSize();
 		CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUavHandle._cpuHandle;
 		CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
-		CpuDescriptorHandle meshletInfoHandle = indirectArgumentHandle + incrimentSize * 2;
-		CpuDescriptorHandle packedMeshletHandle = indirectArgumentHandle + incrimentSize * 3;
-		CpuDescriptorHandle packedMeshletCountHandle = indirectArgumentHandle + incrimentSize * 4;
+		CpuDescriptorHandle meshletInfoHandle = indirectArgumentHandle + static_cast<u64>(incrimentSize) * 2;
 
 		UnorderedAccessViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
@@ -590,9 +579,11 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
 		device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
 
-		desc._buffer._structureByteStride = sizeof(gpu::BatchedMeshletInfo);
-		device->createUnorderedAccessView(_batchedMeshletInfoBuffer.getResource(), nullptr, &desc, meshletInfoHandle);
+		desc._buffer._numElements = BATCHED_SUBMESH_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::BatchedSubMeshInfo);
+		device->createUnorderedAccessView(_batchedSubMeshInfoBuffer.getResource(), nullptr, &desc, meshletInfoHandle);
 
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 		desc._buffer._structureByteStride = 0;
 		desc._format = FORMAT_R32_TYPELESS;
@@ -601,30 +592,21 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		// カウントバッファをAPIの機能でクリアするためにCPU Only Descriptorを作成
 		_countCpuUavHandle = cpuAllocator->allocateDescriptors(1);
 		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUavHandle._cpuHandle);
+	}
 
-		desc._format = FORMAT_UNKNOWN;
-		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
-		desc._buffer._flags = BUFFER_UAV_FLAG_NONE;
-		desc._buffer._structureByteStride = sizeof(gpu::PackedMeshletInfo);
-		device->createUnorderedAccessView(_packedMeshletBuffer.getResource(), nullptr, &desc, packedMeshletHandle);
+	// packed meshlet count uav
+	{
+		_packedMeshletCountUav = allocator->allocateDescriptors(1);
+		_packedMeshletCountCpuUav = cpuAllocator->allocateDescriptors(1);
 
+		UnorderedAccessViewDesc desc = {};
 		desc._format = FORMAT_R32_TYPELESS;
-		desc._buffer._numElements = Scene::PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		desc._buffer._structureByteStride = 0;
-		device->createUnorderedAccessView(_packedMeshletCountBuffer.getResource(), nullptr, &desc, packedMeshletCountHandle);
-
-		_packedMeshletCountCpuHandle = cpuAllocator->allocateDescriptors(1);
-		device->createUnorderedAccessView(_packedMeshletCountBuffer.getResource(), nullptr, &desc, _packedMeshletCountCpuHandle._cpuHandle);
-
-#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
-		_debugOutputPrimitiveUav = allocator->allocateDescriptors(1);
-		desc._format = FORMAT_UNKNOWN;
-		desc._buffer._numElements = Scene::MESHLET_INSTANCE_COUNT_MAX;
-		desc._buffer._flags = BUFFER_UAV_FLAG_NONE;
-		desc._buffer._structureByteStride = sizeof(gpu::DebugPrimitive);
-		device->createUnorderedAccessView(_debugOutputPrimitiveBuffer.getResource(), nullptr, &desc, _debugOutputPrimitiveUav._cpuHandle);
-#endif
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = Scene::PACKED_SUB_MESH_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+		device->createUnorderedAccessView(_packedMeshletCountBuffer.getResource(), nullptr, &desc, _packedMeshletCountUav._cpuHandle);
+		device->createUnorderedAccessView(_packedMeshletCountBuffer.getResource(), nullptr, &desc, _packedMeshletCountCpuUav._cpuHandle);
 	}
 
 	// culling result uav descriptors
@@ -665,18 +647,13 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._buffer._numElements = Scene::MESH_INSTANCE_COUNT_MAX;
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
 		device->createShaderResourceView(_currentLodLevelBuffer.getResource(), &desc, _currentLodLevelSrv._cpuHandle);
-	}
 
-	// packed meshlets
-	{
-		_packedMeshletSrv = allocator->allocateDescriptors(1);
-		ShaderResourceViewDesc desc = {};
+		_batchedSubMeshInfoSrv = allocator->allocateDescriptors(1);
 		desc._format = FORMAT_UNKNOWN;
-		desc._viewDimension = SRV_DIMENSION_BUFFER;
-		desc._buffer._firstElement = 0;
-		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(gpu::PackedMeshletInfo);
-		device->createShaderResourceView(_packedMeshletBuffer.getResource(), &desc, _packedMeshletSrv._cpuHandle);
+		desc._buffer._numElements = BATCHED_SUBMESH_COUNT_MAX;
+		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
+		desc._buffer._structureByteStride = sizeof(gpu::BatchedSubMeshInfo);
+		device->createShaderResourceView(_batchedSubMeshInfoBuffer.getResource(), &desc, _batchedSubMeshInfoSrv._cpuHandle);
 	}
 
 	// build hiz textures
@@ -768,10 +745,9 @@ void GraphicsView::terminate() {
 	_indirectArgumentBuffer.terminate();
 	_countBuffer.terminate();
 	_cullingResultBuffer.terminate();
-	_batchedMeshletInfoBuffer.terminate();
+	_batchedSubMeshInfoBuffer.terminate();
 	_cullingViewConstantBuffer.terminate();
 	_currentLodLevelBuffer.terminate();
-	_packedMeshletBuffer.terminate();
 	_packedMeshletCountBuffer.terminate();
 
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
@@ -797,17 +773,13 @@ void GraphicsView::terminate() {
 	}
 	allocator->discardDescriptor(_hizDepthTextureUav);
 	allocator->discardDescriptor(_hizDepthTextureSrv);
-	allocator->discardDescriptor(_packedMeshletSrv);
+	allocator->discardDescriptor(_packedMeshletCountUav);
+	allocator->discardDescriptor(_batchedSubMeshInfoSrv);
 
-	DescriptorHeapAllocator* cpuAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
-	cpuAllocater->discardDescriptor(_countCpuUavHandle);
-	cpuAllocater->discardDescriptor(_cullingResultCpuUavHandle);
-	cpuAllocater->discardDescriptor(_packedMeshletCountCpuHandle);
-
-#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
-	_debugOutputPrimitiveBuffer.terminate();
-	allocator->discardDescriptor(_debugOutputPrimitiveUav);
-#endif
+	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	cpuAllocator->discardDescriptor(_countCpuUavHandle);
+	cpuAllocator->discardDescriptor(_cullingResultCpuUavHandle);
+	cpuAllocator->discardDescriptor(_packedMeshletCountCpuUav);
 }
 
 void GraphicsView::update() {
@@ -831,7 +803,7 @@ void GraphicsView::update() {
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	CullingViewInfo* cullingInfo = vramUpdater->enqueueUpdate<CullingViewInfo>(&_cullingViewConstantBuffer, 0);
-	*reinterpret_cast<u64*>(cullingInfo->_meshletInfoGpuAddress) = _batchedMeshletInfoBuffer.getGpuVirtualAddress();
+	*reinterpret_cast<u64*>(cullingInfo->_meshletInfoGpuAddress) = _batchedSubMeshInfoBuffer.getGpuVirtualAddress();
 }
 
 void GraphicsView::setComputeLodResource(CommandList* commandList) {
@@ -874,10 +846,11 @@ void GraphicsView::resetResourceComputeLodBarriers(CommandList* commandList) {
 
 void GraphicsView::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
 	// Indirect Argument から UAVへ
-	ResourceTransitionBarrier indirectArgumentToUavBarriers[3] = {};
+	ResourceTransitionBarrier indirectArgumentToUavBarriers[4] = {};
 	indirectArgumentToUavBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
-	indirectArgumentToUavBarriers[2] = _batchedMeshletInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	indirectArgumentToUavBarriers[2] = _batchedSubMeshInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	indirectArgumentToUavBarriers[3] = _packedMeshletCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(indirectArgumentToUavBarriers, LTN_COUNTOF(indirectArgumentToUavBarriers));
 }
 
@@ -899,10 +872,11 @@ void GraphicsView::resourceBarriersHizUavtoSrv(CommandList * commandList){
 
 void GraphicsView::resetResourceGpuCullingBarriers(CommandList* commandList) {
 	// UAV から Indirect Argumentへ
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[3] = {};
+	ResourceTransitionBarrier uavToIndirectArgumentBarriers[4] = {};
 	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
-	uavToIndirectArgumentBarriers[2] = _batchedMeshletInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	uavToIndirectArgumentBarriers[2] = _batchedSubMeshInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	uavToIndirectArgumentBarriers[3] = _packedMeshletCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
 }
 
@@ -911,7 +885,8 @@ void GraphicsView::resetCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	u32 incrimentSize = allocater->getIncrimentSize();
-	// indirect arguments count
+
+	// indirect argument count
 	{
 		GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize;
 		CpuDescriptorHandle cpuDescriptor = _countCpuUavHandle._cpuHandle;
@@ -920,8 +895,8 @@ void GraphicsView::resetCountBuffers(CommandList* commandList) {
 
 	// packed meshlet count
 	{
-		GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize * 4;
-		CpuDescriptorHandle cpuDescriptor = _packedMeshletCountCpuHandle._cpuHandle;
+		GpuDescriptorHandle gpuDescriptor = _packedMeshletCountUav._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _packedMeshletCountCpuUav._cpuHandle;
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _packedMeshletCountBuffer.getResource(), clearValues, 0, nullptr);
 	}
 }
@@ -937,15 +912,10 @@ void GraphicsView::resetResultBuffers(CommandList* commandList) {
 void GraphicsView::readbackCullingResultBuffer(CommandList* commandList) {
 	// カリング結果をリードバックバッファへコピー 
 	u32 frameIndex = GraphicsSystemImpl::Get()->getFrameIndex();
-	GpuBuffer& currentReadbackBuffer = _cullingResultReadbackBuffer[frameIndex];
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-	commandList->copyBufferRegion(currentReadbackBuffer.getResource(), 0, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
+	commandList->copyBufferRegion(_cullingResultReadbackBuffer[frameIndex].getResource(), 0, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
-
-	MemoryRange range = { 0, 1 };
-	gpu::CullingResult* currentFrameCullingResultMapPtr = currentReadbackBuffer.map<gpu::CullingResult>(&range);
-	memcpy(&_currentFrameCullingResultMapPtr, currentFrameCullingResultMapPtr, sizeof(gpu::CullingResult));
-	currentReadbackBuffer.unmap();
+	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[frameIndex];
 }
 
 void GraphicsView::setDrawResultDescriptorTable(CommandList* commandList) {
@@ -955,10 +925,7 @@ void GraphicsView::setDrawResultDescriptorTable(CommandList* commandList) {
 
 void GraphicsView::setDrawCurrentLodDescriptorTable(CommandList* commandList) {
 	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
-	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_PACKED_MESHLET_INFO, _packedMeshletSrv._gpuHandle);
-#if ENABLE_DEBUG_OUTPUT_PRIMITIVE
-	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_DEBUG_OUTPUT_PRIMITIVE, _debugOutputPrimitiveUav._gpuHandle);
-#endif
+	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_BATCHED_INFO, _batchedSubMeshInfoSrv._gpuHandle);
 }
 
 void GraphicsView::render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset) {
@@ -972,5 +939,5 @@ ResourceDesc GraphicsView::getHizTextureResourceDesc(u32 level) const {
 }
 
 const CullingResult* GraphicsView::getCullingResult() const {
-	return reinterpret_cast<const CullingResult*>(&_currentFrameCullingResultMapPtr);
+	return reinterpret_cast<CullingResult*>(_currentFrameCullingResultMapPtr);
 }

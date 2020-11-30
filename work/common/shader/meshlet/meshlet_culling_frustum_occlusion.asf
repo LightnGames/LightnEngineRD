@@ -4,7 +4,8 @@ Texture2D<float> _hizTextures[] : register(t16);
 RWByteAddressBuffer _cullingResult : register(u0);
 
 [numthreads(THREAD_NUM, 1, 1)]
-void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
+{
     bool passFrustum = false;
     bool passBackface = false;
     bool passOcclusion = false;
@@ -19,18 +20,13 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     uint passBackfacePrimitiveCount = 0;
     uint passOcclusionPrimitiveCount = 0;
     
-    uint meshletInstanceLocalIndex = groupID.x * THREAD_NUM + groupThreadID.x;
-    uint meshletInfoIndex = groupID.y;
-    BatchedMeshletInfo batchedMeshletInfo = _batchedMeshletInfos[meshletInfoIndex];
-    
-    uint packedMeshletOffset = meshletInstanceLocalIndex / batchedMeshletInfo._packedMeshletCount;
-    PackedMeshletInfo packedMeshletInfo = _packedMeshletInfos[batchedMeshletInfo._packedMeshletOffset + packedMeshletOffset];
-    
-    uint meshletLocalIndex = meshletInstanceLocalIndex % batchedMeshletInfo._packedMeshletCount;
-    uint meshletIndex = meshletLocalIndex + packedMeshletInfo._meshletIndex;
+    BatchedSubMeshInfo batchedSubMeshInfo = _batchedSubMeshInfos[_batchedSubMeshInfoIndex._index];
+    uint meshletLocalIndex = dtid % batchedSubMeshInfo._meshletCountMax;
+    uint meshInstanceOffset = dtid / batchedSubMeshInfo._meshletCountMax;
+    uint meshletIndex = batchedSubMeshInfo._meshletIndex + meshletLocalIndex;
     Meshlet meshlet = _meshlets[meshletIndex];
-    if (meshletInstanceLocalIndex < batchedMeshletInfo._totalMeshletCountMax) {
-        MeshInstance meshInstance = _meshInstances[packedMeshletInfo._meshInstanceIndex];
+    if (meshInstanceOffset < batchedSubMeshInfo._meshInstanceCount) {
+        MeshInstance meshInstance = _meshInstances[batchedSubMeshInfo._meshInstanceIndex];
         MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, meshlet);
         ViewInfo viewInfo = _viewInfo;
         float3 boundsMin = meshletBounds._boundsMin;
@@ -39,21 +35,26 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
         isTestedFrustumCulling = true;
         testFrustumPrimitiveCount = meshlet._primitiveCount;
         
-        if(passFrustum){
-            passBackface = doBackFaceCulling(meshletBounds);   
+        if (passFrustum)
+        {
+            passBackface = doBackFaceCulling(meshletBounds);
         }
     
-        if(passBackface){
+        if (passBackface)
+        {
             uint hizLevel = 0;
             uint2 leftTopCoords = uint2(0, 0);
             uint2 sampleCount = uint2(0, 0);
             uint2 hizSize = uint2(0, 0);
             isTestedOcclusionCulling = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
-            if(isTestedOcclusionCulling){
+            if (isTestedOcclusionCulling)
+            {
                 float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[hizLevel]);
-                passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo); 
+                passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
                 visible = passOcclusion;
-            } else {
+            }
+            else
+            {
                 visible = true;
             }
         }
@@ -61,7 +62,8 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     
     if (visible) {
         uint index = WavePrefixCountBits(visible);
-        writePayloadStruct(index, meshletIndex, batchedMeshletInfo, packedMeshletInfo);
+        writePayloadStruct(index, meshletIndex, batchedSubMeshInfo);
+        _passMeshlets._meshInstanceOffsets[index] = meshInstanceOffset;
     }
     
     uint visibleCount = WaveActiveCountBits(visible);

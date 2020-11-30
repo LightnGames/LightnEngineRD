@@ -979,9 +979,8 @@ void ResourceD3D12::terminate() {
 	*_stateFlags = GRAPHICS_INTERFACE_STATE_REQUEST_DELETE;
 }
 
-void ResourceD3D12::unmap(const MemoryRange* range) {
-	const D3D12_RANGE* memoryRange = reinterpret_cast<const D3D12_RANGE*>(range);
-	_resource->Unmap(0, memoryRange);
+void ResourceD3D12::unmap() {
+	_resource->Unmap(0, nullptr);
 }
 
 u64 ResourceD3D12::getGpuVirtualAddress() const {
@@ -1186,7 +1185,7 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error);
 	if (error != nullptr) {
 		char errorMessage[512];
-		memcpy(errorMessage, error->GetBufferPointer(), LTN_COUNTOF(errorMessage));
+		memcpy(errorMessage, error->GetBufferPointer(), 512);
 		error->Release();
 	}
 	LTN_ASSERT(error == nullptr);
