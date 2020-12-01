@@ -979,8 +979,9 @@ void ResourceD3D12::terminate() {
 	*_stateFlags = GRAPHICS_INTERFACE_STATE_REQUEST_DELETE;
 }
 
-void ResourceD3D12::unmap() {
-	_resource->Unmap(0, nullptr);
+void ResourceD3D12::unmap(const MemoryRange* range) {
+	const D3D12_RANGE* memoryRange = reinterpret_cast<const D3D12_RANGE*>(range);
+	_resource->Unmap(0, memoryRange);
 }
 
 u64 ResourceD3D12::getGpuVirtualAddress() const {

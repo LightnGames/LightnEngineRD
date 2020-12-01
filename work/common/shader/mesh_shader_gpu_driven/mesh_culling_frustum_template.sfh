@@ -18,8 +18,8 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 //ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
-StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
-ByteAddressBuffer _batchedSubMeshInfoOffsets : register(t9);
+ByteAddressBuffer _batchedSubMeshInfoOffsets : register(t8);
+StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t9);
 
 //RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 //RWByteAddressBuffer _countBuffer : register(u1);
@@ -78,9 +78,10 @@ void addIndirectArgument(uint meshInstanceIndex) {
     LodMeshInstance lodMeshInstance = _lodMeshInstances[meshInstance._lodMeshInstanceOffset + lodLevel];
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
-        if (subMesh._meshletCount < 64) {
+        uint meshletIndex = subMesh._meshletCount - 1;
+        if (meshletIndex < 64) {
             SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
-            uint batchedSubMeshInfoOffsetAddress = (subMeshInstance._shaderSetIndex * 64 + subMesh._meshletCount) * UINT32_SIZE_IN_BYTE;
+            uint batchedSubMeshInfoOffsetAddress = (subMeshInstance._shaderSetIndex * 64 + meshletIndex) * UINT32_SIZE_IN_BYTE;
             uint batchedSubMeshInfoOffset = _batchedSubMeshInfoOffsets.Load(batchedSubMeshInfoOffsetAddress);
             uint batchedSubMeshInfoLocalOffset = 0;
             _batchedSubMeshInfoCounts.InterlockedAdd(batchedSubMeshInfoOffsetAddress, 1, batchedSubMeshInfoLocalOffset);

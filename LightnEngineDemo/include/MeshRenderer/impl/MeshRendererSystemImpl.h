@@ -50,6 +50,8 @@ private:
 	RootSignature* _gpuOcclusionCullingRootSignature = nullptr;
 	PipelineState* _gpuCullingPipelineState = nullptr;
 	RootSignature* _gpuCullingRootSignature = nullptr;
+	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
+	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
 	PipelineState* _computeLodPipelineState = nullptr;
 	RootSignature* _computeLodRootSignature = nullptr;
 	PipelineState* _buildHizPipelineState = nullptr;

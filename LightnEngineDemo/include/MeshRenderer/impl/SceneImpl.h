@@ -26,8 +26,8 @@ enum GpuCullingRootParameters {
 	ROOT_PARAM_GPU_VIEW_INFO,
 	ROOT_PARAM_GPU_MESH,
 	ROOT_PARAM_GPU_MESH_INSTANCE,
-	ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS,
-	ROOT_PARAM_GPU_INDIRECT_ARGUMENTS,
+	ROOT_PARAM_GPU_BATCHED_SUBMESH_INFO,
+	ROOT_PARAM_GPU_BATCHED_SUBMESH_OFFSET,
 	ROOT_PARAM_GPU_LOD_LEVEL,
 	ROOT_PARAM_GPU_CULLING_VIEW_INFO,
 	ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO,
@@ -58,6 +58,13 @@ enum GpuComputeLodRootParameters {
 	ROOT_PARAM_LOD_MESH_INSTANCE,
 	ROOT_PARAM_LOD_RESULT_LEVEL,
 	ROOT_PARAM_LOD_COUNT
+};
+
+enum BuildIndirectArgumentRootParameters {
+	BATCHED_SUBMESH_OFFSET = 0,
+	BATCHED_SUBMESH_COUNT,
+	INDIRECT_ARGUMENT,
+	ROOT_PARAM_COUNT
 };
 
 enum BuildHizRootParameters {
@@ -195,6 +202,8 @@ public:
 	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
 	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
+	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav; }
+	DescriptorHandle getBatchedSubMeshInfoCountSrv() const { return _batchedSubMeshInfoSrv; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
@@ -205,7 +214,6 @@ private:
 	GpuBuffer _countBuffer;
 	GpuBuffer _cullingResultBuffer;
 	GpuBuffer _cullingResultReadbackBuffer[BACK_BUFFER_COUNT] = {};
-	GpuBuffer _batchedSubMeshInfoBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[HIERACHICAL_DEPTH_COUNT] = {};
@@ -213,7 +221,7 @@ private:
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
 
-	DescriptorHandle _indirectArgumentUavHandle;
+	DescriptorHandle _indirectArgumentUav;
 	DescriptorHandle _cullingViewInfoCbvHandle;
 	DescriptorHandle _cullingResultUavHandle;
 	DescriptorHandle _cullingResultCpuUavHandle;
@@ -225,9 +233,12 @@ private:
 	const ViewInfo* _viewInfo = nullptr;
 
 	DescriptorHandle _batchedSubMeshInfoSrv;
-	DescriptorHandle _packedMeshletCountUav;
-	DescriptorHandle _packedMeshletCountCpuUav;
-	GpuBuffer _packedMeshletCountBuffer;
+	DescriptorHandle _batchedSubMeshInfoUav;
+	DescriptorHandle _batchedSubMeshInfoCountSrv;
+	DescriptorHandle _batchedSubMeshInfoCountUav;
+	DescriptorHandle _batchedSubMeshInfoCountCpuUav;
+	GpuBuffer _batchedSubMeshInfoCountBuffer;
+	GpuBuffer _batchedSubMeshInfoBuffer;
 };
 
 class SubMeshInstanceImpl : public SubMeshInstance {
@@ -302,7 +313,9 @@ public:
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
-	DescriptorHandle getPackedMeshletOffsetHandles() const { return _packedMeshletOffsetHandle; }
+	u32 getLodMeshInstanceCount() const { return _gpuLodMeshInstances.getInstanceCount(); }
+	u32 getSubMeshInstanceCount() const { return _gpuSubMeshInstances.getInstanceCount(); }
+	DescriptorHandle getBatchedSubMeshInfoOffsetSrv() const { return _batchedSubMeshInfoOffsetSrv; }
 
 private:
 	VramShaderSetSystem _vramShaderSetSystem;
@@ -324,6 +337,6 @@ private:
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
 
-	DescriptorHandle _packedMeshletOffsetHandle;
-	GpuBuffer _packedMeshletOffsetBuffer;
+	DescriptorHandle _batchedSubMeshInfoOffsetSrv;
+	GpuBuffer _batchedSubMeshInfoOffsetBuffer;
 };
