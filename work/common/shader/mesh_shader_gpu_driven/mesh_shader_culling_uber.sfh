@@ -132,6 +132,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #if UBER_FRUSTUM
     passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
     testFrustum = true;
+    passCulling = passFrustum;
 #endif
     
 #if UBER_OCCLUSION
@@ -154,6 +155,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
         }
     }
+    passCulling = passFrustum && passOcclusion;
 #endif
     
 #if UBER_CULLING_RESULT

@@ -1,5 +1,4 @@
 #include "../gpu_culling_function.sfh"
-
 struct StandardIndirectArgument {
     uint _meshInstanceIndex;
     uint _materialIndex;
@@ -23,11 +22,18 @@ ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
 StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
 
+#if UBER_OCCLUSION
+Texture2D<float> _hizTextures[] : register(t9);
+#endif
+
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 
+#if UBER_CULLING_RESULT
+RWByteAddressBuffer _cullingResult : register(u3);
+#endif
+
 #define THREAD_NUM 128
-#define AMPLIFICATION_DISPATCH_NUM 32
 
 bool isRangeMeshInstance(uint meshInstanceIndex) {
     return meshInstanceIndex < _sceneCullingInfo._meshInstanceCount;
@@ -99,4 +105,78 @@ void addIndirectArgument(uint meshInstanceIndex) {
         arguments._baseVertexLocation = lodMesh._vertexOffset;
         _indirectArguments[indirectArgumentOffset] = arguments;
     }
+}
+
+
+[numthreads(THREAD_NUM, 1, 1)]
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
+    uint meshInstanceIndex = dtid;
+    if (!isTested(meshInstanceIndex)) {
+        return;
+    }
+    
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Mesh mesh = getMesh(meshInstance);
+    uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
+	
+    LodMesh lodMesh = getLodMesh(mesh, lodLevel);
+    uint subMeshCount = lodMesh._subMeshCount;
+    
+    ViewInfo viewInfo = _viewInfo;
+    float3 boundsMin = meshInstance._aabbMin;
+    float3 boundsMax = meshInstance._aabbMax;
+    bool passCulling = true;
+    bool testFrustum = false;
+    bool testOcclusion = false;
+    bool passFrustum = true;
+    bool passOcclusion = true;
+#if UBER_FRUSTUM
+    passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
+    testFrustum = true;
+    passCulling = passFrustum;
+#endif
+    
+#if UBER_OCCLUSION
+    if (passFrustum) {
+        uint hizLevel = 0;
+        uint2 coords = uint2(0, 0);
+        uint2 sampleCount = uint2(0, 0);
+        uint2 hizSize = uint2(0, 0);
+        testOcclusion = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, coords, sampleCount, hizSize);
+        
+        uint currentCount = 0;
+        if (testOcclusion) {
+            float hizDepthValue = sampleHiz(hizSize, sampleCount, coords, _hizTextures[hizLevel]);
+            passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
+        }
+    }
+    passCulling = passFrustum && passOcclusion;
+#endif
+       
+    if (passCulling) {
+        addIndirectArgument(meshInstanceIndex);
+    }
+    
+#if UBER_CULLING_RESULT
+    uint currentCount = 0;
+    if (testFrustum) {
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    }
+    
+    if (testOcclusion) {
+        _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    }
+    
+    if (passFrustum) {
+        _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    }
+    
+    if (passOcclusion) {
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+    }
+#endif
 }

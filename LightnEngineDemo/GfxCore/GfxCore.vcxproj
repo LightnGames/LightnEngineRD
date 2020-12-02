@@ -186,10 +186,10 @@
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_frustum.asf" />
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_frustum_occlusion.asf" />
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_pass.asf" />
-    <None Include="..\..\work\common\shader\meshlet\meshlet_culling_template.sfh" />
+    <None Include="..\..\work\common\shader\meshlet\meshlet_amplification_uber.sfh" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum.csf" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_occlusion.csf" />
-    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_template.sfh" />
+    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_shader_culling_uber.sfh" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_pass.csf" />
     <None Include="..\..\work\common\shader\shaderInput.sfh" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum.csf" />

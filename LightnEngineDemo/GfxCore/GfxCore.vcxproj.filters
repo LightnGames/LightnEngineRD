@@ -142,9 +142,6 @@
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_occlusion.csf">
       <Filter>shader\mesh_shader_gpu_driven</Filter>
     </None>
-    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_template.sfh">
-      <Filter>shader\mesh_shader_gpu_driven</Filter>
-    </None>
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_pass.csf">
       <Filter>shader\mesh_shader_gpu_driven</Filter>
     </None>
@@ -155,9 +152,6 @@
       <Filter>shader\meshlet</Filter>
     </None>
     <None Include="..\..\work\common\shader\meshlet\meshlet_culling_pass.asf">
-      <Filter>shader\meshlet</Filter>
-    </None>
-    <None Include="..\..\work\common\shader\meshlet\meshlet_culling_template.sfh">
       <Filter>shader\meshlet</Filter>
     </None>
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh.msf">
@@ -192,6 +186,12 @@
     </None>
     <None Include="..\..\work\common\shader\debug\debug_draw_meshlet_bounds.csf">
       <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_shader_culling_uber.sfh">
+      <Filter>shader\mesh_shader_gpu_driven</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\meshlet\meshlet_amplification_uber.sfh">
+      <Filter>shader\meshlet</Filter>
     </None>
   </ItemGroup>
 </Project>

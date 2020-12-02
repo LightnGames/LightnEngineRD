@@ -1,18 +1,4 @@
-#include "mesh_culling_frustum_template.sfh"
-
-[numthreads(THREAD_NUM, 1, 1)]
-void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
-    uint meshInstanceIndex = getMeshInstanceIndex(groupID.x, groupThreadID.x);
-    if (!isTested(meshInstanceIndex)) {
-        return;
-    }
-    
-    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
-    ViewInfo viewInfo = _viewInfo;
-    float3 boundsMin = meshInstance._aabbMin;
-    float3 boundsMax = meshInstance._aabbMax;
-    bool inFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
-    if (inFrustum) {
-        addIndirectArgument(meshInstanceIndex);
-    }
-}
+#define UBER_FRUSTUM 1
+#define UBER_OCCLUSION 0
+#define UBER_CULLING_RESULT 0
+#include "standard_mesh_culling_uber.sfh"
