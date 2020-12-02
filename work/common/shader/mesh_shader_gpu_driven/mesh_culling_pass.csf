@@ -1,4 +1,4 @@
-#define UBER_FRUSTUNM 0
+#define UBER_FRUSTUM 0
 #define UBER_OCCLUSION 0
 #define UBER_CULLING_RESULT 1
 #include "mesh_shader_culling_uber.sfh"

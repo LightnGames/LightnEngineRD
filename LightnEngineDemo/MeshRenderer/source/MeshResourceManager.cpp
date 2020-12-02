@@ -35,11 +35,9 @@ void MeshResourceManager::initialize() {
 		_classicIndexBuffer.initialize(desc);
 		_classicIndexBuffer.setDebugName("Classic Index");
 #endif
-#if ENABLE_MULTI_INDIRECT_DRAW
 		desc._sizeInByte = SUB_MESH_COUNT_MAX * sizeof(gpu::SubMeshDrawInfo);
 		_subMeshDrawInfoBuffer.initialize(desc);
 		_subMeshDrawInfoBuffer.setDebugName("SubMesh Draw Info");
-#endif
 
 		desc._sizeInByte = MESH_COUNT_MAX * sizeof(gpu::Mesh);
 		_meshBuffer.initialize(desc);
@@ -75,9 +73,7 @@ void MeshResourceManager::initialize() {
 		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshHandles = allocater->allocateDescriptors(4);
 		_vertexHandles = allocater->allocateDescriptors(5);
-#if ENABLE_MULTI_INDIRECT_DRAW
 		_subMeshDrawInfoSrv = allocater->allocateDescriptors(1);
-#endif
 		u64 incrimentSize = static_cast<u64>(allocater->getIncrimentSize());
 
 		ShaderResourceViewDesc desc = {};
@@ -106,11 +102,9 @@ void MeshResourceManager::initialize() {
 			desc._buffer._structureByteStride = sizeof(gpu::Meshlet);
 			device->createShaderResourceView(_meshletBuffer.getResource(), &desc, handle + incrimentSize * 3);
 
-#if ENABLE_MULTI_INDIRECT_DRAW
 			desc._buffer._numElements = SUB_MESH_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::SubMeshDrawInfo);
 			device->createShaderResourceView(_subMeshDrawInfoBuffer.getResource(), &desc, _subMeshDrawInfoSrv._cpuHandle);
-#endif
 		}
 
 		// vertex
@@ -168,13 +162,11 @@ void MeshResourceManager::terminate() {
 	_lodMeshBuffer.terminate();
 	_subMeshBuffer.terminate();
 	_meshletBuffer.terminate();
+	_subMeshDrawInfoBuffer.terminate();
 
 #if ENABLE_CLASSIC_VERTEX
 	_classicIndexBuffer.terminate();
 	_classicIndexBinaryHeaders.terminate();
-#endif
-#if ENABLE_MULTI_INDIRECT_DRAW
-	_subMeshDrawInfoBuffer.terminate();
 #endif
 
 	LTN_ASSERT(_meshes.getInstanceCount() == 0);
@@ -193,9 +185,7 @@ void MeshResourceManager::terminate() {
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocater->discardDescriptor(_meshHandles);
 	allocater->discardDescriptor(_vertexHandles);
-#if ENABLE_MULTI_INDIRECT_DRAW
 	allocater->discardDescriptor(_subMeshDrawInfoSrv);
-#endif
 }
 
 void MeshResourceManager::drawDebugGui() {

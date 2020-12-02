@@ -17,7 +17,7 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
-StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
+// StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
 #if UBER_OCCLUSION
 Texture2D<float> _hizTextures[] : register(t9);
 #endif
@@ -125,10 +125,15 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     float3 boundsMin = meshInstance._aabbMin;
     float3 boundsMax = meshInstance._aabbMax;
     bool passCulling = true;
-    bool passFrustum = false;
-    bool passOcclusion = false;
+    bool passFrustum = true;
+    bool passOcclusion = true;
     bool testFrustum = false;
     bool testOcclusion = false;
+    Mesh mesh = getMesh(meshInstance);
+    uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
+	
+    LodMesh lodMesh = getLodMesh(mesh, lodLevel);
+    uint subMeshCount = lodMesh._subMeshCount;
 #if UBER_FRUSTUM
     passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
     testFrustum = true;
@@ -136,12 +141,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #endif
     
 #if UBER_OCCLUSION
-    Mesh mesh = getMesh(meshInstance);
-    uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
-	
-    LodMesh lodMesh = getLodMesh(mesh, lodLevel);
-    uint subMeshCount = lodMesh._subMeshCount;
-    
     if (passFrustum) {
         uint hizLevel;
         uint2 coords;

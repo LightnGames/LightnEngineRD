@@ -126,10 +126,10 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     float3 boundsMin = meshInstance._aabbMin;
     float3 boundsMax = meshInstance._aabbMax;
     bool passCulling = true;
-    bool testFrustum = false;
-    bool testOcclusion = false;
     bool passFrustum = true;
     bool passOcclusion = true;
+    bool testFrustum = false;
+    bool testOcclusion = false;
 #if UBER_FRUSTUM
     passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
     testFrustum = true;
@@ -152,10 +152,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
     passCulling = passFrustum && passOcclusion;
 #endif
-       
-    if (passCulling) {
-        addIndirectArgument(meshInstanceIndex);
-    }
     
 #if UBER_CULLING_RESULT
     uint currentCount = 0;
@@ -179,4 +175,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
     }
 #endif
+    if (passCulling) {
+        addIndirectArgument(meshInstanceIndex);
+    }
 }
