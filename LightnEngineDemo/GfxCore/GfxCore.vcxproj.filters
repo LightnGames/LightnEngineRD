@@ -178,9 +178,6 @@
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum_occlusion.csf">
       <Filter>shader\standard_gpu_driven</Filter>
     </None>
-    <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum_template.sfh">
-      <Filter>shader\standard_gpu_driven</Filter>
-    </None>
     <None Include="..\..\work\common\shader\compute_lod.csf">
       <Filter>shader</Filter>
     </None>
@@ -192,6 +189,9 @@
     </None>
     <None Include="..\..\work\common\shader\meshlet\meshlet_amplification_uber.sfh">
       <Filter>shader\meshlet</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\standard_gpu_driven\standard_mesh_culling_uber.sfh">
+      <Filter>shader\standard_gpu_driven</Filter>
     </None>
   </ItemGroup>
 </Project>
