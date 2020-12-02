@@ -170,6 +170,7 @@ class GraphicsView {
 public:
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
 	static constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
+	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
 
 	void initialize(const ViewInfo* viewInfo);
 	void terminate();
@@ -195,7 +196,7 @@ public:
 	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
 	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
-	DescriptorHandle getPassedMeshletInfoSrv() const { return _passedMeshletInfoSrv; }
+	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
@@ -206,7 +207,8 @@ private:
 	GpuBuffer _countBuffer;
 	GpuBuffer _cullingResultBuffer;
 	GpuBuffer _cullingResultReadbackBuffer[BACK_BUFFER_COUNT] = {};
-	GpuBuffer _passedMeshletInfoBuffer;
+	GpuBuffer _meshletInstanceInfoBuffer;
+	GpuBuffer _meshletInstanceInfoCountBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[HIERACHICAL_DEPTH_COUNT] = {};
@@ -214,7 +216,10 @@ private:
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
 
-	DescriptorHandle _passedMeshletInfoSrv;
+	DescriptorHandle _meshletInstanceInfoCountCpuUav;
+	DescriptorHandle _meshletInstanceInfoCountUav;
+	DescriptorHandle _meshletInstanceInfoCountSrv;
+	DescriptorHandle _meshletInstanceInfoSrv;
 	DescriptorHandle _indirectArgumentUavHandle;
 	DescriptorHandle _cullingViewInfoCbvHandle;
 	DescriptorHandle _cullingResultUavHandle;
@@ -279,7 +284,7 @@ public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 4;
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
-	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
+	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 
 	void initialize();
 	void update();
@@ -314,7 +319,9 @@ private:
 	GpuBuffer _meshInstanceBuffer;
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
+	GpuBuffer _meshletInstanceInfoOffsetBuffer;
 
+	DescriptorHandle _meshletInstanceInfoOffsetSrv;
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;

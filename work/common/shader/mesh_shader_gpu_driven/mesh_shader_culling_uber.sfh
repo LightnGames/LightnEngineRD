@@ -1,6 +1,8 @@
 #include "../gpu_culling_function.sfh"
 struct DispatchMeshIndirectArgument {
-    uint _meshletInfoOffset;
+    uint _meshletInstanceInfoOffset;
+    uint _instanceCount;
+    uint _meshletCount;
     uint _dispatchX;
     uint _dispatchY;
     uint _dispatchZ;
@@ -24,7 +26,7 @@ Texture2D<float> _hizTextures[] : register(t9);
 
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
-RWStructuredBuffer<MeshletInfo> _meshletInfos : register(u2);
+RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
 #if UBER_CULLING_RESULT
 RWByteAddressBuffer _cullingResult : register(u3);
 #endif
@@ -90,26 +92,24 @@ void addIndirectArgument(uint meshInstanceIndex) {
         uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset);
         uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
         uint dispatchCount = (subMesh._meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
-        uint2 meshletInfoAddress = _cullingViewInfo._meshletInfoGpuAddress;
-        addUint64(meshletInfoAddress, MESHLET_INFO_SIZE_IN_BYTE * indirectArgumentOffset);
 		
         DispatchMeshIndirectArgument arguments;
-
-        arguments._meshletInfoOffset = indirectArgumentOffset;
+        arguments._instanceCount = 1;
+        arguments._meshletCount = subMesh._meshletCount;
+        arguments._meshletInstanceInfoOffset = indirectArgumentOffset;
         arguments._dispatchX = dispatchCount;
         arguments._dispatchY = 1;
         arguments._dispatchZ = 1;
         _indirectArguments[indirectArgumentOffset] = arguments;
 		
-        MeshletInfo meshletInfo;
+        MeshletInstanceInfo meshletInfo;
         meshletInfo._meshletIndex = subMesh._meshletOffset;
         meshletInfo._meshInstanceIndex = meshInstanceIndex;
-        meshletInfo._meshletCountMax = subMesh._meshletCount;
         meshletInfo._materialIndex = subMeshInstance._materialIndex;
         meshletInfo._vertexOffset = lodMesh._vertexOffset;
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
-        _meshletInfos[indirectArgumentOffset] = meshletInfo;
+        _meshletInstanceInfos[indirectArgumentOffset] = meshletInfo;
     }
 }
 

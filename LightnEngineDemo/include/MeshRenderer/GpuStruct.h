@@ -10,10 +10,9 @@ namespace gpu {
 		MESH_STATE_LOADED,
 	};
 
-	struct MeshletInfo {
+	struct MeshletInstanceInfo {
 		u32 _meshletInstanceOffset;
 		u32 _meshInstanceIndex;
-		u32 _meshletCountMax;
 		u32 _materialIndex;
 		u32 _vertexOffset;
 		u32 _primitiveOffset;
@@ -77,7 +76,9 @@ namespace gpu {
 	};
 
 	struct DispatchMeshIndirectArgument {
-		u32 _meshletInfoOffset = 0;
+		u32 _meshletInstanceInfoOffset = 0;
+		u32 _instanceCount = 0;
+		u32 _meshletCount = 0;
 		u32 _dispatchX = 0;
 		u32 _dispatchY = 0;
 		u32 _dispatchZ = 0;

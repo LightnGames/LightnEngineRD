@@ -33,11 +33,9 @@ struct PayloadStruct {
     uint _primitiveOffset;
 }; 
 
-#define MESHLET_INFO_SIZE_IN_BYTE 28
-struct MeshletInfo {
+struct MeshletInstanceInfo {
 	uint _meshletIndex;
     uint _meshInstanceIndex;
-    uint _meshletCountMax;
 	uint _materialIndex;
 	uint _vertexOffset;
     uint _vertexIndexOffset;

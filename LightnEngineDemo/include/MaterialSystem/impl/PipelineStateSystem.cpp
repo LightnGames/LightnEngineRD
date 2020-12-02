@@ -119,7 +119,7 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
 
         IndirectArgumentDesc argumentDescs[2] = {};
         argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-        argumentDescs[0].Constant._num32BitValuesToSet = 1;
+        argumentDescs[0].Constant._num32BitValuesToSet = 3;
         argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_INDIRECT_CONSTANT;
         argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 

@@ -100,7 +100,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, _debugFixedViewConstantHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, meshHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getPassedMeshletInfoSrv()._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getMeshletInstanceInfoSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, vertexResourceDescriptors._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
@@ -183,7 +183,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, _debugFixedViewConstantHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, meshHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getPassedMeshletInfoSrv()._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getMeshletInstanceInfoSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, vertexResourceDescriptors._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
