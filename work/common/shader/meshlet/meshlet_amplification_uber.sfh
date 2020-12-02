@@ -1,6 +1,11 @@
 #include "../gpu_culling_function.sfh"
 
+struct IndirectArgumentConstant {
+    uint _meshletInfoOffset;
+};
+
 ConstantBuffer<ViewInfo> _viewInfo : register(b1);
+ConstantBuffer<IndirectArgumentConstant> _indirectArgumentConstant : register(b2);
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<Mesh> _meshes : register(t1);
@@ -61,7 +66,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint passBackfacePrimitiveCount = 0;
     uint passOcclusionPrimitiveCount = 0;
     
-    MeshletInfo meshletInfo = _meshletInfos[0];
+    MeshletInfo meshletInfo = _meshletInfos[_indirectArgumentConstant._meshletInfoOffset];
     uint meshletIndex = meshletInfo._meshletIndex + dtid;
     Meshlet meshlet = _meshlets[meshletIndex];
     if (dtid < meshletInfo._meshletCountMax) {
@@ -97,7 +102,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             uint2 hizSize = uint2(0, 0);
             isTestedOcclusionCulling = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
             if (isTestedOcclusionCulling) {
-                float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[hizLevel]);
+                float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
                 passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
                 visible = passOcclusion;
             } else {

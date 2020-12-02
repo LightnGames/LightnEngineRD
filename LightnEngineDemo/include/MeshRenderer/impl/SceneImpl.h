@@ -183,8 +183,9 @@ public:
 	void resourceBarriersComputeLodToUAV(CommandList* commandList);
 	void resetResourceComputeLodBarriers(CommandList* commandList);
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
-	void resourceBarriersHizSrvToUav(CommandList* commandList);
-	void resourceBarriersHizUavtoSrv(CommandList* commandList);
+	void resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset);
+	void resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset);
+	void resourceBarriersHizSrvToTexture(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
 	void resetCountBuffers(CommandList* commandList);
 	void resetResultBuffers(CommandList* commandList);
@@ -194,6 +195,7 @@ public:
 	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
 	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
+	DescriptorHandle getPassedMeshletInfoSrv() const { return _passedMeshletInfoSrv; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
@@ -212,6 +214,7 @@ private:
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
 
+	DescriptorHandle _passedMeshletInfoSrv;
 	DescriptorHandle _indirectArgumentUavHandle;
 	DescriptorHandle _cullingViewInfoCbvHandle;
 	DescriptorHandle _cullingResultUavHandle;

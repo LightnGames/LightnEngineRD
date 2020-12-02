@@ -466,6 +466,7 @@ struct PipelineStateD3D12 : public PipelineState {
 #endif
 	virtual void iniaitlize(const ComputePipelineStateDesc& desc) override;
 	virtual void terminate() override;
+	virtual void setDebugName(const char* name) override;
 	ID3D12PipelineState* _pipelineState = nullptr;
 	u8* _stateFlags = nullptr;
 };

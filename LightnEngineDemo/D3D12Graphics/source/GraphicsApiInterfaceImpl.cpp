@@ -1107,6 +1107,10 @@ void PipelineStateD3D12::terminate() {
 	*_stateFlags = GRAPHICS_INTERFACE_STATE_REQUEST_DELETE;
 }
 
+void PipelineStateD3D12::setDebugName(const char* name) {
+	SetDebugName(_pipelineState, name);
+}
+
 void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	ID3D12Device2* device = toD3d12(desc._device);
 
@@ -1184,8 +1188,8 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	ID3DBlob* error = nullptr;
 	D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error);
 	if (error != nullptr) {
-		char errorMessage[256];
-		memcpy(errorMessage, error->GetBufferPointer(), 256);
+		char errorMessage[512];
+		memcpy(errorMessage, error->GetBufferPointer(), LTN_COUNTOF(errorMessage));
 		error->Release();
 	}
 	LTN_ASSERT(error == nullptr);

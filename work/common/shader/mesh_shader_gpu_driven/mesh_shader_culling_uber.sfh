@@ -1,6 +1,6 @@
 #include "../gpu_culling_function.sfh"
 struct DispatchMeshIndirectArgument {
-    uint2 _meshletInfoGpuAddress;
+    uint _meshletInfoOffset;
     uint _dispatchX;
     uint _dispatchY;
     uint _dispatchZ;
@@ -95,7 +95,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
 		
         DispatchMeshIndirectArgument arguments;
 
-        arguments._meshletInfoGpuAddress = meshletInfoAddress;
+        arguments._meshletInfoOffset = indirectArgumentOffset;
         arguments._dispatchX = dispatchCount;
         arguments._dispatchY = 1;
         arguments._dispatchZ = 1;
@@ -150,7 +150,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         
         uint currentCount = 0;
         if (testOcclusion) {
-            float hizDepthValue = sampleHiz(hizSize, sampleSize, coords, _hizTextures[hizLevel]);
+            float hizDepthValue = sampleHiz(hizSize, sampleSize, coords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
             passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
         }
     }

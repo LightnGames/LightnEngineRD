@@ -454,7 +454,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		_countBuffer.setDebugName("Indirect Argument Count");
 	}
 
-	// srv buffers
+	// passed meshlet info buffers
 	{
 		GpuBufferDesc desc = {};
 		desc._sizeInByte = sizeof(gpu::MeshletInfo) * INDIRECT_ARGUMENT_COUNT_MAX;
@@ -499,6 +499,19 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		_cullingResultMapPtr[frameIndex] = _cullingResultReadbackBuffer[frameIndex].map<gpu::CullingResult>();
 	}
 	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[0];
+
+	// passed meshlet info srv
+	{
+		_passedMeshletInfoSrv = allocator->allocateDescriptors(1);
+
+		ShaderResourceViewDesc desc = {};
+		desc._format = FORMAT_UNKNOWN;
+		desc._viewDimension = SRV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInfo);
+		device->createShaderResourceView(_passedMeshletInfoBuffer.getResource(), &desc, _passedMeshletInfoSrv._cpuHandle);
+	}
 
 	// constant buffers
 	{
@@ -696,15 +709,16 @@ void GraphicsView::terminate() {
 	allocator->discardDescriptor(_cullingViewInfoCbvHandle);
 	allocator->discardDescriptor(_currentLodLevelUav);
 	allocator->discardDescriptor(_currentLodLevelSrv);
+	allocator->discardDescriptor(_passedMeshletInfoSrv);
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
 		allocator->discardDescriptor(_hizInfoConstantCbv[i]);
 	}
 	allocator->discardDescriptor(_hizDepthTextureUav);
 	allocator->discardDescriptor(_hizDepthTextureSrv);
 
-	DescriptorHeapAllocator* cpuAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
-	cpuAllocater->discardDescriptor(_countCpuUavHandle);
-	cpuAllocater->discardDescriptor(_cullingResultCpuUavHandle);
+	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	cpuAllocator->discardDescriptor(_countCpuUavHandle);
+	cpuAllocator->discardDescriptor(_cullingResultCpuUavHandle);
 }
 
 void GraphicsView::update() {
@@ -778,15 +792,23 @@ void GraphicsView::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
 	commandList->transitionBarriers(indirectArgumentToUavBarriers, LTN_COUNTOF(indirectArgumentToUavBarriers));
 }
 
-void GraphicsView::resourceBarriersHizSrvToUav(CommandList * commandList){
-	ResourceTransitionBarrier srvToUav[HIERACHICAL_DEPTH_COUNT] = {};
-	for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
-		srvToUav[i] = _hizDepthTextures[i].getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+void GraphicsView::resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset){
+	ResourceTransitionBarrier srvToUav[4] = {};
+	for (u32 i = 0; i < 4; ++i) {
+		srvToUav[i] = _hizDepthTextures[i + offset].getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	}
 	commandList->transitionBarriers(srvToUav, LTN_COUNTOF(srvToUav));
 }
 
-void GraphicsView::resourceBarriersHizUavtoSrv(CommandList * commandList){
+void GraphicsView::resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset){
+	ResourceTransitionBarrier uavToSrv[4] = {};
+	for (u32 i = 0; i < 4; ++i) {
+		uavToSrv[i] = _hizDepthTextures[i + offset].getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	}
+	commandList->transitionBarriers(uavToSrv, LTN_COUNTOF(uavToSrv));
+}
+
+void GraphicsView::resourceBarriersHizSrvToTexture(CommandList* commandList) {
 	ResourceTransitionBarrier uavToSrv[HIERACHICAL_DEPTH_COUNT] = {};
 	for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
 		uavToSrv[i] = _hizDepthTextures[i].getAndUpdateTransitionBarrier(RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

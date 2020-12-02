@@ -100,6 +100,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, _debugFixedViewConstantHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, meshHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getPassedMeshletInfoSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, vertexResourceDescriptors._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
@@ -182,6 +183,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, _debugFixedViewConstantHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, meshHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, _view.getPassedMeshletInfoSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, vertexResourceDescriptors._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
@@ -191,6 +193,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		}
 	}
 
+	_view.resourceBarriersHizSrvToTexture(commandList);
 	_view.readbackCullingResultBuffer(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Main Pass");
@@ -340,6 +343,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		}
 	}
 
+	_view.resourceBarriersHizSrvToTexture(commandList);
 	_view.readbackCullingResultBuffer(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Main Pass");
@@ -527,7 +531,6 @@ void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewIn
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
 
-	_view.resourceBarriersHizSrvToUav(commandList);
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->setComputeRootSignature(_buildHizRootSignature);
 	commandList->setPipelineState(_buildHizPipelineState);
@@ -535,24 +538,28 @@ void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewIn
 	// pass 0
 	{
 		commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
+		_view.resourceBarriersHizTextureToUav(commandList, 0);
 		_view.setHizResourcesPass0(commandList);
 
 		u32 dispatchWidthCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._width), 16u);
 		u32 dispatchHeightCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._height), 16u);
 		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
+
+		_view.resourceBarriersHizUavtoSrv(commandList, 0);
 	}
 
 	// pass 1
 	{
+		_view.resourceBarriersHizTextureToUav(commandList, 4);
 		_view.setHizResourcesPass1(commandList);
 
 		ResourceDesc hizLevel3Desc = _view.getHizTextureResourceDesc(3);
 		u32 dispatchWidthCount = RoundUp(static_cast<u32>(hizLevel3Desc._width), 16u);
 		u32 dispatchHeightCount = RoundUp(static_cast<u32>(hizLevel3Desc._height), 16u);
 		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
-	}
 
-	_view.resourceBarriersHizUavtoSrv(commandList);
+		_view.resourceBarriersHizUavtoSrv(commandList, 4);
+	}
 
 	queryHeapSystem->setCurrentMarkerName("Build Hiz");
 	queryHeapSystem->setMarker(commandList);
@@ -654,6 +661,7 @@ void MeshRendererSystemImpl::initialize() {
 
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_gpuCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_gpuCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum.cso");
 
 				computeShader->terminate(); 
 			}
@@ -665,6 +673,7 @@ void MeshRendererSystemImpl::initialize() {
 				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_frustum.cso");
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_multiDrawCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_multiDrawCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum.cso");
 
 				computeShader->terminate();
 			}
@@ -705,6 +714,7 @@ void MeshRendererSystemImpl::initialize() {
 
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_gpuOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_gpuOcclusionCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
 
 				computeShader->terminate(); 
 			}
@@ -716,6 +726,7 @@ void MeshRendererSystemImpl::initialize() {
 				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_pass.cso");
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_gpuCullingPassPipelineState->iniaitlize(pipelineStateDesc);
+				_gpuCullingPassPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_pass.cso");
 
 				computeShader->terminate();
 			}
@@ -728,6 +739,7 @@ void MeshRendererSystemImpl::initialize() {
 
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_multiDrawOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_multiDrawOcclusionCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum_occlusion.cso");
 
 				computeShader->terminate();
 			}
@@ -776,6 +788,7 @@ void MeshRendererSystemImpl::initialize() {
 		pipelineStateDesc._cs = computeShader->getShaderByteCode();
 		pipelineStateDesc._rootSignature = _computeLodRootSignature;
 		_computeLodPipelineState->iniaitlize(pipelineStateDesc);
+		_computeLodPipelineState->setDebugName("compute_lod.cso");
 
 		computeShader->terminate();
 	}
@@ -821,6 +834,7 @@ void MeshRendererSystemImpl::initialize() {
 		pipelineStateDesc._cs = computeShader->getShaderByteCode();
 		pipelineStateDesc._rootSignature = _debugMeshletBoundsRootSignature;
 		_debugMeshletBoundsPipelineState->iniaitlize(pipelineStateDesc);
+		_debugMeshletBoundsPipelineState->setDebugName("debug/debug_draw_meshlet_bounds.cso");
 
 		computeShader->terminate();
 	}
@@ -858,6 +872,7 @@ void MeshRendererSystemImpl::initialize() {
 		pipelineStateDesc._cs = computeShader->getShaderByteCode();
 		pipelineStateDesc._rootSignature = _buildHizRootSignature;
 		_buildHizPipelineState->iniaitlize(pipelineStateDesc);
+		_buildHizPipelineState->setDebugName("build_hierarchical_depth.cso");
 
 		computeShader->terminate();
 	}

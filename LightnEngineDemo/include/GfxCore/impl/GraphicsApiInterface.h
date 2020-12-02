@@ -1204,6 +1204,7 @@ struct LTN_GFX_API PipelineState {
 #endif
 	virtual void iniaitlize(const ComputePipelineStateDesc& desc) = 0;
 	virtual void terminate() = 0;
+	virtual void setDebugName(const char* name) = 0;
 };
 struct LTN_GFX_API RootSignature {
 	virtual void iniaitlize(const RootSignatureDesc& desc) = 0;

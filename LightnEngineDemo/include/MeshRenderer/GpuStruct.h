@@ -77,7 +77,7 @@ namespace gpu {
 	};
 
 	struct DispatchMeshIndirectArgument {
-		u32 _meshletInfoGpuAddress[2] = {};
+		u32 _meshletInfoOffset = 0;
 		u32 _dispatchX = 0;
 		u32 _dispatchY = 0;
 		u32 _dispatchZ = 0;
