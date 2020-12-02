@@ -1,0 +1,178 @@
+#include "../gpu_culling_function.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b1);
+
+StructuredBuffer<CustomParameters> _customParameters : register(t0);
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<LodMesh> _lodMeshes : register(t2);
+StructuredBuffer<SubMesh> _subMeshes : register(t3);
+StructuredBuffer<Meshlet> _meshlets : register(t4);
+
+StructuredBuffer<MeshInstance> _meshInstances : register(t5);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
+StructuredBuffer<MeshletInfo> _meshletInfos : register(t9);
+#if UBER_OCCLUSION
+Texture2D<float> _hizTextures[] : register(t16);
+#endif
+
+#if UBER_CULLING_RESULT
+RWByteAddressBuffer _cullingResult : register(u0);
+#endif
+
+#define THREADS_PER_WAVE 32
+#define THREAD_NUM THREADS_PER_WAVE
+groupshared PayloadStruct _passMeshlets;
+
+// バックフェースカリング
+bool doBackFaceCulling(MeshletBounds meshletBounds) {
+    float3 boundsCenter = (meshletBounds._boundsMin + meshletBounds._boundsMax) / 2.0;
+    float3 apexDirection = meshletBounds._normal * meshletBounds._apexOffset;
+    float3 offsetedBoundsCenter = boundsCenter - apexDirection;
+    float3 viewDirection = normalize(_viewInfo._position - offsetedBoundsCenter);
+    float3 axis = -meshletBounds._normal;
+    float viewAngle = dot(axis, viewDirection);
+    return !(viewAngle > meshletBounds._cutoff);
+}
+
+void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInfo meshletInfo) {
+    _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
+    _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
+    _passMeshlets._meshletCountMax = meshletInfo._meshletCountMax;
+    _passMeshlets._materialIndex = meshletInfo._materialIndex;
+    _passMeshlets._vertexOffset = meshletInfo._vertexOffset;
+    _passMeshlets._vertexIndexOffset = meshletInfo._vertexIndexOffset;
+    _passMeshlets._primitiveOffset = meshletInfo._primitiveOffset;
+}
+
+
+[numthreads(THREAD_NUM, 1, 1)]
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
+    bool passFrustum = false;
+    bool passBackface = false;
+    bool passOcclusion = false;
+    bool visible = false;
+    bool isTestedFrustumCulling = false;
+    bool isTestedBackfaceCulling = false;
+    bool isTestedOcclusionCulling = false;
+    uint testFrustumPrimitiveCount = 0;
+    uint testBackfacePrimitiveCount = 0;
+    uint testOcclusionPrimitiveCount = 0;
+    uint passFrustumPrimitiveCount = 0;
+    uint passBackfacePrimitiveCount = 0;
+    uint passOcclusionPrimitiveCount = 0;
+    
+    MeshletInfo meshletInfo = _meshletInfos[dtid];
+    uint meshletIndex = meshletInfo._meshletIndex + dtid;
+    Meshlet meshlet = _meshlets[meshletIndex];
+    if (dtid < meshletInfo._meshletCountMax) {
+        MeshInstance meshInstance = _meshInstances[meshletInfo._meshInstanceIndex];
+        MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, meshlet);
+        ViewInfo viewInfo = _viewInfo;
+        float3 boundsMin = meshletBounds._boundsMin;
+        float3 boundsMax = meshletBounds._boundsMax;
+        visible = true;
+        passFrustum = true;
+        passBackface = true;
+        passOcclusion = true;
+#if UBER_FRUSTUM
+        passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
+        isTestedFrustumCulling = true;
+        testFrustumPrimitiveCount = meshlet._primitiveCount;
+#endif
+        
+#if UBER_BACKFACE
+        if (passFrustum) {
+            passBackface = doBackFaceCulling(meshletBounds);
+            isTestedBackfaceCulling = true;
+        }
+#endif
+    
+#if UBER_OCCLUSION
+        if (passBackface) {
+            uint hizLevel = 0;
+            uint2 leftTopCoords = uint2(0, 0);
+            uint2 sampleCount = uint2(0, 0);
+            uint2 hizSize = uint2(0, 0);
+            isTestedOcclusionCulling = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
+            if (isTestedOcclusionCulling) {
+                float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[hizLevel]);
+                passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
+                visible = passOcclusion;
+            } else {
+                visible = true;
+            }
+        }
+#endif
+    }
+    
+    if (visible) {
+        uint index = WavePrefixCountBits(visible);
+        writePayloadStruct(index, meshletIndex, meshletInfo);
+    }
+    
+#if UBER_CULLING_RESULT
+    if (passFrustum) {
+        passFrustumPrimitiveCount = meshlet._primitiveCount;
+        testBackfacePrimitiveCount = meshlet._primitiveCount;
+    }
+    
+    if (passBackface) {
+        testOcclusionPrimitiveCount = meshlet._primitiveCount;
+        passBackfacePrimitiveCount = meshlet._primitiveCount;
+    }
+    
+    if (passOcclusion) {
+        passOcclusionPrimitiveCount = meshlet._primitiveCount;
+    }
+    
+    uint waveTestFrustumPrimitiveCount = WaveActiveSum(testFrustumPrimitiveCount);
+    uint waveTestFrustumMeshletCount = WaveActiveCountBits(isTestedFrustumCulling);
+    uint waveTestBackfacePrimitiveCount = WaveActiveSum(testBackfacePrimitiveCount);
+    uint waveTestBackfaceMeshletCount = WaveActiveCountBits(isTestedBackfaceCulling);
+    uint waveTestOcclusionPrimitiveCount = WaveActiveSum(testOcclusionPrimitiveCount);
+    uint waveTestOcclusionMeshletCount = WaveActiveCountBits(isTestedOcclusionCulling);
+    uint wavePassFrustumPrimitiveCount = WaveActiveSum(passFrustumPrimitiveCount);
+    uint wavePassFrustumMeshletCount = WaveActiveCountBits(passFrustum);
+    uint wavePassBackfacePrimitiveCount = WaveActiveSum(passBackfacePrimitiveCount);
+    uint wavePassBackfaceMeshletCount = WaveActiveCountBits(passBackface);
+    uint wavePassOcclusionPrimitiveCount = WaveActiveSum(passOcclusionPrimitiveCount);
+    uint wavePassOcclusionMeshletCount = WaveActiveCountBits(passOcclusion);
+    
+    if (WaveIsFirstLane()) {
+        uint currentCount = 0;
+        if (WaveActiveAnyTrue(isTestedFrustumCulling)) {
+            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, waveTestFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestFrustumMeshletCount, currentCount);
+        }
+    
+        if (WaveActiveAnyTrue(isTestedBackfaceCulling)) {
+            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, waveTestBackfacePrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestBackfaceMeshletCount, currentCount);
+        }
+    
+        if (WaveActiveAnyTrue(isTestedOcclusionCulling)) {
+            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, waveTestOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestOcclusionMeshletCount, currentCount);
+        }
+
+        if (WaveActiveAnyTrue(passFrustum)) {
+            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, wavePassFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassFrustumMeshletCount, currentCount);
+        }
+    
+        if (WaveActiveAnyTrue(passBackface)) {
+            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, wavePassBackfacePrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassBackfaceMeshletCount, currentCount);
+        }
+        
+        if (WaveActiveAnyTrue(passOcclusion)) {
+            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, wavePassOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassOcclusionMeshletCount, currentCount);
+        }
+    }
+#endif
+    
+    uint visibleCount = WaveActiveCountBits(visible);
+    DispatchMesh(visibleCount, 1, 1, _passMeshlets);
+}
