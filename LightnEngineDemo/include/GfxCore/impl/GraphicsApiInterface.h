@@ -5,6 +5,7 @@
 #define ENABLE_MESH_SHADER 1
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
+#define ENABLE_MESHLET_INSTANCING 0
 
 struct Resource;
 struct Device;

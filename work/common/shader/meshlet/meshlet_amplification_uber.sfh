@@ -68,10 +68,13 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint passBackfacePrimitiveCount = 0;
     uint passOcclusionPrimitiveCount = 0;
     
-    MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[_indirectArgumentConstant._meshletInstanceInfoOffset];
-    uint meshletIndex = meshletInfo._meshletIndex + dtid;
+    uint meshletOffset = dtid % _indirectArgumentConstant._meshletCount;
+    uint instanceOffset = dtid / _indirectArgumentConstant._meshletCount;
+    uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
+    MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+    uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
     Meshlet meshlet = _meshlets[meshletIndex];
-    if (dtid < _indirectArgumentConstant._meshletCount) {
+    if (instanceOffset < _indirectArgumentConstant._instanceCount) {
         MeshInstance meshInstance = _meshInstances[meshletInfo._meshInstanceIndex];
         MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, meshlet);
         ViewInfo viewInfo = _viewInfo;

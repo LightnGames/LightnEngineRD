@@ -584,11 +584,10 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 	// uav descriptors
 	{
 		{
-			_indirectArgumentUavHandle = allocator->allocateDescriptors(3);
+			_indirectArgumentUavHandle = allocator->allocateDescriptors(2);
 			u32 incrimentSize = allocator->getIncrimentSize();
 			CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUavHandle._cpuHandle;
 			CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
-			CpuDescriptorHandle meshletInfoHandle = indirectArgumentHandle + static_cast<u64>(incrimentSize) * 2;
 
 			UnorderedAccessViewDesc desc = {};
 			desc._format = FORMAT_UNKNOWN;
@@ -598,11 +597,6 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
 			device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
 
-			desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
-			desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-			device->createUnorderedAccessView(_meshletInstanceInfoBuffer.getResource(), nullptr, &desc, meshletInfoHandle);
-
-			desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
 			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 			desc._buffer._structureByteStride = 0;
 			desc._format = FORMAT_R32_TYPELESS;
@@ -611,6 +605,18 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			// カウントバッファをAPIの機能でクリアするためにCPU Only Descriptorを作成
 			_countCpuUavHandle = cpuAllocator->allocateDescriptors(1);
 			device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUavHandle._cpuHandle);
+		}
+
+		// meshlet instance 
+		{
+			_meshletInstanceInfoUav = allocator->allocateDescriptors(1);
+			UnorderedAccessViewDesc desc = {};
+			desc._format = FORMAT_UNKNOWN;
+			desc._viewDimension = UAV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
+			device->createUnorderedAccessView(_meshletInstanceInfoBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoUav._cpuHandle);
 		}
 
 		// meshlet instance count
@@ -798,6 +804,7 @@ void GraphicsView::terminate() {
 	}
 	allocator->discardDescriptor(_hizDepthTextureUav);
 	allocator->discardDescriptor(_hizDepthTextureSrv);
+	allocator->discardDescriptor(_meshletInstanceInfoUav);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_countCpuUavHandle);

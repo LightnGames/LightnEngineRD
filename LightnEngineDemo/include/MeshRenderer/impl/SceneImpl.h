@@ -32,6 +32,8 @@ enum GpuCullingRootParameters {
 	ROOT_PARAM_GPU_CULLING_VIEW_INFO,
 	ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO,
 	ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET,
+	ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO,
+	ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT,
 	ROOT_PARAM_GPU_CULLING_RESULT,
 	ROOT_PARAM_GPU_HIZ,
 	ROOT_PARAM_GPU_COUNT
@@ -208,6 +210,7 @@ public:
 	DescriptorHandle getMeshletInstanceCountUav() const { return _meshletInstanceInfoCountUav; }
 	DescriptorHandle getMeshletInstanceCountSrv() const { return _meshletInstanceInfoCountSrv; }
 	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
+	DescriptorHandle getMeshletInstanceInfoUav() const { return _meshletInstanceInfoUav; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
@@ -231,6 +234,7 @@ private:
 	DescriptorHandle _meshletInstanceInfoCountUav;
 	DescriptorHandle _meshletInstanceInfoCountSrv;
 	DescriptorHandle _meshletInstanceInfoSrv;
+	DescriptorHandle _meshletInstanceInfoUav;
 	DescriptorHandle _indirectArgumentUavHandle;
 	DescriptorHandle _cullingViewInfoCbvHandle;
 	DescriptorHandle _cullingResultUavHandle;

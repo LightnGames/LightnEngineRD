@@ -25,12 +25,16 @@ ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
 Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
+#define ENABLE_MESHLET_INSTANCING 0
+
+#if !ENABLE_MESHLET_INSTANCING
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
+#endif
 RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
 RWByteAddressBuffer _meshletInstanceInfoCounts : register(u3);
 #if UBER_CULLING_RESULT
-RWByteAddressBuffer _cullingResult : register(u3);
+RWByteAddressBuffer _cullingResult : register(u4);
 #endif
 
 #define THREAD_NUM 128
@@ -87,7 +91,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
         SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
         
-#if 0
+#if ENABLE_MESHLET_INSTANCING
         uint meshletIndex = subMesh._meshletCount - 1;
         if (meshletIndex < 64) {
             uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * 64 + meshletIndex) * UINT32_SIZE_IN_BYTE;
@@ -106,8 +110,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
             meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
             _meshletInstanceInfos[globalOffset] = meshletInfo;
         }
-#endif
-        
+#else
         uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
         _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
@@ -133,6 +136,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
         _meshletInstanceInfos[indirectArgumentOffset] = meshletInfo;
+#endif
     }
 }
 
