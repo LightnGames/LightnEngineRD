@@ -639,8 +639,11 @@ void MeshRendererSystemImpl::initialize() {
 		DescriptorRange subMeshInfoSrvRange = {};
 		subMeshInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
 
+		DescriptorRange meshletInstanceInfoOffsetSrvRange = {};
+		meshletInstanceInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
+
 		DescriptorRange hizSrvRange = {};
-		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, GraphicsView::HIERACHICAL_DEPTH_COUNT, 9);
+		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, GraphicsView::HIERACHICAL_DEPTH_COUNT, 10);
 
 		DescriptorRange hizDebugRange = {};
 		hizDebugRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
@@ -662,6 +665,7 @@ void MeshRendererSystemImpl::initialize() {
 			rootParameters[ROOT_PARAM_GPU_INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO].initializeDescriptorTable(1, &subMeshInfoSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
 
 			RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc._device = device;
@@ -713,6 +717,7 @@ void MeshRendererSystemImpl::initialize() {
 			rootParameters[ROOT_PARAM_GPU_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO].initializeDescriptorTable(1, &subMeshInfoSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_HIZ].initializeDescriptorTable(1, &hizSrvRange, SHADER_VISIBILITY_ALL);
 
 			RootSignatureDesc rootSignatureDesc = {};
@@ -790,7 +795,7 @@ void MeshRendererSystemImpl::initialize() {
 		_buildIndirectArgumentRootSignature->iniaitlize(rootSignatureDesc);
 
 		ShaderBlob* computeShader = allocator->allocateShaderBlob();
-		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_arguments.cso");
+		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_argument.cso");
 
 		ComputePipelineStateDesc pipelineStateDesc = {};
 		pipelineStateDesc._device = device;

@@ -869,16 +869,17 @@ void GraphicsView::resetResourceComputeLodBarriers(CommandList* commandList) {
 
 void GraphicsView::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
 	// Indirect Argument から UAVへ
-	ResourceTransitionBarrier indirectArgumentToUavBarriers[3] = {};
+	ResourceTransitionBarrier indirectArgumentToUavBarriers[4] = {};
 	indirectArgumentToUavBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[2] = _meshletInstanceInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	indirectArgumentToUavBarriers[3] = _meshletInstanceInfoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(indirectArgumentToUavBarriers, LTN_COUNTOF(indirectArgumentToUavBarriers));
 }
 
 void GraphicsView::resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset) {
 	ResourceTransitionBarrier srvToUav[4] = {};
-	for (u32 i = 0; i < 4; ++i) {
+	for (u32 i = 0; i < LTN_COUNTOF(srvToUav); ++i) {
 		srvToUav[i] = _hizDepthTextures[i + offset].getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	}
 	commandList->transitionBarriers(srvToUav, LTN_COUNTOF(srvToUav));
@@ -886,7 +887,7 @@ void GraphicsView::resourceBarriersHizTextureToUav(CommandList* commandList, u32
 
 void GraphicsView::resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset) {
 	ResourceTransitionBarrier uavToSrv[4] = {};
-	for (u32 i = 0; i < 4; ++i) {
+	for (u32 i = 0; i < LTN_COUNTOF(uavToSrv); ++i) {
 		uavToSrv[i] = _hizDepthTextures[i + offset].getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 	commandList->transitionBarriers(uavToSrv, LTN_COUNTOF(uavToSrv));
@@ -902,10 +903,11 @@ void GraphicsView::resourceBarriersHizSrvToTexture(CommandList* commandList) {
 
 void GraphicsView::resetResourceGpuCullingBarriers(CommandList* commandList) {
 	// UAV から Indirect Argumentへ
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[3] = {};
+	ResourceTransitionBarrier uavToIndirectArgumentBarriers[4] = {};
 	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[2] = _meshletInstanceInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	uavToIndirectArgumentBarriers[3] = _meshletInstanceInfoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
 }
 
@@ -914,19 +916,11 @@ void GraphicsView::resetCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	u32 incrimentSize = allocater->getIncrimentSize();
-	GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize;
-	CpuDescriptorHandle cpuDescriptor = _countCpuUavHandle._cpuHandle;
-	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _countBuffer.getResource(), clearValues, 0, nullptr);
-}
-
-// カリング結果バッファクリア
-void GraphicsView::resetResultBuffers(CommandList* commandList) {
-	u32 clearValues[4] = {};
 	// indirect argument count
 	{
-		GpuDescriptorHandle gpuDescriptor = _cullingResultUavHandle._gpuHandle;
-		CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUavHandle._cpuHandle;
-		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _cullingResultBuffer.getResource(), clearValues, 0, nullptr); 
+		GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize;
+		CpuDescriptorHandle cpuDescriptor = _countCpuUavHandle._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _countBuffer.getResource(), clearValues, 0, nullptr);
 	}
 
 	// meshlet instance info count
@@ -935,6 +929,14 @@ void GraphicsView::resetResultBuffers(CommandList* commandList) {
 		CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
 	}
+}
+
+// カリング結果バッファクリア
+void GraphicsView::resetResultBuffers(CommandList* commandList) {
+	u32 clearValues[4] = {};
+	GpuDescriptorHandle gpuDescriptor = _cullingResultUavHandle._gpuHandle;
+	CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUavHandle._cpuHandle;
+	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _cullingResultBuffer.getResource(), clearValues, 0, nullptr);
 }
 
 void GraphicsView::readbackCullingResultBuffer(CommandList* commandList) {
