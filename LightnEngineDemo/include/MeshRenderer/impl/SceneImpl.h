@@ -76,6 +76,13 @@ enum DebugMeshletBoundsRootParameters {
 	ROOT_PARAM_DEBUG_MESHLET_COUNT
 };
 
+enum BuildIndirectArgumentRootParameters {
+	BATCHED_SUBMESH_OFFSET = 0,
+	BATCHED_SUBMESH_COUNT,
+	INDIRECT_ARGUMENT,
+	ROOT_PARAM_COUNT
+};
+
 class PipelineStateGroup;
 struct ViewInfo;
 struct ShaderSet;
@@ -196,6 +203,9 @@ public:
 	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
 	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
+	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav; }
+	DescriptorHandle getMeshletInstanceCountUav() const { return _meshletInstanceInfoCountUav; }
+	DescriptorHandle getMeshletInstanceCountSrv() const { return _meshletInstanceInfoCountSrv; }
 	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
@@ -298,6 +308,7 @@ public:
 
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	MeshInstance* createMeshInstance(const Mesh* mesh);
+	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);

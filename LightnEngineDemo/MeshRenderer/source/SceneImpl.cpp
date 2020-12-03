@@ -583,9 +583,9 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 
 	// uav descriptors
 	{
-		u32 incrimentSize = allocator->getIncrimentSize();
 		{
 			_indirectArgumentUavHandle = allocator->allocateDescriptors(3);
+			u32 incrimentSize = allocator->getIncrimentSize();
 			CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUavHandle._cpuHandle;
 			CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
 			CpuDescriptorHandle meshletInfoHandle = indirectArgumentHandle + static_cast<u64>(incrimentSize) * 2;
@@ -613,6 +613,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUavHandle._cpuHandle);
 		}
 
+		// meshlet instance count
 		{
 			_meshletInstanceInfoCountUav = allocator->allocateDescriptors(1);
 			_meshletInstanceInfoCountCpuUav = cpuAllocator->allocateDescriptors(1);
@@ -921,9 +922,19 @@ void GraphicsView::resetCountBuffers(CommandList* commandList) {
 // カリング結果バッファクリア
 void GraphicsView::resetResultBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
-	GpuDescriptorHandle gpuDescriptor = _cullingResultUavHandle._gpuHandle;
-	CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUavHandle._cpuHandle;
-	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _cullingResultBuffer.getResource(), clearValues, 0, nullptr);
+	// indirect argument count
+	{
+		GpuDescriptorHandle gpuDescriptor = _cullingResultUavHandle._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUavHandle._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _cullingResultBuffer.getResource(), clearValues, 0, nullptr); 
+	}
+
+	// meshlet instance info count
+	{
+		GpuDescriptorHandle gpuDescriptor = _meshletInstanceInfoCountUav._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
+	}
 }
 
 void GraphicsView::readbackCullingResultBuffer(CommandList* commandList) {

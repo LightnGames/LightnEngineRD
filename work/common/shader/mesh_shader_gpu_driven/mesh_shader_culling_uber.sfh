@@ -20,13 +20,15 @@ StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
 // StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
+ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t9);
+Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
+RWByteAddressBuffer _meshletInstanceInfoCounts : register(u3);
 #if UBER_CULLING_RESULT
 RWByteAddressBuffer _cullingResult : register(u3);
 #endif
@@ -84,7 +86,28 @@ void addIndirectArgument(uint meshInstanceIndex) {
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
         SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
-			
+        
+#if 0
+        uint meshletIndex = subMesh._meshletCount - 1;
+        if (meshletIndex < 64) {
+            uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * 64 + meshletIndex) * UINT32_SIZE_IN_BYTE;
+            uint currentCount = 0;
+            _meshletInstanceInfoCounts.InterlockedAdd(meshletInstanceOffsetByte, 1, currentCount);
+            
+            uint offset = _meshletInstanceInfoOffsets.Load(meshletInstanceOffsetByte);
+            uint globalOffset = offset + currentCount;
+            
+            MeshletInstanceInfo meshletInfo;
+            meshletInfo._meshletIndex = subMesh._meshletOffset;
+            meshletInfo._meshInstanceIndex = meshInstanceIndex;
+            meshletInfo._materialIndex = subMeshInstance._materialIndex;
+            meshletInfo._vertexOffset = lodMesh._vertexOffset;
+            meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
+            meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
+            _meshletInstanceInfos[globalOffset] = meshletInfo;
+        }
+#endif
+        
         uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
         _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);

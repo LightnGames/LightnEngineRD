@@ -36,6 +36,7 @@ private:
 private:
 	void computeLod(CommandList* commandList, ViewInfo* viewInfo);
 	void depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
+	void buildIndirectArgument(CommandList* commandList);
 	void mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
 	void buildHiz(CommandList* commandList, ViewInfo* viewInfo);
 	void mainCulling(CommandList* commandList, ViewInfo* viewInfo);
@@ -56,6 +57,8 @@ private:
 	RootSignature* _buildHizRootSignature = nullptr;
 	PipelineState* _debugMeshletBoundsPipelineState = nullptr;
 	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
+	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
+	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
 #if ENABLE_MULTI_INDIRECT_DRAW
 	PipelineState* _multiDrawCullingPipelineState = nullptr;
 	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;

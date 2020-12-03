@@ -39,7 +39,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	// Lod level 計算
-	if(!isFixedCullingView){
+	if (!isFixedCullingView) {
 		computeLod(commandList, viewInfo);
 	}
 
@@ -67,7 +67,9 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
 		depthPrePassCulling(commandList, viewInfo, _gpuCullingPipelineState);
+		buildIndirectArgument(commandList);
 	}
+
 
 	// デプスプリパス
 	{
@@ -122,6 +124,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		bool isPassedCulling = _cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
 		PipelineState* mainCullingPipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuOcclusionCullingPipelineState;
 		mainCulling(commandList, viewInfo, mainCullingPipelineState);
+		buildIndirectArgument(commandList);
 	}
 
 
@@ -433,7 +436,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
 }
 
-void MeshRendererSystemImpl::computeLod(CommandList* commandList, ViewInfo* viewInfo){
+void MeshRendererSystemImpl::computeLod(CommandList* commandList, ViewInfo* viewInfo) {
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
@@ -491,6 +494,20 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 
 	queryHeapSystem->setCurrentMarkerName("Depth Prepass Culling");
 	queryHeapSystem->setMarker(commandList);
+}
+
+void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
+#if 0
+	commandList->setGraphicsRootSignature(_buildIndirectArgumentRootSignature);
+	commandList->setPipelineState(_buildIndirectArgumentPipelineState);
+
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET, _scene.getMeshletInstanceOffsetSrv()._gpuHandle);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT, _view.getMeshletInstanceCountSrv()._gpuHandle);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, _view.getIndirectArgumentUav()._gpuHandle);
+
+	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
+#endif
 }
 
 void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState) {
@@ -663,7 +680,7 @@ void MeshRendererSystemImpl::initialize() {
 				_gpuCullingPipelineState->iniaitlize(pipelineStateDesc);
 				_gpuCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum.cso");
 
-				computeShader->terminate(); 
+				computeShader->terminate();
 			}
 
 #if ENABLE_MULTI_INDIRECT_DRAW
@@ -716,7 +733,7 @@ void MeshRendererSystemImpl::initialize() {
 				_gpuOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
 				_gpuOcclusionCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
 
-				computeShader->terminate(); 
+				computeShader->terminate();
 			}
 
 			// カリングオフ
@@ -745,6 +762,43 @@ void MeshRendererSystemImpl::initialize() {
 			}
 #endif
 		}
+	}
+
+	// build indirect arguments
+	{
+		_buildIndirectArgumentPipelineState = allocator->allocatePipelineState();
+		_buildIndirectArgumentRootSignature = allocator->allocateRootSignature();
+
+		DescriptorRange batchedSubMeshInfoOffsetSrvRange = {};
+		batchedSubMeshInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		DescriptorRange batchedSubMeshInfoCountSrvRange = {};
+		batchedSubMeshInfoCountSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		DescriptorRange indirectArgumentUavRange = {};
+		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+
+		RootParameter rootParameters[BuildIndirectArgumentRootParameters::ROOT_PARAM_COUNT] = {};
+		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET].initializeDescriptorTable(1, &batchedSubMeshInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT].initializeDescriptorTable(1, &batchedSubMeshInfoCountSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
+
+		RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+		_buildIndirectArgumentRootSignature->iniaitlize(rootSignatureDesc);
+
+		ShaderBlob* computeShader = allocator->allocateShaderBlob();
+		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_arguments.cso");
+
+		ComputePipelineStateDesc pipelineStateDesc = {};
+		pipelineStateDesc._device = device;
+		pipelineStateDesc._cs = computeShader->getShaderByteCode();
+		pipelineStateDesc._rootSignature = _buildIndirectArgumentRootSignature;
+		_buildIndirectArgumentPipelineState->iniaitlize(pipelineStateDesc);
+
+		computeShader->terminate();
 	}
 
 	// gpu compute lod 
@@ -931,6 +985,8 @@ void MeshRendererSystemImpl::terminate() {
 	_buildHizRootSignature->terminate();
 	_debugMeshletBoundsPipelineState->terminate();
 	_debugMeshletBoundsRootSignature->terminate();
+	_buildIndirectArgumentPipelineState->terminate();
+	_buildIndirectArgumentRootSignature->terminate();
 
 	_sceneCullingConstantBuffer.terminate();
 #if ENABLE_MULTI_INDIRECT_DRAW
