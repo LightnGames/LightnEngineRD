@@ -203,7 +203,7 @@ public:
 	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
 	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
-	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav; }
+	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUavHandle; }
 	DescriptorHandle getMeshletInstanceCountUav() const { return _meshletInstanceInfoCountUav; }
 	DescriptorHandle getMeshletInstanceCountSrv() const { return _meshletInstanceInfoCountSrv; }
 	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
