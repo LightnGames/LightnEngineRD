@@ -537,7 +537,6 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
-
 	_view.resetResourceGpuCullingBarriers(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Depth Prepass Culling");
@@ -546,6 +545,7 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 
 void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
 #if ENABLE_MESHLET_INSTANCING
+	_view.resourceBarriersBuildIndirectArgument(commandList);
 	commandList->setComputeRootSignature(_buildIndirectArgumentRootSignature);
 	commandList->setPipelineState(_buildIndirectArgumentPipelineState);
 
@@ -555,6 +555,7 @@ void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
 
 	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
+	_view.resourceBarriersResetBuildIndirectArgument(commandList);
 #endif
 }
 
@@ -1249,6 +1250,8 @@ void MeshRendererSystemImpl::update() {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	SceneCullingInfo* cullingInfo = vramUpdater->enqueueUpdate<SceneCullingInfo>(&_sceneCullingConstantBuffer, 0, 1);
 	cullingInfo->_meshInstanceCountMax = meshInstanceCountMax;
+
+	_view.resetMeshletInfo();
 }
 
 void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo) {

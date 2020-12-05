@@ -45,11 +45,10 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
 void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInstanceInfo meshletInfo) {
     _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
-    _passMeshlets._meshletCountMax = _indirectArgumentConstant._meshletCount;
-    _passMeshlets._materialIndex = meshletInfo._materialIndex;
-    _passMeshlets._vertexOffset = meshletInfo._vertexOffset;
-    _passMeshlets._vertexIndexOffset = meshletInfo._vertexIndexOffset;
-    _passMeshlets._primitiveOffset = meshletInfo._primitiveOffset;
+    _passMeshlets._materialIndex[visibleIndex] = meshletInfo._materialIndex;
+    _passMeshlets._vertexOffset[visibleIndex] = meshletInfo._vertexOffset;
+    _passMeshlets._vertexIndexOffset[visibleIndex] = meshletInfo._vertexIndexOffset;
+    _passMeshlets._primitiveOffset[visibleIndex] = meshletInfo._primitiveOffset;
 }
 
 [numthreads(THREAD_NUM, 1, 1)]
@@ -71,19 +70,17 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint meshletOffset = dtid % _indirectArgumentConstant._meshletCount;
     uint instanceOffset = dtid / _indirectArgumentConstant._meshletCount;
     uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
-    MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
-    uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
-    Meshlet meshlet = _meshlets[meshletIndex];
     if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+        MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+        uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+        Meshlet meshlet = _meshlets[meshletIndex];
         MeshInstance meshInstance = _meshInstances[meshletInfo._meshInstanceIndex];
         MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, meshlet);
         ViewInfo viewInfo = _viewInfo;
         float3 boundsMin = meshletBounds._boundsMin;
         float3 boundsMax = meshletBounds._boundsMax;
         visible = true;
-        passFrustum = true;
-        passBackface = true;
-        passOcclusion = true;
+
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
         isTestedFrustumCulling = true;
@@ -101,23 +98,34 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
 #if UBER_OCCLUSION
         if (passBackface) {
-            uint hizLevel = 0;
-            uint2 leftTopCoords = uint2(0, 0);
-            uint2 sampleCount = uint2(0, 0);
-            uint2 hizSize = uint2(0, 0);
+            uint hizLevel;
+            uint2 leftTopCoords;
+            uint2 sampleCount;
+            uint2 hizSize;
             isTestedOcclusionCulling = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
             if (isTestedOcclusionCulling) {
                 float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
                 passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
                 visible = passOcclusion;
-            } else {
-                visible = true;
             }
         }
 #endif
+        
+        if (visible) {
+            MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+            uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+            uint index = WavePrefixCountBits(visible);
+            writePayloadStruct(index, meshletIndex, meshletInfo);
+            _passMeshlets._asDtid[index] = dtid;
+        }
     }
     
+    
 #if UBER_CULLING_RESULT
+        if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+    MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+    uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+    Meshlet meshlet = _meshlets[meshletIndex];
     if (passFrustum) {
         passFrustumPrimitiveCount = meshlet._primitiveCount;
         testBackfacePrimitiveCount = meshlet._primitiveCount;
@@ -176,14 +184,9 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, wavePassOcclusionPrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassOcclusionMeshletCount, currentCount);
         }
-    }
+    }}
 #endif
-    
-    if (visible) {
-        uint index = WavePrefixCountBits(visible);
-        writePayloadStruct(index, meshletIndex, meshletInfo);
-    }
-    
+        
     uint visibleCount = WaveActiveCountBits(visible);
     DispatchMesh(visibleCount, 1, 1, _passMeshlets);
 }

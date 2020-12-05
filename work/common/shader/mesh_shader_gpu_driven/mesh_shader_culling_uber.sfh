@@ -25,7 +25,7 @@ ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
 Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
-#define ENABLE_MESHLET_INSTANCING 0
+#define ENABLE_MESHLET_INSTANCING 1
 
 #if !ENABLE_MESHLET_INSTANCING
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);

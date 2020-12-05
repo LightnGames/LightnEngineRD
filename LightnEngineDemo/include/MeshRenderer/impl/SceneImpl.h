@@ -198,6 +198,8 @@ public:
 	void resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset);
 	void resourceBarriersHizSrvToTexture(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
+	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
+	void resourceBarriersResetBuildIndirectArgument(CommandList* commandList);
 	void resetCountBuffers(CommandList* commandList);
 	void resetResultBuffers(CommandList* commandList);
 	void readbackCullingResultBuffer(CommandList* commandList);
@@ -214,6 +216,8 @@ public:
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
+
+	void resetMeshletInfo();
 
 private:
 	GpuBuffer _currentLodLevelBuffer;

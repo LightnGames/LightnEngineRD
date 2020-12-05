@@ -80,8 +80,8 @@ MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshle
         worldMatrixCol1
     };
     
-    float3 resultBoundsMin = float3(1, 1, 1) * 100000;
-    float3 resultBoundsMax = float3(1, 1, 1) * -100000;
+    float3 resultBoundsMin = float3(FLT_MAX, FLT_MAX, FLT_MAX);
+    float3 resultBoundsMax = float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
     for (uint pointIndex = 0; pointIndex < 8; ++pointIndex) {
         resultBoundsMin = min(resultBoundsMin, boundsWorldMin + points[pointIndex]);
         resultBoundsMax = max(resultBoundsMax, boundsWorldMin + points[pointIndex]);
@@ -94,7 +94,7 @@ MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshle
     MeshletBounds bounds;
     bounds._boundsMin = resultBoundsMin;
     bounds._boundsMax = resultBoundsMax;
-    bounds._normal = normalize(resultBoundsNormal);
+    bounds._normal = resultBoundsNormal / worldScale;
     bounds._apexOffset = meshlet._apexOffset * worldScale;
     bounds._cutoff = normalCone.w * worldScale;
     return bounds;

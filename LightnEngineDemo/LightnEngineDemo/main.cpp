@@ -172,7 +172,7 @@ public:
 			}
 		}
 
-		if (_meshInstanceStreamingCounter == _levelHeader._meshInstanceCount) {
+		if (isCompletedStream()) {
 			_fin.close();
 		}
 	}
@@ -204,6 +204,10 @@ public:
 		_materials.terminate();
 		_shaderSets.terminate();
 		_assets.terminate();
+	}
+
+	bool isCompletedStream() const {
+		return _meshInstanceStreamingCounter == _levelHeader._meshInstanceCount;
 	}
 
 private:

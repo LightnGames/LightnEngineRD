@@ -23,7 +23,7 @@ ByteAddressBuffer _currentLodLevels : register(t7);
 StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
 
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t9);
+Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);

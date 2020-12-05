@@ -24,8 +24,9 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         return;
     }
     
-    uint meshletCount = dtid % MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+    uint meshletIndex = dtid % MESHLET_INSTANCE_MESHLET_COUNT_MAX;
     uint shaderSetIndex = dtid / MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+    uint meshletCount = meshletIndex + 1;
     
     uint currentCount = 0;
     uint countOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX * UINT32_SIZE_IN_BYTE;
@@ -35,7 +36,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     arguments._batchedSubMeshInfoOffset = _meshletInstanceInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
     arguments._instanceCount = instanceCount;
     arguments._meshletCount = meshletCount;
-    arguments._dispatchX = (instanceCount / 32) + 1;
+    arguments._dispatchX = (instanceCount * meshletCount / 32) + 1;
     arguments._dispatchY = 1;
     arguments._dispatchZ = 1;
     

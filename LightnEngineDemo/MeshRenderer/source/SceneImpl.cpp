@@ -133,13 +133,14 @@ void Scene::update() {
 		u32 packedMeshletCounts[ARRAY_COUNT] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
+			const MeshInfo* meshInfo = mesh->getMeshInfo();
 			const gpu::LodMesh* lodMeshes = mesh->getGpuLodMesh();
 			const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
 			const gpu::SubMeshInstance* subMeshInstances = _meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
 			u32 lodCount = mesh->getGpuMesh()->_lodMeshCount;
 			for (u32 lodIndex = 0; lodIndex < lodCount; ++lodIndex) {
 				u32 subMeshCount = lodMeshes[lodIndex]._subMeshCount;
-				u32 subMeshLocalOffset = lodMeshes[lodIndex]._subMeshOffset;
+				u32 subMeshLocalOffset = meshInfo->_subMeshOffsets[lodIndex];
 				for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 					u32 subMeshOffset = subMeshLocalOffset + subMeshIndex;
 					u32 meshletCount = subMeshes[subMeshOffset]._meshletCount - 1;
@@ -151,7 +152,7 @@ void Scene::update() {
 			}
 		}
 
-		packedSubMeshOffsets[0] = 0;
+		memset(packedSubMeshOffsets, 0, sizeof(u32) * ARRAY_COUNT);
 		for (u32 packedIndex = 1; packedIndex < ARRAY_COUNT; ++packedIndex) {
 			u32 prevIndex = packedIndex - 1;
 			packedSubMeshOffsets[packedIndex] = packedSubMeshOffsets[prevIndex] + packedMeshletCounts[prevIndex];
@@ -918,6 +919,20 @@ void GraphicsView::resetResourceGpuCullingBarriers(CommandList* commandList) {
 	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
 }
 
+void GraphicsView::resourceBarriersBuildIndirectArgument(CommandList* commandList) {
+	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
+	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
+}
+
+void GraphicsView::resourceBarriersResetBuildIndirectArgument(CommandList* commandList) {
+	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
+	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
+}
+
 // カウントバッファクリア
 void GraphicsView::resetCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
@@ -976,4 +991,10 @@ ResourceDesc GraphicsView::getHizTextureResourceDesc(u32 level) const {
 
 const CullingResult* GraphicsView::getCullingResult() const {
 	return reinterpret_cast<CullingResult*>(_currentFrameCullingResultMapPtr);
+}
+
+void GraphicsView::resetMeshletInfo() {
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	u32* ptr = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoBuffer, 0, _meshletInstanceInfoBuffer.getSizeInByte() / sizeof(u32));
+	memset(ptr, 0, _meshletInstanceInfoBuffer.getSizeInByte());
 }

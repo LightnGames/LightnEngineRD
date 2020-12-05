@@ -44,14 +44,14 @@ void main(
 
     if(gtid < primitiveCount){
         uint primitiveIndex = meshlet._primitiveOffset + gtid;
-        uint packedIndex = _primitives[meshPayload._primitiveOffset + primitiveIndex];
+        uint packedIndex = _primitives[meshPayload._primitiveOffset[gid] + primitiveIndex];
         tris[gtid] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
     }
 
     if(gtid < vertexCount){
         uint vertexLocalIndex = meshlet._vertexOffset + gtid;
-        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset + vertexLocalIndex];
-        uint vertexOffset = meshPayload._vertexOffset + vertexIndex;
+        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset[gid] + vertexLocalIndex];
+        uint vertexOffset = meshPayload._vertexOffset[gid] + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
 
@@ -62,12 +62,17 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = meshPayload._materialIndex;
+        vertexOut._materialIndex = meshPayload._materialIndex[gid];
+        vertexOut._dtid = dtid;
+        vertexOut._vertexCount = vertexCount;
+        vertexOut._primCount = primitiveCount;
+        vertexOut._asDtid = meshPayload._asDtid[gid];
+        vertexOut._meshInstanceIndex = meshInstanceIndex;
 
         vertexOut._lodLevel = 0.0;
-        if(mesh._lodMeshCount > 1){
-            vertexOut._lodLevel = currentLodLevel / (float)(mesh._lodMeshCount - 1);
-        }
+        //if(mesh._lodMeshCount > 1){
+        //    vertexOut._lodLevel = currentLodLevel / (float)(mesh._lodMeshCount - 1);
+        //}
 
         verts[gtid] = vertexOut;
     }
