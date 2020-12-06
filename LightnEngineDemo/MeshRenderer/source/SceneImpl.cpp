@@ -902,11 +902,19 @@ void GraphicsView::resourceBarriersHizUavtoSrv(CommandList* commandList, u32 off
 }
 
 void GraphicsView::resourceBarriersHizSrvToTexture(CommandList* commandList) {
-	ResourceTransitionBarrier uavToSrv[HIERACHICAL_DEPTH_COUNT] = {};
+	ResourceTransitionBarrier srvToTexture[HIERACHICAL_DEPTH_COUNT] = {};
 	for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
-		uavToSrv[i] = _hizDepthTextures[i].getAndUpdateTransitionBarrier(RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		srvToTexture[i] = _hizDepthTextures[i].getAndUpdateTransitionBarrier(RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
-	commandList->transitionBarriers(uavToSrv, LTN_COUNTOF(uavToSrv));
+	commandList->transitionBarriers(srvToTexture, LTN_COUNTOF(srvToTexture));
+}
+
+void GraphicsView::resourceBarriersHizTextureToSrv(CommandList* commandList) {
+	ResourceTransitionBarrier textureToSrv[HIERACHICAL_DEPTH_COUNT] = {};
+	for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
+		textureToSrv[i] = _hizDepthTextures[i].getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	}
+	commandList->transitionBarriers(textureToSrv, LTN_COUNTOF(textureToSrv));
 }
 
 void GraphicsView::resetResourceGpuCullingBarriers(CommandList* commandList) {
@@ -934,23 +942,20 @@ void GraphicsView::resourceBarriersResetBuildIndirectArgument(CommandList* comma
 }
 
 // カウントバッファクリア
-void GraphicsView::resetCountBuffers(CommandList* commandList) {
+void GraphicsView::resetIndirectArgumentCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	u32 incrimentSize = allocater->getIncrimentSize();
-	// indirect argument count
-	{
-		GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize;
-		CpuDescriptorHandle cpuDescriptor = _countCpuUavHandle._cpuHandle;
-		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _countBuffer.getResource(), clearValues, 0, nullptr);
-	}
+	GpuDescriptorHandle gpuDescriptor = _indirectArgumentUavHandle._gpuHandle + incrimentSize;
+	CpuDescriptorHandle cpuDescriptor = _countCpuUavHandle._cpuHandle;
+	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _countBuffer.getResource(), clearValues, 0, nullptr);
+}
 
-	// meshlet instance info count
-	{
-		GpuDescriptorHandle gpuDescriptor = _meshletInstanceInfoCountUav._gpuHandle;
-		CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
-		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
-	}
+void GraphicsView::resetMeshletInstanceInfoCountBuffers(CommandList* commandList) {
+	u32 clearValues[4] = {};
+	GpuDescriptorHandle gpuDescriptor = _meshletInstanceInfoCountUav._gpuHandle;
+	CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
+	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
 }
 
 // カリング結果バッファクリア

@@ -1,7 +1,12 @@
 #include "../shaderInput.sfh"
 #include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<MeshInstance> _meshInstances : register(t5);
+ByteAddressBuffer _currentLodLevels : register(t15);
 
 float3 heatMap(float unormValue) {
     float redValue = min(unormValue * 2.0, 1.0);
@@ -10,7 +15,15 @@ float3 heatMap(float unormValue) {
 }
 
 float4 main(VertexOut input) : SV_TARGET {
+    MeshInstance meshInstance = _meshInstances[input._meshInstanceIndex];
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+    float lodPersentage = 0.0f;
+    if(mesh._lodMeshCount > 1){
+        uint currentLodLevel = _currentLodLevels.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE);
+        lodPersentage = currentLodLevel / (float) (mesh._lodMeshCount - 1);
+    }
+    
     uint meshletIndex = input._meshletIndex;
-    float3 diffuseColor = heatMap(input._lodLevel);
+    float3 diffuseColor = heatMap(lodPersentage) * 0.8f;
     return float4(diffuseColor, 1.0);
 }

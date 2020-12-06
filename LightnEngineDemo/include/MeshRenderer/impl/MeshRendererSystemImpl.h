@@ -46,11 +46,11 @@ private:
 	bool _visible = true;
 	Scene _scene;
 	MeshResourceManager _resourceManager;
+	RootSignature* _gpuCullingRootSignature = nullptr;
 	PipelineState* _gpuCullingPassPipelineState = nullptr;
 	PipelineState* _gpuOcclusionCullingPipelineState = nullptr;
-	RootSignature* _gpuOcclusionCullingRootSignature = nullptr;
 	PipelineState* _gpuCullingPipelineState = nullptr;
-	RootSignature* _gpuCullingRootSignature = nullptr;
+
 	PipelineState* _computeLodPipelineState = nullptr;
 	RootSignature* _computeLodRootSignature = nullptr;
 	PipelineState* _buildHizPipelineState = nullptr;

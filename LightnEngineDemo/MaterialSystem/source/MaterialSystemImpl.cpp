@@ -247,7 +247,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	hizRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 8, 16);
 
 	DescriptorRange textureDescriptorRange = {};
-	textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, 9);
+	textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, 16);
 
 	DescriptorRange cullingResultDescriptorRange = {};
 	cullingResultDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
@@ -266,7 +266,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
 		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
-		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_MESH);
+		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumCulling._device = device;
 		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(rootParameters);
@@ -286,7 +286,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
 		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ROOT_DEFAULT_MESH_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_MESH);
+		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_AMPLIFICATION);
 
 		rootSignatureDescFurstumOcclusionCulling._device = device;

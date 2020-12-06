@@ -1,5 +1,6 @@
 #include <GfxCore/impl/VramBufferUpdater.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 
 void VramBufferUpdater::initialize() {
 	GpuDynamicBufferDesc desc = {};
@@ -90,6 +91,9 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 
 		return UNKNOWN_RESOURCE_INDEX;
 	};
+
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Vram Updater");
 
 	// vram to vram
 	for (u32 headerIndex = 0; headerIndex < _updateHeaderCount; ++headerIndex) {
@@ -187,6 +191,9 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	_updateHeaderCount = 0;
 	_stagingUpdateHeaderCount = 0;
 	_textureUpdateHeaderCount = 0;
+
+	queryHeapSystem->setCurrentMarkerName("Vram Updater");
+	queryHeapSystem->setMarker(commandList);
 }
 
 void* VramBufferUpdater::allocateUpdateBuffer(u32 sizeInByte, u32 alignment) {

@@ -63,7 +63,7 @@ void QueryHeapSystem::debugDrawTimeStamps() {
 			Vector2 currentScreenPos = DebugGui::GetCursorScreenPos() + offset;
 			Vector2 currentScreenOffsetPos = DebugGui::GetCursorScreenPos() + offset + currentOffset;
 			Vector2 currentSize(size._x * frameTime * rectScale, size._y);
-			DebugGui::Text("%-22s %-4.2f ms", _debugMarkerNames[markerIndex], frameTime);
+			DebugGui::Text("%-24s %-4.2f ms", _debugMarkerNames[markerIndex], frameTime);
 			DebugGui::AddRectFilled(currentScreenPos, currentScreenOffsetPos + currentSize, Color4::DEEP_GREEN, DebugGui::DrawCornerFlags_None);
 			DebugGui::AddRectFilled(currentScreenOffsetPos, currentScreenOffsetPos + currentSize, Color4::DEEP_RED, DebugGui::DrawCornerFlags_None);
 		}

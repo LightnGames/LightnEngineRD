@@ -20,8 +20,6 @@ StructuredBuffer<float3> _vertexPositions : register(t11);
 StructuredBuffer<uint> _vertexNormalTangents : register(t12);
 StructuredBuffer<uint> _vertexTexcoords : register(t13);
 
-ByteAddressBuffer _currentLodLevels : register(t15);
-
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void main(
@@ -54,8 +52,6 @@ void main(
         uint vertexOffset = meshPayload._vertexOffset[gid] + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
-
-        uint currentLodLevel = _currentLodLevels.Load(meshInstanceIndex * 4);
         
         VertexOut vertexOut;
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
@@ -63,16 +59,7 @@ void main(
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
         vertexOut._materialIndex = meshPayload._materialIndex[gid];
-        vertexOut._dtid = dtid;
-        vertexOut._vertexCount = vertexCount;
-        vertexOut._primCount = primitiveCount;
-        vertexOut._asDtid = meshPayload._asDtid[gid];
         vertexOut._meshInstanceIndex = meshInstanceIndex;
-
-        vertexOut._lodLevel = 0.0;
-        //if(mesh._lodMeshCount > 1){
-        //    vertexOut._lodLevel = currentLodLevel / (float)(mesh._lodMeshCount - 1);
-        //}
 
         verts[gtid] = vertexOut;
     }

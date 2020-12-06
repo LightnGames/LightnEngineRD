@@ -11,14 +11,9 @@ struct VertexOut {
     float4 _position : SV_Position;
     float4 _positionNdc : SCREEN_POSITION;
     float2 _texcoord : TEXCOORD0;
-    nointerpolation float _lodLevel : LOD_LEVEL;
+    nointerpolation uint _meshInstanceIndex : MESH_INSTANCE_INDEX;
     nointerpolation uint _meshletIndex : MESHLET_INDEX;
     nointerpolation uint _materialIndex : MATERIAL_INDEX;
-    nointerpolation uint _dtid : MS_DTID;
-    nointerpolation uint _asDtid : AS_DTID;
-    nointerpolation uint _meshInstanceIndex : MESH_INDEX;
-    nointerpolation uint _vertexCount : VERTEX_COUNT;
-    nointerpolation uint _primCount : PRIM_COUNT;
 };
 
 struct SkyDomePSInput{

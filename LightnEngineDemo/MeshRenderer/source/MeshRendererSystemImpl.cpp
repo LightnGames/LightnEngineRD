@@ -33,6 +33,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	queryHeapSystem->setMarker(commandList);
 
 	_view.resetResultBuffers(commandList);
+
 	bool isFixedCullingView = _cullingDebugType & CULLING_DEBUG_TYPE_FIXED_VIEW;
 	if (!isFixedCullingView) {
 		setFixedDebugView(commandList, viewInfo);
@@ -66,10 +67,12 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		depthPrePassCulling(commandList, viewInfo, _gpuCullingPipelineState);
-		buildIndirectArgument(commandList);
+		bool isPassedCulling = _cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
+		PipelineState* pipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuCullingPipelineState;
+		depthPrePassCulling(commandList, viewInfo, pipelineState);
 	}
 
+	buildIndirectArgument(commandList);
 
 	// デプスプリパス
 	{
@@ -142,17 +145,19 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	// GPUカリング
 	if (!isFixedCullingView) {
 		bool isPassedCulling = _cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
-		PipelineState* mainCullingPipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuOcclusionCullingPipelineState;
-		mainCulling(commandList, viewInfo, mainCullingPipelineState);
-		buildIndirectArgument(commandList);
+		PipelineState* pipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuOcclusionCullingPipelineState;
+		mainCulling(commandList, viewInfo, pipelineState);
 	}
 
+	buildIndirectArgument(commandList);
 
 	// 描画
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
+
+		_view.resourceBarriersHizTextureToSrv(commandList);
 
 		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
 			ShaderSetImpl* shaderSet = materialSystem->getShaderSet(pipelineStateIndex);
@@ -236,9 +241,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 #endif
 		}
+
+		_view.resourceBarriersHizSrvToTexture(commandList);
 	}
 
-	_view.resourceBarriersHizSrvToTexture(commandList);
 	_view.readbackCullingResultBuffer(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Main Pass");
@@ -281,6 +287,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	indexBufferView._format = FORMAT_R32_UINT;
 
 	_view.resetResultBuffers(commandList);
+
 	bool isFixedCullingView = _cullingDebugType & CULLING_DEBUG_TYPE_FIXED_VIEW;
 	if (!isFixedCullingView) {
 		setFixedDebugView(commandList, viewInfo);
@@ -347,12 +354,13 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		mainCulling(commandList, viewInfo, _multiDrawOcclusionCullingPipelineState);
 	}
 
-
 	// 描画
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
+
+		_view.resourceBarriersHizTextureToSrv(commandList);
 
 		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
 			ShaderSetImpl* shaderSet = materialSystem->getShaderSet(pipelineStateIndex);
@@ -386,9 +394,10 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
 			_view.render(commandList, classicShaderSet->_multiDrawCommandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
+
+		_view.resourceBarriersHizSrvToTexture(commandList);
 	}
 
-	_view.resourceBarriersHizSrvToTexture(commandList);
 	_view.readbackCullingResultBuffer(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Main Pass");
@@ -519,7 +528,7 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Depth Prepass Culling");
 
 	_view.resourceBarriersGpuCullingToUAV(commandList);
-	_view.resetCountBuffers(commandList);
+	_view.resetMeshletInstanceInfoCountBuffers(commandList);
 
 	commandList->setComputeRootSignature(_gpuCullingRootSignature);
 	commandList->setPipelineState(pipelineState);
@@ -545,7 +554,11 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 
 void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
 #if ENABLE_MESHLET_INSTANCING
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
+
 	_view.resourceBarriersBuildIndirectArgument(commandList);
+	_view.resetIndirectArgumentCountBuffers(commandList);
 	commandList->setComputeRootSignature(_buildIndirectArgumentRootSignature);
 	commandList->setPipelineState(_buildIndirectArgumentPipelineState);
 
@@ -556,6 +569,9 @@ void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
 	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	_view.resourceBarriersResetBuildIndirectArgument(commandList);
+
+	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
+	queryHeapSystem->setMarker(commandList);
 #endif
 }
 
@@ -572,10 +588,11 @@ void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* vie
 
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Main Culling");
 
+	_view.resourceBarriersHizTextureToSrv(commandList);
 	_view.resourceBarriersGpuCullingToUAV(commandList);
-	_view.resetCountBuffers(commandList);
+	_view.resetMeshletInstanceInfoCountBuffers(commandList);
 
-	commandList->setComputeRootSignature(_gpuOcclusionCullingRootSignature);
+	commandList->setComputeRootSignature(_gpuCullingRootSignature);
 	commandList->setPipelineState(pipelineState);
 	_view.setGpuCullingResources(commandList);
 
@@ -593,6 +610,7 @@ void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* vie
 	commandList->dispatch(dispatchCount, 1, 1);
 
 	_view.resetResourceGpuCullingBarriers(commandList);
+	_view.resourceBarriersHizSrvToTexture(commandList);
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
 
 	queryHeapSystem->setCurrentMarkerName("Main Culling");
@@ -632,6 +650,8 @@ void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewIn
 
 		_view.resourceBarriersHizUavtoSrv(commandList, 4);
 	}
+
+	_view.resourceBarriersHizSrvToTexture(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Build Hiz");
 	queryHeapSystem->setMarker(commandList);
@@ -706,65 +726,9 @@ void MeshRendererSystemImpl::initialize() {
 		DescriptorRange hizSrvRange = {};
 		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, GraphicsView::HIERACHICAL_DEPTH_COUNT, 10);
 
-
-		// フラスタムカリングのみ
+		// culling root signature
 		{
-			_gpuCullingPipelineState = allocator->allocatePipelineState();
 			_gpuCullingRootSignature = allocator->allocateRootSignature();
-
-			constexpr u32 rootParamCount = ROOT_PARAM_GPU_COUNT - 2;
-			RootParameter rootParameters[rootParamCount] = {};
-			rootParameters[ROOT_PARAM_GPU_CULLING_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_CULLING_VIEW_INFO].initializeDescriptorTable(1, &cullingViewInfoConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_VIEW_INFO].initializeDescriptorTable(1, &viewInfoConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS].initializeDescriptorTable(1, &indirectArgumentOffsetRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO].initializeDescriptorTable(1, &subMeshInfoSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO].initializeDescriptorTable(1, &meshletInstanceInfoUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT].initializeDescriptorTable(1, &meshletInstanceInfoCountUavRange, SHADER_VISIBILITY_ALL);
-
-			RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc._device = device;
-			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-			rootSignatureDesc._parameters = rootParameters;
-			_gpuCullingRootSignature->iniaitlize(rootSignatureDesc);
-
-			ComputePipelineStateDesc pipelineStateDesc = {};
-			pipelineStateDesc._device = device;
-			pipelineStateDesc._rootSignature = _gpuCullingRootSignature;
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_frustum.cso");
-
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_gpuCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_gpuCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum.cso");
-
-				computeShader->terminate();
-			}
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-			_multiDrawCullingPipelineState = allocator->allocatePipelineState();
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_frustum.cso");
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_multiDrawCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_multiDrawCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum.cso");
-
-				computeShader->terminate();
-			}
-#endif
-		}
-
-		// フラスタムカリング ＋ オクルージョンカリング
-		{
-			_gpuOcclusionCullingPipelineState = allocator->allocatePipelineState();
-			_gpuOcclusionCullingRootSignature = allocator->allocateRootSignature();
 
 			RootParameter rootParameters[ROOT_PARAM_GPU_COUNT] = {};
 			rootParameters[ROOT_PARAM_GPU_CULLING_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
@@ -786,12 +750,19 @@ void MeshRendererSystemImpl::initialize() {
 			rootSignatureDesc._device = device;
 			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 			rootSignatureDesc._parameters = rootParameters;
-			_gpuOcclusionCullingRootSignature->iniaitlize(rootSignatureDesc);
+			_gpuCullingRootSignature->iniaitlize(rootSignatureDesc);
+		}
+
+		// pipeline state
+		{
+			_gpuOcclusionCullingPipelineState = allocator->allocatePipelineState();
+			_gpuCullingPipelineState = allocator->allocatePipelineState();
 
 			ComputePipelineStateDesc pipelineStateDesc = {};
 			pipelineStateDesc._device = device;
-			pipelineStateDesc._rootSignature = _gpuOcclusionCullingRootSignature;
-			// standard
+			pipelineStateDesc._rootSignature = _gpuCullingRootSignature;
+
+			// フラスタム　＋　オクルージョンカリング
 			{
 				ShaderBlob* computeShader = allocator->allocateShaderBlob();
 				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
@@ -799,6 +770,18 @@ void MeshRendererSystemImpl::initialize() {
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_gpuOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
 				_gpuOcclusionCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
+
+				computeShader->terminate();
+			}
+
+			// フラスタムカリングのみ
+			{
+				ShaderBlob* computeShader = allocator->allocateShaderBlob();
+				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_frustum.cso");
+
+				pipelineStateDesc._cs = computeShader->getShaderByteCode();
+				_gpuCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_gpuCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum.cso");
 
 				computeShader->terminate();
 			}
@@ -824,6 +807,17 @@ void MeshRendererSystemImpl::initialize() {
 				pipelineStateDesc._cs = computeShader->getShaderByteCode();
 				_multiDrawOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
 				_multiDrawOcclusionCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum_occlusion.cso");
+
+				computeShader->terminate();
+			}
+
+			_multiDrawCullingPipelineState = allocator->allocatePipelineState();
+			{
+				ShaderBlob* computeShader = allocator->allocateShaderBlob();
+				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_frustum.cso");
+				pipelineStateDesc._cs = computeShader->getShaderByteCode();
+				_multiDrawCullingPipelineState->iniaitlize(pipelineStateDesc);
+				_multiDrawCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum.cso");
 
 				computeShader->terminate();
 			}
@@ -1043,9 +1037,8 @@ void MeshRendererSystemImpl::terminate() {
 	_debugFixedViewConstantBuffer.terminate();
 	_gpuCullingPassPipelineState->terminate();
 	_gpuOcclusionCullingPipelineState->terminate();
-	_gpuOcclusionCullingRootSignature->terminate();
-	_gpuCullingPipelineState->terminate();
 	_gpuCullingRootSignature->terminate();
+	_gpuCullingPipelineState->terminate();
 	_computeLodPipelineState->terminate();
 	_computeLodRootSignature->terminate();
 	_buildHizPipelineState->terminate();
@@ -1118,6 +1111,11 @@ void MeshRendererSystemImpl::update() {
 		if (debug._fixedCullingView) {
 			DebugRendererSystem::Get()->drawFrustum(_debugFixedViewMatrix, _debugFixedProjectionMatrix, Color4::YELLOW);
 		}
+
+		if (!debug._fixedCullingView) {
+			_view.resetMeshletInfo();
+		}
+
 	}
 
 	DebugWindow::StartWindow("Scene Meshs");
@@ -1250,8 +1248,6 @@ void MeshRendererSystemImpl::update() {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	SceneCullingInfo* cullingInfo = vramUpdater->enqueueUpdate<SceneCullingInfo>(&_sceneCullingConstantBuffer, 0, 1);
 	cullingInfo->_meshInstanceCountMax = meshInstanceCountMax;
-
-	_view.resetMeshletInfo();
 }
 
 void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo) {

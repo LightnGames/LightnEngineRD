@@ -26,7 +26,7 @@ VertexOut main(VSInput input){
     vertexOut._positionNdc = float4(input._position, 1);
     vertexOut._texcoord = unpackTexCoords(input._texcoord);
     vertexOut._meshletIndex = 0;
-    vertexOut._lodLevel = 1.0;
+    vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
     vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
     return vertexOut;
 }

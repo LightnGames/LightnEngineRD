@@ -122,69 +122,55 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
     
 #if UBER_CULLING_RESULT
-        if (instanceOffset < _indirectArgumentConstant._instanceCount) {
-    MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
-    uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
-    Meshlet meshlet = _meshlets[meshletIndex];
-    if (passFrustum) {
-        passFrustumPrimitiveCount = meshlet._primitiveCount;
-        testBackfacePrimitiveCount = meshlet._primitiveCount;
-    }
+    if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+        MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+        uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+        Meshlet meshlet = _meshlets[meshletIndex];
+        if (passFrustum) {
+            passFrustumPrimitiveCount = meshlet._primitiveCount;
+            testBackfacePrimitiveCount = meshlet._primitiveCount;
+        }
     
-    if (passBackface) {
-        testOcclusionPrimitiveCount = meshlet._primitiveCount;
-        passBackfacePrimitiveCount = meshlet._primitiveCount;
-    }
+        if (passBackface) {
+            testOcclusionPrimitiveCount = meshlet._primitiveCount;
+            passBackfacePrimitiveCount = meshlet._primitiveCount;
+        }
     
-    if (passOcclusion) {
-        passOcclusionPrimitiveCount = meshlet._primitiveCount;
-    }
+        if (passOcclusion) {
+            passOcclusionPrimitiveCount = meshlet._primitiveCount;
+        }
     
-    uint waveTestFrustumPrimitiveCount = WaveActiveSum(testFrustumPrimitiveCount);
-    uint waveTestFrustumMeshletCount = WaveActiveCountBits(isTestedFrustumCulling);
-    uint waveTestBackfacePrimitiveCount = WaveActiveSum(testBackfacePrimitiveCount);
-    uint waveTestBackfaceMeshletCount = WaveActiveCountBits(isTestedBackfaceCulling);
-    uint waveTestOcclusionPrimitiveCount = WaveActiveSum(testOcclusionPrimitiveCount);
-    uint waveTestOcclusionMeshletCount = WaveActiveCountBits(isTestedOcclusionCulling);
-    uint wavePassFrustumPrimitiveCount = WaveActiveSum(passFrustumPrimitiveCount);
-    uint wavePassFrustumMeshletCount = WaveActiveCountBits(passFrustum);
-    uint wavePassBackfacePrimitiveCount = WaveActiveSum(passBackfacePrimitiveCount);
-    uint wavePassBackfaceMeshletCount = WaveActiveCountBits(passBackface);
-    uint wavePassOcclusionPrimitiveCount = WaveActiveSum(passOcclusionPrimitiveCount);
-    uint wavePassOcclusionMeshletCount = WaveActiveCountBits(passOcclusion);
-    
-    if (WaveIsFirstLane()) {
         uint currentCount = 0;
-        if (WaveActiveAnyTrue(isTestedFrustumCulling)) {
-            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, waveTestFrustumPrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestFrustumMeshletCount, currentCount);
+        if (isTestedFrustumCulling) {
+            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, testFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
-        if (WaveActiveAnyTrue(isTestedBackfaceCulling)) {
-            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, waveTestBackfacePrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestBackfaceMeshletCount, currentCount);
+        if (isTestedBackfaceCulling) {
+            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, testBackfacePrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
-        if (WaveActiveAnyTrue(isTestedOcclusionCulling)) {
-            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, waveTestOcclusionPrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, waveTestOcclusionMeshletCount, currentCount);
+        if (isTestedOcclusionCulling) {
+            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, testOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
 
-        if (WaveActiveAnyTrue(passFrustum)) {
-            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, wavePassFrustumPrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassFrustumMeshletCount, currentCount);
+        if (passFrustum) {
+            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, passFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
-        if (WaveActiveAnyTrue(passBackface)) {
-            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, wavePassBackfacePrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassBackfaceMeshletCount, currentCount);
+        if (passBackface) {
+            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
         
-        if (WaveActiveAnyTrue(passOcclusion)) {
-            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, wavePassOcclusionPrimitiveCount, currentCount);
-            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, wavePassOcclusionMeshletCount, currentCount);
+        if (passOcclusion) {
+            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, passOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
-    }}
+    }
 #endif
         
     uint visibleCount = WaveActiveCountBits(visible);

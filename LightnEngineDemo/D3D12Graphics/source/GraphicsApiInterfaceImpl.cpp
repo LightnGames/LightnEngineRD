@@ -209,20 +209,28 @@ void SetDebugName(T* resource, const char* name, ...) {
 void HardwareFactoryD3D12::initialize(const HardwareFactoryDesc& desc) {
 	u32 dxgiFactoryFlags = 0;
 
+#define ENABLE_GBV 0
+
 	// debug Layer
 	if (desc._flags & HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG) {
 		ID3D12Debug* debugController = nullptr;
-		//ID3D12Debug1* debugController1 = nullptr;
+#if ENABLE_GBV
+		ID3D12Debug1* debugController1 = nullptr;
+#endif
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
 			debugController->EnableDebugLayer();
 			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 
-			//debugController->QueryInterface(IID_PPV_ARGS(&debugController1));
-			//debugController1->SetEnableGPUBasedValidation(true);
+#if ENABLE_GBV
+			debugController->QueryInterface(IID_PPV_ARGS(&debugController1));
+			debugController1->SetEnableGPUBasedValidation(true);
+#endif
 		}
 
 		debugController->Release();
-		//debugController1->Release();
+#if ENABLE_GBV
+		debugController1->Release();
+#endif
 	}
 
 	LTN_SUCCEEDED(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&_factory)));
