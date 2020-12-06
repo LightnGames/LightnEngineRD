@@ -34,7 +34,6 @@ void main(
     uint meshletIndex = meshPayload._meshletIndices[gid];
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
-    Mesh mesh = _meshes[meshInstance._meshIndex];
 
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
@@ -60,7 +59,6 @@ void main(
         vertexOut._meshletIndex = meshletIndex;
         vertexOut._materialIndex = meshPayload._materialIndex[gid];
         vertexOut._meshInstanceIndex = meshInstanceIndex;
-
         verts[gtid] = vertexOut;
     }
 }

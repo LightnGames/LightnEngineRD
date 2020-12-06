@@ -112,11 +112,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #endif
         
         if (visible) {
-            MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
-            uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
             uint index = WavePrefixCountBits(visible);
             writePayloadStruct(index, meshletIndex, meshletInfo);
-            _passMeshlets._asDtid[index] = dtid;
         }
     }
     

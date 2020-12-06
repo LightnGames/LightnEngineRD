@@ -30,7 +30,6 @@ struct PayloadStruct {
     uint _vertexOffset[32];
     uint _vertexIndexOffset[32];
     uint _primitiveOffset[32];
-    uint _asDtid[32];
 }; 
 
 struct MeshletInstanceInfo {
