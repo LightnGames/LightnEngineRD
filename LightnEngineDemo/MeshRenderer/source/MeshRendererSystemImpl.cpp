@@ -1112,10 +1112,6 @@ void MeshRendererSystemImpl::update() {
 		if (debug._fixedCullingView) {
 			DebugRendererSystem::Get()->drawFrustum(_debugFixedViewMatrix, _debugFixedProjectionMatrix, Color4::YELLOW);
 		}
-
-		if (!debug._fixedCullingView) {
-			_view.resetMeshletInfo();
-		}
 	}
 
 	DebugWindow::StartWindow("Scene Meshs");

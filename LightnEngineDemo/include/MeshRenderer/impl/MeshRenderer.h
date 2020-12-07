@@ -57,5 +57,5 @@ private:
 	u32 _indirectArgumentOffsets[SHADER_SET_COUNT_MAX] = {};
 	GpuBuffer _indirectArgumentOffsetBuffer;
 	DescriptorHandle _indirectArgumentOffsetSrv;
-	bool _isNeededUpdateIndirectArgumentOffset = false;
+	bool _isUpdatedIndirectArgumentOffset = false;
 };

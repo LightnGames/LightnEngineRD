@@ -103,6 +103,7 @@ void Scene::update() {
 		}
 	}
 
+	bool isUpdatedInstancingOffset = false;
 	u32 subMeshInstanceCount = _gpuSubMeshInstances.getArrayCountMax();
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
@@ -121,16 +122,18 @@ void Scene::update() {
 			u32 offset = sizeof(gpu::SubMeshInstance) * subMeshInstanceIndex;
 			gpu::SubMeshInstance* mapSubMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, offset);
 			*mapSubMeshInstance = gpuSubMeshInstance;
+
+			isUpdatedInstancingOffset = true;
 		}
 	}
 
 	_vramShaderSetSystem.update();
 
 	// メッシュレット　インスタンシング情報のオフセットを計算
-	{
+	if(isUpdatedInstancingOffset) {
 		constexpr u32 ARRAY_COUNT = MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
-		u32* packedSubMeshOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, ARRAY_COUNT);
-		u32 packedMeshletCounts[ARRAY_COUNT] = {};
+		u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, ARRAY_COUNT);
+		u32 counts[ARRAY_COUNT] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
 			const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -146,16 +149,16 @@ void Scene::update() {
 					u32 meshletCount = subMeshes[subMeshOffset]._meshletCount - 1;
 					if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
 						u32 shaderSetOffset = subMeshInstances[subMeshOffset]._shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-						++packedMeshletCounts[shaderSetOffset + meshletCount];
+						++counts[shaderSetOffset + meshletCount];
 					}
 				}
 			}
 		}
 
-		memset(packedSubMeshOffsets, 0, sizeof(u32) * ARRAY_COUNT);
-		for (u32 packedIndex = 1; packedIndex < ARRAY_COUNT; ++packedIndex) {
-			u32 prevIndex = packedIndex - 1;
-			packedSubMeshOffsets[packedIndex] = packedSubMeshOffsets[prevIndex] + packedMeshletCounts[prevIndex];
+		memset(mapOffsets, 0, sizeof(u32) * ARRAY_COUNT);
+		for (u32 i = 1; i < ARRAY_COUNT; ++i) {
+			u32 prevIndex = i - 1;
+			mapOffsets[i] = mapOffsets[prevIndex] + counts[prevIndex];
 		}
 	}
 }
@@ -997,10 +1000,4 @@ ResourceDesc GraphicsView::getHizTextureResourceDesc(u32 level) const {
 
 const CullingResult* GraphicsView::getCullingResult() const {
 	return reinterpret_cast<const CullingResult*>(&_currentFrameCullingResultMapPtr);
-}
-
-void GraphicsView::resetMeshletInfo() {
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32* ptr = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoBuffer, 0, _meshletInstanceInfoBuffer.getSizeInByte() / sizeof(u32));
-	memset(ptr, 0, _meshletInstanceInfoBuffer.getSizeInByte());
 }

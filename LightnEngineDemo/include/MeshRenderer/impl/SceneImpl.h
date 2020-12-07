@@ -219,8 +219,6 @@ public:
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
 
-	void resetMeshletInfo();
-
 private:
 	GpuBuffer _currentLodLevelBuffer;
 	GpuBuffer _indirectArgumentBuffer;

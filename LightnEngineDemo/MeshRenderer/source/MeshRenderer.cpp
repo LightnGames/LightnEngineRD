@@ -84,7 +84,7 @@ void VramShaderSetSystem::update() {
 		}
 	}
 
-	if (_isNeededUpdateIndirectArgumentOffset) {
+	if (_isUpdatedIndirectArgumentOffset) {
 		memset(_indirectArgumentOffsets, 0, sizeof(u32) * SHADER_SET_COUNT_MAX);
 		for (u32 shaderSetIndex = 1; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
 			u32 prevShaderIndex = shaderSetIndex - 1;
@@ -94,7 +94,7 @@ void VramShaderSetSystem::update() {
 
 		u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, shaderSetCount);
 		memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * shaderSetCount);
-		_isNeededUpdateIndirectArgumentOffset = false;
+		_isUpdatedIndirectArgumentOffset = false;
 	}
 }
 
@@ -188,7 +188,7 @@ void VramShaderSetSystem::addRefCountMaterial(Material* material) {
 
 	++shaderSet._materialRefCounts[findIndex];
 	++shaderSet._totalRefCount;
-	_isNeededUpdateIndirectArgumentOffset = true;
+	_isUpdatedIndirectArgumentOffset = true;
 }
 
 void VramShaderSetSystem::removeRefCountMaterial(const Material* material) {
@@ -201,7 +201,7 @@ void VramShaderSetSystem::removeRefCountMaterial(const Material* material) {
 	LTN_ASSERT(findIndex != static_cast<u32>(-1));
 	--shaderSet._materialRefCounts[findIndex];
 	--shaderSet._totalRefCount;
-	_isNeededUpdateIndirectArgumentOffset = true;
+	_isUpdatedIndirectArgumentOffset = true;
 
 	if (getMaterialInstanceTotalRefCount(shaderSetIndex) == 0) {
 		shaderSet.terminate();
