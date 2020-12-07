@@ -226,7 +226,7 @@ private:
 	GpuBuffer _indirectArgumentBuffer;
 	GpuBuffer _countBuffer;
 	GpuBuffer _cullingResultBuffer;
-	GpuBuffer _cullingResultReadbackBuffer[BACK_BUFFER_COUNT] = {};
+	GpuBuffer _cullingResultReadbackBuffer;
 	GpuBuffer _meshletInstanceInfoBuffer;
 	GpuBuffer _meshletInstanceInfoCountBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
@@ -248,8 +248,7 @@ private:
 	DescriptorHandle _currentLodLevelUav;
 	DescriptorHandle _currentLodLevelSrv;
 	DescriptorHandle _countCpuUavHandle;
-	gpu::CullingResult* _cullingResultMapPtr[BACK_BUFFER_COUNT] = {};
-	gpu::CullingResult* _currentFrameCullingResultMapPtr = nullptr;
+	gpu::CullingResult _currentFrameCullingResultMapPtr;
 	const ViewInfo* _viewInfo = nullptr;
 };
 

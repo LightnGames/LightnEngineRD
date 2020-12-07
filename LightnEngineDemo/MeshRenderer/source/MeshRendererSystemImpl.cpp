@@ -858,6 +858,7 @@ void MeshRendererSystemImpl::initialize() {
 		pipelineStateDesc._cs = computeShader->getShaderByteCode();
 		pipelineStateDesc._rootSignature = _buildIndirectArgumentRootSignature;
 		_buildIndirectArgumentPipelineState->iniaitlize(pipelineStateDesc);
+		_buildIndirectArgumentPipelineState->setDebugName("build_indirect_argument.cso");
 
 		computeShader->terminate();
 	}
@@ -1115,7 +1116,6 @@ void MeshRendererSystemImpl::update() {
 		if (!debug._fixedCullingView) {
 			_view.resetMeshletInfo();
 		}
-
 	}
 
 	DebugWindow::StartWindow("Scene Meshs");

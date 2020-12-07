@@ -2,7 +2,7 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <Core/System.h>
 
-#define ENABLE_MESH_SHADER 1
+#define ENABLE_MESH_SHADER 0
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
 #define ENABLE_MESHLET_INSTANCING 1
@@ -1193,7 +1193,7 @@ struct LTN_GFX_API CommandSignature {
 struct LTN_GFX_API Resource {
 	virtual void terminate() = 0;
 	virtual void* map(const MemoryRange* range) = 0;
-	virtual void unmap() = 0;
+	virtual void unmap(const MemoryRange* range = nullptr) = 0;
 	virtual u64 getGpuVirtualAddress() const = 0;
 	virtual void setDebugName(const char* name) = 0;
 };

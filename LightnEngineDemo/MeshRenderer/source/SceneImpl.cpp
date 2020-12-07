@@ -541,17 +541,16 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 	}
 
 	// culling result readback buffers
-	for (u32 frameIndex = 0; frameIndex < BACK_BUFFER_COUNT; ++frameIndex) {
+	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = sizeof(gpu::CullingResult);
+		desc._sizeInByte = sizeof(gpu::CullingResult)*BACK_BUFFER_COUNT;
 		desc._initialState = RESOURCE_STATE_COPY_DEST;
 		desc._heapType = HEAP_TYPE_READBACK;
 		desc._device = device;
-		_cullingResultReadbackBuffer[frameIndex].initialize(desc);
-		_cullingResultReadbackBuffer[frameIndex].setDebugName("Culling Result Readback");
-		_cullingResultMapPtr[frameIndex] = _cullingResultReadbackBuffer[frameIndex].map<gpu::CullingResult>();
+		_cullingResultReadbackBuffer.initialize(desc);
+		_cullingResultReadbackBuffer.setDebugName("Culling Result Readback");
 	}
-	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[0];
+
 
 	// passed meshlet info srv
 	{
@@ -778,6 +777,7 @@ void GraphicsView::terminate() {
 	_meshletInstanceInfoCountBuffer.terminate();
 	_cullingViewConstantBuffer.terminate();
 	_currentLodLevelBuffer.terminate();
+	_cullingResultReadbackBuffer.terminate();
 
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
 		_hizInfoConstantBuffer[i].terminate();
@@ -785,10 +785,6 @@ void GraphicsView::terminate() {
 
 	for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
 		_hizDepthTextures[i].terminate();
-	}
-
-	for (u32 frameIndex = 0; frameIndex < BACK_BUFFER_COUNT; ++frameIndex) {
-		_cullingResultReadbackBuffer[frameIndex].terminate();
 	}
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
@@ -969,10 +965,15 @@ void GraphicsView::resetResultBuffers(CommandList* commandList) {
 void GraphicsView::readbackCullingResultBuffer(CommandList* commandList) {
 	// カリング結果をリードバックバッファへコピー 
 	u32 frameIndex = GraphicsSystemImpl::Get()->getFrameIndex();
+	u32 offset = frameIndex * sizeof(gpu::CullingResult);
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-	commandList->copyBufferRegion(_cullingResultReadbackBuffer[frameIndex].getResource(), 0, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
+	commandList->copyBufferRegion(_cullingResultReadbackBuffer.getResource(), offset, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
-	_currentFrameCullingResultMapPtr = _cullingResultMapPtr[frameIndex];
+
+	MemoryRange range = { frameIndex, frameIndex + 1 };
+	gpu::CullingResult* mapPtr = _cullingResultReadbackBuffer.map<gpu::CullingResult>(&range);
+	memcpy(&_currentFrameCullingResultMapPtr, mapPtr, sizeof(gpu::CullingResult));
+	_cullingResultReadbackBuffer.unmap();
 }
 
 void GraphicsView::setDrawResultDescriptorTable(CommandList* commandList) {
@@ -995,7 +996,7 @@ ResourceDesc GraphicsView::getHizTextureResourceDesc(u32 level) const {
 }
 
 const CullingResult* GraphicsView::getCullingResult() const {
-	return reinterpret_cast<CullingResult*>(_currentFrameCullingResultMapPtr);
+	return reinterpret_cast<const CullingResult*>(&_currentFrameCullingResultMapPtr);
 }
 
 void GraphicsView::resetMeshletInfo() {

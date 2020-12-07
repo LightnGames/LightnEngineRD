@@ -13,7 +13,6 @@ void QueryHeapSystem::initialize() {
 		desc._device = device;
 		_timeStampBuffer.initialize(desc);
 		_timeStampBuffer.setDebugName("Time Stamp");
-		_mapedTimeStampPtr = _timeStampBuffer.map<u64>();
 	}
 
 	{
@@ -29,8 +28,6 @@ void QueryHeapSystem::initialize() {
 void QueryHeapSystem::terminate() {
 	_timeStampBuffer.terminate();
 	_queryHeap->terminate();
-	_mapedTimeStampPtr = nullptr;
-	_currentTimeStamps = nullptr;
 }
 
 void QueryHeapSystem::update() {
@@ -40,7 +37,11 @@ void QueryHeapSystem::update() {
 void QueryHeapSystem::requestTimeStamp(CommandList* commandList, u32 frameIndex) {
 	u32 queryFrameOffset = frameIndex * GPU_TIME_STAMP_COUNT_MAX;
 	commandList->resolveQueryData(_queryHeap, QUERY_TYPE_TIMESTAMP, queryFrameOffset, _currentFrameMarkerCount, _timeStampBuffer.getResource(), queryFrameOffset * sizeof(u64));
-	_currentTimeStamps = _mapedTimeStampPtr + queryFrameOffset;
+
+	MemoryRange range = { queryFrameOffset , GPU_TIME_STAMP_COUNT_MAX };
+	u64* mapPtr = _timeStampBuffer.map<u64>(&range);
+	memcpy(_currentTimeStamps, mapPtr, sizeof(u64) * GPU_TIME_STAMP_COUNT_MAX);
+	_timeStampBuffer.unmap();
 }
 
 void QueryHeapSystem::setGpuFrequency(CommandQueue* commandQueue) {

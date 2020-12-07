@@ -64,6 +64,10 @@ public:
 	T* map(const MemoryRange* range = nullptr) {
 		return reinterpret_cast<T*>(_resource->map(range));
 	}
+
+	void unmap(const MemoryRange* range = nullptr) {
+		_resource->unmap(range);
+	}
 };
 
 class LTN_GFX_CORE_API GpuTexture :public GpuResource {
