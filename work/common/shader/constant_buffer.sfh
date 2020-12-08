@@ -1,5 +1,7 @@
 #define FRUSTUM_PLANE_COUNT 6
 #define FLT_MAX 3.402823466e+38
+#define UINT16_MAX 65535
+#define UINT32_MAX 4294967295
 
 struct ViewInfo {
     float4x4 _matrixView;
@@ -165,7 +167,6 @@ bool computeHizLevelAndCoords(float3 boundsMin, float3 boundsMax, ViewInfo viewI
     return false;
 }
 
-#define UINT16_MAX 65535
 float2 unpackTexCoords(uint packed) {
     uint x = (packed.x >> 0) & 0xffff;
     uint y = (packed.x >> 16) & 0xffff;

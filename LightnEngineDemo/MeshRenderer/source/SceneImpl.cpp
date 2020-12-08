@@ -739,12 +739,6 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._device = device;
 		buffer.initialize(desc);
 		buffer.setDebugName("Hiz Info Constant 0");
-
-		Application* app = ApplicationSystem::Get()->getApplication();
-		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&buffer, 0);
-		mapConstant->_inputDepthWidth = app->getScreenWidth();
-		mapConstant->_inputDepthHeight = app->getScreenHeight();
 	}
 
 	{
@@ -755,12 +749,6 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._device = device;
 		buffer.initialize(desc);
 		buffer.setDebugName("Hiz Info Constant 1");
-
-		ResourceDesc hizLevel3Desc = getHizTextureResourceDesc(3);
-		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&buffer, 0);
-		mapConstant->_inputDepthWidth = static_cast<u32>(hizLevel3Desc._width);
-		mapConstant->_inputDepthHeight = static_cast<u32>(hizLevel3Desc._height);
 	}
 
 	// build hiz cbv descriptors
@@ -825,7 +813,7 @@ void GraphicsView::update() {
 		ResourceDesc desc = _hizDepthTextures[i].getResourceDesc();
 		DebugGui::Text("[%d] width:%-4d height:%-4d", i, desc._width, desc._height);
 		DebugGui::Image(_hizDepthTextureSrv._gpuHandle + incrimentSize * i, Vector2(200 * aspectRate, 200),
-			Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.95f, 1), DebugGui::TEXTURE_SAMPLE_TYPE_POINT);
+			Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.0f, 1), DebugGui::TEXTURE_SAMPLE_TYPE_POINT);
 		DebugGui::NextColumn();
 	}
 	DebugGui::Columns(1);
@@ -834,6 +822,24 @@ void GraphicsView::update() {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	CullingViewInfo* cullingInfo = vramUpdater->enqueueUpdate<CullingViewInfo>(&_cullingViewConstantBuffer, 0);
 	*reinterpret_cast<u64*>(cullingInfo->_meshletInfoGpuAddress) = _meshletInstanceInfoBuffer.getGpuVirtualAddress();
+
+	Application* app = ApplicationSystem::Get()->getApplication();
+	{
+		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&_hizInfoConstantBuffer[0], 0);
+		mapConstant->_inputDepthWidth = app->getScreenWidth();
+		mapConstant->_inputDepthHeight = app->getScreenHeight();
+		mapConstant->_nearClip = _viewInfo->_nearClip;
+		mapConstant->_farClip = _viewInfo->_farClip;
+	}
+
+	{
+		ResourceDesc hizLevel3Desc = getHizTextureResourceDesc(3);
+		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&_hizInfoConstantBuffer[1], 0);
+		mapConstant->_inputDepthWidth = static_cast<u32>(hizLevel3Desc._width);
+		mapConstant->_inputDepthHeight = static_cast<u32>(hizLevel3Desc._height);
+		mapConstant->_nearClip = _viewInfo->_nearClip;
+		mapConstant->_farClip = _viewInfo->_farClip;
+	}
 }
 
 void GraphicsView::setComputeLodResource(CommandList* commandList) {
