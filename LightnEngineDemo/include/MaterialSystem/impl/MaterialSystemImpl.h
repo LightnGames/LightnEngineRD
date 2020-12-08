@@ -27,6 +27,7 @@ enum ShaderSetMaterialStateFlags {
 };
 
 struct ClassicShaderSet {
+	PipelineState* _debugPipelineState = nullptr;
 	PipelineState* _depthPipelineState = nullptr;
 	PipelineState* _pipelineState = nullptr;
 	RootSignature* _rootSignature = nullptr;

@@ -215,6 +215,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
 	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
+	constexpr u32 TEXTURE_BASE_REGISTER = 16;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	RootSignatureDesc rootSignatureDescFurstumCulling = {};
 	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
@@ -233,7 +234,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	DescriptorRange meshInstanceDescriptorRange = {};
 	meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 4, 5);
 
-
 	DescriptorRange meshletInfoSrvRange = {};
 	meshletInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
 
@@ -247,7 +247,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	hizRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 8, 16);
 
 	DescriptorRange textureDescriptorRange = {};
-	textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, 16);
+	textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
 
 	DescriptorRange cullingResultDescriptorRange = {};
 	cullingResultDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
@@ -363,6 +363,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		pixelShader->initialize(pixelShaderPath);
 
 		_classicShaderSet._depthPipelineState = allocator->allocatePipelineState();
+		_classicShaderSet._debugPipelineState = allocator->allocatePipelineState();
 		_classicShaderSet._pipelineState = allocator->allocatePipelineState();
 		_classicShaderSet._rootSignature = allocator->allocateRootSignature();
 
@@ -376,7 +377,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		materialDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
 		DescriptorRange textureDescriptorRange = {};
-		textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, 9);
+		textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
 
 		RootParameter rootParameters[ROOT_CLASSIC_MESH_COUNT] = {};
 		rootParameters[ROOT_CLASSIC_MESH_SCENE_CONSTANT].initializeDescriptorTable(1, &cbvDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -418,6 +419,16 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 
 		pipelineStateDesc._ps = ShaderByteCode();
 		_classicShaderSet._depthPipelineState->iniaitlize(pipelineStateDesc);
+
+		{
+			ShaderBlob* debugBlob = allocator->allocateShaderBlob();
+			debugBlob->initialize("L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso");
+
+			pipelineStateDesc._ps = debugBlob->getShaderByteCode();
+			_classicShaderSet._debugPipelineState->iniaitlize(pipelineStateDesc);
+			debugBlob->terminate();
+		}
+		pipelineStateDesc._ps = ShaderByteCode();
 
 		vertexShader->terminate();
 		pixelShader->terminate();

@@ -1,8 +1,6 @@
 #include "../gpu_culling_function.sfh"
 struct DispatchMeshIndirectArgument {
-    uint _meshletInstanceInfoOffset;
-    uint _instanceCount;
-    uint _meshletCount;
+    IndirectArgumentConstant _constant;
     uint _dispatchX;
     uint _dispatchY;
     uint _dispatchZ;
@@ -26,11 +24,11 @@ Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
 #define ENABLE_MESHLET_INSTANCING 1
+#define SHADER_SET_COUNT_MAX 32
+#define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
 
-#if !ENABLE_MESHLET_INSTANCING
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
-RWByteAddressBuffer _countBuffer : register(u1);
-#endif
+RWByteAddressBuffer _indirectArgumentCounts : register(u1);
 RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
 RWByteAddressBuffer _meshletInstanceInfoCounts : register(u3);
 #if UBER_CULLING_RESULT
@@ -91,10 +89,9 @@ void addIndirectArgument(uint meshInstanceIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
         SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
         
-#if ENABLE_MESHLET_INSTANCING
         uint meshletIndex = subMesh._meshletCount - 1;
-        if (meshletIndex < 64) {
-            uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * 64 + meshletIndex) * UINT32_SIZE_IN_BYTE;
+        if (meshletIndex < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
+            uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX + meshletIndex) * UINT32_SIZE_IN_BYTE;
             uint currentCount = 0;
             _meshletInstanceInfoCounts.InterlockedAdd(meshletInstanceOffsetByte, 1, currentCount);
             
@@ -109,20 +106,24 @@ void addIndirectArgument(uint meshInstanceIndex) {
             meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
             meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
             _meshletInstanceInfos[globalOffset] = meshletInfo;
+            
+            continue;
         }
-#else
-        uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
+        
+        uint shaderSetOffset = (subMeshInstance._shaderSetIndex + SHADER_SET_COUNT_MAX) * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
-        _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
+        _indirectArgumentCounts.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
 	
-        uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset);
+        uint instancingOffset = SHADER_SET_COUNT_MAX * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+        uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset) + instancingOffset;
         uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
         uint dispatchCount = (subMesh._meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
+        uint meshletInfoOffset = _meshletInstanceInfoOffsets.Load(instancingOffset) + currentCountIndex;
 		
         DispatchMeshIndirectArgument arguments;
-        arguments._instanceCount = 1;
-        arguments._meshletCount = subMesh._meshletCount;
-        arguments._meshletInstanceInfoOffset = indirectArgumentOffset;
+        arguments._constant._instanceCount = 1;
+        arguments._constant._meshletCount = subMesh._meshletCount;
+        arguments._constant._meshletInstanceInfoOffset = meshletInfoOffset;
         arguments._dispatchX = dispatchCount;
         arguments._dispatchY = 1;
         arguments._dispatchZ = 1;
@@ -135,8 +136,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         meshletInfo._vertexOffset = lodMesh._vertexOffset;
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
-        _meshletInstanceInfos[indirectArgumentOffset] = meshletInfo;
-#endif
+        _meshletInstanceInfos[meshletInfoOffset] = meshletInfo;
     }
 }
 

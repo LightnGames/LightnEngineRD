@@ -85,7 +85,6 @@ void VramShaderSetSystem::update() {
 	}
 
 	if (_isUpdatedIndirectArgumentOffset) {
-		memset(_indirectArgumentOffsets, 0, sizeof(u32) * SHADER_SET_COUNT_MAX);
 		for (u32 shaderSetIndex = 1; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
 			u32 prevShaderIndex = shaderSetIndex - 1;
 			u32 refCount = _shaderSets[prevShaderIndex].getTotalRefCount();

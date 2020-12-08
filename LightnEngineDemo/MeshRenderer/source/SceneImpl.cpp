@@ -546,7 +546,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 	// culling result readback buffers
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = sizeof(gpu::CullingResult)*BACK_BUFFER_COUNT;
+		desc._sizeInByte = sizeof(gpu::CullingResult) * BACK_BUFFER_COUNT;
 		desc._initialState = RESOURCE_STATE_COPY_DEST;
 		desc._heapType = HEAP_TYPE_READBACK;
 		desc._device = device;

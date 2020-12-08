@@ -110,3 +110,9 @@ struct SubMeshDrawInfo {
     uint _indexOffset;
 };
 
+struct IndirectArgumentConstant {
+    uint _meshletInstanceInfoOffset;
+    uint _instanceCount;
+    uint _meshletCount;
+};
+

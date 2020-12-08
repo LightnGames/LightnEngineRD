@@ -1,11 +1,5 @@
 #include "../gpu_culling_function.sfh"
 
-struct IndirectArgumentConstant {
-    uint _meshletInstanceInfoOffset;
-    uint _instanceCount;
-    uint _meshletCount;
-};
-
 ConstantBuffer<ViewInfo> _viewInfo : register(b1);
 ConstantBuffer<IndirectArgumentConstant> _indirectArgumentConstant : register(b2);
 
