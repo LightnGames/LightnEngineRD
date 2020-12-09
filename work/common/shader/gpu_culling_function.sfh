@@ -52,12 +52,6 @@ bool isEnabledMeshInstance(MeshInstance meshInstance) {
     return meshInstance._stateFlags != 0;
 }
 
-bool isEnableMeshletBounds(MeshletBounds meshletBounds) {
-    return true;
-    float sqrNormalLength = dot(meshletBounds._normal, meshletBounds._normal);
-    return sqrNormalLength > 0.1;
-}
-
 MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshlet) {
     float4x4 worldMatrix = meshInstance._matrixWorld;
     float3 boundsMin = meshlet._aabbMin;
