@@ -287,9 +287,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		_view.resourceBarriersBuildIndirectArgument(commandList);
-		_view.resetIndirectArgumentCountBuffers(commandList);
-		_view.resourceBarriersResetBuildIndirectArgument(commandList);
 		depthPrePassCulling(commandList, viewInfo, _multiDrawCullingPipelineState);
 	}
 
@@ -298,6 +295,8 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
+
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
 
 		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
 			ShaderSetImpl* shaderSet = materialSystem->getShaderSet(pipelineStateIndex);
@@ -330,6 +329,8 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 			_view.render(commandList, classicShaderSet->_multiDrawCommandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
 		queryHeapSystem->setMarker(commandList);
 	}
@@ -341,9 +342,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// GPUカリング
 	if (!isFixedCullingView) {
-		_view.resourceBarriersBuildIndirectArgument(commandList);
-		_view.resetIndirectArgumentCountBuffers(commandList);
-		_view.resourceBarriersResetBuildIndirectArgument(commandList);
 		mainCulling(commandList, viewInfo, _multiDrawOcclusionCullingPipelineState);
 	}
 
@@ -353,6 +351,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
 		_view.resourceBarriersHizTextureToSrv(commandList);
 
 		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
@@ -407,6 +406,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		}
 
 		_view.resourceBarriersHizSrvToTexture(commandList);
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 
 	_view.readbackCullingResultBuffer(commandList);
@@ -565,7 +565,6 @@ void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewI
 }
 
 void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
-#if ENABLE_MESHLET_INSTANCING
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
 
@@ -583,7 +582,6 @@ void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
 
 	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
 	queryHeapSystem->setMarker(commandList);
-#endif
 }
 
 void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState) {
@@ -603,6 +601,7 @@ void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* vie
 	_view.resourceBarriersGpuCullingToUAV(commandList);
 	_view.resetMeshletInstanceInfoCountBuffers(commandList);
 	_view.resetIndirectArgumentCountBuffers(commandList);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	commandList->setComputeRootSignature(_gpuCullingRootSignature);
 	commandList->setPipelineState(pipelineState);
@@ -623,7 +622,7 @@ void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* vie
 
 	_view.resetResourceGpuCullingBarriers(commandList);
 	_view.resourceBarriersHizSrvToTexture(commandList);
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	queryHeapSystem->setCurrentMarkerName("Main Culling");
 	queryHeapSystem->setMarker(commandList);
@@ -663,6 +662,7 @@ void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewIn
 		_view.resourceBarriersHizUavtoSrv(commandList, 4);
 	}
 
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	_view.resourceBarriersHizSrvToTexture(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Build Hiz");
@@ -1262,6 +1262,15 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 	if (!_visible) {
 		return;
 	}
+
+	//f32 clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
+	f32 clearColor[4] = {};
+	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
+	commandList->setRenderTargets(1, &currentRenderTargetHandle, &viewInfo->_depthDsv);
+	commandList->clearRenderTargetView(currentRenderTargetHandle, clearColor);
+	commandList->clearDepthStencilView(viewInfo->_depthDsv._cpuHandle, CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	switch (_geometoryType) {
 #if ENABLE_MESH_SHADER

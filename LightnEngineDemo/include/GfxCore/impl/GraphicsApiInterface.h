@@ -173,6 +173,11 @@ enum ComparisonFunc {
 	COMPARISON_FUNC_ALWAYS = 8
 };
 
+enum DepthWriteMask {
+	DEPTH_WRITE_MASK_ZERO = 0,
+	DEPTH_WRITE_MASK_ALL = 1
+};
+
 enum PrimitiveTopology {
 	PRIMITIVE_TOPOLOGY_UNDEFINED = 0,
 	PRIMITIVE_TOPOLOGY_POINTLIST = 1,
@@ -816,6 +821,7 @@ struct GraphicsPipelineStateDesc {
 	Format _rtvFormats[8] = {};
 	Format _dsvFormat;
 	ComparisonFunc _depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+	DepthWriteMask _depthWriteMask = DEPTH_WRITE_MASK_ALL;
 	SampleDesc _sampleDesc;
 	PrimitiveTopologyType _topologyType;
 };

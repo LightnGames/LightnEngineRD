@@ -13,6 +13,10 @@ D3D12_COMPARISON_FUNC toD3d12(ComparisonFunc func) {
 	return static_cast<D3D12_COMPARISON_FUNC>(func);
 }
 
+D3D12_DEPTH_WRITE_MASK toD3d12(DepthWriteMask mask) {
+	return static_cast<D3D12_DEPTH_WRITE_MASK>(mask);
+}
+
 ID3D12DescriptorHeap* toD3d12(DescriptorHeap* descriptorHeap) {
 	return static_cast<DescriptorHeapD3D12*>(descriptorHeap)->_descriptorHeap;
 }
@@ -1042,6 +1046,7 @@ void PipelineStateD3D12::iniaitlize(const GraphicsPipelineStateDesc& desc) {
 
 	auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
+	depthStencilDesc.DepthWriteMask = toD3d12(desc._depthWriteMask);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout.NumElements = desc._inputElementCount;

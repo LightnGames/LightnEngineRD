@@ -4,7 +4,7 @@
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 
 float4 main(VertexOut input) : SV_TARGET {
-    uint meshletIndex = input._materialIndex;
+    uint meshletIndex = input._meshletIndex;
     float3 diffuseColor = float3(
             float(meshletIndex & 1),
             float(meshletIndex & 3) / 4,

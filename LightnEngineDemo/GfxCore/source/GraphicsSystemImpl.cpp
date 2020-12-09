@@ -168,15 +168,6 @@ void GraphicsSystemImpl::render() {
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 	_vramBufferUpdater.populateCommandList(commandList);
 
-	ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
-	//f32 clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	f32 clearColor[4] = {};
-	u32 incrimentSize = _rtvDescriptorAllocator.getIncrimentSize();
-	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
-	commandList->setRenderTargets(1, &currentRenderTargetHandle, &viewInfo->_depthDsv);
-	commandList->clearRenderTargetView(currentRenderTargetHandle, clearColor);
-	commandList->clearDepthStencilView(viewInfo->_depthDsv._cpuHandle, CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
 	_renderPass(commandList);
 
 	// test
@@ -190,6 +181,7 @@ void GraphicsSystemImpl::render() {
 	_debugWindow.renderFrame(commandList);
 
 	// hdr buffer からバックバッファにコピー
+	ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
 	GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
 	viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
 	currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_COPY_DEST);

@@ -1,5 +1,6 @@
 #include <GfxCore/impl/DebugWindow.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 #include <Core/Application.h>
 #include <direct.h>
 
@@ -62,7 +63,11 @@ void DebugWindow::beginFrame() {
 
 void DebugWindow::renderFrame(CommandList* commandList) {
 #if DEBUG_WINDOW_ENABLE
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "ImGui");
 	DebugGui::RenderDebugWindowGui(commandList);
+	queryHeapSystem->setCurrentMarkerName("ImGui");
+	queryHeapSystem->setMarker(commandList);
 #endif
 }
 

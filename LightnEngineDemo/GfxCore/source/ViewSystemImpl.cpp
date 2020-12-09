@@ -54,7 +54,7 @@ void ViewSystemImpl::initialize() {
 		desc._width = screenWidth;
 		desc._height = screenHeight;
 		desc._flags = RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-		desc._initialState = RESOURCE_STATE_DEPTH_WRITE;
+		desc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		_mainView._depthTexture.initialize(desc);
 		_mainView._depthTexture.setDebugName("Main View Depth");
 

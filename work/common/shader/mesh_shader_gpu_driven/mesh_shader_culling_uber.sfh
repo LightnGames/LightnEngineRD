@@ -23,7 +23,6 @@ ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
 Texture2D<float> _hizTextures[] : register(t10);
 #endif
 
-#define ENABLE_MESHLET_INSTANCING 1
 #define SHADER_SET_COUNT_MAX 32
 #define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
 

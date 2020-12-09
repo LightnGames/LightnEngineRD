@@ -46,9 +46,9 @@ void DebugRendererSystemImpl::initialize() {
 		pipelineStateDesc._ps = pixelShader->getShaderByteCode();
 		pipelineStateDesc._numRenderTarget = 1;
 		pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
-		pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
 		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_LINE;
 		pipelineStateDesc._rootSignature = _rootSignature;
+		pipelineStateDesc._depthWriteMask = DEPTH_WRITE_MASK_ZERO;
 		pipelineStateDesc._sampleDesc._count = 1;
 		_pipelineState->iniaitlize(pipelineStateDesc);
 
@@ -170,6 +170,9 @@ void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
+	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
+	commandList->setRenderTargets(1, &currentRenderTargetHandle, nullptr);
+
 	u32 instanceCount = _lineInstances.getCount();
 	if (instanceCount > 0) {
 		commandList->setViewports(1, &viewInfo->_viewPort);
