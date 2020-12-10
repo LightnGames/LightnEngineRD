@@ -324,6 +324,14 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_texcoords.pso";
 	_debugTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
+	// ワイヤーフレーム表示
+	{
+		PipelineStateGroupDesc desc = pipelineStateDesc;
+		desc._fillMode = FILL_MODE_WIREFRAME;
+		desc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_wireframe.pso";
+		_debugWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
+	}
+
 	// オクルージョンカリング可視化
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_occlusion_culling.pso";
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
@@ -465,6 +473,7 @@ void ShaderSetImpl::terminate() {
 	_debugOcclusionPipelineStateGroup->requestToDestroy();
 	_debugDepthPipelineStateGroup->requestToDestroy();
 	_debugTexcoordsPipelineStateGroup->requestToDestroy();
+	_debugWireFramePipelineStateGroup->requestToDestroy();
 	_classicShaderSet._pipelineState->terminate();
 	_classicShaderSet._depthPipelineState->terminate();
 	_classicShaderSet._debugPipelineState->terminate();

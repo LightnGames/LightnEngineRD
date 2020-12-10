@@ -189,6 +189,9 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
 				pipelineState = shaderSet->getDebugTexcoordsPipelineStateGroup();
 				break;
+			case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
+				pipelineState = shaderSet->getDebugWireFramePipelineStateGroup();
+				break;
 			}
 
 			if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
@@ -1105,7 +1108,7 @@ void MeshRendererSystemImpl::update() {
 		const char* geometoryTypes[] = { "Mesh Shader", "Multi Indirect", "Vertex Shader" };
 		DebugGui::Combo("Geometory Type", reinterpret_cast<s32*>(&debug._geometoryMode), geometoryTypes, LTN_COUNTOF(geometoryTypes));
 
-		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion","Depth","Texcoords","World Normal" };
+		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 		DebugWindow::End();
 

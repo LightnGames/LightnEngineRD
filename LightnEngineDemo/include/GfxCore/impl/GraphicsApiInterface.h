@@ -2,10 +2,9 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <Core/System.h>
 
-#define ENABLE_MESH_SHADER 1
+#define ENABLE_MESH_SHADER 0
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
-#define ENABLE_MESHLET_INSTANCING 1
 
 struct Resource;
 struct Device;
@@ -757,6 +756,11 @@ enum QueryType {
 	QUERY_TYPE_VIDEO_DECODE_STATISTICS = 8
 };
 
+enum FillMode {
+	FILL_MODE_WIREFRAME = 2,
+	FILL_MODE_SOLID = 3
+};
+
 struct BufferUav {
 	u64 _firstElement = 0;
 	u32 _numElements = 0;
@@ -841,6 +845,7 @@ struct MeshPipelineStateDesc {
 	SampleDesc _sampleDesc;
 	PrimitiveTopologyType _topologyType;
 	BlendDesc _blendDesc;
+	FillMode _fillMode = FILL_MODE_SOLID;
 };
 #endif
 

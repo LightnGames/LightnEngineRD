@@ -1,0 +1,5 @@
+#include "../shaderInput.sfh"
+
+float4 main(VertexOut input) : SV_TARGET {
+    return float4(0.0, 0.2, 1.0, 1.0);
+}

@@ -64,6 +64,7 @@ struct ShaderSetImpl :public ShaderSet {
 	PipelineStateGroup* getDebugCullingPassPipelineStateGroup() { return _debugCullingPassPipelineStateGroup; }
 	PipelineStateGroup* getDebugDepthPipelineStateGroup() { return _debugDepthPipelineStateGroup; }
 	PipelineStateGroup* getDebugTexcoordsPipelineStateGroup() { return _debugTexcoordsPipelineStateGroup; }
+	PipelineStateGroup* getDebugWireFramePipelineStateGroup() { return _debugWireFramePipelineStateGroup; }
 	const PipelineStateGroup* getPipelineStateGroup() const { return _pipelineStateGroup; }
 	ClassicShaderSet* getClassicShaderSet() { return &_classicShaderSet; }
 
@@ -78,6 +79,7 @@ private:
 	PipelineStateGroup* _debugLodLevelPipelineStateGroup = nullptr;
 	PipelineStateGroup* _debugDepthPipelineStateGroup = nullptr;
 	PipelineStateGroup* _debugTexcoordsPipelineStateGroup = nullptr;
+	PipelineStateGroup* _debugWireFramePipelineStateGroup = nullptr;
 	ClassicShaderSet _classicShaderSet;
 };
 

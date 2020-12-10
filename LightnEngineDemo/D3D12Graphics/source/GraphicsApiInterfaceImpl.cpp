@@ -9,6 +9,10 @@
 
 GraphicsApiInstanceAllocatorImpl _graphicsApiInstanceAllocator;
 
+D3D12_FILL_MODE toD3d12(FillMode mode) {
+	return static_cast<D3D12_FILL_MODE>(mode);
+}
+
 D3D12_COMPARISON_FUNC toD3d12(ComparisonFunc func) {
 	return static_cast<D3D12_COMPARISON_FUNC>(func);
 }
@@ -1090,6 +1094,7 @@ void PipelineStateD3D12::iniaitlize(const MeshPipelineStateDesc& desc) {
 	psoDesc.RTFormats = rtvFormats;
 	psoDesc.DepthFormat = toD3d12(desc._dsvFormat);
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);      // CW front; cull back
+	psoDesc.RasterizerState.FillMode = toD3d12(desc._fillMode);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(toD3d12(desc._blendDesc));
 	psoDesc.DepthStencilState = depthStencilDesc;
 	psoDesc.SampleMask = UINT_MAX;

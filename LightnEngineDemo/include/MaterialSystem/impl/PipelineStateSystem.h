@@ -38,6 +38,7 @@ enum ClassicMeshRootParameterIndex {
 struct PipelineStateGroupDesc {
 	ComparisonFunc _depthComparisonFunc;
 	BlendDesc _blendDesc;
+	FillMode _fillMode = FILL_MODE_SOLID;
 	const char* _meshShaderFilePath = nullptr;
 	const char* _amplificationShaderFilePath = nullptr;
 	const char* _pixelShaderFilePath = nullptr;

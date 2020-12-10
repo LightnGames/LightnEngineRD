@@ -104,6 +104,7 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
     pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
 	pipelineStateDesc._depthComparisonFunc = desc._depthComparisonFunc;
     pipelineStateDesc._blendDesc = desc._blendDesc;
+	pipelineStateDesc._fillMode = desc._fillMode;
     _pipelineState->iniaitlize(pipelineStateDesc);
 
     meshShader->terminate();
