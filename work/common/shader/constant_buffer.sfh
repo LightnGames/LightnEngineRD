@@ -35,6 +35,11 @@ float computeLinerDepth(float nonLinerDepth, float nearClip, float farClip){
     return 1.0 / (invFarNear * nonLinerDepth + farNear);
 }
 
+uint computeLinerDepth(uint nonLinerDepth, uint depthFormat, float nearClip, float farClip) {
+    float depth = nonLinerDepth / (float)depthFormat;
+    return computeLinerDepth(depth, nearClip, farClip) * UINT16_MAX;
+}
+
 // AABBの法線方向に最も近いポイントを探す
 float3 getPositivePoint(float3 boundsMin, float3 boundsMax, float3 planeNormal){
 	float3 result = boundsMin;

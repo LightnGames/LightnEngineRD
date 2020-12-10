@@ -103,6 +103,7 @@ struct HizInfoConstant {
 	u32 _inputDepthHeight = 0;
 	f32 _nearClip = 0.0f;
 	f32 _farClip = 0.0f;
+	u32 _inputBitDepth = 0;
 };
 
 struct CullingResult :public gpu::CullingResult {

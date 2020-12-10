@@ -467,6 +467,7 @@ void ShaderSetImpl::terminate() {
 	_debugTexcoordsPipelineStateGroup->requestToDestroy();
 	_classicShaderSet._pipelineState->terminate();
 	_classicShaderSet._depthPipelineState->terminate();
+	_classicShaderSet._debugPipelineState->terminate();
 	_classicShaderSet._rootSignature->terminate();
 #if ENABLE_MULTI_INDIRECT_DRAW
 	_classicShaderSet._multiDrawCommandSignature->terminate();
