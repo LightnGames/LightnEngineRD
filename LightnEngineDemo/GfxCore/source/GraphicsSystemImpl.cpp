@@ -181,13 +181,18 @@ void GraphicsSystemImpl::render() {
 	_debugWindow.renderFrame(commandList);
 
 	// hdr buffer からバックバッファにコピー
-	ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
-	GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
-	viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-	currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_COPY_DEST);
-	commandList->copyResource(currentRtvTexture.getResource(), viewInfo->_hdrTexture.getResource());
-	viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_RENDER_TARGET);
-	currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_PRESENT);
+	{
+		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "HDR to LDR");
+
+		ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
+		GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
+		viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
+		currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_COPY_DEST);
+		commandList->copyResource(currentRtvTexture.getResource(), viewInfo->_hdrTexture.getResource());
+		viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_RENDER_TARGET);
+		currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_PRESENT);
+	}
 
 
 	// タイムスタンプ更新

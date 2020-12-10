@@ -704,7 +704,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 
 			GpuTextureDesc desc = {};
 			desc._device = device;
-			desc._format = FORMAT_R16_UINT;
+			desc._format = FORMAT_R32_FLOAT;
 			desc._width = screenWidth;
 			desc._height = screenHeight;
 			desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -719,7 +719,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		for (u32 i = 0; i < HIERACHICAL_DEPTH_COUNT; ++i) {
 			CpuDescriptorHandle uavHandle = _hizDepthTextureUav._cpuHandle + static_cast<u64>(incrimentSize) * i;
 			UnorderedAccessViewDesc uavDesc = {};
-			uavDesc._format = FORMAT_R16_UINT;
+			uavDesc._format = FORMAT_R32_FLOAT;
 			uavDesc._viewDimension = UAV_DIMENSION_TEXTURE2D;
 			uavDesc._texture2D._mipSlice = 0;
 			uavDesc._texture2D._planeSlice = 0;

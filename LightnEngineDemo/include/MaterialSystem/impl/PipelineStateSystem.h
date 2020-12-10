@@ -73,7 +73,7 @@ private:
 
 class LTN_MATERIAL_SYSTEM_API PipelineStateSystem {
 public:
-	static constexpr u32 PIPELINE_STATE_GROUP_COUNT_MAX = 16;
+	static constexpr u32 PIPELINE_STATE_GROUP_COUNT_MAX = 32;
 	void initialize();
 	void update();
 	void processDeletion();

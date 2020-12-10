@@ -1266,14 +1266,19 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 		return;
 	}
 
-	//f32 clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	f32 clearColor[4] = {};
-	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
-	commandList->setRenderTargets(1, &currentRenderTargetHandle, &viewInfo->_depthDsv);
-	commandList->clearRenderTargetView(currentRenderTargetHandle, clearColor);
-	commandList->clearDepthStencilView(viewInfo->_depthDsv._cpuHandle, CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	// レンダーターゲットクリア
+	{
+		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Setup Draw");
+
+		f32 clearColor[4] = {};
+		DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
+		commandList->setRenderTargets(1, &currentRenderTargetHandle, &viewInfo->_depthDsv);
+		commandList->clearRenderTargetView(currentRenderTargetHandle, clearColor);
+		commandList->clearDepthStencilView(viewInfo->_depthDsv._cpuHandle, CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
 
 	switch (_geometoryType) {
 #if ENABLE_MESH_SHADER

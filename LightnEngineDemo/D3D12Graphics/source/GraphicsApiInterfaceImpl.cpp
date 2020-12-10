@@ -1086,6 +1086,9 @@ void PipelineStateD3D12::iniaitlize(const MeshPipelineStateDesc& desc) {
 	auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
 
+	auto rasterrizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	rasterrizerState.FillMode = toD3d12(desc._fillMode);;
+
 	MeshShaderPsoDesc psoDesc = {};
 	psoDesc.pRootSignature = toD3d12(desc._rootSignature);
 	psoDesc.MS = toD3d12(desc._ms);
@@ -1093,8 +1096,7 @@ void PipelineStateD3D12::iniaitlize(const MeshPipelineStateDesc& desc) {
 	psoDesc.PS = toD3d12(desc._ps);
 	psoDesc.RTFormats = rtvFormats;
 	psoDesc.DepthFormat = toD3d12(desc._dsvFormat);
-	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);      // CW front; cull back
-	psoDesc.RasterizerState.FillMode = toD3d12(desc._fillMode);
+	psoDesc.RasterizerState = rasterrizerState;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(toD3d12(desc._blendDesc));
 	psoDesc.DepthStencilState = depthStencilDesc;
 	psoDesc.SampleMask = UINT_MAX;

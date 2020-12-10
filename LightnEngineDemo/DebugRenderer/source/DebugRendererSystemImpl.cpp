@@ -2,12 +2,9 @@
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/GraphicsApiInterface.h>
 #include <GfxCore/impl/ViewSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 
 DebugRendererSystemImpl _debugSystem;
-
-struct DispatchMeshIndirectArgument {
-
-};
 
 void DebugRendererSystemImpl::initialize() {
 	_lineInstances.initialize(LINE_INSTANCE_COUNT_MAX);
@@ -170,6 +167,9 @@ void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Debug Draw");
+
 	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
 	commandList->setRenderTargets(1, &currentRenderTargetHandle, nullptr);
 
