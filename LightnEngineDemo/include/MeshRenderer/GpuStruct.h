@@ -11,10 +11,11 @@ namespace gpu {
 	};
 
 	struct MeshletInstanceInfo {
-		u32 _meshletInstanceOffset;
+		u32 _meshletIndex;
 		u32 _meshInstanceIndex;
 		u32 _materialIndex;
 		u32 _vertexOffset;
+		u32 _vertexIndexOffset;
 		u32 _primitiveOffset;
 	};
 

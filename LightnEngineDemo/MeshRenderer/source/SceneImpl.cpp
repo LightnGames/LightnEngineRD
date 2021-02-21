@@ -563,7 +563,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		desc._format = FORMAT_UNKNOWN;
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
-		desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
+		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 		device->createShaderResourceView(_meshletInstanceInfoBuffer.getResource(), &desc, _meshletInstanceInfoSrv._cpuHandle);
 	}
@@ -617,7 +617,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			desc._format = FORMAT_UNKNOWN;
 			desc._viewDimension = UAV_DIMENSION_BUFFER;
 			desc._buffer._firstElement = 0;
-			desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
+			desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 			device->createUnorderedAccessView(_meshletInstanceInfoBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoUav._cpuHandle);
 		}
