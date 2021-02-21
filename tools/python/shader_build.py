@@ -53,6 +53,7 @@ def convert(shader_file_path):
     cmd.append("%s" % ENTRY_POINT)
     cmd.append("/Fo")
     cmd.append("%s" % shader_output_path)
+    cmd.append("/enable_unbounded_descriptor_tables")
     cmd.append("/Zi")
     cmd.append("/Qembed_debug")
     cmd.append("/Od")

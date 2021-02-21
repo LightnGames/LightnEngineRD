@@ -181,6 +181,8 @@ struct CullingResult :public gpu::CullingResult {
 
 class GraphicsView {
 public:
+	// インスタンシング用 0~31　単品用 31~63 
+	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = VramShaderSetSystem::SHADER_SET_COUNT_MAX * 2;
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
 	static constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
@@ -306,6 +308,7 @@ public:
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
+	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
 
 	void initialize();
 	void update();
@@ -321,10 +324,12 @@ public:
 	MeshInstance* createMeshInstance(const Mesh* mesh);
 	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
+	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
+	u32 getIndirectArgumentOffset(u32 shaderSetIndex) { return _indirectArgumentOffsets[shaderSetIndex]; }
 
 private:
 	VramShaderSetSystem _vramShaderSetSystem;
@@ -333,6 +338,7 @@ private:
 	u8 _subMeshInstanceUpdateFlags[SUB_MESH_INSTANCE_COUNT_MAX] = {};
 	MeshInstanceImpl _meshInstances[MESH_INSTANCE_COUNT_MAX] = {};
 	SubMeshInstanceImpl _subMeshInstances[SUB_MESH_INSTANCE_COUNT_MAX] = {};
+	u32 _indirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -342,7 +348,9 @@ private:
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _meshletInstanceInfoOffsetBuffer;
+	GpuBuffer _indirectArgumentOffsetBuffer;
 
+	DescriptorHandle _indirectArgumentOffsetSrv;
 	DescriptorHandle _meshletInstanceInfoOffsetSrv;
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;

@@ -14,7 +14,7 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
 StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t9);
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t16);
+Texture2D<float> _hizTextures[8] : register(t16);
 #endif
 
 #if UBER_CULLING_RESULT

@@ -45,17 +45,11 @@ public:
 	u32 getMaterialInstanceTotalRefCount(u32 pipelineStateIndex);
 	u32 getIndexVramMaterial(const Material* material);
 	u32 getShaderSetIndex(const Material* material);
-	u32 getIndirectArgumentOffset(u32 shaderSetIndex) { return _indirectArgumentOffsets[shaderSetIndex]; }
 	void addRefCountMaterial(Material* material);
 	void removeRefCountMaterial(const Material* material);
 	VramShaderSet* getShaderSet(u32 index) { return &_shaderSets[index]; }
-	DescriptorHandle getOffsetHandle() const { return _indirectArgumentOffsetSrv; }
 
 private:
 	VramShaderSet _shaderSets[SHADER_SET_COUNT_MAX] = {};
 	MaterialMapKey _materialMapKeys[MATERIAL_COUNT_MAX] = {};
-	u32 _indirectArgumentOffsets[SHADER_SET_COUNT_MAX] = {};
-	GpuBuffer _indirectArgumentOffsetBuffer;
-	DescriptorHandle _indirectArgumentOffsetSrv;
-	bool _isUpdatedIndirectArgumentOffset = false;
 };

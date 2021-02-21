@@ -3,12 +3,12 @@
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
-Texture2D _textures[] : register(t16);
+Texture2D _textures[] : register(t25);
 SamplerState _sampler : register(s0);
 
 float4 main(VertexOut input) : SV_TARGET {
     CustomParameters materialParameter = _customParameters[input._materialIndex];
-    Texture2D albedoTexture = _textures[materialParameter._albedoTextureIndex];
+    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
     float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
     //return float4(input._texcoord,0,1);
     return float4(baseColor, 1.0);

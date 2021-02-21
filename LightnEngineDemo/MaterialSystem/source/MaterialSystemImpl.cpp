@@ -215,7 +215,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
 	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
-	constexpr u32 TEXTURE_BASE_REGISTER = 16;
+	constexpr u32 TEXTURE_BASE_REGISTER = 25;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	RootSignatureDesc rootSignatureDescFurstumCulling = {};
 	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
@@ -265,7 +265,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
-		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumCulling._device = device;
@@ -284,10 +284,10 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
-		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_AMPLIFICATION);
+		rootParameters[ROOT_DEFAULT_MESH_HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumOcclusionCulling._device = device;
 		rootSignatureDescFurstumOcclusionCulling._numParameters = LTN_COUNTOF(rootParameters);

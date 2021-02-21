@@ -31,9 +31,13 @@ void Scene::initialize() {
 		_subMeshInstanceBuffer.initialize(desc);
 		_subMeshInstanceBuffer.setDebugName("Sub Mesh Instance");
 
-		desc._sizeInByte = MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
+		desc._sizeInByte = MESHLET_INSTANCE_INFO_COUNT_MAX * sizeof(u32);
 		_meshletInstanceInfoOffsetBuffer.initialize(desc);
 		_meshletInstanceInfoOffsetBuffer.setDebugName("Meshlet Instance Offsets");
+
+		desc._sizeInByte = VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
+		_indirectArgumentOffsetBuffer.initialize(desc);
+		_indirectArgumentOffsetBuffer.setDebugName("Indirect Argument Offsets");
 	}
 
 	// descriptors
@@ -71,9 +75,23 @@ void Scene::initialize() {
 		{
 			desc._format = FORMAT_R32_TYPELESS;
 			desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
-			desc._buffer._numElements = MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+			desc._buffer._numElements = MESHLET_INSTANCE_INFO_COUNT_MAX;
 			desc._buffer._structureByteStride = 0;
 			device->createShaderResourceView(_meshletInstanceInfoOffsetBuffer.getResource(), &desc, _meshletInstanceInfoOffsetSrv._cpuHandle);
+		}
+
+		// indirect argument offset
+		{
+			_indirectArgumentOffsetSrv = allocator->allocateDescriptors(1);
+
+			ShaderResourceViewDesc desc = {};
+			desc._format = FORMAT_UNKNOWN;
+			desc._viewDimension = SRV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
+			desc._buffer._numElements = VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(u32);
+			device->createShaderResourceView(_indirectArgumentOffsetBuffer.getResource(), &desc, _indirectArgumentOffsetSrv._cpuHandle);
 		}
 	}
 
@@ -131,9 +149,8 @@ void Scene::update() {
 
 	// メッシュレット　インスタンシング情報のオフセットを計算
 	if(isUpdatedInstancingOffset) {
-		constexpr u32 ARRAY_COUNT = MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
-		u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, ARRAY_COUNT);
-		u32 counts[ARRAY_COUNT] = {};
+		u32 singleCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+		u32 counts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
 			const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -147,19 +164,31 @@ void Scene::update() {
 				for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 					u32 subMeshOffset = subMeshLocalOffset + subMeshIndex;
 					u32 meshletCount = subMeshes[subMeshOffset]._meshletCount - 1;
+					u32 shaderSetIndex = subMeshInstances[subMeshOffset]._shaderSetIndex;
 					if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
-						u32 shaderSetOffset = subMeshInstances[subMeshOffset]._shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+						u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
 						++counts[shaderSetOffset + meshletCount];
+					} else {
+						++singleCounts[shaderSetIndex];
 					}
 				}
 			}
 		}
 
-		memset(mapOffsets, 0, sizeof(u32) * ARRAY_COUNT);
-		for (u32 i = 1; i < ARRAY_COUNT; ++i) {
+		u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, MESHLET_INSTANCE_INFO_COUNT_MAX);
+		memset(mapOffsets, 0, sizeof(u32) * MESHLET_INSTANCE_INFO_COUNT_MAX);
+		for (u32 i = 1; i < MESHLET_INSTANCE_INFO_COUNT_MAX; ++i) {
 			u32 prevIndex = i - 1;
 			mapOffsets[i] = mapOffsets[prevIndex] + counts[prevIndex];
 		}
+
+		for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+			u32 prevShaderIndex = shaderSetIndex - 1;
+			_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + singleCounts[prevShaderIndex];
+		}
+
+		u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+		memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
 	}
 }
 
@@ -196,6 +225,7 @@ void Scene::terminate() {
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_meshletInstanceInfoOffsetBuffer.terminate();
+	_indirectArgumentOffsetBuffer.terminate();
 
 	LTN_ASSERT(_gpuMeshInstances.getInstanceCount() == 0);
 	LTN_ASSERT(_gpuLodMeshInstances.getInstanceCount() == 0);
@@ -208,6 +238,7 @@ void Scene::terminate() {
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceHandles);
 	allocator->discardDescriptor(_meshletInstanceInfoOffsetSrv);
+	allocator->discardDescriptor(_indirectArgumentOffsetSrv);
 }
 
 void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
@@ -501,7 +532,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		_indirectArgumentBuffer.initialize(desc);
 		_indirectArgumentBuffer.setDebugName("Indirect Argument");
 
-		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNTER_COUNT;
 		_countBuffer.initialize(desc);
 		_countBuffer.setDebugName("Indirect Argument Count");
 	}
@@ -509,14 +540,14 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 	// meshlet instance info buffers
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = sizeof(gpu::MeshletInstanceInfo) * MESHLET_INSTANCE_COUNT_MAX;
+		desc._sizeInByte = sizeof(gpu::MeshletInstanceInfo) * Scene::SUB_MESH_INSTANCE_COUNT_MAX;
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		desc._device = device;
 		_meshletInstanceInfoBuffer.initialize(desc);
 		_meshletInstanceInfoBuffer.setDebugName("Meshlet Instance Infos");
 
-		desc._sizeInByte = sizeof(u32) * MESHLET_INSTANCE_COUNT_MAX;
+		desc._sizeInByte = sizeof(u32) * Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
 		_meshletInstanceInfoCountBuffer.initialize(desc);
 		_meshletInstanceInfoCountBuffer.setDebugName("Meshlet Instance Info Counts");
 	}
@@ -599,7 +630,8 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
 			device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
-
+			
+			desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT;
 			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 			desc._buffer._structureByteStride = 0;
 			desc._format = FORMAT_R32_TYPELESS;
@@ -630,7 +662,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			UnorderedAccessViewDesc desc = {};
 			desc._format = FORMAT_R32_TYPELESS;
 			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
+			desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
 			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountUav._cpuHandle);
 			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountCpuUav._cpuHandle);
@@ -682,7 +714,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		ShaderResourceViewDesc desc = {};
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
-		desc._buffer._numElements = MESHLET_INSTANCE_COUNT_MAX;
+		desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
 		device->createShaderResourceView(_meshletInstanceInfoCountBuffer.getResource(), &desc, _meshletInstanceInfoCountSrv._cpuHandle);
 	}

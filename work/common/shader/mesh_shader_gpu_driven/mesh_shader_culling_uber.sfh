@@ -97,7 +97,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
             uint offset = _meshletInstanceInfoOffsets.Load(meshletInstanceOffsetByte);
             uint globalOffset = offset + currentCount;
             
-            MeshletInstanceInfo meshletInfo;
+            MeshletInstanceInfo meshletInfo = (MeshletInstanceInfo) 0;
             meshletInfo._meshletIndex = subMesh._meshletOffset;
             meshletInfo._meshInstanceIndex = meshInstanceIndex;
             meshletInfo._materialIndex = subMeshInstance._materialIndex;
@@ -105,11 +105,10 @@ void addIndirectArgument(uint meshInstanceIndex) {
             meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
             meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
             _meshletInstanceInfos[globalOffset] = meshletInfo;
-            
             continue;
         }
         
-        uint shaderSetOffset = (subMeshInstance._shaderSetIndex + SHADER_SET_COUNT_MAX) * UINT32_SIZE_IN_BYTE;
+        uint shaderSetOffset = (SHADER_SET_COUNT_MAX + subMeshInstance._shaderSetIndex) * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
         _indirectArgumentCounts.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
 	

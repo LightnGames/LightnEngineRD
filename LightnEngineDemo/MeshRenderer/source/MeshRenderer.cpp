@@ -6,32 +6,6 @@
 #include <TextureSystem/impl/TextureSystemImpl.h>
 
 void VramShaderSetSystem::initialize() {
-	Device* device = GraphicsSystemImpl::Get()->getDevice();
-
-	// buffers
-	{
-		GpuBufferDesc desc = {};
-		desc._device = device;
-		desc._sizeInByte = SHADER_SET_COUNT_MAX * sizeof(u32);
-		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		_indirectArgumentOffsetBuffer.initialize(desc);
-		_indirectArgumentOffsetBuffer.setDebugName("Indirect Argument Offsets");
-	}
-
-	// descriptors
-	{
-		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_indirectArgumentOffsetSrv = allocater->allocateDescriptors(1);
-
-		ShaderResourceViewDesc desc = {};
-		desc._format = FORMAT_UNKNOWN;
-		desc._viewDimension = SRV_DIMENSION_BUFFER;
-		desc._buffer._firstElement = 0;
-		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
-		desc._buffer._numElements = SHADER_SET_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(u32);
-		device->createShaderResourceView(_indirectArgumentOffsetBuffer.getResource(), &desc, _indirectArgumentOffsetSrv._cpuHandle);
-	}
 }
 
 void VramShaderSetSystem::update() {
@@ -83,18 +57,6 @@ void VramShaderSetSystem::update() {
 			continue;
 		}
 	}
-
-	if (_isUpdatedIndirectArgumentOffset) {
-		for (u32 shaderSetIndex = 1; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
-			u32 prevShaderIndex = shaderSetIndex - 1;
-			u32 refCount = _shaderSets[prevShaderIndex].getTotalRefCount();
-			_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + refCount;
-		}
-
-		u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, shaderSetCount);
-		memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * shaderSetCount);
-		_isUpdatedIndirectArgumentOffset = false;
-	}
 }
 
 void VramShaderSetSystem::processDeletion() {
@@ -109,9 +71,6 @@ void VramShaderSetSystem::processDeletion() {
 }
 
 void VramShaderSetSystem::terminate() {
-	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocater->discardDescriptor(_indirectArgumentOffsetSrv);
-	_indirectArgumentOffsetBuffer.terminate();
 }
 
 u32 VramShaderSetSystem::getMaterialInstanceTotalRefCount(u32 pipelineStateIndex) {
@@ -187,7 +146,6 @@ void VramShaderSetSystem::addRefCountMaterial(Material* material) {
 
 	++shaderSet._materialRefCounts[findIndex];
 	++shaderSet._totalRefCount;
-	_isUpdatedIndirectArgumentOffset = true;
 }
 
 void VramShaderSetSystem::removeRefCountMaterial(const Material* material) {
@@ -200,7 +158,6 @@ void VramShaderSetSystem::removeRefCountMaterial(const Material* material) {
 	LTN_ASSERT(findIndex != static_cast<u32>(-1));
 	--shaderSet._materialRefCounts[findIndex];
 	--shaderSet._totalRefCount;
-	_isUpdatedIndirectArgumentOffset = true;
 
 	if (getMaterialInstanceTotalRefCount(shaderSetIndex) == 0) {
 		shaderSet.terminate();
