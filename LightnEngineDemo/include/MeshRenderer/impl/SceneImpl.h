@@ -1,7 +1,6 @@
 #pragma once
 #include <GfxCore/impl/GpuResourceImpl.h>
 #include <MeshRenderer/MeshRendererSystem.h>
-#include <MeshRenderer/impl/MeshRenderer.h>
 #include <MeshRenderer/GpuStruct.h>
 
 enum MeshInstanceStateFlag {
@@ -19,71 +18,6 @@ enum MeshInstanceUpdateFlag {
 enum SubMeshInstanceUpdateFlag {
 	SUB_MESH_INSTANCE_UPDATE_NONE = 0,
 	SUB_MESH_INSTANCE_UPDATE_MATERIAL = 1 << 1,
-};
-
-enum GpuCullingRootParameters {
-	ROOT_PARAM_GPU_CULLING_SCENE_INFO = 0,
-	ROOT_PARAM_GPU_VIEW_INFO,
-	ROOT_PARAM_GPU_MESH,
-	ROOT_PARAM_GPU_MESH_INSTANCE,
-	ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS,
-	ROOT_PARAM_GPU_INDIRECT_ARGUMENTS,
-	ROOT_PARAM_GPU_LOD_LEVEL,
-	ROOT_PARAM_GPU_CULLING_VIEW_INFO,
-	ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO,
-	ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET,
-	ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO,
-	ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT,
-	ROOT_PARAM_GPU_CULLING_RESULT,
-	ROOT_PARAM_GPU_HIZ,
-	ROOT_PARAM_GPU_COUNT
-};
-
-enum MultiDrawCullingRootParameters {
-	ROOT_PARAM_MULTI_CULLING_SCENE_INFO = 0,
-	ROOT_PARAM_MULTI_VIEW_INFO,
-	ROOT_PARAM_MULTI_MESH,
-	ROOT_PARAM_MULTI_MESH_INSTANCE,
-	ROOT_PARAM_MULTI_SUB_MESH_INFO,
-	ROOT_PARAM_MULTI_INDIRECT_ARGUMENT_OFFSETS,
-	ROOT_PARAM_MULTI_INDIRECT_ARGUMENTS,
-	ROOT_PARAM_MULTI_LOD_LEVEL,
-	ROOT_PARAM_MULTI_CULLING_VIEW_INFO,
-	ROOT_PARAM_MULTI_CULLING_RESULT,
-	ROOT_PARAM_MULTI_HIZ,
-	ROOT_PARAM_MULTI_COUNT
-};
-
-enum GpuComputeLodRootParameters {
-	ROOT_PARAM_LOD_SCENE_INFO = 0,
-	ROOT_PARAM_LOD_VIEW_INFO,
-	ROOT_PARAM_LOD_MESH,
-	ROOT_PARAM_LOD_MESH_INSTANCE,
-	ROOT_PARAM_LOD_RESULT_LEVEL,
-	ROOT_PARAM_LOD_COUNT
-};
-
-enum BuildHizRootParameters {
-	ROOT_PARAM_HIZ_INFO = 0,
-	ROOT_PARAM_HIZ_INPUT_DEPTH,
-	ROOT_PARAM_HIZ_OUTPUT_DEPTH,
-	ROOT_PARAM_HIZ_COUNT
-};
-
-enum DebugMeshletBoundsRootParameters {
-	ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO = 0,
-	ROOT_PARAM_DEBUG_MESHLET_MESH,
-	ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE,
-	ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL,
-	ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT,
-	ROOT_PARAM_DEBUG_MESHLET_COUNT
-};
-
-enum BuildIndirectArgumentRootParameters {
-	BATCHED_SUBMESH_OFFSET = 0,
-	BATCHED_SUBMESH_COUNT,
-	INDIRECT_ARGUMENT,
-	ROOT_PARAM_COUNT
 };
 
 class PipelineStateGroup;
@@ -179,12 +113,58 @@ struct CullingResult :public gpu::CullingResult {
 
 };
 
+struct MaterialParameter {
+	Color4 _baseColor;
+	u32 _albedoTextureIndex = 0;
+};
+
+struct MaterialMapKey {
+	u16 _vramShaderSetIndex = 0;
+	u16 _materialInstanceIndex = 0;
+};
+
+class VramShaderSet {
+public:
+	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 16;
+	static constexpr u32 MATERIAL_INSTANCE_COUNT_MAX = 256;
+	void initialize();
+	void terminate();
+	u32 getTotalRefCount() const { return _totalRefCount; }
+
+	GpuBuffer _parameterBuffer;
+	DescriptorHandle _materialParameterSrv;
+	DynamicQueue<Material*> _materialInstances;
+	u32 _materialRefCounts[MATERIAL_INSTANCE_COUNT_MAX] = {};
+	u32 _totalRefCount = 0;
+};
+
+class VramShaderSetSystem {
+public:
+	static constexpr u32 SHADER_SET_COUNT_MAX = 32;
+	static constexpr u32 MATERIAL_COUNT_MAX = 1024;
+
+	void initialize();
+	void update();
+	void processDeletion();
+	void terminate();
+
+	u32 getMaterialInstanceTotalRefCount(u32 pipelineStateIndex);
+	u32 getIndexVramMaterial(const Material* material);
+	u32 getShaderSetIndex(const Material* material);
+	void addRefCountMaterial(Material* material);
+	void removeRefCountMaterial(const Material* material);
+	VramShaderSet* getShaderSet(u32 index) { return &_shaderSets[index]; }
+
+private:
+	VramShaderSet _shaderSets[SHADER_SET_COUNT_MAX] = {};
+	MaterialMapKey _materialMapKeys[MATERIAL_COUNT_MAX] = {};
+};
+
 class GraphicsView {
 public:
 	// インスタンシング用 0~31　単品用 31~63 
 	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = VramShaderSetSystem::SHADER_SET_COUNT_MAX * 2;
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
-	static constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
 
 	void initialize(const ViewInfo* viewInfo);
@@ -193,7 +173,6 @@ public:
 
 	void setComputeLodResource(CommandList* commandList);
 	void setGpuCullingResources(CommandList* commandList);
-	void setGpuFrustumCullingResources(CommandList* commandList);
 	void setHizResourcesPass0(CommandList* commandList);
 	void setHizResourcesPass1(CommandList* commandList);
 	void resourceBarriersComputeLodToUAV(CommandList* commandList);
@@ -234,7 +213,7 @@ private:
 	GpuBuffer _meshletInstanceInfoCountBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
-	GpuTexture _hizDepthTextures[HIERACHICAL_DEPTH_COUNT] = {};
+	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
 	DescriptorHandle _hizDepthTextureSrv;
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
@@ -325,6 +304,7 @@ public:
 	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
 	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
+	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
@@ -354,12 +334,15 @@ private:
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _meshletInstanceInfoOffsetBuffer;
 	GpuBuffer _indirectArgumentOffsetBuffer;
+	GpuBuffer _sceneCullingConstantBuffer;
 
+	DescriptorHandle _cullingSceneConstantHandle;
 	DescriptorHandle _indirectArgumentOffsetSrv;
 	DescriptorHandle _meshletInstanceInfoOffsetSrv;
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
+
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	u32 _multiDrawIndirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};

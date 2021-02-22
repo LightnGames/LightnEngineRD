@@ -34,41 +34,17 @@ private:
 	void renderClassicVertex(CommandList* commandList, const ViewInfo* viewInfo);
 #endif
 private:
-	void computeLod(CommandList* commandList, ViewInfo* viewInfo);
-	void depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
-	void buildIndirectArgument(CommandList* commandList);
-	void mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState);
-	void buildHiz(CommandList* commandList, ViewInfo* viewInfo);
-	void mainCulling(CommandList* commandList, ViewInfo* viewInfo);
 	void setFixedDebugView(CommandList * commandList, ViewInfo* viewInfo);
 
 private:
 	bool _visible = true;
 	Scene _scene;
 	MeshResourceManager _resourceManager;
-	RootSignature* _gpuCullingRootSignature = nullptr;
-	PipelineState* _gpuCullingPassPipelineState = nullptr;
-	PipelineState* _gpuOcclusionCullingPipelineState = nullptr;
-	PipelineState* _gpuCullingPipelineState = nullptr;
-
-	PipelineState* _computeLodPipelineState = nullptr;
-	RootSignature* _computeLodRootSignature = nullptr;
-	PipelineState* _buildHizPipelineState = nullptr;
-	RootSignature* _buildHizRootSignature = nullptr;
-	PipelineState* _debugMeshletBoundsPipelineState = nullptr;
-	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
-	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
-	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
-#if ENABLE_MULTI_INDIRECT_DRAW
-	PipelineState* _multiDrawCullingPipelineState = nullptr;
-	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;
-#endif
+	MeshRenderer _meshRenderer;
 
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;
 	DescriptorHandle _debugFixedViewConstantHandle;
-	GpuBuffer _sceneCullingConstantBuffer;
-	DescriptorHandle _cullingSceneConstantHandle;
 	GraphicsView _view;
 
 	enum GeometoryType {

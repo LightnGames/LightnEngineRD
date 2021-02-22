@@ -3,53 +3,90 @@
 #include <GfxCore/impl/GpuResourceImpl.h>
 #include <GfxCore/impl/DescriptorHeap.h>
 
-struct CommandList;
-struct Material;
-class PipelineStateGroup;
+struct ViewInfo;
+class GraphicsView;
 
-struct MaterialParameter {
-	Color4 _baseColor;
-	u32 _albedoTextureIndex = 0;
+struct RenderContext {
+	CommandList* commandList = nullptr;
 };
 
-struct MaterialMapKey {
-	u16 _vramShaderSetIndex = 0;
-	u16 _materialInstanceIndex = 0;
+struct ComputeLodContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	u32 _meshInstanceCountMax = 0;
+	GpuDescriptorHandle _meshInstanceHandle;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _sceneConstantCbv;
 };
 
-class VramShaderSet {
+struct GpuCullingContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	u32 _meshInstanceCountMax = 0;
+	GpuDescriptorHandle _indirectArgumentOffsetSrv;
+	GpuDescriptorHandle _sceneConstantCbv;
+	GpuDescriptorHandle _meshInstanceHandle;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _subMeshDrawInfoHandle;
+	GpuDescriptorHandle _meshletInstanceInfoOffsetSrv;
+	GpuDescriptorHandle _meshletInstanceInfoCountUav;
+	GpuDescriptorHandle _meshletInstanceInfoUav;
+	GpuDescriptorHandle _cullingViewCbv;
+	const char* _scopeName = nullptr;
+};
+
+struct BuildIndirectArgumentContext {
+	CommandList* _commandList = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	GpuDescriptorHandle _meshletInstanceOffsetSrv;
+	GpuDescriptorHandle _meshletInstanceCountSrv;
+	GpuDescriptorHandle _indirectArgumentUav;
+};
+
+struct BuildHizContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+};
+
+class MeshRenderer {
 public:
-	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 16;
-	static constexpr u32 MATERIAL_INSTANCE_COUNT_MAX = 256;
 	void initialize();
 	void terminate();
-	u32 getTotalRefCount() const { return _totalRefCount; }
+	void render(RenderContext& context);
 
-	GpuBuffer _parameterBuffer;
-	DescriptorHandle _materialParameterSrv;
-	DynamicQueue<Material*> _materialInstances;
-	u32 _materialRefCounts[MATERIAL_INSTANCE_COUNT_MAX] = {};
-	u32 _totalRefCount = 0;
-};
+	void computeLod(ComputeLodContext& context);
+	void depthPrePassCulling(GpuCullingContext& context);
+	void mainCulling(GpuCullingContext& context);
+	void buildIndirectArgument(BuildIndirectArgumentContext& context);
+	void buildHiz(BuildHizContext& context);
 
-class VramShaderSetSystem {
-public:
-	static constexpr u32 SHADER_SET_COUNT_MAX = 32;
-	static constexpr u32 MATERIAL_COUNT_MAX = 1024;
-
-	void initialize();
-	void update();
-	void processDeletion();
-	void terminate();
-
-	u32 getMaterialInstanceTotalRefCount(u32 pipelineStateIndex);
-	u32 getIndexVramMaterial(const Material* material);
-	u32 getShaderSetIndex(const Material* material);
-	void addRefCountMaterial(Material* material);
-	void removeRefCountMaterial(const Material* material);
-	VramShaderSet* getShaderSet(u32 index) { return &_shaderSets[index]; }
+#if ENABLE_MULTI_INDIRECT_DRAW
+	void multiDrawDepthPrePassCulling(GpuCullingContext& context);
+	void multiDrawMainCulling(GpuCullingContext& context);
+#endif
 
 private:
-	VramShaderSet _shaderSets[SHADER_SET_COUNT_MAX] = {};
-	MaterialMapKey _materialMapKeys[MATERIAL_COUNT_MAX] = {};
+	void gpuCulling(GpuCullingContext& context, PipelineState* pipelineState);
+
+private:
+	RootSignature* _gpuCullingRootSignature = nullptr;
+	PipelineState* _gpuCullingPassPipelineState = nullptr;
+	PipelineState* _gpuOcclusionCullingPipelineState = nullptr;
+	PipelineState* _gpuCullingPipelineState = nullptr;
+
+	PipelineState* _computeLodPipelineState = nullptr;
+	RootSignature* _computeLodRootSignature = nullptr;
+	PipelineState* _buildHizPipelineState = nullptr;
+	RootSignature* _buildHizRootSignature = nullptr;
+	PipelineState* _debugMeshletBoundsPipelineState = nullptr;
+	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
+	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
+	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
+#if ENABLE_MULTI_INDIRECT_DRAW
+	PipelineState* _multiDrawCullingPipelineState = nullptr;
+	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;
+#endif
 };

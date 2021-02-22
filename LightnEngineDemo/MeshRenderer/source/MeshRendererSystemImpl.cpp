@@ -283,12 +283,35 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// Lod level 計算
 	if (!isFixedCullingView) {
-		computeLod(commandList, viewInfo);
+		ComputeLodContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		_meshRenderer.computeLod(context);
 	}
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		depthPrePassCulling(commandList, viewInfo, _multiDrawCullingPipelineState);
+		GpuCullingContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._indirectArgumentOffsetSrv = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
+		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._scopeName = "Depth Pre Pass Culling";
+		_meshRenderer.multiDrawDepthPrePassCulling(context);
 	}
 
 	// デプスプリパス
@@ -338,12 +361,31 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// build hiz
 	if (!isFixedCullingView) {
-		buildHiz(commandList, viewInfo);
+		BuildHizContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		_meshRenderer.buildHiz(context);
 	}
 
 	// GPUカリング
 	if (!isFixedCullingView) {
-		mainCulling(commandList, viewInfo, _multiDrawOcclusionCullingPipelineState);
+		GpuCullingContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._indirectArgumentOffsetSrv = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
+		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._scopeName = "Main Culling";
+		_meshRenderer.multiDrawMainCulling(context);
 	}
 
 	// 描画
@@ -499,196 +541,6 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
 }
 
-void MeshRendererSystemImpl::computeLod(CommandList* commandList, ViewInfo* viewInfo) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
-
-	commandList->setComputeRootSignature(_computeLodRootSignature);
-	commandList->setPipelineState(_computeLodPipelineState);
-	_view.setComputeLodResource(commandList);
-	_view.resourceBarriersComputeLodToUAV(commandList);
-
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH, meshHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH_INSTANCE, meshInstanceHandle);
-
-	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-	commandList->dispatch(dispatchCount, 1, 1);
-
-	_view.resetResourceComputeLodBarriers(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Compute Lod");
-	queryHeapSystem->setMarker(commandList);
-}
-
-void MeshRendererSystemImpl::depthPrePassCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-	GpuDescriptorHandle subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
-	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-
-	GpuDescriptorHandle indirectArgumentOffsetHandle;
-	switch (_geometoryType) {
-	case MeshRendererSystemImpl::GEOMETORY_MODE_MESH_SHADER:
-		indirectArgumentOffsetHandle = _scene.getIndirectArgumentOffsetSrv()._gpuHandle;
-		break;
-	case MeshRendererSystemImpl::GEOMETORY_MODE_MULTI_INDIRECT:
-		indirectArgumentOffsetHandle = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
-		break;
-	}
-
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Depth Prepass Culling");
-
-	_view.resourceBarriersGpuCullingToUAV(commandList);
-	_view.resetMeshletInstanceInfoCountBuffers(commandList);
-	_view.resetIndirectArgumentCountBuffers(commandList);
-
-	commandList->setComputeRootSignature(_gpuCullingRootSignature);
-	commandList->setPipelineState(pipelineState);
-	_view.setGpuFrustumCullingResources(commandList);
-
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_VIEW_INFO, viewInfo->_depthPrePassCbvHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH, meshHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, meshInstanceHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO, subMeshDrawInfoHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, indirectArgumentOffsetHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, meshletInstanceInfoOffsetSrv);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, meshletInstanceInfoUav);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, meshletInstanceInfoCountUav);
-
-	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-	commandList->dispatch(dispatchCount, 1, 1);
-	_view.resetResourceGpuCullingBarriers(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Depth Prepass Culling");
-	queryHeapSystem->setMarker(commandList);
-}
-
-void MeshRendererSystemImpl::buildIndirectArgument(CommandList* commandList) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
-
-	_view.resourceBarriersBuildIndirectArgument(commandList);
-	commandList->setComputeRootSignature(_buildIndirectArgumentRootSignature);
-	commandList->setPipelineState(_buildIndirectArgumentPipelineState);
-
-	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET, _scene.getMeshletInstanceOffsetSrv()._gpuHandle);
-	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT, _view.getMeshletInstanceCountSrv()._gpuHandle);
-	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, _view.getIndirectArgumentUav()._gpuHandle);
-
-	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX, 128u);
-	commandList->dispatch(dispatchCount, 1, 1);
-	_view.resourceBarriersResetBuildIndirectArgument(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
-	queryHeapSystem->setMarker(commandList);
-}
-
-void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* viewInfo, PipelineState* pipelineState) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-	GpuDescriptorHandle subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
-	GpuDescriptorHandle meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
-	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-
-	GpuDescriptorHandle indirectArgumentOffsetHandle;
-	switch (_geometoryType) {
-	case MeshRendererSystemImpl::GEOMETORY_MODE_MESH_SHADER:
-		indirectArgumentOffsetHandle = _scene.getIndirectArgumentOffsetSrv()._gpuHandle;
-		break;
-	case MeshRendererSystemImpl::GEOMETORY_MODE_MULTI_INDIRECT:
-		indirectArgumentOffsetHandle = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
-		break;
-	}
-
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Main Culling");
-
-	_view.resourceBarriersHizTextureToSrv(commandList);
-	_view.resourceBarriersGpuCullingToUAV(commandList);
-	_view.resetMeshletInstanceInfoCountBuffers(commandList);
-	_view.resetIndirectArgumentCountBuffers(commandList);
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-	commandList->setComputeRootSignature(_gpuCullingRootSignature);
-	commandList->setPipelineState(pipelineState);
-	_view.setGpuCullingResources(commandList);
-
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH, meshHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, meshInstanceHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, indirectArgumentOffsetHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO, subMeshDrawInfoHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, meshletInstanceInfoOffsetSrv);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, meshletInstanceInfoUav);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, meshletInstanceInfoCountUav);
-
-	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-	commandList->dispatch(dispatchCount, 1, 1);
-
-	_view.resetResourceGpuCullingBarriers(commandList);
-	_view.resourceBarriersHizSrvToTexture(commandList);
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-	queryHeapSystem->setCurrentMarkerName("Main Culling");
-	queryHeapSystem->setMarker(commandList);
-}
-
-void MeshRendererSystemImpl::buildHiz(CommandList* commandList, ViewInfo* viewInfo) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
-
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	commandList->setComputeRootSignature(_buildHizRootSignature);
-	commandList->setPipelineState(_buildHizPipelineState);
-
-	// pass 0
-	{
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
-		_view.resourceBarriersHizTextureToUav(commandList, 0);
-		_view.setHizResourcesPass0(commandList);
-
-		u32 dispatchWidthCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._width), 16u);
-		u32 dispatchHeightCount = RoundUp(static_cast<u32>(viewInfo->_viewPort._height), 16u);
-		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
-
-		_view.resourceBarriersHizUavtoSrv(commandList, 0);
-	}
-
-	// pass 1
-	{
-		_view.resourceBarriersHizTextureToUav(commandList, 4);
-		_view.setHizResourcesPass1(commandList);
-
-		ResourceDesc hizLevel3Desc = _view.getHizTextureResourceDesc(3);
-		u32 dispatchWidthCount = RoundUp(static_cast<u32>(hizLevel3Desc._width), 16u);
-		u32 dispatchHeightCount = RoundUp(static_cast<u32>(hizLevel3Desc._height), 16u);
-		commandList->dispatch(dispatchWidthCount, dispatchHeightCount, 1);
-
-		_view.resourceBarriersHizUavtoSrv(commandList, 4);
-	}
-
-	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	_view.resourceBarriersHizSrvToTexture(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Build Hiz");
-	queryHeapSystem->setMarker(commandList);
-}
-
-void MeshRendererSystemImpl::mainCulling(CommandList* commandList, ViewInfo* viewInfo) {}
 void MeshRendererSystemImpl::setFixedDebugView(CommandList* commandList, ViewInfo* viewInfo) {
 	ResourceTransitionBarrier constantToCopy[2] = {};
 	constantToCopy[0] = _debugFixedViewConstantBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_DEST);
@@ -709,340 +561,14 @@ void MeshRendererSystemImpl::setFixedDebugView(CommandList* commandList, ViewInf
 void MeshRendererSystemImpl::initialize() {
 	_scene.initialize();
 	_resourceManager.initialize();
+	_meshRenderer.initialize();
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 
-	// gpu culling
-	{
-		DescriptorRange sceneCullingConstantRange = {};
-		sceneCullingConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange cullingViewInfoConstantRange = {};
-		cullingViewInfoConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
-
-		DescriptorRange viewInfoConstantRange = {};
-		viewInfoConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 2);
-
-		DescriptorRange meshDescriptorRange = {};
-		meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);
-
-		DescriptorRange meshInstanceDescriptorRange = {};
-		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 3, 3);
-
-		DescriptorRange indirectArgumentOffsetRange = {};
-		indirectArgumentOffsetRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
-
-		DescriptorRange indirectArgumentUavRange = {};
-		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
-
-		DescriptorRange meshletInstanceInfoUavRange = {};
-		meshletInstanceInfoUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
-
-		DescriptorRange meshletInstanceInfoCountUavRange = {};
-		meshletInstanceInfoCountUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
-
-		DescriptorRange cullingResultUavRange = {};
-		cullingResultUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
-
-		DescriptorRange lodLevelSrvRange = {};
-		lodLevelSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
-
-		DescriptorRange subMeshInfoSrvRange = {};
-		subMeshInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
-
-		DescriptorRange meshletInstanceInfoOffsetSrvRange = {};
-		meshletInstanceInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
-
-		DescriptorRange hizSrvRange = {};
-		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, GraphicsView::HIERACHICAL_DEPTH_COUNT, 10);
-
-		// culling root signature
-		{
-			_gpuCullingRootSignature = allocator->allocateRootSignature();
-
-			RootParameter rootParameters[ROOT_PARAM_GPU_COUNT] = {};
-			rootParameters[ROOT_PARAM_GPU_CULLING_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_CULLING_VIEW_INFO].initializeDescriptorTable(1, &cullingViewInfoConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_VIEW_INFO].initializeDescriptorTable(1, &viewInfoConstantRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS].initializeDescriptorTable(1, &indirectArgumentOffsetRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO].initializeDescriptorTable(1, &subMeshInfoSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO].initializeDescriptorTable(1, &meshletInstanceInfoUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT].initializeDescriptorTable(1, &meshletInstanceInfoCountUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[ROOT_PARAM_GPU_HIZ].initializeDescriptorTable(1, &hizSrvRange, SHADER_VISIBILITY_ALL);
-
-			RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc._device = device;
-			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-			rootSignatureDesc._parameters = rootParameters;
-			_gpuCullingRootSignature->iniaitlize(rootSignatureDesc);
-		}
-
-		// pipeline state
-		{
-			_gpuOcclusionCullingPipelineState = allocator->allocatePipelineState();
-			_gpuCullingPipelineState = allocator->allocatePipelineState();
-
-			ComputePipelineStateDesc pipelineStateDesc = {};
-			pipelineStateDesc._device = device;
-			pipelineStateDesc._rootSignature = _gpuCullingRootSignature;
-
-			// フラスタム　＋　オクルージョンカリング
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
-
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_gpuOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_gpuOcclusionCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum_occlusion.cso");
-
-				computeShader->terminate();
-			}
-
-			// フラスタムカリングのみ
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_frustum.cso");
-
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_gpuCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_gpuCullingPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_frustum.cso");
-
-				computeShader->terminate();
-			}
-
-			// カリングオフ
-			{
-				_gpuCullingPassPipelineState = allocator->allocatePipelineState();
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/mesh_shader_gpu_driven/mesh_culling_pass.cso");
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_gpuCullingPassPipelineState->iniaitlize(pipelineStateDesc);
-				_gpuCullingPassPipelineState->setDebugName("mesh_shader_gpu_driven/mesh_culling_pass.cso");
-
-				computeShader->terminate();
-			}
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-			_multiDrawOcclusionCullingPipelineState = allocator->allocatePipelineState();
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_frustum_occlusion.cso");
-
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_multiDrawOcclusionCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_multiDrawOcclusionCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum_occlusion.cso");
-
-				computeShader->terminate();
-			}
-
-			_multiDrawCullingPipelineState = allocator->allocatePipelineState();
-			{
-				ShaderBlob* computeShader = allocator->allocateShaderBlob();
-				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_frustum.cso");
-				pipelineStateDesc._cs = computeShader->getShaderByteCode();
-				_multiDrawCullingPipelineState->iniaitlize(pipelineStateDesc);
-				_multiDrawCullingPipelineState->setDebugName("standard_gpu_driven/mesh_culling_frustum.cso");
-
-				computeShader->terminate();
-			}
-#endif
-		}
-	}
-
-	// build indirect arguments
-	{
-		_buildIndirectArgumentPipelineState = allocator->allocatePipelineState();
-		_buildIndirectArgumentRootSignature = allocator->allocateRootSignature();
-
-		DescriptorRange batchedSubMeshInfoOffsetSrvRange = {};
-		batchedSubMeshInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-		DescriptorRange batchedSubMeshInfoCountSrvRange = {};
-		batchedSubMeshInfoCountSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-
-		DescriptorRange indirectArgumentUavRange = {};
-		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
-
-		RootParameter rootParameters[BuildIndirectArgumentRootParameters::ROOT_PARAM_COUNT] = {};
-		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET].initializeDescriptorTable(1, &batchedSubMeshInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT].initializeDescriptorTable(1, &batchedSubMeshInfoCountSrvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
-
-		RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = device;
-		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-		rootSignatureDesc._parameters = rootParameters;
-		_buildIndirectArgumentRootSignature->iniaitlize(rootSignatureDesc);
-
-		ShaderBlob* computeShader = allocator->allocateShaderBlob();
-		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_argument.cso");
-
-		ComputePipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._cs = computeShader->getShaderByteCode();
-		pipelineStateDesc._rootSignature = _buildIndirectArgumentRootSignature;
-		_buildIndirectArgumentPipelineState->iniaitlize(pipelineStateDesc);
-		_buildIndirectArgumentPipelineState->setDebugName("build_indirect_argument.cso");
-
-		computeShader->terminate();
-	}
-
-	// gpu compute lod 
-	{
-		_computeLodPipelineState = allocator->allocatePipelineState();
-		_computeLodRootSignature = allocator->allocateRootSignature();
-
-		DescriptorRange sceneCullingConstantRange = {};
-		sceneCullingConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange cullingViewInfoConstantRange = {};
-		cullingViewInfoConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
-
-		DescriptorRange meshDescriptorRange = {};
-		meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
-
-		DescriptorRange meshInstanceDescriptorRange = {};
-		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
-
-		DescriptorRange resultLodLevelDescriptorRange = {};
-		resultLodLevelDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-
-		RootParameter rootParameters[ROOT_PARAM_LOD_COUNT] = {};
-		rootParameters[ROOT_PARAM_LOD_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_VIEW_INFO].initializeDescriptorTable(1, &cullingViewInfoConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_RESULT_LEVEL].initializeDescriptorTable(1, &resultLodLevelDescriptorRange, SHADER_VISIBILITY_ALL);
-
-		RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = device;
-		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-		rootSignatureDesc._parameters = rootParameters;
-		_computeLodRootSignature->iniaitlize(rootSignatureDesc);
-
-		ShaderBlob* computeShader = allocator->allocateShaderBlob();
-		computeShader->initialize("L:/LightnEngine/resource/common/shader/compute_lod.cso");
-
-		ComputePipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._cs = computeShader->getShaderByteCode();
-		pipelineStateDesc._rootSignature = _computeLodRootSignature;
-		_computeLodPipelineState->iniaitlize(pipelineStateDesc);
-		_computeLodPipelineState->setDebugName("compute_lod.cso");
-
-		computeShader->terminate();
-	}
-
-	// debug meshlet bounds
-	{
-		_debugMeshletBoundsPipelineState = allocator->allocatePipelineState();
-		_debugMeshletBoundsRootSignature = allocator->allocateRootSignature();
-
-		DescriptorRange sceneCullingConstantRange = {};
-		sceneCullingConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange meshDescriptorRange = {};
-		meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);
-
-		DescriptorRange meshInstanceDescriptorRange = {};
-		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-
-		DescriptorRange currentLodLevelRange = {};
-		currentLodLevelRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-
-		DescriptorRange lineDrawIndirectRange = {};
-		lineDrawIndirectRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
-
-		RootParameter rootParameters[ROOT_PARAM_DEBUG_MESHLET_COUNT] = {};
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT].initializeDescriptorTable(1, &lineDrawIndirectRange, SHADER_VISIBILITY_ALL);
-
-		RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = device;
-		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-		rootSignatureDesc._parameters = rootParameters;
-		_debugMeshletBoundsRootSignature->iniaitlize(rootSignatureDesc);
-
-		ShaderBlob* computeShader = allocator->allocateShaderBlob();
-		computeShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug_draw_meshlet_bounds.cso");
-
-		ComputePipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._cs = computeShader->getShaderByteCode();
-		pipelineStateDesc._rootSignature = _debugMeshletBoundsRootSignature;
-		_debugMeshletBoundsPipelineState->iniaitlize(pipelineStateDesc);
-		_debugMeshletBoundsPipelineState->setDebugName("debug/debug_draw_meshlet_bounds.cso");
-
-		computeShader->terminate();
-	}
-
-	// build hiz
-	{
-		_buildHizPipelineState = allocator->allocatePipelineState();
-		_buildHizRootSignature = allocator->allocateRootSignature();
-
-		DescriptorRange buildHizInfoConstantRange = {};
-		buildHizInfoConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange inputDepthRange = {};
-		inputDepthRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-		DescriptorRange outpuDepthRange = {};
-		outpuDepthRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, GraphicsView::HIERACHICAL_DEPTH_COUNT / 2, 0);
-
-		RootParameter rootParameters[ROOT_PARAM_HIZ_COUNT] = {};
-		rootParameters[ROOT_PARAM_HIZ_INFO].initializeDescriptorTable(1, &buildHizInfoConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_HIZ_INPUT_DEPTH].initializeDescriptorTable(1, &inputDepthRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_HIZ_OUTPUT_DEPTH].initializeDescriptorTable(1, &outpuDepthRange, SHADER_VISIBILITY_ALL);
-
-		RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = device;
-		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
-		rootSignatureDesc._parameters = rootParameters;
-		_buildHizRootSignature->iniaitlize(rootSignatureDesc);
-
-		ShaderBlob* computeShader = allocator->allocateShaderBlob();
-		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_hierarchical_depth.cso");
-
-		ComputePipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._cs = computeShader->getShaderByteCode();
-		pipelineStateDesc._rootSignature = _buildHizRootSignature;
-		_buildHizPipelineState->iniaitlize(pipelineStateDesc);
-		_buildHizPipelineState->setDebugName("build_hierarchical_depth.cso");
-
-		computeShader->terminate();
-	}
-
 	_view.initialize(ViewSystemImpl::Get()->getView());
 
 	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-
-	// gpu culling constant buffers
-	{
-		GpuBufferDesc desc = {};
-		desc._sizeInByte = GetConstantBufferAligned(sizeof(SceneCullingInfo));
-		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		desc._device = device;
-		_sceneCullingConstantBuffer.initialize(desc);
-		_sceneCullingConstantBuffer.setDebugName("Culling Constant");
-	}
-
-	// gpu culling cbv descriptors
-	{
-		_cullingSceneConstantHandle = descriptorHeapAllocater->allocateDescriptors(1);
-		device->createConstantBufferView(_sceneCullingConstantBuffer.getConstantBufferViewDesc(), _cullingSceneConstantHandle._cpuHandle);
-	}
 
 	// デバッグビュー固定用定数バッファ
 	{
@@ -1064,30 +590,12 @@ void MeshRendererSystemImpl::terminate() {
 	processDeletion();
 	_scene.terminate();
 	_resourceManager.terminate();
+	_meshRenderer.terminate();
 	_view.terminate();
 
 	_debugFixedViewConstantBuffer.terminate();
-	_gpuCullingPassPipelineState->terminate();
-	_gpuOcclusionCullingPipelineState->terminate();
-	_gpuCullingRootSignature->terminate();
-	_gpuCullingPipelineState->terminate();
-	_computeLodPipelineState->terminate();
-	_computeLodRootSignature->terminate();
-	_buildHizPipelineState->terminate();
-	_buildHizRootSignature->terminate();
-	_debugMeshletBoundsPipelineState->terminate();
-	_debugMeshletBoundsRootSignature->terminate();
-	_buildIndirectArgumentPipelineState->terminate();
-	_buildIndirectArgumentRootSignature->terminate();
-
-	_sceneCullingConstantBuffer.terminate();
-#if ENABLE_MULTI_INDIRECT_DRAW
-	_multiDrawCullingPipelineState->terminate();
-	_multiDrawOcclusionCullingPipelineState->terminate();
-#endif
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_cullingSceneConstantHandle);
 	allocator->discardDescriptor(_debugFixedViewConstantHandle);
 }
 
@@ -1270,11 +778,6 @@ void MeshRendererSystemImpl::update() {
 	}
 
 	DebugWindow::End();
-
-	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	SceneCullingInfo* cullingInfo = vramUpdater->enqueueUpdate<SceneCullingInfo>(&_sceneCullingConstantBuffer, 0, 1);
-	cullingInfo->_meshInstanceCountMax = meshInstanceCountMax;
 }
 
 void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo) {

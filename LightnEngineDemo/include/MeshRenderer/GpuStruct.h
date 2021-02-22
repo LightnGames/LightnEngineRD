@@ -3,6 +3,7 @@
 
 namespace gpu {
 	constexpr u32 INVALID_INDEX = 0xffffffff;
+	constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 
 	enum MeshState {
 		MESH_STATE_NONE = 0,
