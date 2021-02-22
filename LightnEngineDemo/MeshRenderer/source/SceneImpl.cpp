@@ -38,6 +38,11 @@ void Scene::initialize() {
 		desc._sizeInByte = VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
 		_indirectArgumentOffsetBuffer.initialize(desc);
 		_indirectArgumentOffsetBuffer.setDebugName("Indirect Argument Offsets");
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+		_multiDrawIndirectArgumentOffsetBuffer.initialize(desc);
+		_multiDrawIndirectArgumentOffsetBuffer.setDebugName("Multi Draw Indirect Argument Offsets");
+#endif
 	}
 
 	// descriptors
@@ -92,6 +97,11 @@ void Scene::initialize() {
 			desc._buffer._numElements = VramShaderSetSystem::SHADER_SET_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(u32);
 			device->createShaderResourceView(_indirectArgumentOffsetBuffer.getResource(), &desc, _indirectArgumentOffsetSrv._cpuHandle);
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+			_multiDrawIndirectArgumentOffsetSrv = allocator->allocateDescriptors(1);
+			device->createShaderResourceView(_multiDrawIndirectArgumentOffsetBuffer.getResource(), &desc, _multiDrawIndirectArgumentOffsetSrv._cpuHandle);
+#endif
 		}
 	}
 
@@ -149,6 +159,7 @@ void Scene::update() {
 
 	// メッシュレット　インスタンシング情報のオフセットを計算
 	if(isUpdatedInstancingOffset) {
+		u32 multiDrawCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
 		u32 singleCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
 		u32 counts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
@@ -171,6 +182,7 @@ void Scene::update() {
 					} else {
 						++singleCounts[shaderSetIndex];
 					}
+					++multiDrawCounts[shaderSetIndex];
 				}
 			}
 		}
@@ -182,13 +194,29 @@ void Scene::update() {
 			mapOffsets[i] = mapOffsets[prevIndex] + counts[prevIndex];
 		}
 
-		for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
-			u32 prevShaderIndex = shaderSetIndex - 1;
-			_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + singleCounts[prevShaderIndex];
+		// mesh shader indirect argument offset
+		{
+			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+				u32 prevShaderIndex = shaderSetIndex - 1;
+				_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + singleCounts[prevShaderIndex];
+			}
+
+			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+			memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
 		}
 
-		u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
-		memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+#if ENABLE_MULTI_INDIRECT_DRAW
+		// multi draw indirect argument offset
+		{
+			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+				u32 prevShaderIndex = shaderSetIndex - 1;
+				_multiDrawIndirectArgumentOffsets[shaderSetIndex] = _multiDrawIndirectArgumentOffsets[prevShaderIndex] + multiDrawCounts[prevShaderIndex];
+			}
+
+			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_multiDrawIndirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+			memcpy(mapIndirectArgumentOffsets, _multiDrawIndirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+		}
+#endif
 	}
 }
 
@@ -239,6 +267,11 @@ void Scene::terminate() {
 	allocator->discardDescriptor(_meshInstanceHandles);
 	allocator->discardDescriptor(_meshletInstanceInfoOffsetSrv);
 	allocator->discardDescriptor(_indirectArgumentOffsetSrv);
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	_multiDrawIndirectArgumentOffsetBuffer.terminate();
+	allocator->discardDescriptor(_multiDrawIndirectArgumentOffsetSrv);
+#endif
 }
 
 void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {

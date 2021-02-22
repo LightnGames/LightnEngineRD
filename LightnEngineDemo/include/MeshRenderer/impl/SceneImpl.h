@@ -331,6 +331,11 @@ public:
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getIndirectArgumentOffset(u32 shaderSetIndex) { return _indirectArgumentOffsets[shaderSetIndex]; }
 
+#if ENABLE_MULTI_INDIRECT_DRAW
+	u32 getMultiDrawIndirectArgumentOffset(u32 shaderSetIndex) { return _multiDrawIndirectArgumentOffsets[shaderSetIndex]; }
+	DescriptorHandle getMultiDrawIndirectArgumentOffsetSrv() const { return _multiDrawIndirectArgumentOffsetSrv; }
+#endif
+
 private:
 	VramShaderSetSystem _vramShaderSetSystem;
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -355,4 +360,10 @@ private:
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	u32 _multiDrawIndirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	GpuBuffer _multiDrawIndirectArgumentOffsetBuffer;
+	DescriptorHandle _multiDrawIndirectArgumentOffsetSrv;
+#endif
 };
