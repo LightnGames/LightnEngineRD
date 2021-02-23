@@ -563,16 +563,12 @@ void MeshRenderer::render(RenderContext& context) {
 			continue;
 		}
 
-		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
-		u32 commandCountMax = vramShaderSet->getTotalRefCount();
-		if (commandCountMax == 0) {
-			continue;
-		}
-
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
 
 		// インスタンシング描画
-		{
+		u32 commandInstancingCountMax = context._indirectArgmentInstancingCounts[pipelineStateIndex];
+		if (commandInstancingCountMax > 0) {
+			VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
 			u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 			u32 indirectArgumentOffset = pipelineStateIndex * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX;
 			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
@@ -596,7 +592,8 @@ void MeshRenderer::render(RenderContext& context) {
 		}
 
 		// 単品描画
-		{
+		u32 commandCountMax = context._indirectArgmentCounts[pipelineStateIndex];
+		if (commandCountMax > 0) {
 			u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex] + (VramShaderSetSystem::SHADER_SET_COUNT_MAX * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX);
 			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
 			LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
@@ -727,7 +724,7 @@ void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
 		}
 
 		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
-		u32 commandCountMax = vramShaderSet->getTotalRefCount();
+		u32 commandCountMax = context._indirectArgmentCounts[pipelineStateIndex];
 		if (commandCountMax == 0) {
 			continue;
 		}

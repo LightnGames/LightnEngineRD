@@ -309,9 +309,12 @@ public:
 	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
+	const u32* getIndirectArgumentInstancingCounts() const { return _indirectArgumentInstancingCounts; }
+	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
 	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
 
 #if ENABLE_MULTI_INDIRECT_DRAW
+	const u32* getMultiDrawIndirectArgumentCounts() const { return _multiDrawIndirectArgumentCounts; }
 	const u32* getMultiDrawIndirectArgumentOffsets() const { return _multiDrawIndirectArgumentOffsets; }
 	DescriptorHandle getMultiDrawIndirectArgumentOffsetSrv() const { return _multiDrawIndirectArgumentOffsetSrv; }
 #endif
@@ -324,6 +327,8 @@ private:
 	MeshInstanceImpl _meshInstances[MESH_INSTANCE_COUNT_MAX] = {};
 	SubMeshInstanceImpl _subMeshInstances[SUB_MESH_INSTANCE_COUNT_MAX] = {};
 	u32 _indirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentInstancingCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -346,6 +351,7 @@ private:
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	u32 _multiDrawIndirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	u32 _multiDrawIndirectArgumentCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
 	GpuBuffer _multiDrawIndirectArgumentOffsetBuffer;
 	DescriptorHandle _multiDrawIndirectArgumentOffsetSrv;
 #endif

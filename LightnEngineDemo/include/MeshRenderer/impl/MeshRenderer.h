@@ -13,6 +13,8 @@ struct RenderContext {
 	GraphicsView* _graphicsView = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
 	const u32* _indirectArgmentOffsets = nullptr;
+	const u32* _indirectArgmentCounts = nullptr;
+	const u32* _indirectArgmentInstancingCounts = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;
@@ -31,6 +33,7 @@ struct MultiIndirectRenderContext {
 	IndexBufferView* _indexBufferView = nullptr;
 	u32 _numVertexBufferView = 0;
 	const u32* _indirectArgmentOffsets = nullptr;
+	const u32* _indirectArgmentCounts = nullptr;
 	GpuDescriptorHandle _meshInstanceHandle;
 };
 

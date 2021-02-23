@@ -170,8 +170,10 @@ void Scene::update() {
 
 	// メッシュレット　インスタンシング情報のオフセットを計算
 	if(isUpdatedInstancingOffset) {
-		u32 multiDrawCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
-		u32 singleCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+		memset(_indirectArgumentCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+		memset(_indirectArgumentInstancingCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+		memset(_multiDrawIndirectArgumentCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+
 		u32 counts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
@@ -190,10 +192,11 @@ void Scene::update() {
 					if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
 						u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
 						++counts[shaderSetOffset + meshletCount];
+						++_indirectArgumentInstancingCounts[shaderSetIndex];
 					} else {
-						++singleCounts[shaderSetIndex];
+						++_indirectArgumentCounts[shaderSetIndex];
 					}
-					++multiDrawCounts[shaderSetIndex];
+					++_multiDrawIndirectArgumentCounts[shaderSetIndex];
 				}
 			}
 		}
@@ -209,7 +212,7 @@ void Scene::update() {
 		{
 			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
 				u32 prevShaderIndex = shaderSetIndex - 1;
-				_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + singleCounts[prevShaderIndex];
+				_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + _indirectArgumentCounts[prevShaderIndex];
 			}
 
 			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
@@ -221,7 +224,7 @@ void Scene::update() {
 		{
 			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
 				u32 prevShaderIndex = shaderSetIndex - 1;
-				_multiDrawIndirectArgumentOffsets[shaderSetIndex] = _multiDrawIndirectArgumentOffsets[prevShaderIndex] + multiDrawCounts[prevShaderIndex];
+				_multiDrawIndirectArgumentOffsets[shaderSetIndex] = _multiDrawIndirectArgumentOffsets[prevShaderIndex] + _multiDrawIndirectArgumentCounts[prevShaderIndex];
 			}
 
 			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_multiDrawIndirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);

@@ -115,6 +115,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
 		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getIndirectArgumentOffsets();
+		context._indirectArgmentCounts = _scene.getIndirectArgumentCounts();
+		context._indirectArgmentInstancingCounts = _scene.getIndirectArgumentInstancingCounts();
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
@@ -211,6 +213,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
 		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getIndirectArgumentOffsets();
+		context._indirectArgmentCounts = _scene.getIndirectArgumentCounts();
+		context._indirectArgmentInstancingCounts = _scene.getIndirectArgumentInstancingCounts();
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
@@ -312,6 +316,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._graphicsView = &_view;
 		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
+		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._pipelineStates = materialSystem->getClassicDepthPipelineStateGroups();
 		context._vertexBufferViews = vertexBufferViews;
@@ -380,6 +385,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._graphicsView = &_view;
 		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
+		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._pipelineStates = pipelineStates;
 		context._vertexBufferViews = vertexBufferViews;
