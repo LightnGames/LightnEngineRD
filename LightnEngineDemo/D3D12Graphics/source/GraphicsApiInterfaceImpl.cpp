@@ -1211,6 +1211,7 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	if (error != nullptr) {
 		char errorMessage[512];
 		memcpy(errorMessage, error->GetBufferPointer(), LTN_COUNTOF(errorMessage));
+		printf(errorMessage);
 		error->Release();
 	}
 	LTN_ASSERT(error == nullptr);

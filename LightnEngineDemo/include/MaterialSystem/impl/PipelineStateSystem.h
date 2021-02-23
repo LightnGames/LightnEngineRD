@@ -35,12 +35,20 @@ enum ClassicMeshRootParameterIndex {
 	ROOT_CLASSIC_MESH_COUNT
 };
 
-struct PipelineStateGroupDesc {
+struct MeshShaderPipelineStateGroupDesc {
 	ComparisonFunc _depthComparisonFunc;
 	BlendDesc _blendDesc;
 	FillMode _fillMode = FILL_MODE_SOLID;
 	const char* _meshShaderFilePath = nullptr;
 	const char* _amplificationShaderFilePath = nullptr;
+	const char* _pixelShaderFilePath = nullptr;
+};
+
+struct ClassicPipelineStateGroupDesc {
+	ComparisonFunc _depthComparisonFunc;
+	BlendDesc _blendDesc;
+	FillMode _fillMode = FILL_MODE_SOLID;
+	const char* _vertexShaderFilePath = nullptr;
 	const char* _pixelShaderFilePath = nullptr;
 };
 
@@ -53,7 +61,8 @@ struct ShaderInfo {
 class PipelineStateGroup {
 public:
 	static constexpr u32 MATERIAL_STRUCT_COUNT_MAX = 64;
-	void initialize(const PipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
+	void initialize(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
+	void initialize(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
 	void terminate();
 	void requestToDestroy();
 	PipelineState* getPipelineState() { return _pipelineState; }
@@ -68,7 +77,7 @@ private:
 	RootSignature* _rootSignature = nullptr;
 	//ValueDynamicQueue _materialStructs;
 	//ShaderInfo _shaderInfo;
-	CommandSignature* _commandSignature;
+	CommandSignature* _commandSignature = nullptr;
 };
 
 class LTN_MATERIAL_SYSTEM_API PipelineStateSystem {
@@ -83,10 +92,14 @@ public:
 	u64 getPipelineStateGrpupHash(const PipelineStateGroup* group) const;
 	u32 getGroupArrayCount() const { return _pipelineStates.getArrayCountMax(); }
 	u32 getGroupIndex(const PipelineStateGroup* pipelineState) const;
-	PipelineStateGroup* createPipelineStateGroup(const PipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
+	PipelineStateGroup* createPipelineStateGroup(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
+	PipelineStateGroup* createPipelineStateGroup(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
 	const u8* getStateArray() const { return _stateFlags; }
 
 	static PipelineStateSystem* Get();
+private:
+	u32 findPipelineStateGroup(u64 hash) const;
+
 private:
 	DynamicQueue<PipelineStateGroup> _pipelineStates;
 	u64 _pipelineStateHashes[PIPELINE_STATE_GROUP_COUNT_MAX] = {};

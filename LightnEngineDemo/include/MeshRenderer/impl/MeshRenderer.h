@@ -21,6 +21,19 @@ struct RenderContext {
 	bool _collectResult = false;
 };
 
+struct MultiIndirectRenderContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	VramShaderSet* _vramShaderSets = nullptr;
+	PipelineStateGroup** _pipelineStates = nullptr;
+	VertexBufferView* _vertexBufferViews = nullptr;
+	IndexBufferView* _indexBufferView = nullptr;
+	u32 _numVertexBufferView = 0;
+	const u32* _indirectArgmentOffsets = nullptr;
+	GpuDescriptorHandle _meshInstanceHandle;
+};
+
 struct ComputeLodContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
@@ -75,6 +88,7 @@ public:
 	void buildHiz(BuildHizContext& context);
 
 #if ENABLE_MULTI_INDIRECT_DRAW
+	void multiDrawRender(MultiIndirectRenderContext& context);
 	void multiDrawDepthPrePassCulling(GpuCullingContext& context);
 	void multiDrawMainCulling(GpuCullingContext& context);
 #endif

@@ -60,6 +60,8 @@ void MaterialSystemImpl::processDeletion() {
 			_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
 			_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
 			_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_classicPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_classicDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
 
 			_shaderSetFileHashes[shaderSetIndex] = 0;
 			_shaderSets[shaderSetIndex] = ShaderSetImpl();
@@ -72,6 +74,8 @@ void MaterialSystemImpl::processDeletion() {
 			_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
 			_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
 			_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+			_classicPipelineStateGroups[shaderSetIndex] = nullptr;
+			_classicDepthPipelineStateGroups[shaderSetIndex] = nullptr;
 
 			_shaderSets.discard(shaderSetIndex);
 		}
@@ -127,6 +131,8 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._debugWireFramePipelineStateGroup = &_debugWireFramePipelineStateGroups[findIndex];
 		implDesc._depthPipelineStateGroup = &_depthPipelineStateGroups[findIndex];
 		implDesc._pipelineStateGroup = &_pipelineStateGroups[findIndex];
+		implDesc._classicPipelineStateGroup = &_classicPipelineStateGroups[findIndex];
+		implDesc._classicDepthPipelineStateGroup = &_classicDepthPipelineStateGroups[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -285,11 +291,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	DescriptorRange cullingResultDescriptorRange = {};
 	cullingResultDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
+	constexpr u32 ROOT_FRUSTUM_COUNT = ROOT_DEFAULT_MESH_COUNT - 2;
+	RootParameter furstumCullingRootParameters[ROOT_FRUSTUM_COUNT] = {};
+	RootParameter furstumOcclusionCullingRootParameters[ROOT_DEFAULT_MESH_COUNT] = {};
+
 	// メッシュレット　フラスタムカリングのみ
 	{
-		constexpr u32 ROOT_FRUSTUM_COUNT = ROOT_DEFAULT_MESH_COUNT - 2;
-
-		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
+		RootParameter* rootParameters = furstumCullingRootParameters;
 		rootParameters[ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -302,13 +310,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumCulling._device = device;
-		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(furstumCullingRootParameters);
 		rootSignatureDescFurstumCulling._parameters = rootParameters;
 	}
 
 	// メッシュレット　フラスタム + オクルージョンカリング
 	{
-		RootParameter rootParameters[ROOT_DEFAULT_MESH_COUNT] = {};
+		RootParameter* rootParameters = furstumOcclusionCullingRootParameters;
 		rootParameters[ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[ROOT_DEFAULT_MESH_VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -323,12 +331,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ROOT_DEFAULT_MESH_HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumOcclusionCulling._device = device;
-		rootSignatureDescFurstumOcclusionCulling._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDescFurstumOcclusionCulling._numParameters = LTN_COUNTOF(furstumOcclusionCullingRootParameters);
 		rootSignatureDescFurstumOcclusionCulling._parameters = rootParameters; 
 	}
 
 	PipelineStateSystem* pipelineStateSystem = PipelineStateSystem::Get();
-	PipelineStateGroupDesc pipelineStateDesc = {};
+	MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
 	pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 	pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
@@ -359,7 +367,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// ワイヤーフレーム表示
 	{
-		PipelineStateGroupDesc desc = pipelineStateDesc;
+		MeshShaderPipelineStateGroupDesc desc = pipelineStateDesc;
 		desc._fillMode = FILL_MODE_WIREFRAME;
 		desc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_wireframe.pso";
 		*implDesc._debugWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
@@ -381,32 +389,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// デプスオンリー (フラスタムカリングのみ)
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
-	pipelineStateDesc._pixelShaderFilePath = "";
+	pipelineStateDesc._pixelShaderFilePath = nullptr;
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
 
 	// classic
 	{
-		Device* device = GraphicsSystemImpl::Get()->getDevice();
-		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-
-		char vertexShaderName[FILE_PATH_COUNT_MAX] = {};
-		memcpy(vertexShaderName, meshShaderName, meshShaderNameLength - 3);
-		memcpy(vertexShaderName + meshShaderNameLength - 3, "vso", 3);
-
-		char vertexShaderPath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(vertexShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, vertexShaderName);
-
-		ShaderBlob* vertexShader = allocator->allocateShaderBlob();
-		ShaderBlob* pixelShader = allocator->allocateShaderBlob();
-		vertexShader->initialize(vertexShaderPath);
-		pixelShader->initialize(pixelShaderPath);
-
-		_classicShaderSet._depthPipelineState = allocator->allocatePipelineState();
-		_classicShaderSet._debugPipelineState = allocator->allocatePipelineState();
-		_classicShaderSet._pipelineState = allocator->allocatePipelineState();
-		_classicShaderSet._rootSignature = allocator->allocateRootSignature();
-
 		DescriptorRange cbvDescriptorRange = {};
 		cbvDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 
@@ -431,78 +419,28 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		rootSignatureDesc._flags = ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		_classicShaderSet._rootSignature->iniaitlize(rootSignatureDesc);
 
-		InputElementDesc inputElements[2] = {};
-		inputElements[0]._inputSlot = 0;
-		inputElements[0]._format = FORMAT_R32G32B32_FLOAT;
-		inputElements[0]._semanticName = "POSITION";
+		char vertexShaderName[FILE_PATH_COUNT_MAX] = {};
+		memcpy(vertexShaderName, meshShaderName, meshShaderNameLength - 3);
+		memcpy(vertexShaderName + meshShaderNameLength - 3, "vso", 3);
 
-		inputElements[1]._inputSlot = 1;
-		inputElements[1]._format = FORMAT_R32_UINT;
-		inputElements[1]._semanticName = "PACKED_TEX";
+		char vertexShaderPath[FILE_PATH_COUNT_MAX] = {};
+		sprintf_s(vertexShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, vertexShaderName);
 
-		GraphicsPipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._vs = vertexShader->getShaderByteCode();
-		pipelineStateDesc._ps = pixelShader->getShaderByteCode();
-		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
-		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		pipelineStateDesc._rootSignature = _classicShaderSet._rootSignature;
-		pipelineStateDesc._sampleDesc._count = 1;
-		pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
-		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-		pipelineStateDesc._inputElements = inputElements;
-		pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
-		_classicShaderSet._pipelineState->iniaitlize(pipelineStateDesc);
+		ClassicPipelineStateGroupDesc desc = {};
+		desc._vertexShaderFilePath = vertexShaderPath;
+		desc._pixelShaderFilePath = pixelShaderPath;
+		desc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+		*implDesc._classicPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 
-		pipelineStateDesc._ps = ShaderByteCode();
-		_classicShaderSet._depthPipelineState->iniaitlize(pipelineStateDesc);
+		desc._pixelShaderFilePath = nullptr;
+		desc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+		*implDesc._classicDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 
-		{
-			ShaderBlob* debugBlob = allocator->allocateShaderBlob();
-			debugBlob->initialize("L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso");
-
-			pipelineStateDesc._ps = debugBlob->getShaderByteCode();
-			_classicShaderSet._debugPipelineState->iniaitlize(pipelineStateDesc);
-			debugBlob->terminate();
-		}
-		pipelineStateDesc._ps = ShaderByteCode();
-
-		vertexShader->terminate();
-		pixelShader->terminate();
+		// "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso"
 	}
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-	{
-		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-		_classicShaderSet._multiDrawCommandSignature = allocator->allocateCommandSignature();
-
-		IndirectArgumentDesc argumentDescs[2] = {};
-		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-		argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
-		argumentDescs[0].Constant._num32BitValuesToSet = 2;
-		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-
-		CommandSignatureDesc desc = {};
-		desc._device = device;
-		desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
-		desc._argumentDescs = argumentDescs;
-		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-		desc._rootSignature = _classicShaderSet._rootSignature;
-		_classicShaderSet._multiDrawCommandSignature->initialize(desc);
-	}
-#endif
 }
 
 void ShaderSetImpl::terminate() {
-	_classicShaderSet._pipelineState->terminate();
-	_classicShaderSet._depthPipelineState->terminate();
-	_classicShaderSet._debugPipelineState->terminate();
-	_classicShaderSet._rootSignature->terminate();
-#if ENABLE_MULTI_INDIRECT_DRAW
-	_classicShaderSet._multiDrawCommandSignature->terminate();
-#endif
 	_shaderParams.terminate();
 }

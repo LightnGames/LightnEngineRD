@@ -707,6 +707,55 @@ void MeshRenderer::buildHiz(BuildHizContext& context) {
 	queryHeapSystem->setMarker(commandList);
 }
 
+void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
+	CommandList* commandList = context._commandList;
+	ViewInfo* viewInfo = context._viewInfo;
+	GraphicsView* graphicsView = context._graphicsView;
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
+	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
+	u32 shaderSetCount = materialSystem->getShaderSetCount();
+
+	commandList->setViewports(1, &viewInfo->_viewPort);
+	commandList->setScissorRects(1, &viewInfo->_scissorRect);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
+	graphicsView->resourceBarriersHizTextureToSrv(commandList);
+	for (u32 pipelineStateIndex = 0; pipelineStateIndex < shaderSetCount; ++pipelineStateIndex) {
+		PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
+		if (pipelineState == nullptr) {
+			continue;
+		}
+
+		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
+		u32 commandCountMax = vramShaderSet->getTotalRefCount();
+		if (commandCountMax == 0) {
+			continue;
+		}
+
+		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
+
+		u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex];
+		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
+		LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
+
+		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
+
+		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+		commandList->setPipelineState(pipelineState->getPipelineState());
+		commandList->setVertexBuffers(0, context._numVertexBufferView, context._vertexBufferViews);
+		commandList->setIndexBuffer(context._indexBufferView);
+		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, context._meshInstanceHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
+		graphicsView->render(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+	}
+
+	graphicsView->resourceBarriersHizSrvToTexture(commandList);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
 void MeshRenderer::multiDrawDepthPrePassCulling(GpuCullingContext & context) {
 	gpuCulling(context, _multiDrawCullingPipelineState);
 }

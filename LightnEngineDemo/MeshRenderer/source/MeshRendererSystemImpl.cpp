@@ -305,43 +305,19 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	// デプスプリパス
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
-		commandList->setViewports(1, &viewInfo->_viewPort);
-		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
-
-		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
-			ShaderSetImpl* shaderSet = materialSystem->getShaderSet(pipelineStateIndex);
-			if (!materialSystem->isEnabledShaderSet(shaderSet)) {
-				continue;
-			}
-
-			VramShaderSet* vramShaderSet = _scene.getVramShaderSetSystem()->getShaderSet(pipelineStateIndex);
-			u32 commandCountMax = vramShaderSet->getTotalRefCount();
-			if (commandCountMax == 0) {
-				continue;
-			}
-
-			u32 indirectArgumentOffset = _scene.getMultiDrawIndirectArgumentOffset(pipelineStateIndex);
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
-			LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
-
-			u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
-			ClassicShaderSet* classicShaderSet = shaderSet->getClassicShaderSet();
-
-			commandList->setGraphicsRootSignature(classicShaderSet->_rootSignature);
-			commandList->setPipelineState(classicShaderSet->_depthPipelineState);
-			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
-			commandList->setIndexBuffer(&indexBufferView);
-			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, meshInstanceHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
-			_view.render(commandList, classicShaderSet->_multiDrawCommandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
-		}
-
-		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		MultiIndirectRenderContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._graphicsView = &_view;
+		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._pipelineStates = materialSystem->getClassicDepthPipelineStateGroups();
+		context._vertexBufferViews = vertexBufferViews;
+		context._indexBufferView = &indexBufferView;
+		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
+		_meshRenderer.multiDrawRender(context);
 
 		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
 		queryHeapSystem->setMarker(commandList);
@@ -379,65 +355,40 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	// 描画
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
-		commandList->setViewports(1, &viewInfo->_viewPort);
-		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
-		_view.resourceBarriersHizTextureToSrv(commandList);
-
-		for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateResourceCount; ++pipelineStateIndex) {
-			ShaderSetImpl* shaderSet = materialSystem->getShaderSet(pipelineStateIndex);
-			if (!materialSystem->isEnabledShaderSet(shaderSet)) {
-				continue;
-			}
-
-			VramShaderSet* vramShaderSet = _scene.getVramShaderSetSystem()->getShaderSet(pipelineStateIndex);
-			u32 commandCountMax = vramShaderSet->getTotalRefCount();
-			if (commandCountMax == 0) {
-				continue;
-			}
-
-			DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
-
-			u32 indirectArgumentOffset = _scene.getMultiDrawIndirectArgumentOffset(pipelineStateIndex);
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
-			LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
-
-			u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
-			ClassicShaderSet* classicShaderSet = shaderSet->getClassicShaderSet();
-
-			PipelineState* pipelineState = classicShaderSet->_pipelineState;
-			switch (_debugPrimitiveType) {
-			case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-				pipelineState = classicShaderSet->_pipelineState;
-				break;
-			case DEBUG_PRIMITIVE_TYPE_MESHLET:
-				pipelineState = classicShaderSet->_debugPipelineState;
-				break;
-			case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-				break;
-			case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-				break;
-			case DEBUG_PRIMITIVE_TYPE_DEPTH:
-				break;
-			case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-				break;
-			}
-
-			commandList->setGraphicsRootSignature(classicShaderSet->_rootSignature);
-			commandList->setPipelineState(pipelineState);
-			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
-			commandList->setIndexBuffer(&indexBufferView);
-			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, meshInstanceHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
-			_view.render(commandList, classicShaderSet->_multiDrawCommandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		PipelineStateGroup** pipelineStates = nullptr;
+		switch (_debugPrimitiveType) {
+		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
+			pipelineStates = materialSystem->getClassicPipelineStateGroups();
+			break;
+		case DEBUG_PRIMITIVE_TYPE_MESHLET:
+			//pipelineStates = classicShaderSet->_debugPipelineState;
+			break;
+		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
+			break;
+		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
+			break;
+		case DEBUG_PRIMITIVE_TYPE_DEPTH:
+			break;
+		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
+			break;
 		}
 
-		_view.resourceBarriersHizSrvToTexture(commandList);
-		viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		MultiIndirectRenderContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._graphicsView = &_view;
+		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._pipelineStates = pipelineStates;
+		context._vertexBufferViews = vertexBufferViews;
+		context._indexBufferView = &indexBufferView;
+		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
+		_meshRenderer.multiDrawRender(context);
+
+		queryHeapSystem->setCurrentMarkerName("Main Pass");
+		queryHeapSystem->setMarker(commandList);
 	}
 
 	_view.readbackCullingResultBuffer(commandList);
@@ -478,9 +429,11 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 	commandList->setViewports(1, &viewInfo->_viewPort);
 	commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
+
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+	PipelineStateGroup** pipelineStates = materialSystem->getClassicPipelineStateGroups();
 	u32 meshInstanceCount = _scene.getMeshInstanceCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		MeshInstanceImpl* meshInstance = _scene.getMeshInstance(meshInstanceIndex);
@@ -498,11 +451,11 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 			SubMeshInstance* subMeshInstance = meshInstance->getSubMeshInstance(subMeshIndex) + lodSubMeshLocalOffset;
 			Material* material = subMeshInstance->getMaterial();
 			ShaderSetImpl* shaderSet = static_cast<MaterialImpl*>(material)->getShaderSet();
-			ClassicShaderSet* classicShaderSet = shaderSet->getClassicShaderSet();
 			u32 shaderSetIndex = materialSystem->getShaderSetIndex(shaderSet);
+			PipelineStateGroup* pipelineState = pipelineStates[shaderSetIndex];
 			VramShaderSet* vramShaderSet = _scene.getVramShaderSetSystem()->getShaderSet(shaderSetIndex);
-			commandList->setGraphicsRootSignature(classicShaderSet->_rootSignature);
-			commandList->setPipelineState(classicShaderSet->_pipelineState);
+			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+			commandList->setPipelineState(pipelineState->getPipelineState());
 			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 			commandList->setIndexBuffer(&indexBufferView);
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);

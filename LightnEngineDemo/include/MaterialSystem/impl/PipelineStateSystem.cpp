@@ -35,28 +35,41 @@ u32 PipelineStateSystem::getGroupIndex(const PipelineStateGroup* pipelineState) 
     return index;
 }
 
-PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const PipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
     u64 meshShaderHash = StrHash(desc._meshShaderFilePath);
 	u64 amplificationShaderHash = StrHash(desc._amplificationShaderFilePath);
     u64 pixelShaderHash = 0;
-	if (desc._pixelShaderFilePath != "") {
+	if (desc._pixelShaderFilePath != nullptr) {
 		pixelShaderHash = StrHash(desc._pixelShaderFilePath);
 	}
+
 	u64 shaderHash = meshShaderHash + amplificationShaderHash + pixelShaderHash;
-
-    u32 findIndex = static_cast<u32>(-1);
-    u32 pipelineStateCount = _pipelineStates.getArrayCountMax();
-    for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateCount; ++pipelineStateIndex) {
-        if (_pipelineStateHashes[pipelineStateIndex] == shaderHash) {
-            findIndex = pipelineStateIndex;
-            break;
-        }
-    }
-
-    if (findIndex == static_cast<u32>(-1)) {
+    u32 findIndex = findPipelineStateGroup(shaderHash);
+    if (findIndex == gpu::INVALID_INDEX) {
         findIndex = _pipelineStates.request();
         PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
 		pipelineState->initialize(desc, rootSignatureDesc);
+        pipelineState->setStateFlags(&_stateFlags[findIndex]);
+        _pipelineStateHashes[findIndex] = shaderHash;
+    }
+
+    PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
+    return pipelineState;
+}
+
+PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+    u64 vertexShaderHash = StrHash(desc._vertexShaderFilePath);
+    u64 pixelShaderHash = 0;
+    if (desc._pixelShaderFilePath != nullptr) {
+        pixelShaderHash = StrHash(desc._pixelShaderFilePath);
+    }
+
+    u64 shaderHash = vertexShaderHash + pixelShaderHash;
+    u32 findIndex = findPipelineStateGroup(shaderHash);
+    if (findIndex == gpu::INVALID_INDEX) {
+        findIndex = _pipelineStates.request();
+        PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
+        pipelineState->initialize(desc, rootSignatureDesc);
         pipelineState->setStateFlags(&_stateFlags[findIndex]);
         _pipelineStateHashes[findIndex] = shaderHash;
     }
@@ -69,7 +82,20 @@ PipelineStateSystem* PipelineStateSystem::Get() {
     return &_pipelineStateSystem;
 }
 
-void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
+    u32 findIndex = gpu::INVALID_INDEX;
+    u32 pipelineStateCount = _pipelineStates.getArrayCountMax();
+    for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateCount; ++pipelineStateIndex) {
+        if (_pipelineStateHashes[pipelineStateIndex] == hash) {
+            findIndex = pipelineStateIndex;
+            break;
+        }
+    }
+
+    return findIndex;
+}
+
+void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 #if ENABLE_MESH_SHADER
@@ -85,7 +111,7 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
     meshShader->initialize(desc._meshShaderFilePath);
     amplificationShader->initialize(desc._amplificationShaderFilePath);
 
-	if (desc._pixelShaderFilePath != "") {
+	if (desc._pixelShaderFilePath != nullptr) {
         pixelShader = allocator->allocateShaderBlob();
 		pixelShader->initialize(desc._pixelShaderFilePath);
 		pixelShaderByteCode = pixelShader->getShaderByteCode();;
@@ -130,6 +156,76 @@ void PipelineStateGroup::initialize(const PipelineStateGroupDesc& desc, const Ro
         desc._argumentDescs = argumentDescs;
         desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
         desc._rootSignature = _rootSignature;
+        _commandSignature->initialize(desc);
+    }
+#endif
+}
+
+void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+    Device* device = GraphicsSystemImpl::Get()->getDevice();
+    GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+
+    ShaderBlob* pixelShader = nullptr;
+    ShaderBlob* vertexShader = allocator->allocateShaderBlob();
+    vertexShader->initialize(desc._vertexShaderFilePath);
+
+    ShaderByteCode pixelShaderByteCode = {};
+    if (desc._pixelShaderFilePath != nullptr) {
+        pixelShader = allocator->allocateShaderBlob();
+        pixelShader->initialize(desc._pixelShaderFilePath);
+        pixelShaderByteCode = pixelShader->getShaderByteCode();;
+    }
+
+    _pipelineState = allocator->allocatePipelineState();
+    _rootSignature = allocator->allocateRootSignature();
+    _rootSignature->iniaitlize(rootSignatureDesc);
+
+    InputElementDesc inputElements[2] = {};
+    inputElements[0]._inputSlot = 0;
+    inputElements[0]._format = FORMAT_R32G32B32_FLOAT;
+    inputElements[0]._semanticName = "POSITION";
+
+    inputElements[1]._inputSlot = 1;
+    inputElements[1]._format = FORMAT_R32_UINT;
+    inputElements[1]._semanticName = "PACKED_TEX";
+
+    GraphicsPipelineStateDesc pipelineStateDesc = {};
+    pipelineStateDesc._device = device;
+    pipelineStateDesc._vs = vertexShader->getShaderByteCode();
+    pipelineStateDesc._ps = pixelShaderByteCode;
+    pipelineStateDesc._numRenderTarget = 1;
+    pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
+    pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipelineStateDesc._rootSignature = _rootSignature;
+    pipelineStateDesc._sampleDesc._count = 1;
+    pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
+    pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+    pipelineStateDesc._inputElements = inputElements;
+    pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
+    _pipelineState->iniaitlize(pipelineStateDesc);
+
+    vertexShader->terminate();
+    if (pixelShader != nullptr) {
+        pixelShader->terminate();
+    }
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+    {
+        GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+
+        IndirectArgumentDesc argumentDescs[2] = {};
+        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+        argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
+        argumentDescs[0].Constant._num32BitValuesToSet = 2;
+        argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+        CommandSignatureDesc desc = {};
+        desc._device = device;
+        desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
+        desc._argumentDescs = argumentDescs;
+        desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+        desc._rootSignature = _rootSignature;
+        _commandSignature = allocator->allocateCommandSignature();
         _commandSignature->initialize(desc);
     }
 #endif

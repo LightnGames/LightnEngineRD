@@ -26,16 +26,6 @@ enum ShaderSetMaterialStateFlags {
 	SHADER_SET_MATERIAL_STATE_REQUEST_DESTROY = 1 << 0,
 };
 
-struct ClassicShaderSet {
-	PipelineState* _debugPipelineState = nullptr;
-	PipelineState* _depthPipelineState = nullptr;
-	PipelineState* _pipelineState = nullptr;
-	RootSignature* _rootSignature = nullptr;
-#if ENABLE_MULTI_INDIRECT_DRAW
-	CommandSignature* _multiDrawCommandSignature;
-#endif
-};
-
 struct TempShaderParam {
 	Color4 _color;
 	Texture* _albedoTexture = nullptr;
@@ -56,6 +46,8 @@ struct ShaderSetImplDesc {
 	PipelineStateGroup** _debugDepthPipelineStateGroup = nullptr;
 	PipelineStateGroup** _debugTexcoordsPipelineStateGroup = nullptr;
 	PipelineStateGroup** _debugWireFramePipelineStateGroup = nullptr;
+	PipelineStateGroup** _classicPipelineStateGroup = nullptr;
+	PipelineStateGroup** _classicDepthPipelineStateGroup = nullptr;
 };
 
 struct ShaderSetImpl :public ShaderSet {
@@ -68,13 +60,8 @@ struct ShaderSetImpl :public ShaderSet {
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 
-	ClassicShaderSet* getClassicShaderSet() { return &_classicShaderSet; }
-
 	u8 _shaderParamStateFlags[MATERIAL_COUNT_MAX] = {};
 	DynamicQueue<TempShaderParam> _shaderParams;
-
-private:
-	ClassicShaderSet _classicShaderSet;
 };
 
 struct MaterialImpl :public Material {
@@ -128,6 +115,9 @@ public:
 	PipelineStateGroup** getDebugTexcoordsPipelineStateGroups() { return _debugTexcoordsPipelineStateGroups; }
 	PipelineStateGroup** getDebugWireFramePipelineStateGroups() { return _debugWireFramePipelineStateGroups; }
 
+	PipelineStateGroup** getClassicPipelineStateGroups() { return _classicPipelineStateGroups; }
+	PipelineStateGroup** getClassicDepthPipelineStateGroups() { return _classicDepthPipelineStateGroups; }
+
 	virtual ShaderSet* createShaderSet(const ShaderSetDesc& desc) override;
 	virtual Material* createMaterial(const MaterialDesc& desc) override;
 	virtual Material* findMaterial(u64 filePathHash) override;
@@ -151,4 +141,7 @@ private:
 	PipelineStateGroup* _debugDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugWireFramePipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+
+	PipelineStateGroup* _classicPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _classicDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 };
