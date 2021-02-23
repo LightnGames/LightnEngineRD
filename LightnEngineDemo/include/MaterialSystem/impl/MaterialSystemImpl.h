@@ -46,40 +46,34 @@ struct TempShaderParamGpu {
 	u32 _albedoTextureIndex;
 };
 
+struct ShaderSetImplDesc {
+	PipelineStateGroup** _pipelineStateGroup = nullptr;
+	PipelineStateGroup** _depthPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugCullingPassPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugOcclusionPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugMeshletPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugLodLevelPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugDepthPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugTexcoordsPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugWireFramePipelineStateGroup = nullptr;
+};
+
 struct ShaderSetImpl :public ShaderSet {
 	static constexpr u32 MATERIAL_COUNT_MAX = 128;
 	virtual void requestToDelete() override;
 	virtual void setTexture(Texture* texture, u64 parameterNameHash) override;
 
-	void initialize(const ShaderSetDesc& desc);
+	void initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& implDesc);
 	void terminate();
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 
-	PipelineStateGroup* getPipelineStateGroup() { return _pipelineStateGroup; }
-	PipelineStateGroup* getDepthPipelineStateGroup() { return _depthPipelineStateGroup; }
-	PipelineStateGroup* getDebugMeshletPipelineStateGroup() { return _debugMeshletPipelineStateGroup; }
-	PipelineStateGroup* getDebugLodLevelPipelineStateGroup() { return _debugLodLevelPipelineStateGroup; }
-	PipelineStateGroup* getDebugOcclusionPipelineStateGroup() { return _debugOcclusionPipelineStateGroup; }
-	PipelineStateGroup* getDebugCullingPassPipelineStateGroup() { return _debugCullingPassPipelineStateGroup; }
-	PipelineStateGroup* getDebugDepthPipelineStateGroup() { return _debugDepthPipelineStateGroup; }
-	PipelineStateGroup* getDebugTexcoordsPipelineStateGroup() { return _debugTexcoordsPipelineStateGroup; }
-	PipelineStateGroup* getDebugWireFramePipelineStateGroup() { return _debugWireFramePipelineStateGroup; }
-	const PipelineStateGroup* getPipelineStateGroup() const { return _pipelineStateGroup; }
 	ClassicShaderSet* getClassicShaderSet() { return &_classicShaderSet; }
 
 	u8 _shaderParamStateFlags[MATERIAL_COUNT_MAX] = {};
 	DynamicQueue<TempShaderParam> _shaderParams;
+
 private:
-	PipelineStateGroup* _pipelineStateGroup = nullptr;
-	PipelineStateGroup* _depthPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugCullingPassPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugOcclusionPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugMeshletPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugLodLevelPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugDepthPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugTexcoordsPipelineStateGroup = nullptr;
-	PipelineStateGroup* _debugWireFramePipelineStateGroup = nullptr;
 	ClassicShaderSet _classicShaderSet;
 };
 
@@ -124,6 +118,16 @@ public:
 	u32 getMaterialIndex(const Material* material) const;
 	bool isEnabledShaderSet(const ShaderSetImpl* shaderSet) const;
 
+	PipelineStateGroup** getPipelineStateGroups() { return _pipelineStateGroups; }
+	PipelineStateGroup** getDepthPipelineStateGroups() { return _depthPipelineStateGroups; }
+	PipelineStateGroup** getDebugMeshletPipelineStateGroups() { return _debugMeshletPipelineStateGroups; }
+	PipelineStateGroup** getDebugLodLevelPipelineStateGroups() { return _debugLodLevelPipelineStateGroups; }
+	PipelineStateGroup** getDebugOcclusionPipelineStateGroups() { return _debugOcclusionPipelineStateGroups; }
+	PipelineStateGroup** getDebugCullingPassPipelineStateGroups() { return _debugCullingPassPipelineStateGroups; }
+	PipelineStateGroup** getDebugDepthPipelineStateGroups() { return _debugDepthPipelineStateGroups; }
+	PipelineStateGroup** getDebugTexcoordsPipelineStateGroups() { return _debugTexcoordsPipelineStateGroups; }
+	PipelineStateGroup** getDebugWireFramePipelineStateGroups() { return _debugWireFramePipelineStateGroups; }
+
 	virtual ShaderSet* createShaderSet(const ShaderSetDesc& desc) override;
 	virtual Material* createMaterial(const MaterialDesc& desc) override;
 	virtual Material* findMaterial(u64 filePathHash) override;
@@ -137,4 +141,14 @@ private:
 	u8 _materialStateFlags[MATERIAL_COUNT_MAX] = {};
 	u8 _shaderSetStateFlags[SHADER_SET_COUNT_MAX] = {};
 	u8 _materialUpdateFlags[MATERIAL_COUNT_MAX] = {};
+
+	PipelineStateGroup* _pipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _depthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugCullingPassPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugOcclusionPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugMeshletPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugLodLevelPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugWireFramePipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 };

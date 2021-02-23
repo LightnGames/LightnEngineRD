@@ -310,6 +310,7 @@ public:
 	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getIndirectArgumentOffset(u32 shaderSetIndex) { return _indirectArgumentOffsets[shaderSetIndex]; }
+	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	u32 getMultiDrawIndirectArgumentOffset(u32 shaderSetIndex) { return _multiDrawIndirectArgumentOffsets[shaderSetIndex]; }

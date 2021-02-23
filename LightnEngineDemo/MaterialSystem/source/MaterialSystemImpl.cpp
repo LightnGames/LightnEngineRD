@@ -50,8 +50,29 @@ void MaterialSystemImpl::processDeletion() {
 
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_NONE;
-			_shaderSetFileHashes[shaderSetIndex] = 0;
 			_shaderSets[shaderSetIndex].terminate();
+			_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugMeshletPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugLodLevelPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugOcclusionPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+
+			_shaderSetFileHashes[shaderSetIndex] = 0;
+			_shaderSets[shaderSetIndex] = ShaderSetImpl();
+			_pipelineStateGroups[shaderSetIndex] = nullptr;
+			_depthPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugMeshletPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugLodLevelPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugOcclusionPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
+			_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+
 			_shaderSets.discard(shaderSetIndex);
 		}
 	}
@@ -95,8 +116,20 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 
 	if (findIndex == static_cast<u32>(-1)) {
 		findIndex = _shaderSets.request();
+
+		ShaderSetImplDesc implDesc = {};
+		implDesc._debugCullingPassPipelineStateGroup = &_debugCullingPassPipelineStateGroups[findIndex];
+		implDesc._debugDepthPipelineStateGroup = &_debugDepthPipelineStateGroups[findIndex];
+		implDesc._debugLodLevelPipelineStateGroup = &_debugLodLevelPipelineStateGroups[findIndex];
+		implDesc._debugMeshletPipelineStateGroup = &_debugMeshletPipelineStateGroups[findIndex];
+		implDesc._debugOcclusionPipelineStateGroup = &_debugOcclusionPipelineStateGroups[findIndex];
+		implDesc._debugTexcoordsPipelineStateGroup = &_debugTexcoordsPipelineStateGroups[findIndex];
+		implDesc._debugWireFramePipelineStateGroup = &_debugWireFramePipelineStateGroups[findIndex];
+		implDesc._depthPipelineStateGroup = &_depthPipelineStateGroups[findIndex];
+		implDesc._pipelineStateGroup = &_pipelineStateGroups[findIndex];
+
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
-		shaderSet.initialize(desc);
+		shaderSet.initialize(desc, implDesc);
 		shaderSet.setStateFlags(&_shaderSetStateFlags[findIndex]);
 		_shaderSetFileHashes[findIndex] = fileHash;
 		_shaderSetStateFlags[findIndex] |= SHADER_SET_STATE_FLAG_CREATED;
@@ -186,7 +219,7 @@ void ShaderSetImpl::requestToDelete() {
 void ShaderSetImpl::setTexture(Texture* texture, u64 parameterNameHash) {
 }
 
-void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
+void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& implDesc) {
 	_shaderParams.initialize(MATERIAL_COUNT_MAX);
 
 	// アセット実パスに変換
@@ -302,34 +335,34 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 
 	// GPUカリング無効デバッグ用
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_pass.aso";
-	_debugCullingPassPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugCullingPassPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// フラスタム＋オクルージョンカリング
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum_occlusion.aso";
-	_pipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._pipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// メッシュレットデバッグ用
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso";
-	_debugMeshletPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugMeshletPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// LodLevel デバッグ用
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_lod.pso";
-	_debugLodLevelPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugLodLevelPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// Depth デバッグ用
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_depth.pso";
-	_debugDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// Texcoords デバッグ用
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_texcoords.pso";
-	_debugTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// ワイヤーフレーム表示
 	{
 		PipelineStateGroupDesc desc = pipelineStateDesc;
 		desc._fillMode = FILL_MODE_WIREFRAME;
 		desc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_wireframe.pso";
-		_debugWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
 	}
 
 	// オクルージョンカリング可視化
@@ -344,14 +377,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 	blendDesc._srcBlendAlpha = BLEND_ONE;
 	blendDesc._destBlendAlpha = BLEND_ZERO;
 	blendDesc._blendOpAlpha = BLEND_OP_ADD;
-	_debugOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+	*implDesc._debugOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// デプスオンリー (フラスタムカリングのみ)
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
 	pipelineStateDesc._pixelShaderFilePath = "";
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-	_depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
-
+	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
 
 	// classic
 	{
@@ -465,15 +497,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc) {
 }
 
 void ShaderSetImpl::terminate() {
-	_pipelineStateGroup->requestToDestroy();
-	_depthPipelineStateGroup->requestToDestroy();
-	_debugCullingPassPipelineStateGroup->requestToDestroy();
-	_debugMeshletPipelineStateGroup->requestToDestroy();
-	_debugLodLevelPipelineStateGroup->requestToDestroy();
-	_debugOcclusionPipelineStateGroup->requestToDestroy();
-	_debugDepthPipelineStateGroup->requestToDestroy();
-	_debugTexcoordsPipelineStateGroup->requestToDestroy();
-	_debugWireFramePipelineStateGroup->requestToDestroy();
 	_classicShaderSet._pipelineState->terminate();
 	_classicShaderSet._depthPipelineState->terminate();
 	_classicShaderSet._debugPipelineState->terminate();

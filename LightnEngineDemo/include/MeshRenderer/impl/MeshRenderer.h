@@ -5,9 +5,20 @@
 
 struct ViewInfo;
 class GraphicsView;
+class VramShaderSet;
 
 struct RenderContext {
-	CommandList* commandList = nullptr;
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	VramShaderSet* _vramShaderSets = nullptr;
+	const u32* _indirectArgmentOffsets = nullptr;
+	PipelineStateGroup** _pipelineStates = nullptr;
+	GpuDescriptorHandle _meshInstanceHandle;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _vertexResourceDescriptors;
+	GpuDescriptorHandle _debugFixedViewCbv;
+	bool _collectResult = false;
 };
 
 struct ComputeLodContext {
