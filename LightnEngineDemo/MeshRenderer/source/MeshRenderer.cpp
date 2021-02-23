@@ -7,208 +7,8 @@
 #include <GfxCore/impl/ViewSystemImpl.h>
 #include <MeshRenderer/impl/MeshRenderer.h>
 #include <MeshRenderer/impl/SceneImpl.h>
+#include <MeshRenderer/impl/VramShaderSetSystem.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
-
-void VramShaderSetSystem::initialize() {
-}
-
-void VramShaderSetSystem::update() {
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	MaterialImpl* materials = materialSystem->getMaterial();
-	const u8* materialUpdateFlags = materialSystem->getMaterialUpdateFlags();
-	const u8* materialStateFlags = materialSystem->getMaterialStateFlags();
-	u32 materialCount = materialSystem->getMaterialCount();
-	const u8* shaderSetStateFlags = materialSystem->getShaderSetStateFlags();
-	u32 shaderSetCount = materialSystem->getShaderSetCount();
-	for (u32 shaderSetIndex = 0; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
-		if (shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_CREATED) {
-			//_shaderSets[shaderSetIndex].initialize();
-		}
-
-		if (shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
-			//_shaderSets[shaderSetIndex].terminate();
-		}
-	}
-
-	for (u32 materialIndex = 0; materialIndex < materialCount; ++materialIndex) {
-		if (materialUpdateFlags[materialIndex] & MATERIAL_UPDATE_FLAG_UPDATE_PARAMS) {
-			const MaterialMapKey& mapKey = _materialMapKeys[materialIndex];
-			VramShaderSet& shaderSet = _shaderSets[mapKey._vramShaderSetIndex];
-			MaterialImpl* material = &materials[materialIndex];
-			if (shaderSet._materialInstances[mapKey._materialInstanceIndex] != material) {
-				continue;
-			}
-
-			u32 offset = sizeof(MaterialParameter) * mapKey._materialInstanceIndex;
-			TempShaderParam* srcParam = material->getShaderParam();
-			MaterialParameter* mapParam = vramUpdater->enqueueUpdate<MaterialParameter>(&shaderSet._parameterBuffer, offset);
-			u32 textureIndex = 0;
-			if (srcParam->_albedoTexture != nullptr) {
-				textureIndex = TextureSystemImpl::Get()->getTextureIndex(srcParam->_albedoTexture);
-			}
-			mapParam->_baseColor = srcParam->_color;
-			mapParam->_albedoTextureIndex = textureIndex;
-		}
-	}
-
-	for (u32 materialIndex = 0; materialIndex < materialCount; ++materialIndex) {
-		if (materialUpdateFlags[materialIndex] & MATERIAL_STATE_FLAG_CREATED) {
-			continue;
-		}
-
-		if (materialStateFlags[materialIndex] & MATERIAL_STATE_FLAG_REQEST_DESTROY) {
-			continue;
-		}
-	}
-}
-
-void VramShaderSetSystem::processDeletion() {
-	//MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	//const u8* shaderSetStateFlags = materialSystem->getShaderSetStateFlags();
-	//u32 shaderSetCount = materialSystem->getShaderSetCount();
-	//for (u32 shaderSetIndex = 0; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
-	//	if (shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
-	//		_shaderSets[shaderSetIndex].terminate();
-	//	}
-	//}
-}
-
-void VramShaderSetSystem::terminate() {
-}
-
-u32 VramShaderSetSystem::getMaterialInstanceTotalRefCount(u32 pipelineStateIndex) {
-	u32 totalCount = 0;
-	const VramShaderSet& shaderSet = _shaderSets[pipelineStateIndex];
-	u32 materialInstanceCount = shaderSet._materialInstances.getArrayCountMax();
-	for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-		totalCount += shaderSet._materialRefCounts[materialInstanceIndex];
-	}
-	return totalCount;
-}
-
-u32 VramShaderSetSystem::getIndexVramMaterial(const Material* material) {
-	u32 shaderSetIndex = getShaderSetIndex(material);
-
-	VramShaderSet& shaderSet = _shaderSets[shaderSetIndex];
-	u32 materialInstanceCount = shaderSet._materialInstances.getArrayCountMax();
-	for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-		if (shaderSet._materialInstances[materialInstanceIndex] == material) {
-			return materialInstanceIndex;
-			break;
-		}
-	}
-
-	return static_cast<u32>(-1);
-}
-
-u32 VramShaderSetSystem::getShaderSetIndex(const Material* material) {
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	return materialSystem->getShaderSetIndex(static_cast<const MaterialImpl*>(material)->getShaderSet());
-}
-
-void VramShaderSetSystem::addRefCountMaterial(Material* material) {
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	MaterialImpl* materialImpl = static_cast<MaterialImpl*>(material);
-	ShaderSetImpl* shaderSetImpl = materialImpl->getShaderSet();
-	u32 shaderSetIndex = materialSystem->getShaderSetIndex(shaderSetImpl);
-
-	VramShaderSet& shaderSet = _shaderSets[shaderSetIndex];
-	if (getMaterialInstanceTotalRefCount(shaderSetIndex) == 0) {
-		shaderSet.initialize();
-	}
-
-	u32 materialInstanceCount = shaderSet._materialInstances.getArrayCountMax();
-	u32 findIndex = static_cast<u32>(-1);
-	for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-		if (shaderSet._materialInstances[materialInstanceIndex] == material) {
-			findIndex = materialInstanceIndex;
-			break;
-		}
-	}
-
-	if (findIndex == static_cast<u32>(-1)) {
-		findIndex = shaderSet._materialInstances.request();
-		shaderSet._materialInstances[findIndex] = material;
-
-		u32 materialIndex = materialSystem->getMaterialIndex(material);
-		MaterialMapKey& mapKey = _materialMapKeys[materialIndex];
-		mapKey._materialInstanceIndex = findIndex;
-		mapKey._vramShaderSetIndex = shaderSetIndex;
-
-		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-		u32 offset = sizeof(MaterialParameter) * mapKey._materialInstanceIndex;
-		TempShaderParam* srcParam = materialImpl->getShaderParam();
-		MaterialParameter* mapParam = vramUpdater->enqueueUpdate<MaterialParameter>(&shaderSet._parameterBuffer, offset);
-		u32 textureIndex = 0;
-		if (srcParam->_albedoTexture != nullptr) {
-			textureIndex = TextureSystemImpl::Get()->getTextureIndex(srcParam->_albedoTexture);
-		}
-		mapParam->_baseColor = srcParam->_color;
-		mapParam->_albedoTextureIndex = textureIndex;
-	}
-
-	++shaderSet._materialRefCounts[findIndex];
-	++shaderSet._totalRefCount;
-}
-
-void VramShaderSetSystem::removeRefCountMaterial(const Material* material) {
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	u32 shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<const MaterialImpl*>(material)->getShaderSet());
-
-	VramShaderSet& shaderSet = _shaderSets[shaderSetIndex];
-	u32 findIndex = getIndexVramMaterial(material);
-
-	LTN_ASSERT(findIndex != static_cast<u32>(-1));
-	--shaderSet._materialRefCounts[findIndex];
-	--shaderSet._totalRefCount;
-
-	if (getMaterialInstanceTotalRefCount(shaderSetIndex) == 0) {
-		shaderSet.terminate();
-		shaderSet = VramShaderSet();
-
-		u32 materialIndex = materialSystem->getMaterialIndex(material);
-		_materialMapKeys[materialIndex] = MaterialMapKey();
-	}
-}
-
-void VramShaderSet::initialize() {
-	Device* device = GraphicsSystemImpl::Get()->getDevice();
-
-	// buffers
-	{
-		GpuBufferDesc desc = {};
-		desc._device = device;
-		desc._sizeInByte = MATERIAL_INSTANCE_COUNT_MAX * sizeof(MaterialParameter);
-		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		_parameterBuffer.initialize(desc);
-		_parameterBuffer.setDebugName("Material Parameters");
-	}
-
-	// descriptors
-	{
-		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_materialParameterSrv = allocater->allocateDescriptors(1);
-
-		ShaderResourceViewDesc desc = {};
-		desc._format = FORMAT_UNKNOWN;
-		desc._viewDimension = SRV_DIMENSION_BUFFER;
-		desc._buffer._firstElement = 0;
-		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
-		desc._buffer._numElements = MATERIAL_INSTANCE_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(MaterialParameter);
-		device->createShaderResourceView(_parameterBuffer.getResource(), &desc, _materialParameterSrv._cpuHandle);
-	}
-
-	_materialInstances.initialize(MATERIAL_INSTANCE_COUNT_MAX);
-}
-
-void VramShaderSet::terminate() {
-	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocater->discardDescriptor(_materialParameterSrv);
-	_parameterBuffer.terminate();
-	_materialInstances.terminate();
-}
 
 void MeshRenderer::initialize()
 {
@@ -577,7 +377,7 @@ void MeshRenderer::render(RenderContext& context) {
 			commandList->setPipelineState(pipelineState->getPipelineState());
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, context._meshHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, graphicsView->getMeshletInstanceInfoSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, context._meshInstanceHandle);
@@ -594,11 +394,11 @@ void MeshRenderer::render(RenderContext& context) {
 		// ’P•i•`‰æ
 		u32 commandCountMax = context._indirectArgmentCounts[pipelineStateIndex];
 		if (commandCountMax > 0) {
-			u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex] + (VramShaderSetSystem::SHADER_SET_COUNT_MAX * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX);
+			u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex] + (gpu::SHADER_SET_COUNT_MAX * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX);
 			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
 			LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
 
-			u32 countBufferOffset = (pipelineStateIndex + VramShaderSetSystem::SHADER_SET_COUNT_MAX) * sizeof(u32);
+			u32 countBufferOffset = (pipelineStateIndex + gpu::SHADER_SET_COUNT_MAX) * sizeof(u32);
 			commandList->setPipelineState(pipelineState->getPipelineState());
 			graphicsView->render(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
@@ -648,7 +448,7 @@ void MeshRenderer::buildIndirectArgument(BuildIndirectArgumentContext& context) 
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT, context._meshletInstanceCountSrv);
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, context._indirectArgumentUav);
 
-	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * VramShaderSetSystem::SHADER_SET_COUNT_MAX, 128u);
+	u32 dispatchCount = RoundUp(Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	graphicsView->resourceBarriersResetBuildIndirectArgument(commandList);
 
@@ -742,7 +542,7 @@ void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
 		commandList->setVertexBuffers(0, context._numVertexBufferView, context._vertexBufferViews);
 		commandList->setIndexBuffer(context._indexBufferView);
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, context._meshInstanceHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);

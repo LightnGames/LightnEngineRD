@@ -71,6 +71,7 @@ public:
 	void update();
 	void processDeletion();
 	void terminate();
+	void terminateDefaultResources();
 	void drawDebugGui();
 	void loadMesh(u32 meshIndex);
 

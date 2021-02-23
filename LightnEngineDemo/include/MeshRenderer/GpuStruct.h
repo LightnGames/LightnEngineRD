@@ -4,6 +4,7 @@
 namespace gpu {
 	constexpr u32 INVALID_INDEX = 0xffffffff;
 	constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
+	constexpr u32 SHADER_SET_COUNT_MAX = 32;
 
 	enum MeshState {
 		MESH_STATE_NONE = 0,

@@ -4,6 +4,7 @@
 #include <MeshRenderer/impl/SceneImpl.h>
 #include <MeshRenderer/impl/MeshResourceManager.h>
 #include <MeshRenderer/impl/MeshRenderer.h>
+#include <MeshRenderer/impl/VramShaderSetSystem.h>
 
 struct MeshRenderDesc {
 	CommandList* _commandList = nullptr;
@@ -41,6 +42,7 @@ private:
 	Scene _scene;
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;
+	VramShaderSetSystem _vramShaderSetSystem;
 
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;

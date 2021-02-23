@@ -113,7 +113,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._viewInfo = viewInfo;
 		context._graphicsView = &_view;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
-		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _scene.getIndirectArgumentCounts();
 		context._indirectArgmentInstancingCounts = _scene.getIndirectArgumentInstancingCounts();
@@ -211,7 +211,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._viewInfo = viewInfo;
 		context._graphicsView = &_view;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
-		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _scene.getIndirectArgumentCounts();
 		context._indirectArgmentInstancingCounts = _scene.getIndirectArgumentInstancingCounts();
@@ -314,7 +314,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
 		context._graphicsView = &_view;
-		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
@@ -383,7 +383,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
 		context._graphicsView = &_view;
-		context._vramShaderSets = _scene.getVramShaderSetSystem()->getShaderSet(0);
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
@@ -459,13 +459,13 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 			ShaderSetImpl* shaderSet = static_cast<MaterialImpl*>(material)->getShaderSet();
 			u32 shaderSetIndex = materialSystem->getShaderSetIndex(shaderSet);
 			PipelineStateGroup* pipelineState = pipelineStates[shaderSetIndex];
-			VramShaderSet* vramShaderSet = _scene.getVramShaderSetSystem()->getShaderSet(shaderSetIndex);
+			VramShaderSet* vramShaderSet = _vramShaderSetSystem.getShaderSet(shaderSetIndex);
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
 			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 			commandList->setIndexBuffer(&indexBufferView);
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->_materialParameterSrv._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
@@ -509,6 +509,7 @@ void MeshRendererSystemImpl::initialize() {
 	_scene.initialize();
 	_resourceManager.initialize();
 	_meshRenderer.initialize();
+	_vramShaderSetSystem.initialize();
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
@@ -534,8 +535,13 @@ void MeshRendererSystemImpl::initialize() {
 }
 
 void MeshRendererSystemImpl::terminate() {
+	_scene.terminateDefaultResources();
+	_resourceManager.terminateDefaultResources();
+
 	processDeletion();
+	
 	_scene.terminate();
+	_vramShaderSetSystem.terminate();
 	_resourceManager.terminate();
 	_meshRenderer.terminate();
 	_view.terminate();
@@ -554,6 +560,7 @@ void MeshRendererSystemImpl::update() {
 	_scene.update();
 	_resourceManager.update();
 	_view.update();
+	_vramShaderSetSystem.update();
 
 	// メッシュインスタンスデバッグオプション
 	{
@@ -768,6 +775,7 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 void MeshRendererSystemImpl::processDeletion() {
 	_scene.processDeletion();
 	_resourceManager.processDeletion();
+	_vramShaderSetSystem.processDeletion();
 }
 
 Mesh* MeshRendererSystemImpl::allocateMesh(const MeshDesc& desc) {

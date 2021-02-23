@@ -113,57 +113,10 @@ struct CullingResult :public gpu::CullingResult {
 
 };
 
-struct MaterialParameter {
-	Color4 _baseColor;
-	u32 _albedoTextureIndex = 0;
-};
-
-struct MaterialMapKey {
-	u16 _vramShaderSetIndex = 0;
-	u16 _materialInstanceIndex = 0;
-};
-
-class VramShaderSet {
-public:
-	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 16;
-	static constexpr u32 MATERIAL_INSTANCE_COUNT_MAX = 256;
-	void initialize();
-	void terminate();
-	u32 getTotalRefCount() const { return _totalRefCount; }
-
-	GpuBuffer _parameterBuffer;
-	DescriptorHandle _materialParameterSrv;
-	DynamicQueue<Material*> _materialInstances;
-	u32 _materialRefCounts[MATERIAL_INSTANCE_COUNT_MAX] = {};
-	u32 _totalRefCount = 0;
-};
-
-class VramShaderSetSystem {
-public:
-	static constexpr u32 SHADER_SET_COUNT_MAX = 32;
-	static constexpr u32 MATERIAL_COUNT_MAX = 1024;
-
-	void initialize();
-	void update();
-	void processDeletion();
-	void terminate();
-
-	u32 getMaterialInstanceTotalRefCount(u32 pipelineStateIndex);
-	u32 getIndexVramMaterial(const Material* material);
-	u32 getShaderSetIndex(const Material* material);
-	void addRefCountMaterial(Material* material);
-	void removeRefCountMaterial(const Material* material);
-	VramShaderSet* getShaderSet(u32 index) { return &_shaderSets[index]; }
-
-private:
-	VramShaderSet _shaderSets[SHADER_SET_COUNT_MAX] = {};
-	MaterialMapKey _materialMapKeys[MATERIAL_COUNT_MAX] = {};
-};
-
 class GraphicsView {
 public:
 	// インスタンシング用 0~31　単品用 31~63 
-	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = VramShaderSetSystem::SHADER_SET_COUNT_MAX * 2;
+	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = gpu::SHADER_SET_COUNT_MAX * 2;
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
 
@@ -287,12 +240,13 @@ public:
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
-	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
 
 	void initialize();
 	void update();
 	void processDeletion();
 	void terminate();
+	void terminateDefaultResources();
 	void updateMeshInstanceBounds(u32 meshInstanceIndex);
 	void deleteMeshInstance(u32 meshInstanceIndex);
 	void debugDrawMeshletBounds();
@@ -306,8 +260,6 @@ public:
 	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
-	u32 getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState);
-	VramShaderSetSystem* getVramShaderSetSystem() { return &_vramShaderSetSystem; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	const u32* getIndirectArgumentInstancingCounts() const { return _indirectArgumentInstancingCounts; }
 	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
@@ -320,15 +272,14 @@ public:
 #endif
 
 private:
-	VramShaderSetSystem _vramShaderSetSystem;
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
 	u8 _meshInstanceUpdateFlags[MESH_INSTANCE_COUNT_MAX] = {};
 	u8 _subMeshInstanceUpdateFlags[SUB_MESH_INSTANCE_COUNT_MAX] = {};
 	MeshInstanceImpl _meshInstances[MESH_INSTANCE_COUNT_MAX] = {};
 	SubMeshInstanceImpl _subMeshInstances[SUB_MESH_INSTANCE_COUNT_MAX] = {};
-	u32 _indirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
-	u32 _indirectArgumentCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
-	u32 _indirectArgumentInstancingCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -350,8 +301,8 @@ private:
 
 
 #if ENABLE_MULTI_INDIRECT_DRAW
-	u32 _multiDrawIndirectArgumentOffsets[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
-	u32 _multiDrawIndirectArgumentCounts[VramShaderSetSystem::SHADER_SET_COUNT_MAX] = {};
+	u32 _multiDrawIndirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
+	u32 _multiDrawIndirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 	GpuBuffer _multiDrawIndirectArgumentOffsetBuffer;
 	DescriptorHandle _multiDrawIndirectArgumentOffsetSrv;
 #endif

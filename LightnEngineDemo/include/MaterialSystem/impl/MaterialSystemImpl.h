@@ -86,8 +86,6 @@ private:
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {
 public:
-	static constexpr u32 MATERIAL_COUNT_MAX = 256;
-	static constexpr u32 SHADER_SET_COUNT_MAX = 32;
 	void initialize();
 	void update();
 	void processDeletion();

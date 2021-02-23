@@ -153,6 +153,7 @@
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRendererSystemImpl.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshResourceManager.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\SceneImpl.h" />
+    <ClInclude Include="..\include\MeshRenderer\impl\VramShaderSetSystem.h" />
     <ClInclude Include="..\include\MeshRenderer\MeshRendererSystem.h" />
   </ItemGroup>
   <ItemGroup>
@@ -160,6 +161,7 @@
     <ClCompile Include="source\MeshRendererSystemImpl.cpp" />
     <ClCompile Include="source\MeshResourceManager.cpp" />
     <ClCompile Include="source\SceneImpl.cpp" />
+    <ClCompile Include="source\VramShaderSetSystem.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

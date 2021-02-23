@@ -33,6 +33,9 @@ struct ShaderSetDesc {
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystem {
 public:
+	static constexpr u32 MATERIAL_COUNT_MAX = 256;
+	static constexpr u32 SHADER_SET_COUNT_MAX = 32;
+
 	virtual ShaderSet* createShaderSet(const ShaderSetDesc& desc) = 0;
 	virtual Material* createMaterial(const MaterialDesc& desc) = 0;
 	virtual Material* findMaterial(u64 filePathHash) = 0;

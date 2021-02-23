@@ -5,10 +5,9 @@
 #include <MaterialSystem/impl/PipelineStateSystem.h>
 #include <GfxCore/impl/ViewSystemImpl.h>
 #include <Core/Application.h>
+#include <MaterialSystem/impl/MaterialSystemImpl.h>
 
 void Scene::initialize() {
-	_vramShaderSetSystem.initialize();
-
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	_gpuMeshInstances.initialize(MESH_INSTANCE_COUNT_MAX);
 	_gpuLodMeshInstances.initialize(LOD_MESH_INSTANCE_COUNT_MAX);
@@ -35,7 +34,7 @@ void Scene::initialize() {
 		_meshletInstanceInfoOffsetBuffer.initialize(desc);
 		_meshletInstanceInfoOffsetBuffer.setDebugName("Meshlet Instance Offsets");
 
-		desc._sizeInByte = VramShaderSetSystem::SHADER_SET_COUNT_MAX * sizeof(u32);
+		desc._sizeInByte = gpu::SHADER_SET_COUNT_MAX * sizeof(u32);
 		_indirectArgumentOffsetBuffer.initialize(desc);
 		_indirectArgumentOffsetBuffer.setDebugName("Indirect Argument Offsets");
 
@@ -99,7 +98,7 @@ void Scene::initialize() {
 			desc._viewDimension = SRV_DIMENSION_BUFFER;
 			desc._buffer._firstElement = 0;
 			desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
-			desc._buffer._numElements = VramShaderSetSystem::SHADER_SET_COUNT_MAX;
+			desc._buffer._numElements = gpu::SHADER_SET_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(u32);
 			device->createShaderResourceView(_indirectArgumentOffsetBuffer.getResource(), &desc, _indirectArgumentOffsetSrv._cpuHandle);
 
@@ -129,12 +128,12 @@ void Scene::initialize() {
 		MaterialDesc desc = {};
 		desc._filePath = "common/default_mesh.mto";
 		_defaultMaterial = MaterialSystem::Get()->createMaterial(desc);
-		_vramShaderSetSystem.addRefCountMaterial(_defaultMaterial);
 	}
 }
 
 void Scene::update() {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		if (_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX) {
@@ -147,16 +146,12 @@ void Scene::update() {
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
 			SubMeshInstance& subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
-			if (subMeshInstance.getPrevMaterial() != nullptr) {
-				_vramShaderSetSystem.removeRefCountMaterial(subMeshInstance.getPrevMaterial());
-			}
+			Material* material = subMeshInstance.getMaterial();
+			subMeshInstance.setPrevMaterial(material);
 
 			gpu::SubMeshInstance& gpuSubMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex];
-			Material* material = subMeshInstance.getMaterial();
-			_vramShaderSetSystem.addRefCountMaterial(material);
-			subMeshInstance.setPrevMaterial(material);
-			gpuSubMeshInstance._materialIndex = _vramShaderSetSystem.getIndexVramMaterial(material);
-			gpuSubMeshInstance._shaderSetIndex = _vramShaderSetSystem.getShaderSetIndex(material);
+			gpuSubMeshInstance._materialIndex = 0;// _vramShaderSetSystem.getIndexVramMaterial(material);
+			gpuSubMeshInstance._shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(material)->getShaderSet());
 
 			u32 offset = sizeof(gpu::SubMeshInstance) * subMeshInstanceIndex;
 			gpu::SubMeshInstance* mapSubMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, offset);
@@ -166,13 +161,11 @@ void Scene::update() {
 		}
 	}
 
-	_vramShaderSetSystem.update();
-
 	// メッシュレット　インスタンシング情報のオフセットを計算
 	if(isUpdatedInstancingOffset) {
-		memset(_indirectArgumentCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
-		memset(_indirectArgumentInstancingCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
-		memset(_multiDrawIndirectArgumentCounts, 0, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+		memset(_indirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
+		memset(_indirectArgumentInstancingCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
+		memset(_multiDrawIndirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 
 		u32 counts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
@@ -210,25 +203,25 @@ void Scene::update() {
 
 		// mesh shader indirect argument offset
 		{
-			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+			for (u32 shaderSetIndex = 1; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
 				u32 prevShaderIndex = shaderSetIndex - 1;
 				_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + _indirectArgumentCounts[prevShaderIndex];
 			}
 
-			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
-			memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, gpu::SHADER_SET_COUNT_MAX);
+			memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 		}
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 		// multi draw indirect argument offset
 		{
-			for (u32 shaderSetIndex = 1; shaderSetIndex < VramShaderSetSystem::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+			for (u32 shaderSetIndex = 1; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
 				u32 prevShaderIndex = shaderSetIndex - 1;
 				_multiDrawIndirectArgumentOffsets[shaderSetIndex] = _multiDrawIndirectArgumentOffsets[prevShaderIndex] + _multiDrawIndirectArgumentCounts[prevShaderIndex];
 			}
 
-			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_multiDrawIndirectArgumentOffsetBuffer, 0, VramShaderSetSystem::SHADER_SET_COUNT_MAX);
-			memcpy(mapIndirectArgumentOffsets, _multiDrawIndirectArgumentOffsets, sizeof(u32) * VramShaderSetSystem::SHADER_SET_COUNT_MAX);
+			u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_multiDrawIndirectArgumentOffsetBuffer, 0, gpu::SHADER_SET_COUNT_MAX);
+			memcpy(mapIndirectArgumentOffsets, _multiDrawIndirectArgumentOffsets, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 		}
 #endif
 	}
@@ -238,7 +231,6 @@ void Scene::update() {
 }
 
 void Scene::processDeletion() {
-	_vramShaderSetSystem.processDeletion();
 	u32 meshInstanceCount = _gpuMeshInstances.getInstanceCount();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		if (_meshInstanceStateFlags[meshInstanceIndex] & MESH_INSTANCE_FLAG_REQUEST_DESTROY) {
@@ -262,10 +254,6 @@ void Scene::processDeletion() {
 }
 
 void Scene::terminate() {
-	_defaultShaderSet->requestToDelete();
-	_defaultMaterial->requestToDelete();
-	_vramShaderSetSystem.removeRefCountMaterial(_defaultMaterial);
-	_vramShaderSetSystem.terminate();
 	_meshInstanceBuffer.terminate();
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
@@ -281,7 +269,6 @@ void Scene::terminate() {
 	_gpuLodMeshInstances.terminate();
 	_gpuSubMeshInstances.terminate();
 
-
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceHandles);
 	allocator->discardDescriptor(_meshletInstanceInfoOffsetSrv);
@@ -292,6 +279,11 @@ void Scene::terminate() {
 	_multiDrawIndirectArgumentOffsetBuffer.terminate();
 	allocator->discardDescriptor(_multiDrawIndirectArgumentOffsetSrv);
 #endif
+}
+
+void Scene::terminateDefaultResources() {
+	_defaultShaderSet->requestToDelete();
+	_defaultMaterial->requestToDelete();
 }
 
 void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
@@ -324,12 +316,6 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	const gpu::MeshInstance& meshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset];
 	const gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset];
-	u32 subMeshCount = meshInfo->_totalSubMeshCount;
-	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		SubMeshInstance& subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshIndex];
-		Material* material = subMeshInstance.getMaterial();
-		_vramShaderSetSystem.removeRefCountMaterial(material);
-	}
 	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], meshInfo->_totalSubMeshCount);
 	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], meshInfo->_totalLodMeshCount);
 	_gpuMeshInstances.discard(&_gpuMeshInstances[meshInstanceIndex], 1);
@@ -461,14 +447,14 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh) {
 		lodMeshInstance._threshhold = threshhold;
 	}
 
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 subMeshCount = meshInfo->_totalSubMeshCount;
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		_vramShaderSetSystem.addRefCountMaterial(_defaultMaterial);
 		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndex);
 		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndex);
 		gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex + subMeshIndex];
-		subMeshInstance._materialIndex = _vramShaderSetSystem.getIndexVramMaterial(_defaultMaterial);
-		subMeshInstance._shaderSetIndex = _vramShaderSetSystem.getShaderSetIndex(_defaultMaterial);
+		subMeshInstance._materialIndex = 0;// _vramShaderSetSystem.getIndexVramMaterial(_defaultMaterial);
+		subMeshInstance._shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
 	}
 
 	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
@@ -511,11 +497,6 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh) {
 	}
 
 	return meshInstance;
-}
-
-u32 Scene::getSubMeshInstanceRefCount(const PipelineStateGroup* pipelineState) {
-	u32 index = PipelineStateSystem::Get()->getGroupIndex(pipelineState);
-	return _vramShaderSetSystem.getMaterialInstanceTotalRefCount(index);
 }
 
 void MeshInstance::requestToDelete() {
@@ -838,10 +819,10 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 
 	// build hiz cbv descriptors
 	{
-		_hizInfoConstantCbv[0] = allocator->allocateDescriptors(1);
-		_hizInfoConstantCbv[1] = allocator->allocateDescriptors(1);
-		device->createConstantBufferView(_hizInfoConstantBuffer[0].getConstantBufferViewDesc(), _hizInfoConstantCbv[0]._cpuHandle);
-		device->createConstantBufferView(_hizInfoConstantBuffer[1].getConstantBufferViewDesc(), _hizInfoConstantCbv[1]._cpuHandle);
+		for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
+			_hizInfoConstantCbv[i] = allocator->allocateDescriptors(1);
+			device->createConstantBufferView(_hizInfoConstantBuffer[i].getConstantBufferViewDesc(), _hizInfoConstantCbv[i]._cpuHandle);
+		}
 	}
 }
 

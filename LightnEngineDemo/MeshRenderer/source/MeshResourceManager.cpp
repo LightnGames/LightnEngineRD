@@ -151,8 +151,6 @@ void MeshResourceManager::processDeletion() {
 }
 
 void MeshResourceManager::terminate() {
-	_defaultCube->requestToDelete();
-	processDeletion();
 	_positionVertexBuffer.terminate();
 	_normalTangentVertexBuffer.terminate();
 	_texcoordVertexBuffer.terminate();
@@ -186,6 +184,10 @@ void MeshResourceManager::terminate() {
 	allocater->discardDescriptor(_meshHandles);
 	allocater->discardDescriptor(_vertexHandles);
 	allocater->discardDescriptor(_subMeshDrawInfoSrv);
+}
+
+void MeshResourceManager::terminateDefaultResources() {
+	_defaultCube->requestToDelete();
 }
 
 void MeshResourceManager::drawDebugGui() {
