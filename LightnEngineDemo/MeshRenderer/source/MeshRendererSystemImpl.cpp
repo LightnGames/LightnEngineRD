@@ -41,38 +41,68 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// Lod level 計算
 	if (!isFixedCullingView) {
-		computeLod(commandList, viewInfo);
+		ComputeLodContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		_meshRenderer.computeLod(context);
 	}
 
 	// メッシュレットバウンディング　デバッグ表示
 	if (_debugDrawMeshletBounds) {
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Debug Meshlet Bounds");
+		//DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Debug Meshlet Bounds");
 
-		DebugRendererSystemImpl* debugSystem = DebugRendererSystemImpl::Get();
-		commandList->setComputeRootSignature(_debugMeshletBoundsRootSignature);
-		commandList->setPipelineState(_debugMeshletBoundsPipelineState);
+		//DebugRendererSystemImpl* debugSystem = DebugRendererSystemImpl::Get();
+		//commandList->setComputeRootSignature(_debugMeshletBoundsRootSignature);
+		//commandList->setPipelineState(_debugMeshletBoundsPipelineState);
 
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH, meshHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE, meshInstanceHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL, _view.getCurrentLodLevelSrv()._gpuHandle);
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT, debugSystem->getLineGpuUavHandle()._gpuHandle);
+		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
+		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH, meshHandle);
+		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE, meshInstanceHandle);
+		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL, _view.getCurrentLodLevelSrv()._gpuHandle);
+		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT, debugSystem->getLineGpuUavHandle()._gpuHandle);
 
-		u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-		commandList->dispatch(dispatchCount, 1, 1);
+		//u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
+		//commandList->dispatch(dispatchCount, 1, 1);
 
-		queryHeapSystem->setCurrentMarkerName("Debug Meshlet Bounds");
-		queryHeapSystem->setMarker(commandList);
+		//queryHeapSystem->setCurrentMarkerName("Debug Meshlet Bounds");
+		//queryHeapSystem->setMarker(commandList);
 	}
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		bool isPassedCulling = _cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
-		PipelineState* pipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuCullingPipelineState;
-		depthPrePassCulling(commandList, viewInfo, pipelineState);
+		GpuCullingContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._indirectArgumentOffsetSrv = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
+		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._scopeName = "Depth Pre Pass Culling";
+		_meshRenderer.depthPrePassCulling(context);
 	}
 
-	buildIndirectArgument(commandList);
+	// Build indiret argument
+	{
+		BuildIndirectArgumentContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._indirectArgumentUav = _view.getIndirectArgumentUav()._gpuHandle;
+		context._meshletInstanceCountSrv = _view.getMeshletInstanceCountSrv()._gpuHandle;
+		context._meshletInstanceOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		_meshRenderer.buildIndirectArgument(context);
+	}
 
 	// デプスプリパス
 	{
@@ -133,17 +163,43 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// build hiz
 	if (!isFixedCullingView) {
-		buildHiz(commandList, viewInfo);
+		BuildHizContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		_meshRenderer.buildHiz(context);
 	}
 
 	// GPUカリング
 	if (!isFixedCullingView) {
-		bool isPassedCulling = _cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
-		PipelineState* pipelineState = isPassedCulling ? _gpuCullingPassPipelineState : _gpuOcclusionCullingPipelineState;
-		mainCulling(commandList, viewInfo, pipelineState);
+		GpuCullingContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._viewInfo = viewInfo;
+		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._indirectArgumentOffsetSrv = _scene.getMultiDrawIndirectArgumentOffsetSrv()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
+		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._scopeName = "Main Culling";
+		_meshRenderer.mainCulling(context);
 	}
 
-	buildIndirectArgument(commandList);
+	// Build indiret argument
+	{
+		BuildIndirectArgumentContext context = {};
+		context._commandList = commandList;
+		context._graphicsView = &_view;
+		context._indirectArgumentUav = _view.getIndirectArgumentUav()._gpuHandle;
+		context._meshletInstanceCountSrv = _view.getMeshletInstanceCountSrv()._gpuHandle;
+		context._meshletInstanceOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
+		_meshRenderer.buildIndirectArgument(context);
+	}
 
 	// 描画
 	{
