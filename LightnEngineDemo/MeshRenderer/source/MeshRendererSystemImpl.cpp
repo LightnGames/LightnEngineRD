@@ -87,6 +87,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
@@ -152,6 +153,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
 	}
@@ -302,6 +304,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.multiDrawDepthPrePassCulling(context);
 	}
@@ -353,6 +356,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshletInstanceInfoUav = _view.getMeshletInstanceInfoUav()._gpuHandle;
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.multiDrawMainCulling(context);
 	}

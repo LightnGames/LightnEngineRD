@@ -21,9 +21,10 @@ StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
 ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
 StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
-
+//ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
+ByteAddressBuffer _materialInstanceIndices : register(t10);
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t10);
+Texture2D<float> _hizTextures[] : register(t11);
 #endif
 
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);
@@ -88,6 +89,9 @@ void addIndirectArgument(uint meshInstanceIndex) {
         SubMeshInstance subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
         SubMeshDrawInfo subMeshDrawInfo = _subMeshDrawInfos[lodMesh._subMeshOffset + subMeshLocalIndex];
 			
+        uint materialInstanceOffsetByte = subMeshInstance._materialIndex * UINT32_SIZE_IN_BYTE;
+        uint materialInstanceIndex = _materialInstanceIndices.Load(materialInstanceOffsetByte);
+        
         uint shaderSetOffset = subMeshInstance._shaderSetIndex * UINT32_SIZE_IN_BYTE;
         uint currentCountIndex = 0;
         _countBuffer.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
@@ -97,7 +101,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
 		
         StandardIndirectArgument arguments;
         arguments._meshInstanceIndex = meshInstanceIndex;
-        arguments._materialIndex = subMeshInstance._materialIndex;
+        arguments._materialIndex = materialInstanceIndex;
         arguments._indexCountPerInstance = subMeshDrawInfo._indexCount;
         arguments._startIndexLocation = subMeshDrawInfo._indexOffset;
         arguments._instanceCount = 1;

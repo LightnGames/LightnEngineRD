@@ -19,8 +19,9 @@ ByteAddressBuffer _indirectArgumentOffsets : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t7);
 //StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
 ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
+ByteAddressBuffer _materialInstanceIndices : register(t10);
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t10);
+Texture2D<float> _hizTextures[] : register(t11);
 #endif
 
 #define SHADER_SET_COUNT_MAX 32
@@ -85,9 +86,12 @@ void addIndirectArgument(uint meshInstanceIndex) {
     
     LodMeshInstance lodMeshInstance = _lodMeshInstances[meshInstance._lodMeshInstanceOffset + lodLevel];
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
+        uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshLocalIndex];
-        SubMeshInstance subMeshInstance = _subMeshInstances[lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex];
+        SubMeshInstance subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
         
+        uint materialInstanceOffsetByte = subMeshInstance._materialIndex * UINT32_SIZE_IN_BYTE;
+        uint materialInstanceIndex = _materialInstanceIndices.Load(materialInstanceOffsetByte);
         uint meshletIndex = subMesh._meshletCount - 1;
         if (meshletIndex < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
             uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX + meshletIndex) * UINT32_SIZE_IN_BYTE;
@@ -100,7 +104,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
             MeshletInstanceInfo meshletInfo = (MeshletInstanceInfo) 0;
             meshletInfo._meshletIndex = subMesh._meshletOffset;
             meshletInfo._meshInstanceIndex = meshInstanceIndex;
-            meshletInfo._materialIndex = subMeshInstance._materialIndex;
+            meshletInfo._materialIndex = materialInstanceIndex;
             meshletInfo._vertexOffset = lodMesh._vertexOffset;
             meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
             meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
@@ -130,7 +134,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         MeshletInstanceInfo meshletInfo;
         meshletInfo._meshletIndex = subMesh._meshletOffset;
         meshletInfo._meshInstanceIndex = meshInstanceIndex;
-        meshletInfo._materialIndex = subMeshInstance._materialIndex;
+        meshletInfo._materialIndex = materialInstanceIndex;
         meshletInfo._vertexOffset = lodMesh._vertexOffset;
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;

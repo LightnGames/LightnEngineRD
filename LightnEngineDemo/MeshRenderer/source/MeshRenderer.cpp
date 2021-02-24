@@ -56,8 +56,11 @@ void MeshRenderer::initialize()
 		DescriptorRange meshletInstanceInfoOffsetSrvRange = {};
 		meshletInstanceInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
 
+		DescriptorRange materialInstanceIndexSrvRange = {};
+		materialInstanceIndexSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+
 		DescriptorRange hizSrvRange = {};
-		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 10);
+		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 11);
 
 		// culling root signature
 		{
@@ -77,6 +80,7 @@ void MeshRenderer::initialize()
 			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO].initializeDescriptorTable(1, &meshletInstanceInfoUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT].initializeDescriptorTable(1, &meshletInstanceInfoCountUavRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_MATERIAL_INSTANCE_INDEX].initializeDescriptorTable(1, &materialInstanceIndexSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_HIZ].initializeDescriptorTable(1, &hizSrvRange, SHADER_VISIBILITY_ALL);
 
 			RootSignatureDesc rootSignatureDesc = {};
@@ -587,6 +591,7 @@ void MeshRenderer::gpuCulling(GpuCullingContext & context, PipelineState * pipel
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, context._meshletInstanceInfoOffsetSrv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, context._meshletInstanceInfoUav);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, context._meshletInstanceInfoCountUav);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MATERIAL_INSTANCE_INDEX, context._materialInstanceIndexSrv);
 
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);

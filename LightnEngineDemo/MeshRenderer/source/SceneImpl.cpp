@@ -150,7 +150,7 @@ void Scene::update() {
 			subMeshInstance.setPrevMaterial(material);
 
 			gpu::SubMeshInstance& gpuSubMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex];
-			gpuSubMeshInstance._materialIndex = 0;// _vramShaderSetSystem.getIndexVramMaterial(material);
+			gpuSubMeshInstance._materialIndex = materialSystem->getMaterialIndex(material);
 			gpuSubMeshInstance._shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(material)->getShaderSet());
 
 			u32 offset = sizeof(gpu::SubMeshInstance) * subMeshInstanceIndex;
@@ -453,7 +453,7 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh) {
 		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndex);
 		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndex);
 		gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex + subMeshIndex];
-		subMeshInstance._materialIndex = 0;// _vramShaderSetSystem.getIndexVramMaterial(_defaultMaterial);
+		subMeshInstance._materialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
 		subMeshInstance._shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
 	}
 

@@ -42,8 +42,12 @@ public:
 
 	u32 getShaderSetIndex(const Material* material);
 	VramShaderSet* getShaderSet(u32 index) { return &_shaderSets[index]; }
+	DescriptorHandle getMaterialInstanceIndexSrv() const { return _materialInstanceIndexSrv; }
 
 private:
 	VramShaderSet _shaderSets[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	MaterialMapKey _materialMapKeys[MaterialSystem::MATERIAL_COUNT_MAX] = {};
+	u32 _shaderSetIndices[MaterialSystem::MATERIAL_COUNT_MAX] = {};
+	u32 _materialInstanceIndices[MaterialSystem::MATERIAL_COUNT_MAX] = {};
+	GpuBuffer _materialInstanceIndexBuffer;
+	DescriptorHandle _materialInstanceIndexSrv;
 };
