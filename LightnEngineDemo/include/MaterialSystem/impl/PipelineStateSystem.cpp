@@ -96,9 +96,9 @@ u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
 }
 
 void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+#if ENABLE_MESH_SHADER
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-#if ENABLE_MESH_SHADER
 
     _pipelineState = allocator->allocatePipelineState();
     _rootSignature = allocator->allocateRootSignature();
@@ -237,11 +237,17 @@ u64 PipelineStateSystem::getPipelineStateGrpupHash(const PipelineStateGroup* gro
 }
 
 void PipelineStateGroup::terminate() {
-#if ENABLE_MESH_SHADER
-    _pipelineState->terminate();
-    _rootSignature->terminate();
-    _commandSignature->terminate();
-#endif
+	if (_pipelineState != nullptr) {
+		_pipelineState->terminate();
+	}
+
+	if (_rootSignature != nullptr) {
+		_rootSignature->terminate();
+	}
+
+	if (_commandSignature != nullptr) {
+		_commandSignature->terminate();
+	}
 }
 
 void PipelineStateGroup::requestToDestroy() {

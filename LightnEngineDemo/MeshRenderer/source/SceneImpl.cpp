@@ -34,6 +34,10 @@ void Scene::initialize() {
 		_meshletInstanceInfoOffsetBuffer.initialize(desc);
 		_meshletInstanceInfoOffsetBuffer.setDebugName("Meshlet Instance Offsets");
 
+		desc._sizeInByte = PRIMITIVE_INSTANCING_INFO_COUNT_MAX * sizeof(u32);
+		_primitiveInstancingOffsetBuffer.initialize(desc);
+		_primitiveInstancingOffsetBuffer.setDebugName("Primitive Instancing Offsets");
+
 		desc._sizeInByte = gpu::SHADER_SET_COUNT_MAX * sizeof(u32);
 		_indirectArgumentOffsetBuffer.initialize(desc);
 		_indirectArgumentOffsetBuffer.setDebugName("Indirect Argument Offsets");
@@ -166,39 +170,59 @@ void Scene::update() {
 		memset(_indirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 		memset(_indirectArgumentInstancingCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 		memset(_multiDrawIndirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
+		memset(_indirectArgumentPrimitiveInstancingCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 
-		u32 counts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
+		u32 primitiveInstancingCounts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
+		u32 meshletInstancingCounts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
 			const MeshInfo* meshInfo = mesh->getMeshInfo();
 			const gpu::LodMesh* lodMeshes = mesh->getGpuLodMesh();
 			const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
+			const gpu::Meshlet* meshlets = mesh->getGpuMeshlet();
 			const gpu::SubMeshInstance* subMeshInstances = _meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
-			u32 lodCount = mesh->getGpuMesh()->_lodMeshCount;
-			for (u32 lodIndex = 0; lodIndex < lodCount; ++lodIndex) {
-				u32 subMeshCount = lodMeshes[lodIndex]._subMeshCount;
-				u32 subMeshLocalOffset = meshInfo->_subMeshOffsets[lodIndex];
-				for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-					u32 subMeshOffset = subMeshLocalOffset + subMeshIndex;
-					u32 meshletCount = subMeshes[subMeshOffset]._meshletCount - 1;
-					u32 shaderSetIndex = subMeshInstances[subMeshOffset]._shaderSetIndex;
-					if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
-						u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-						++counts[shaderSetOffset + meshletCount];
-						++_indirectArgumentInstancingCounts[shaderSetIndex];
+			u32 subMeshStartOffset = meshInfo->_subMeshStartIndex;
+			u32 subMeshCount = meshInfo->_totalSubMeshCount;
+			for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+				const gpu::SubMesh& subMesh = subMeshes[subMeshIndex];
+				u32 meshletCount = subMesh._meshletCount - 1;
+				u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
+				if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
+					if (meshletCount == 1) {
+						const gpu::Meshlet& meshlet = meshlets[subMesh._meshletOffset];
+						u32 threadCount = max(meshlet._primitiveCount, meshlet._vertexCount);
+						u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
+						++primitiveInstancingCounts[shaderSetOffset + threadCount];
 					} else {
-						++_indirectArgumentCounts[shaderSetIndex];
+						u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+						++meshletInstancingCounts[shaderSetOffset + meshletCount];
+						++_indirectArgumentInstancingCounts[shaderSetIndex];
 					}
-					++_multiDrawIndirectArgumentCounts[shaderSetIndex];
+				} else {
+					++_indirectArgumentCounts[shaderSetIndex];
 				}
+				++_multiDrawIndirectArgumentCounts[shaderSetIndex];
 			}
 		}
 
-		u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, MESHLET_INSTANCE_INFO_COUNT_MAX);
-		memset(mapOffsets, 0, sizeof(u32) * MESHLET_INSTANCE_INFO_COUNT_MAX);
-		for (u32 i = 1; i < MESHLET_INSTANCE_INFO_COUNT_MAX; ++i) {
-			u32 prevIndex = i - 1;
-			mapOffsets[i] = mapOffsets[prevIndex] + counts[prevIndex];
+		// primitive instancing offsets
+		{
+			u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_primitiveInstancingOffsetBuffer, 0, PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
+			memset(mapOffsets, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
+			for (u32 i = 1; i < PRIMITIVE_INSTANCING_INFO_COUNT_MAX; ++i) {
+				u32 prevIndex = i - 1;
+				mapOffsets[i] = mapOffsets[prevIndex] + primitiveInstancingCounts[prevIndex];
+			}
+		}
+
+		// meshlet instancing offsets
+		{
+			u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_meshletInstanceInfoOffsetBuffer, 0, MESHLET_INSTANCE_INFO_COUNT_MAX);
+			memset(mapOffsets, 0, sizeof(u32) * MESHLET_INSTANCE_INFO_COUNT_MAX);
+			for (u32 i = 1; i < MESHLET_INSTANCE_INFO_COUNT_MAX; ++i) {
+				u32 prevIndex = i - 1;
+				mapOffsets[i] = mapOffsets[prevIndex] + meshletInstancingCounts[prevIndex];
+			}
 		}
 
 		// mesh shader indirect argument offset
@@ -258,6 +282,7 @@ void Scene::terminate() {
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_meshletInstanceInfoOffsetBuffer.terminate();
+	_primitiveInstancingOffsetBuffer.terminate();
 	_indirectArgumentOffsetBuffer.terminate();
 	_sceneCullingConstantBuffer.terminate();
 
@@ -586,6 +611,21 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		_meshletInstanceInfoCountBuffer.setDebugName("Meshlet Instance Info Counts");
 	}
 
+	// primitive instancing buffers
+	{
+		GpuBufferDesc desc = {};
+		desc._sizeInByte = sizeof(gpu::MeshletInstanceInfo) * Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		desc._device = device;
+		_primitiveInstancingInfoBuffer.initialize(desc);
+		_primitiveInstancingInfoBuffer.setDebugName("Primitive Instancing Infos");
+
+		desc._sizeInByte = sizeof(u32) * Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		_primitiveInstancingCountBuffer.initialize(desc);
+		_primitiveInstancingCountBuffer.setDebugName("Primitive Instancing Counts");
+	}
+
 	// culling result buffers
 	{
 		GpuBufferDesc desc = {};
@@ -700,6 +740,20 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountUav._cpuHandle);
 			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountCpuUav._cpuHandle);
+		}
+
+		// primitive instancing count
+		{
+			_primitiveInstancingCountUav = allocator->allocateDescriptors(1);
+			_primitiveInstancingCountCpuUav = cpuAllocator->allocateDescriptors(1);
+
+			UnorderedAccessViewDesc desc = {};
+			desc._format = FORMAT_R32_TYPELESS;
+			desc._viewDimension = UAV_DIMENSION_BUFFER;
+			desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
+			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
+			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
 		}
 	}
 
@@ -835,6 +889,8 @@ void GraphicsView::terminate() {
 	_cullingViewConstantBuffer.terminate();
 	_currentLodLevelBuffer.terminate();
 	_cullingResultReadbackBuffer.terminate();
+	_primitiveInstancingInfoBuffer.terminate();
+	_primitiveInstancingCountBuffer.terminate();
 
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
 		_hizInfoConstantBuffer[i].terminate();
@@ -853,17 +909,19 @@ void GraphicsView::terminate() {
 	allocator->discardDescriptor(_meshletInstanceInfoSrv);
 	allocator->discardDescriptor(_meshletInstanceInfoCountSrv);
 	allocator->discardDescriptor(_meshletInstanceInfoCountUav);
-	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
-		allocator->discardDescriptor(_hizInfoConstantCbv[i]);
-	}
 	allocator->discardDescriptor(_hizDepthTextureUav);
 	allocator->discardDescriptor(_hizDepthTextureSrv);
 	allocator->discardDescriptor(_meshletInstanceInfoUav);
+	allocator->discardDescriptor(_primitiveInstancingCountUav);
+	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
+		allocator->discardDescriptor(_hizInfoConstantCbv[i]);
+	}
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_countCpuUavHandle);
 	cpuAllocator->discardDescriptor(_cullingResultCpuUavHandle);
 	cpuAllocator->discardDescriptor(_meshletInstanceInfoCountCpuUav);
+	cpuAllocator->discardDescriptor(_primitiveInstancingCountCpuUav);
 }
 
 void GraphicsView::update() {
@@ -1022,9 +1080,17 @@ void GraphicsView::resetIndirectArgumentCountBuffers(CommandList* commandList) {
 
 void GraphicsView::resetMeshletInstanceInfoCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
-	GpuDescriptorHandle gpuDescriptor = _meshletInstanceInfoCountUav._gpuHandle;
-	CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
-	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
+	{
+		GpuDescriptorHandle gpuDescriptor = _meshletInstanceInfoCountUav._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _meshletInstanceInfoCountCpuUav._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _meshletInstanceInfoCountBuffer.getResource(), clearValues, 0, nullptr);
+	}
+
+	{
+		GpuDescriptorHandle gpuDescriptor = _primitiveInstancingCountUav._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _primitiveInstancingCountCpuUav._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _primitiveInstancingCountBuffer.getResource(), clearValues, 0, nullptr);
+	}
 }
 
 // カリング結果バッファクリア

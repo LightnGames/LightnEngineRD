@@ -467,14 +467,19 @@ struct PipelineStateD3D12 : public PipelineState {
 	virtual void iniaitlize(const ComputePipelineStateDesc& desc) override;
 	virtual void terminate() override;
 	virtual void setDebugName(const char* name) override;
+	virtual const char* getDebugName() const override { return _debugName; }
 	ID3D12PipelineState* _pipelineState = nullptr;
+	const char* _debugName = nullptr;
 	u8* _stateFlags = nullptr;
 };
 
 struct RootSignatureD3D12 : public RootSignature {
 	virtual void iniaitlize(const RootSignatureDesc& desc) override;
 	virtual void terminate() override;
+	virtual void setDebugName(const char* name) override;
+	virtual const char* getDebugName() const override { return _debugName; }
 	ID3D12RootSignature* _rootSignature = nullptr;
+	const char* _debugName = nullptr;
 	u8* _stateFlags = nullptr;
 };
 

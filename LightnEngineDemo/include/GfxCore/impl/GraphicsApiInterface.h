@@ -2,7 +2,7 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <Core/System.h>
 
-#define ENABLE_MESH_SHADER 1
+#define ENABLE_MESH_SHADER 0
 #define ENABLE_MULTI_INDIRECT_DRAW 1
 #define ENABLE_CLASSIC_VERTEX 1
 
@@ -1217,10 +1217,13 @@ struct LTN_GFX_API PipelineState {
 	virtual void iniaitlize(const ComputePipelineStateDesc& desc) = 0;
 	virtual void terminate() = 0;
 	virtual void setDebugName(const char* name) = 0;
+	virtual const char* getDebugName() const = 0;
 };
 struct LTN_GFX_API RootSignature {
 	virtual void iniaitlize(const RootSignatureDesc& desc) = 0;
 	virtual void terminate() = 0;
+	virtual void setDebugName(const char* name) = 0;
+	virtual const char* getDebugName() const = 0;
 };
 
 class LTN_GFX_API QueryHeap {

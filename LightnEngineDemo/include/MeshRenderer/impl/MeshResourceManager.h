@@ -40,6 +40,10 @@ public:
 		_gpuSubMeshes = subMeshes;
 	}
 
+	void setMeshlets(const gpu::Meshlet* meshlets) {
+		_gpuMeshlets = meshlets;
+	}
+
 	void setMeshInfo(const MeshInfo* meshInfo) {
 		_meshInfo = meshInfo;
 	}
@@ -108,7 +112,7 @@ private:
 	DynamicQueue<gpu::Mesh> _meshes;
 	MultiDynamicQueue<gpu::LodMesh> _lodMeshes;
 	MultiDynamicQueue<gpu::SubMesh> _subMeshes;
-	MultiDynamicQueueBlockManager _meshlets;
+	MultiDynamicQueue<gpu::Meshlet> _meshlets;
 
 	MultiDynamicQueueBlockManager _vertexPositionBinaryHeaders;
 	MultiDynamicQueueBlockManager _indexBinaryHeaders;

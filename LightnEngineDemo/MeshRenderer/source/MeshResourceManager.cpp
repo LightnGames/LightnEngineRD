@@ -292,10 +292,8 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	u32 primitiveBinaryIndex = _primitiveBinaryHeaders.request(primitiveCount);
 
 	// Meshlet
-	gpu::Meshlet* meshletPtr = nullptr;
 	{
-		meshletPtr = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
-		fread_s(meshletPtr, sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
+		fread_s(&_meshlets[meshInfo._meshletStartIndex], sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
 	}
 
 	// プリミティブ
@@ -373,9 +371,11 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	}
 
 	// データVramアップロード
+	gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
 	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, sizeof(gpu::SubMesh) * meshInfo._subMeshStartIndex, meshInfo._totalSubMeshCount);
 	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, sizeof(gpu::LodMesh) * meshInfo._lodMeshStartIndex, meshInfo._totalLodMeshCount);
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
+	memcpy(meshlets, &_meshlets[meshInfo._meshletStartIndex], sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount);
 	memcpy(subMeshes, &_subMeshes[meshInfo._subMeshStartIndex], sizeof(gpu::SubMesh) * meshInfo._totalSubMeshCount);
 	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex], sizeof(gpu::LodMesh) * meshInfo._totalLodMeshCount);
 	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
@@ -522,7 +522,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 
 	_meshStateFlags[meshIndex] |= MESH_FLAG_STATE_CHANGE;
 
-	// regidentメッシュの設定をロードしておく
+	// resident メッシュの設定をロードしておく
 	gpu::Mesh& mesh = _meshes[meshIndex];
 	mesh._stateFlags = gpu::MESH_STATE_ALLOCATED;
 	mesh._lodMeshCount = totalLodMeshCount;
@@ -555,6 +555,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshImpl->setMesh(&_meshes[meshIndex]);
 	meshImpl->setLodMeshes(&_lodMeshes[lodMeshStartIndex]);
 	meshImpl->setSubMeshes(&_subMeshes[subMeshStartIndex]);
+	meshImpl->setMeshlets(&_meshlets[meshletStartIndex]);
 	meshImpl->setMeshInfo(&_meshInfos[meshIndex]);
 	meshImpl->setSubMeshInfos(&_subMeshInfos[subMeshStartIndex]);
 	meshImpl->setStateFlags(&_meshStateFlags[meshIndex]);
@@ -603,7 +604,7 @@ u32 MeshResourceManager::getMeshIndex(const MeshInfo* meshInfo) const {
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndex, meshInfo._vertexCount);
-	_meshlets.discard(meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
+	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex], meshInfo._totalMeshletCount);
 	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex], meshInfo._totalSubMeshCount);
 	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex], meshInfo._totalLodMeshCount);
 	_meshes.discard(meshIndex);

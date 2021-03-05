@@ -164,6 +164,8 @@ private:
 	GpuBuffer _cullingResultReadbackBuffer;
 	GpuBuffer _meshletInstanceInfoBuffer;
 	GpuBuffer _meshletInstanceInfoCountBuffer;
+	GpuBuffer _primitiveInstancingInfoBuffer;
+	GpuBuffer _primitiveInstancingCountBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
@@ -171,6 +173,8 @@ private:
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
 
+	DescriptorHandle _primitiveInstancingCountCpuUav;
+	DescriptorHandle _primitiveInstancingCountUav;
 	DescriptorHandle _meshletInstanceInfoCountCpuUav;
 	DescriptorHandle _meshletInstanceInfoCountUav;
 	DescriptorHandle _meshletInstanceInfoCountSrv;
@@ -239,8 +243,10 @@ public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 4;
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
+	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 
 	void initialize();
 	void update();
@@ -280,6 +286,7 @@ private:
 	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentPrimitiveInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -289,6 +296,7 @@ private:
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _meshletInstanceInfoOffsetBuffer;
+	GpuBuffer _primitiveInstancingOffsetBuffer;
 	GpuBuffer _indirectArgumentOffsetBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;
 

@@ -88,6 +88,7 @@ void MeshRenderer::initialize()
 			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 			rootSignatureDesc._parameters = rootParameters;
 			_gpuCullingRootSignature->iniaitlize(rootSignatureDesc);
+			_gpuCullingRootSignature->setDebugName("Gpu Culling");
 		}
 
 		// pipeline state
@@ -186,6 +187,7 @@ void MeshRenderer::initialize()
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		_buildIndirectArgumentRootSignature->iniaitlize(rootSignatureDesc);
+		_buildIndirectArgumentRootSignature->setDebugName("Build Indirect Argument");
 
 		ShaderBlob* computeShader = allocator->allocateShaderBlob();
 		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_argument.cso");
@@ -232,6 +234,7 @@ void MeshRenderer::initialize()
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		_computeLodRootSignature->iniaitlize(rootSignatureDesc);
+		_computeLodRootSignature->setDebugName("Compute Lod");
 
 		ShaderBlob* computeShader = allocator->allocateShaderBlob();
 		computeShader->initialize("L:/LightnEngine/resource/common/shader/compute_lod.cso");
@@ -278,6 +281,7 @@ void MeshRenderer::initialize()
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		_debugMeshletBoundsRootSignature->iniaitlize(rootSignatureDesc);
+		_debugMeshletBoundsRootSignature->setDebugName("Debug Meshlet Bounds");
 
 		ShaderBlob* computeShader = allocator->allocateShaderBlob();
 		computeShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug_draw_meshlet_bounds.cso");
@@ -316,6 +320,7 @@ void MeshRenderer::initialize()
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		_buildHizRootSignature->iniaitlize(rootSignatureDesc);
+		_buildHizRootSignature->setDebugName("Build Hiz");
 
 		ShaderBlob* computeShader = allocator->allocateShaderBlob();
 		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_hierarchical_depth.cso");

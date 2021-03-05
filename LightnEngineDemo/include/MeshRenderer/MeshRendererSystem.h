@@ -79,12 +79,17 @@ public:
 		return &_gpuSubMeshes[index];
 	}
 
+	const gpu::Meshlet* getGpuMeshlet(u32 index = 0) const {
+		return &_gpuMeshlets[index];
+	}
+
 protected:
 	Asset* _asset = nullptr;
 	u8* _stateFlags = nullptr;
 	const gpu::Mesh* _gpuMesh = nullptr;
 	const gpu::LodMesh* _gpuLodMeshes = nullptr;
 	const gpu::SubMesh* _gpuSubMeshes = nullptr;
+	const gpu::Meshlet* _gpuMeshlets = nullptr;
 	const MeshInfo* _meshInfo = nullptr;
 	const SubMeshInfo* _subMeshInfos = nullptr;
 	const DebugMeshInfo* _debugMeshInfo = nullptr;
