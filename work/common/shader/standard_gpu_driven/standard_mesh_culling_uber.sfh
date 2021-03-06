@@ -15,23 +15,24 @@ ConstantBuffer<ViewInfo> _viewInfo :register(b2);
 StructuredBuffer<Mesh> _meshes : register(t0);
 StructuredBuffer<LodMesh> _lodMeshes : register(t1);
 StructuredBuffer<SubMesh> _subMeshes : register(t2);
-StructuredBuffer<MeshInstance> _meshInstances : register(t3);
-StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
-StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t5);
-ByteAddressBuffer _indirectArgumentOffsets : register(t6);
-ByteAddressBuffer _currentLodLevels : register(t7);
-StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t8);
-//ByteAddressBuffer _meshletInstanceInfoOffsets : register(t9);
-ByteAddressBuffer _materialInstanceIndices : register(t10);
+// StructuredBuffer<Meshlet> _meshlets : register(t3);
+StructuredBuffer<MeshInstance> _meshInstances : register(t4);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t5);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t6);
+ByteAddressBuffer _indirectArgumentOffsets : register(t7);
+ByteAddressBuffer _currentLodLevels : register(t8);
+StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t9);
+// ByteAddressBuffer _meshletInstanceInfoOffsets : register(t10);
+ByteAddressBuffer _materialInstanceIndices : register(t11);
 #if UBER_OCCLUSION
-Texture2D<float> _hizTextures[] : register(t11);
+Texture2D<float> _hizTextures[] : register(t13);
 #endif
 
 RWStructuredBuffer<StandardIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 
 #if UBER_CULLING_RESULT
-RWByteAddressBuffer _cullingResult : register(u3);
+RWByteAddressBuffer _cullingResult : register(u6);
 #endif
 
 #define THREAD_NUM 128

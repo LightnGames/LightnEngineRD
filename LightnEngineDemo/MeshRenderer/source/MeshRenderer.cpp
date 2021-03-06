@@ -27,13 +27,31 @@ void MeshRenderer::initialize()
 		viewInfoConstantRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 2);
 
 		DescriptorRange meshDescriptorRange = {};
-		meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);
+		meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);
 
 		DescriptorRange meshInstanceDescriptorRange = {};
-		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 3, 3);
+		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 3, 4);
 
 		DescriptorRange indirectArgumentOffsetRange = {};
-		indirectArgumentOffsetRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+		indirectArgumentOffsetRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
+
+		DescriptorRange lodLevelSrvRange = {};
+		lodLevelSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+
+		DescriptorRange subMeshInfoSrvRange = {};
+		subMeshInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
+
+		DescriptorRange meshletInstanceInfoOffsetSrvRange = {};
+		meshletInstanceInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+
+		DescriptorRange materialInstanceIndexSrvRange = {};
+		materialInstanceIndexSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
+
+		DescriptorRange primitiveInstancingInfoOffsetSrvRange = {};
+		primitiveInstancingInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
+
+		DescriptorRange hizSrvRange = {};
+		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
 
 		DescriptorRange indirectArgumentUavRange = {};
 		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
@@ -44,23 +62,14 @@ void MeshRenderer::initialize()
 		DescriptorRange meshletInstanceInfoCountUavRange = {};
 		meshletInstanceInfoCountUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
 
+		DescriptorRange primitiveInstancingInfoUavRange = {};
+		primitiveInstancingInfoUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
+
+		DescriptorRange primitiveInstancingInfoCountUavRange = {};
+		primitiveInstancingInfoCountUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
+
 		DescriptorRange cullingResultUavRange = {};
-		cullingResultUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
-
-		DescriptorRange lodLevelSrvRange = {};
-		lodLevelSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
-
-		DescriptorRange subMeshInfoSrvRange = {};
-		subMeshInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
-
-		DescriptorRange meshletInstanceInfoOffsetSrvRange = {};
-		meshletInstanceInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
-
-		DescriptorRange materialInstanceIndexSrvRange = {};
-		materialInstanceIndexSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
-
-		DescriptorRange hizSrvRange = {};
-		hizSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 11);
+		cullingResultUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 6);
 
 		// culling root signature
 		{
@@ -81,6 +90,9 @@ void MeshRenderer::initialize()
 			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO].initializeDescriptorTable(1, &meshletInstanceInfoUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT].initializeDescriptorTable(1, &meshletInstanceInfoCountUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_MATERIAL_INSTANCE_INDEX].initializeDescriptorTable(1, &materialInstanceIndexSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_OFFSETS].initializeDescriptorTable(1, &primitiveInstancingInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_INFOS].initializeDescriptorTable(1, &primitiveInstancingInfoUavRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_COUNTS].initializeDescriptorTable(1, &primitiveInstancingInfoCountUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[ROOT_PARAM_GPU_HIZ].initializeDescriptorTable(1, &hizSrvRange, SHADER_VISIBILITY_ALL);
 
 			RootSignatureDesc rootSignatureDesc = {};
@@ -597,6 +609,9 @@ void MeshRenderer::gpuCulling(GpuCullingContext & context, PipelineState * pipel
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, context._meshletInstanceInfoUav);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, context._meshletInstanceInfoCountUav);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MATERIAL_INSTANCE_INDEX, context._materialInstanceIndexSrv);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_OFFSETS, context._primitiveInstancingInfoOffsetSrv);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_INFOS, context._primitiveInstancingInfoUav);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_COUNTS, context._primitiveInstancingInfoCountUav);
 
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);

@@ -1,0 +1,80 @@
+#include "../constant_buffer.sfh"
+#include "../shaderInput.sfh"
+#include "../gpu_driven.sfh"
+
+struct PrimitiveInstancingConstant {
+    uint _instanceCount;
+    uint _threadStepOffset;
+    uint _meshletInfoOffset;
+};
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+#if UBER_PRIMITIVE_INSTANCING
+ConstantBuffer<PrimitiveInstancingConstant> _primitiveInstancingConstant : register(b1);
+#endif
+
+StructuredBuffer<CustomParameters> _customParameters : register(t0);
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<LodMesh> _lodMeshes : register(t2);
+StructuredBuffer<SubMesh> _subMeshes : register(t3);
+StructuredBuffer<Meshlet> _meshlets : register(t4);
+
+StructuredBuffer<MeshInstance> _meshInstances : register(t5);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
+
+StructuredBuffer<uint> _vertexIndices : register(t9);
+StructuredBuffer<uint> _primitives : register(t10);
+StructuredBuffer<float3> _vertexPositions : register(t11);
+StructuredBuffer<uint> _vertexNormalTangents : register(t12);
+StructuredBuffer<uint> _vertexTexcoords : register(t13);
+
+[NumThreads(128, 1, 1)]
+[OutputTopology("triangle")]
+void main(
+	uint gid : SV_GroupID,
+	uint gtid : SV_GroupThreadID,
+	uint dtid : SV_DispatchThreadID,
+#if UBER_DEFAULT
+    in payload PayloadStruct meshPayload,
+#endif
+    out indices uint3 tris[126],
+    out vertices VertexOut verts[64]
+){
+#if UBER_PRIMITIVE_INSTANCING
+#endif
+    
+#if UBER_DEFAULT
+    uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
+    uint meshletIndex = meshPayload._meshletIndices[gid];
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Meshlet meshlet = _meshlets[meshletIndex];
+
+    uint vertexCount = meshlet._vertexCount;
+    uint primitiveCount = meshlet._primitiveCount;
+    SetMeshOutputCounts(vertexCount, primitiveCount);
+
+    if(gtid < primitiveCount){
+        uint primitiveIndex = meshlet._primitiveOffset + gtid;
+        uint packedIndex = _primitives[meshPayload._primitiveOffset[gid] + primitiveIndex];
+        tris[gtid] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
+    }
+
+    if(gtid < vertexCount){
+        uint vertexLocalIndex = meshlet._vertexOffset + gtid;
+        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset[gid] + vertexLocalIndex];
+        uint vertexOffset = meshPayload._vertexOffset[gid] + vertexIndex;
+        float3 positionVertex = _vertexPositions[vertexOffset];
+        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+        
+        VertexOut vertexOut;
+        vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
+        vertexOut._positionNdc = worldPos;
+        vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
+        vertexOut._meshletIndex = meshletIndex;
+        vertexOut._materialIndex = meshPayload._materialIndex[gid];
+        vertexOut._meshInstanceIndex = meshInstanceIndex;
+        verts[gtid] = vertexOut;
+    }
+#endif
+}

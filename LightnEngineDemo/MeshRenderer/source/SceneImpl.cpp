@@ -194,10 +194,10 @@ void Scene::update() {
 						u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
 						++primitiveInstancingCounts[shaderSetOffset + threadCount];
 					} else {
-						u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-						++meshletInstancingCounts[shaderSetOffset + meshletCount];
-						++_indirectArgumentInstancingCounts[shaderSetIndex];
 					}
+					u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
+					++meshletInstancingCounts[shaderSetOffset + meshletCount];
+					++_indirectArgumentInstancingCounts[shaderSetIndex];
 				} else {
 					++_indirectArgumentCounts[shaderSetIndex];
 				}
@@ -750,7 +750,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 			UnorderedAccessViewDesc desc = {};
 			desc._format = FORMAT_R32_TYPELESS;
 			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
+			desc._buffer._numElements = Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
 			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
 			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
@@ -1004,11 +1004,12 @@ void GraphicsView::resetResourceComputeLodBarriers(CommandList* commandList) {
 
 void GraphicsView::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
 	// Indirect Argument ‚©‚ç UAV‚Ö
-	ResourceTransitionBarrier indirectArgumentToUavBarriers[4] = {};
+	ResourceTransitionBarrier indirectArgumentToUavBarriers[5] = {};
 	indirectArgumentToUavBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[2] = _meshletInstanceInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	indirectArgumentToUavBarriers[3] = _meshletInstanceInfoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	indirectArgumentToUavBarriers[4] = _primitiveInstancingCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(indirectArgumentToUavBarriers, LTN_COUNTOF(indirectArgumentToUavBarriers));
 }
 
@@ -1046,11 +1047,12 @@ void GraphicsView::resourceBarriersHizTextureToSrv(CommandList* commandList) {
 
 void GraphicsView::resetResourceGpuCullingBarriers(CommandList* commandList) {
 	// UAV ‚©‚ç Indirect Argument‚Ö
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[4] = {};
+	ResourceTransitionBarrier uavToIndirectArgumentBarriers[5] = {};
 	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[2] = _meshletInstanceInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	uavToIndirectArgumentBarriers[3] = _meshletInstanceInfoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	uavToIndirectArgumentBarriers[4] = _primitiveInstancingCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
 }
 

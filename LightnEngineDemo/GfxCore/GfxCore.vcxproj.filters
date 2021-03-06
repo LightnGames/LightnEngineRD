@@ -196,5 +196,11 @@
     <None Include="..\..\work\common\shader\build_indirect_argument.csf">
       <Filter>shader</Filter>
     </None>
+    <None Include="..\..\work\common\shader\standard_mesh\default_mesh_uber.sfh">
+      <Filter>shader\standard_mesh</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\standard_mesh\default_mesh_primitive_instancing.msf">
+      <Filter>shader\standard_mesh</Filter>
+    </None>
   </ItemGroup>
 </Project>

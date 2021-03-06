@@ -62,6 +62,9 @@ struct GpuCullingContext {
 	GpuDescriptorHandle _meshletInstanceInfoUav;
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
+	GpuDescriptorHandle _primitiveInstancingInfoOffsetSrv;
+	GpuDescriptorHandle _primitiveInstancingInfoCountUav;
+	GpuDescriptorHandle _primitiveInstancingInfoUav;
 	const char* _scopeName = nullptr;
 };
 

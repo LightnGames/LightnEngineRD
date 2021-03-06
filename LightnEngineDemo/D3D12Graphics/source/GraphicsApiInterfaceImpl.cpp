@@ -1226,6 +1226,11 @@ void RootSignatureD3D12::terminate() {
 	*_stateFlags = GRAPHICS_INTERFACE_STATE_REQUEST_DELETE;
 }
 
+void RootSignatureD3D12::setDebugName(const char* name) {
+	SetDebugName(_rootSignature, name);
+	_debugName = name;
+}
+
 void ShaderBlobD3D12::initialize(const char* filePath) {
 	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 128;
 	WCHAR wName[SET_NAME_LENGTH_COUNT_MAX] = {};
