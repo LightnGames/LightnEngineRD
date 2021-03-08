@@ -153,6 +153,10 @@ public:
 	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
 	DescriptorHandle getMeshletInstanceInfoUav() const { return _meshletInstanceInfoUav; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
+	DescriptorHandle getPrimitiveInstancingCountUav() const { return _primitiveInstancingCountUav; }
+	DescriptorHandle getPrimitiveInstancingCountSrv() const { return _primitiveInstancingCountSrv; }
+	DescriptorHandle getPrimitiveInstancingInfoUav() const { return _primitiveInstancingInfoUav; }
+	DescriptorHandle getPrimitiveInstancingInfoSrv() const { return _primitiveInstancingInfoSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
 
@@ -175,6 +179,9 @@ private:
 
 	DescriptorHandle _primitiveInstancingCountCpuUav;
 	DescriptorHandle _primitiveInstancingCountUav;
+	DescriptorHandle _primitiveInstancingCountSrv;
+	DescriptorHandle _primitiveInstancingInfoUav;
+	DescriptorHandle _primitiveInstancingInfoSrv;
 	DescriptorHandle _meshletInstanceInfoCountCpuUav;
 	DescriptorHandle _meshletInstanceInfoCountUav;
 	DescriptorHandle _meshletInstanceInfoCountSrv;
@@ -243,7 +250,7 @@ public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 4;
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
-	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 126;
+	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
 	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
@@ -264,6 +271,7 @@ public:
 	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
 	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
+	DescriptorHandle getPrimitiveInstancingInfoOffsetSrv() const { return _primitiveInstancingInfoOffsetSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
@@ -303,6 +311,7 @@ private:
 	DescriptorHandle _cullingSceneConstantHandle;
 	DescriptorHandle _indirectArgumentOffsetSrv;
 	DescriptorHandle _meshletInstanceInfoOffsetSrv;
+	DescriptorHandle _primitiveInstancingInfoOffsetSrv;
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;

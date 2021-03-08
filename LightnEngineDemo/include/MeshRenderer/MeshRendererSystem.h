@@ -10,7 +10,6 @@ struct Material;
 struct MeshInfo {
 	static constexpr u32 MATERIAL_SLOT_COUNT_MAX = 32;
 	static constexpr u32 LOD_COUNT_MAX = 16;
-	static constexpr u32 SUB_MESH_COUNT_MAX = 128;
 
 	u32 _meshIndex = 0;
 	u32 _vertexCount = 0;

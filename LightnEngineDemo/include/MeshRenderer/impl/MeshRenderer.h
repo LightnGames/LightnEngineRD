@@ -76,6 +76,14 @@ struct BuildIndirectArgumentContext {
 	GpuDescriptorHandle _indirectArgumentUav;
 };
 
+struct BuildIndirectArgumentPrimitiveInstancingContext {
+	CommandList* _commandList = nullptr;
+	GraphicsView* _graphicsView = nullptr;
+	GpuDescriptorHandle _meshletInstanceOffsetSrv;
+	GpuDescriptorHandle _meshletInstanceCountSrv;
+	GpuDescriptorHandle _indirectArgumentUav;
+};
+
 struct BuildHizContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
@@ -92,6 +100,7 @@ public:
 	void depthPrePassCulling(GpuCullingContext& context);
 	void mainCulling(GpuCullingContext& context);
 	void buildIndirectArgument(BuildIndirectArgumentContext& context);
+	void buildIndirectArgumentPrimitiveInstancing(BuildIndirectArgumentPrimitiveInstancingContext& context);
 	void buildHiz(BuildHizContext& context);
 
 #if ENABLE_MULTI_INDIRECT_DRAW
@@ -117,6 +126,8 @@ private:
 	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
 	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
 	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
+	PipelineState* _buildIndirectArgumentPrimitiveInstancingPipelineState = nullptr;
+	RootSignature* _buildIndirectArgumentPrimitiveInstancingRootSignature = nullptr;
 #if ENABLE_MULTI_INDIRECT_DRAW
 	PipelineState* _multiDrawCullingPipelineState = nullptr;
 	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;

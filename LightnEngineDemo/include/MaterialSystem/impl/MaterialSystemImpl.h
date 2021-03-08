@@ -37,6 +37,8 @@ struct TempShaderParamGpu {
 };
 
 struct ShaderSetImplDesc {
+	PipelineStateGroup** _primitiveInstancingPipelineStateGroup = nullptr;
+	PipelineStateGroup** _primitiveInstancingDepthPipelineStateGroup = nullptr;
 	PipelineStateGroup** _pipelineStateGroup = nullptr;
 	PipelineStateGroup** _depthPipelineStateGroup = nullptr;
 	PipelineStateGroup** _debugCullingPassPipelineStateGroup = nullptr;
@@ -103,6 +105,8 @@ public:
 	u32 getMaterialIndex(const Material* material) const;
 	bool isEnabledShaderSet(const ShaderSetImpl* shaderSet) const;
 
+	PipelineStateGroup** getPrimitiveInstancingPipelineStateGroups() { return _primitiveInstancingPipelineStateGroups; }
+	PipelineStateGroup** getPrimitiveInstancingDepthPipelineStateGroups() { return _primitiveInstancingDepthPipelineStateGroups; }
 	PipelineStateGroup** getPipelineStateGroups() { return _pipelineStateGroups; }
 	PipelineStateGroup** getDepthPipelineStateGroups() { return _depthPipelineStateGroups; }
 	PipelineStateGroup** getDebugMeshletPipelineStateGroups() { return _debugMeshletPipelineStateGroups; }
@@ -130,6 +134,8 @@ private:
 	u8 _shaderSetStateFlags[SHADER_SET_COUNT_MAX] = {};
 	u8 _materialUpdateFlags[MATERIAL_COUNT_MAX] = {};
 
+	PipelineStateGroup* _primitiveInstancingPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _primitiveInstancingDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _pipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _depthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugCullingPassPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};

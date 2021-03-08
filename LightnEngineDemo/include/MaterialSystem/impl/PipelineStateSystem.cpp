@@ -37,7 +37,10 @@ u32 PipelineStateSystem::getGroupIndex(const PipelineStateGroup* pipelineState) 
 
 PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
     u64 meshShaderHash = StrHash(desc._meshShaderFilePath);
-	u64 amplificationShaderHash = StrHash(desc._amplificationShaderFilePath);
+    u64 amplificationShaderHash = 0;
+    if (desc._amplificationShaderFilePath != nullptr) {
+        amplificationShaderHash = StrHash(desc._amplificationShaderFilePath);
+    }
     u64 pixelShaderHash = 0;
 	if (desc._pixelShaderFilePath != nullptr) {
 		pixelShaderHash = StrHash(desc._pixelShaderFilePath);
@@ -105,22 +108,27 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     _rootSignature->iniaitlize(rootSignatureDesc);
 
     ShaderBlob* meshShader = allocator->allocateShaderBlob();
-    ShaderBlob* amplificationShader = allocator->allocateShaderBlob();
+    ShaderBlob* amplificationShader = nullptr;
     ShaderBlob* pixelShader = nullptr;
+    ShaderByteCode amplificationShaderByteCode = {};
 	ShaderByteCode pixelShaderByteCode = {};
     meshShader->initialize(desc._meshShaderFilePath);
-    amplificationShader->initialize(desc._amplificationShaderFilePath);
+    if (desc._amplificationShaderFilePath != nullptr) {
+        amplificationShader = allocator->allocateShaderBlob();
+        amplificationShader->initialize(desc._amplificationShaderFilePath);
+        amplificationShaderByteCode = amplificationShader->getShaderByteCode();
+    }
 
 	if (desc._pixelShaderFilePath != nullptr) {
         pixelShader = allocator->allocateShaderBlob();
 		pixelShader->initialize(desc._pixelShaderFilePath);
-		pixelShaderByteCode = pixelShader->getShaderByteCode();;
+		pixelShaderByteCode = pixelShader->getShaderByteCode();
 	}
 
     MeshPipelineStateDesc pipelineStateDesc = {};
     pipelineStateDesc._device = device;
     pipelineStateDesc._ms = meshShader->getShaderByteCode();
-    pipelineStateDesc._as = amplificationShader->getShaderByteCode();
+    pipelineStateDesc._as = amplificationShaderByteCode;
 	pipelineStateDesc._ps = pixelShaderByteCode;
     pipelineStateDesc._numRenderTarget = 1;
     pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
@@ -134,7 +142,9 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     _pipelineState->iniaitlize(pipelineStateDesc);
 
     meshShader->terminate();
-    amplificationShader->terminate();
+    if (amplificationShader != nullptr) {
+        amplificationShader->terminate();
+    }
 
 	if (pixelShader != nullptr) {
 		pixelShader->terminate();

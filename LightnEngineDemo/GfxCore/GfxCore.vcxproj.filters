@@ -202,5 +202,8 @@
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh_primitive_instancing.msf">
       <Filter>shader\standard_mesh</Filter>
     </None>
+    <None Include="..\..\work\common\shader\build_indirect_argument_primitive_instancing.csf">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

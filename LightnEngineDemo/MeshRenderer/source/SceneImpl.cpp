@@ -58,6 +58,7 @@ void Scene::initialize() {
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshInstanceHandles = allocator->allocateDescriptors(3);
 		_meshletInstanceInfoOffsetSrv = allocator->allocateDescriptors(1);
+		_primitiveInstancingInfoOffsetSrv = allocator->allocateDescriptors(1);
 
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
@@ -91,6 +92,15 @@ void Scene::initialize() {
 			desc._buffer._numElements = MESHLET_INSTANCE_INFO_COUNT_MAX;
 			desc._buffer._structureByteStride = 0;
 			device->createShaderResourceView(_meshletInstanceInfoOffsetBuffer.getResource(), &desc, _meshletInstanceInfoOffsetSrv._cpuHandle);
+		}
+
+		// primitive instancing offset
+		{
+			desc._format = FORMAT_R32_TYPELESS;
+			desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
+			desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+			desc._buffer._structureByteStride = 0;
+			device->createShaderResourceView(_primitiveInstancingOffsetBuffer.getResource(), &desc, _primitiveInstancingInfoOffsetSrv._cpuHandle);
 		}
 
 		// indirect argument offset
@@ -172,11 +182,11 @@ void Scene::update() {
 		memset(_multiDrawIndirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 		memset(_indirectArgumentPrimitiveInstancingCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 
-		u32 primitiveInstancingCounts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		u32 meshletInstancingCounts[MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 			const Mesh* mesh = _meshInstances[meshInstanceIndex].getMesh();
 			const MeshInfo* meshInfo = mesh->getMeshInfo();
+			const SubMeshInfo* subMeshInfos = mesh->getSubMeshInfo();
 			const gpu::LodMesh* lodMeshes = mesh->getGpuLodMesh();
 			const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
 			const gpu::Meshlet* meshlets = mesh->getGpuMeshlet();
@@ -185,14 +195,17 @@ void Scene::update() {
 			u32 subMeshCount = meshInfo->_totalSubMeshCount;
 			for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 				const gpu::SubMesh& subMesh = subMeshes[subMeshIndex];
+				const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
 				u32 meshletCount = subMesh._meshletCount - 1;
 				u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 				if (meshletCount < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
 					if (meshletCount == 1) {
-						const gpu::Meshlet& meshlet = meshlets[subMesh._meshletOffset];
-						u32 threadCount = max(meshlet._primitiveCount, meshlet._vertexCount);
-						u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
-						++primitiveInstancingCounts[shaderSetOffset + threadCount];
+						const gpu::Meshlet& meshlet = meshlets[subMeshInfo._meshletOffset];
+						if (meshlet._vertexCount > 0) {
+							u32 threadCount = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
+							u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
+							++_indirectArgumentPrimitiveInstancingCounts[shaderSetOffset + threadCount];
+						}
 					} else {
 					}
 					u32 shaderSetOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
@@ -211,7 +224,7 @@ void Scene::update() {
 			memset(mapOffsets, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
 			for (u32 i = 1; i < PRIMITIVE_INSTANCING_INFO_COUNT_MAX; ++i) {
 				u32 prevIndex = i - 1;
-				mapOffsets[i] = mapOffsets[prevIndex] + primitiveInstancingCounts[prevIndex];
+				mapOffsets[i] = mapOffsets[prevIndex] + _indirectArgumentPrimitiveInstancingCounts[prevIndex];
 			}
 		}
 
@@ -299,6 +312,7 @@ void Scene::terminate() {
 	allocator->discardDescriptor(_meshletInstanceInfoOffsetSrv);
 	allocator->discardDescriptor(_indirectArgumentOffsetSrv);
 	allocator->discardDescriptor(_cullingSceneConstantHandle);
+	allocator->discardDescriptor(_primitiveInstancingInfoOffsetSrv);
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	_multiDrawIndirectArgumentOffsetBuffer.terminate();
@@ -673,6 +687,19 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		device->createShaderResourceView(_meshletInstanceInfoBuffer.getResource(), &desc, _meshletInstanceInfoSrv._cpuHandle);
 	}
 
+	// primitive instancing info srv
+	{
+		_primitiveInstancingInfoSrv = allocator->allocateDescriptors(1);
+
+		ShaderResourceViewDesc desc = {};
+		desc._format = FORMAT_UNKNOWN;
+		desc._viewDimension = SRV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
+		device->createShaderResourceView(_primitiveInstancingInfoBuffer.getResource(), &desc, _primitiveInstancingInfoSrv._cpuHandle);
+	}
+
 	// constant buffers
 	{
 		GpuBufferDesc desc = {};
@@ -689,75 +716,97 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		device->createConstantBufferView(_cullingViewConstantBuffer.getConstantBufferViewDesc(), _cullingViewInfoCbvHandle._cpuHandle);
 	}
 
-	// uav descriptors
+	// indirect argument uav
 	{
-		{
-			_indirectArgumentUavHandle = allocator->allocateDescriptors(2);
-			u32 incrimentSize = allocator->getIncrimentSize();
-			CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUavHandle._cpuHandle;
-			CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
+		_indirectArgumentUavHandle = allocator->allocateDescriptors(2);
+		u32 incrimentSize = allocator->getIncrimentSize();
+		CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUavHandle._cpuHandle;
+		CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
 
-			UnorderedAccessViewDesc desc = {};
-			desc._format = FORMAT_UNKNOWN;
-			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._firstElement = 0;
-			desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
-			desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
-			device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
-			
-			desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT;
-			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-			desc._buffer._structureByteStride = 0;
-			desc._format = FORMAT_R32_TYPELESS;
-			device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, countHandle);
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_UNKNOWN;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
+		device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
 
-			// カウントバッファをAPIの機能でクリアするためにCPU Only Descriptorを作成
-			_countCpuUavHandle = cpuAllocator->allocateDescriptors(1);
-			device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUavHandle._cpuHandle);
-		}
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT;
+		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+		desc._buffer._structureByteStride = 0;
+		desc._format = FORMAT_R32_TYPELESS;
+		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, countHandle);
 
-		// meshlet instance 
-		{
-			_meshletInstanceInfoUav = allocator->allocateDescriptors(1);
-			UnorderedAccessViewDesc desc = {};
-			desc._format = FORMAT_UNKNOWN;
-			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._firstElement = 0;
-			desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
-			desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-			device->createUnorderedAccessView(_meshletInstanceInfoBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoUav._cpuHandle);
-		}
-
-		// meshlet instance count
-		{
-			_meshletInstanceInfoCountUav = allocator->allocateDescriptors(1);
-			_meshletInstanceInfoCountCpuUav = cpuAllocator->allocateDescriptors(1);
-
-			UnorderedAccessViewDesc desc = {};
-			desc._format = FORMAT_R32_TYPELESS;
-			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
-			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountUav._cpuHandle);
-			device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountCpuUav._cpuHandle);
-		}
-
-		// primitive instancing count
-		{
-			_primitiveInstancingCountUav = allocator->allocateDescriptors(1);
-			_primitiveInstancingCountCpuUav = cpuAllocator->allocateDescriptors(1);
-
-			UnorderedAccessViewDesc desc = {};
-			desc._format = FORMAT_R32_TYPELESS;
-			desc._viewDimension = UAV_DIMENSION_BUFFER;
-			desc._buffer._numElements = Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
-			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
-			device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
-		}
+		// カウントバッファをAPIの機能でクリアするためにCPU Only Descriptorを作成
+		_countCpuUavHandle = cpuAllocator->allocateDescriptors(1);
+		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUavHandle._cpuHandle);
 	}
 
-	// culling result uav descriptors
+	// meshlet instance uav
+	{
+		_meshletInstanceInfoUav = allocator->allocateDescriptors(1);
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_UNKNOWN;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
+		device->createUnorderedAccessView(_meshletInstanceInfoBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoUav._cpuHandle);
+	}
+
+	// primitive instancing info uav
+	{
+		_primitiveInstancingInfoUav = allocator->allocateDescriptors(1);
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_UNKNOWN;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
+		device->createUnorderedAccessView(_primitiveInstancingInfoBuffer.getResource(), nullptr, &desc, _primitiveInstancingInfoUav._cpuHandle);
+	}
+
+	// meshlet instance count uav
+	{
+		_meshletInstanceInfoCountUav = allocator->allocateDescriptors(1);
+		_meshletInstanceInfoCountCpuUav = cpuAllocator->allocateDescriptors(1);
+
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_R32_TYPELESS;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._numElements = Scene::MESHLET_INSTANCE_INFO_COUNT_MAX;
+		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+		device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountUav._cpuHandle);
+		device->createUnorderedAccessView(_meshletInstanceInfoCountBuffer.getResource(), nullptr, &desc, _meshletInstanceInfoCountCpuUav._cpuHandle);
+	}
+
+	// primitive instancing count uav
+	{
+		_primitiveInstancingCountUav = allocator->allocateDescriptors(1);
+		_primitiveInstancingCountCpuUav = cpuAllocator->allocateDescriptors(1);
+
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_R32_TYPELESS;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._numElements = Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+		device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
+		device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
+	}
+
+	// primitive instancing count srv
+	{
+		_primitiveInstancingCountSrv = allocator->allocateDescriptors(1);
+
+		ShaderResourceViewDesc desc = {};
+		desc._format = FORMAT_R32_TYPELESS;
+		desc._viewDimension = SRV_DIMENSION_BUFFER;
+		desc._buffer._numElements = Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
+		device->createShaderResourceView(_primitiveInstancingCountBuffer.getResource(), &desc, _primitiveInstancingCountSrv._cpuHandle);
+	}
+
+	// culling result uav
 	{
 		_cullingResultUavHandle = allocator->allocateDescriptors(1);
 		_cullingResultCpuUavHandle = cpuAllocator->allocateDescriptors(1);
@@ -772,7 +821,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		device->createUnorderedAccessView(_cullingResultBuffer.getResource(), nullptr, &desc, _cullingResultCpuUavHandle._cpuHandle);
 	}
 
-	// current lod level uav descriptors
+	// current lod level uav
 	{
 		_currentLodLevelUav = allocator->allocateDescriptors(1);
 
@@ -785,7 +834,7 @@ void GraphicsView::initialize(const ViewInfo* viewInfo) {
 		device->createUnorderedAccessView(_currentLodLevelBuffer.getResource(), nullptr, &desc, _currentLodLevelUav._cpuHandle);
 	}
 
-	// current lod level srv descriptors
+	// current lod level srv
 	{
 		_currentLodLevelSrv = allocator->allocateDescriptors(1);
 		ShaderResourceViewDesc desc = {};
@@ -912,7 +961,10 @@ void GraphicsView::terminate() {
 	allocator->discardDescriptor(_hizDepthTextureUav);
 	allocator->discardDescriptor(_hizDepthTextureSrv);
 	allocator->discardDescriptor(_meshletInstanceInfoUav);
+	allocator->discardDescriptor(_primitiveInstancingCountSrv);
 	allocator->discardDescriptor(_primitiveInstancingCountUav);
+	allocator->discardDescriptor(_primitiveInstancingInfoSrv);
+	allocator->discardDescriptor(_primitiveInstancingInfoUav);
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
 		allocator->discardDescriptor(_hizInfoConstantCbv[i]);
 	}

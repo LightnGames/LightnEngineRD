@@ -214,6 +214,45 @@ void MeshRenderer::initialize()
 		computeShader->terminate();
 	}
 
+	// build indirect argument primitive instancing
+	{
+		_buildIndirectArgumentPrimitiveInstancingPipelineState = allocator->allocatePipelineState();
+		_buildIndirectArgumentPrimitiveInstancingRootSignature = allocator->allocateRootSignature();
+
+		DescriptorRange batchedSubMeshInfoOffsetSrvRange = {};
+		batchedSubMeshInfoOffsetSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		DescriptorRange batchedSubMeshInfoCountSrvRange = {};
+		batchedSubMeshInfoCountSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		DescriptorRange indirectArgumentUavRange = {};
+		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+
+		RootParameter rootParameters[BuildIndirectArgumentPrimitiveInstancingRootParameters::ROOT_PARAM_COUNT] = {};
+		rootParameters[BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_OFFSET].initializeDescriptorTable(1, &batchedSubMeshInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_COUNT].initializeDescriptorTable(1, &batchedSubMeshInfoCountSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentPrimitiveInstancingRootParameters::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
+
+		RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+		_buildIndirectArgumentPrimitiveInstancingRootSignature->iniaitlize(rootSignatureDesc);
+		_buildIndirectArgumentPrimitiveInstancingRootSignature->setDebugName("Build Indirect Argument Primitive Instancing");
+
+		ShaderBlob* computeShader = allocator->allocateShaderBlob();
+		computeShader->initialize("L:/LightnEngine/resource/common/shader/build_indirect_argument_primitive_instancing.cso");
+
+		ComputePipelineStateDesc pipelineStateDesc = {};
+		pipelineStateDesc._device = device;
+		pipelineStateDesc._cs = computeShader->getShaderByteCode();
+		pipelineStateDesc._rootSignature = _buildIndirectArgumentRootSignature;
+		_buildIndirectArgumentPrimitiveInstancingPipelineState->iniaitlize(pipelineStateDesc);
+		_buildIndirectArgumentPrimitiveInstancingPipelineState->setDebugName("build_indirect_argument_primitive_instancing.cso");
+
+		computeShader->terminate();
+	}
+
 	// gpu compute lod 
 	{
 		_computeLodPipelineState = allocator->allocatePipelineState();
@@ -362,6 +401,8 @@ void MeshRenderer::terminate()
 	_debugMeshletBoundsRootSignature->terminate();
 	_buildIndirectArgumentPipelineState->terminate();
 	_buildIndirectArgumentRootSignature->terminate();
+	_buildIndirectArgumentPrimitiveInstancingPipelineState->terminate();
+	_buildIndirectArgumentPrimitiveInstancingRootSignature->terminate();
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	_multiDrawCullingPipelineState->terminate();
@@ -474,6 +515,28 @@ void MeshRenderer::buildIndirectArgument(BuildIndirectArgumentContext& context) 
 	graphicsView->resourceBarriersResetBuildIndirectArgument(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
+	queryHeapSystem->setMarker(commandList);
+}
+
+void MeshRenderer::buildIndirectArgumentPrimitiveInstancing(BuildIndirectArgumentPrimitiveInstancingContext& context) {
+	CommandList* commandList = context._commandList;
+	GraphicsView* graphicsView = context._graphicsView;
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument Primitive");
+
+	graphicsView->resourceBarriersBuildIndirectArgument(commandList);
+	commandList->setComputeRootSignature(_buildIndirectArgumentPrimitiveInstancingRootSignature);
+	commandList->setPipelineState(_buildIndirectArgumentPrimitiveInstancingPipelineState);
+
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_OFFSET, context._meshletInstanceOffsetSrv);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_COUNT, context._meshletInstanceCountSrv);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::INDIRECT_ARGUMENT, context._indirectArgumentUav);
+
+	u32 dispatchCount = RoundUp(Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
+	graphicsView->resourceBarriersResetBuildIndirectArgument(commandList);
+
+	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument primitive");
 	queryHeapSystem->setMarker(commandList);
 }
 

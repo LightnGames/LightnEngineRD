@@ -23,6 +23,22 @@
 #define TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 18
 #define PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 19
 
+#define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
+#define PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX 21
+
+struct IndirectArgumentConstant {
+    uint _meshletInstanceInfoOffset;
+    uint _instanceCount;
+    uint _meshletCount;
+};
+
+struct DispatchMeshIndirectArgument {
+    IndirectArgumentConstant _constant;
+    uint _dispatchX;
+    uint _dispatchY;
+    uint _dispatchZ;
+};
+
 struct PayloadStruct { 
     uint _meshletIndices[32]; 
 	uint _meshInstanceIndices[32];
@@ -108,11 +124,5 @@ struct SceneCullingInfo {
 struct SubMeshDrawInfo {
     uint _indexCount;
     uint _indexOffset;
-};
-
-struct IndirectArgumentConstant {
-    uint _meshletInstanceInfoOffset;
-    uint _instanceCount;
-    uint _meshletCount;
 };
 

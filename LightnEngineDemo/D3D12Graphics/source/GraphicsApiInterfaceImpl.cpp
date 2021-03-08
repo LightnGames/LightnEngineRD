@@ -1232,7 +1232,7 @@ void RootSignatureD3D12::setDebugName(const char* name) {
 }
 
 void ShaderBlobD3D12::initialize(const char* filePath) {
-	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 128;
+	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 256;
 	WCHAR wName[SET_NAME_LENGTH_COUNT_MAX] = {};
 	size_t wLength = 0;
 	mbstowcs_s(&wLength, wName, SET_NAME_LENGTH_COUNT_MAX, filePath, _TRUNCATE);

@@ -1,10 +1,4 @@
 #include "../gpu_culling_function.sfh"
-struct DispatchMeshIndirectArgument {
-    IndirectArgumentConstant _constant;
-    uint _dispatchX;
-    uint _dispatchY;
-    uint _dispatchZ;
-};
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
 ConstantBuffer<CullingViewInfo> _cullingViewInfo : register(b1);
@@ -102,8 +96,9 @@ void addIndirectArgument(uint meshInstanceIndex) {
         uint meshletIndex = subMesh._meshletCount - 1;
         if (meshletIndex == 0) {
             Meshlet meshlet = _meshlets[subMesh._meshletOffset];
-            uint meshShaderThreadCount = max(meshlet._vertexCount, meshlet._primitiveCount);
+            uint meshShaderThreadCount = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
             uint meshShaderThreadIndex = meshShaderThreadCount - 1;
+            
             uint countOffsetByte = (subMeshInstance._shaderSetIndex * PRIMITIVE_INSTANCING_THREAD_COUNT_MAX + meshShaderThreadIndex) * UINT32_SIZE_IN_BYTE;
             uint currentCount = 0;
             _primitiveInstancingInfoCounts.InterlockedAdd(countOffsetByte, 1, currentCount);

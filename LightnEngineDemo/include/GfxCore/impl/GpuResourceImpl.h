@@ -74,6 +74,15 @@ enum BuildIndirectArgumentRootParameters {
 	ROOT_PARAM_COUNT
 };
 
+struct BuildIndirectArgumentPrimitiveInstancingRootParameters {
+	enum {
+		BATCHED_SUBMESH_OFFSET = 0,
+		BATCHED_SUBMESH_COUNT,
+		INDIRECT_ARGUMENT,
+		ROOT_PARAM_COUNT
+	};
+};
+
 struct GpuBufferDesc {
 	Device* _device = nullptr;
 	ResourceStates _initialState;

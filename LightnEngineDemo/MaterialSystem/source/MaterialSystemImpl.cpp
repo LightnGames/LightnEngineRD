@@ -51,6 +51,8 @@ void MaterialSystemImpl::processDeletion() {
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_NONE;
 			_shaderSets[shaderSetIndex].terminate();
+			_primitiveInstancingPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_primitiveInstancingDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
 			_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
 			_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
 			_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
@@ -65,6 +67,8 @@ void MaterialSystemImpl::processDeletion() {
 
 			_shaderSetFileHashes[shaderSetIndex] = 0;
 			_shaderSets[shaderSetIndex] = ShaderSetImpl();
+			_primitiveInstancingPipelineStateGroups[shaderSetIndex] = nullptr;
+			_primitiveInstancingDepthPipelineStateGroups[shaderSetIndex] = nullptr;
 			_pipelineStateGroups[shaderSetIndex] = nullptr;
 			_depthPipelineStateGroups[shaderSetIndex] = nullptr;
 			_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
@@ -99,7 +103,7 @@ u32 MaterialSystemImpl::findShaderSetIndex(u64 fileHash) {
 			return shaderSetIndex;
 		}
 	}
-	return static_cast<u32>(-1);
+	return gpu::INVALID_INDEX;
 }
 
 u32 MaterialSystemImpl::getShaderSetIndex(const ShaderSetImpl* shaderSet) const {
@@ -118,7 +122,7 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 	u64 fileHash = StrHash(desc._filePath);
 	u32 findIndex = findShaderSetIndex(fileHash);
 
-	if (findIndex == static_cast<u32>(-1)) {
+	if (findIndex == gpu::INVALID_INDEX) {
 		findIndex = _shaderSets.request();
 
 		ShaderSetImplDesc implDesc = {};
@@ -131,6 +135,8 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._debugWireFramePipelineStateGroup = &_debugWireFramePipelineStateGroups[findIndex];
 		implDesc._depthPipelineStateGroup = &_depthPipelineStateGroups[findIndex];
 		implDesc._pipelineStateGroup = &_pipelineStateGroups[findIndex];
+		implDesc._primitiveInstancingPipelineStateGroup = &_primitiveInstancingPipelineStateGroups[findIndex];
+		implDesc._primitiveInstancingDepthPipelineStateGroup = &_primitiveInstancingDepthPipelineStateGroups[findIndex];
 		implDesc._classicPipelineStateGroup = &_classicPipelineStateGroups[findIndex];
 		implDesc._classicDepthPipelineStateGroup = &_classicDepthPipelineStateGroups[findIndex];
 
@@ -229,11 +235,11 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	_shaderParams.initialize(MATERIAL_COUNT_MAX);
 
 	// アセット実パスに変換
-	char meshFilePath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(meshFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+	char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
+	sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
 	// IO読み取り初期化
-	std::ifstream fin(meshFilePath, std::ios::in | std::ios::binary);
+	std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
 	fin.exceptions(std::ios::badbit);
 	LTN_ASSERT(!fin.fail());
 
@@ -256,8 +262,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	constexpr u32 TEXTURE_BASE_REGISTER = 25;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
-	RootSignatureDesc rootSignatureDescFurstumCulling = {};
-	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
 	DescriptorRange cullingViewCbvRange = {};
 	cullingViewCbvRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 
@@ -294,6 +298,9 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	constexpr u32 ROOT_FRUSTUM_COUNT = ROOT_DEFAULT_MESH_COUNT - 2;
 	RootParameter furstumCullingRootParameters[ROOT_FRUSTUM_COUNT] = {};
 	RootParameter furstumOcclusionCullingRootParameters[ROOT_DEFAULT_MESH_COUNT] = {};
+
+	RootSignatureDesc rootSignatureDescFurstumCulling = {};
+	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
 
 	// メッシュレット　フラスタムカリングのみ
 	{
@@ -337,15 +344,27 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	PipelineStateSystem* pipelineStateSystem = PipelineStateSystem::Get();
 	MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
+	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+
+	// メッシュレット　プリミティブインスタンシング
+	{
+		// Depth Only
+		pipelineStateDesc._meshShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\standard_mesh\\default_mesh_primitive_instancing.mso";
+		*implDesc._primitiveInstancingDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+
+		// フラスタム ＋ オクルージョンカリング
+		pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
+		*implDesc._primitiveInstancingPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+	}
+
 	pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 	pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
-	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 
 	// GPUカリング無効デバッグ用
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_pass.aso";
 	*implDesc._debugCullingPassPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
-	// フラスタム＋オクルージョンカリング
+	// フラスタム ＋ オクルージョンカリング
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum_occlusion.aso";
 	*implDesc._pipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
