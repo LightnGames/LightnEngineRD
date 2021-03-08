@@ -131,11 +131,11 @@ public:
 	void resourceBarriersComputeLodToUAV(CommandList* commandList);
 	void resetResourceComputeLodBarriers(CommandList* commandList);
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
+	void resetResourceGpuCullingBarriers(CommandList* commandList);
 	void resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset);
 	void resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset);
 	void resourceBarriersHizSrvToTexture(CommandList* commandList);
 	void resourceBarriersHizTextureToSrv(CommandList* commandList);
-	void resetResourceGpuCullingBarriers(CommandList* commandList);
 	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
 	void resourceBarriersResetBuildIndirectArgument(CommandList* commandList);
 	void resetIndirectArgumentCountBuffers(CommandList* commandList);
@@ -153,10 +153,6 @@ public:
 	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
 	DescriptorHandle getMeshletInstanceInfoUav() const { return _meshletInstanceInfoUav; }
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
-	DescriptorHandle getPrimitiveInstancingCountUav() const { return _primitiveInstancingCountUav; }
-	DescriptorHandle getPrimitiveInstancingCountSrv() const { return _primitiveInstancingCountSrv; }
-	DescriptorHandle getPrimitiveInstancingInfoUav() const { return _primitiveInstancingInfoUav; }
-	DescriptorHandle getPrimitiveInstancingInfoSrv() const { return _primitiveInstancingInfoSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const CullingResult* getCullingResult() const;
 
@@ -168,20 +164,14 @@ private:
 	GpuBuffer _cullingResultReadbackBuffer;
 	GpuBuffer _meshletInstanceInfoBuffer;
 	GpuBuffer _meshletInstanceInfoCountBuffer;
-	GpuBuffer _primitiveInstancingInfoBuffer;
-	GpuBuffer _primitiveInstancingCountBuffer;
 	GpuBuffer _cullingViewConstantBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
+	
 	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
+
 	DescriptorHandle _hizDepthTextureSrv;
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
-
-	DescriptorHandle _primitiveInstancingCountCpuUav;
-	DescriptorHandle _primitiveInstancingCountUav;
-	DescriptorHandle _primitiveInstancingCountSrv;
-	DescriptorHandle _primitiveInstancingInfoUav;
-	DescriptorHandle _primitiveInstancingInfoSrv;
 	DescriptorHandle _meshletInstanceInfoCountCpuUav;
 	DescriptorHandle _meshletInstanceInfoCountUav;
 	DescriptorHandle _meshletInstanceInfoCountSrv;
@@ -245,15 +235,45 @@ public:
 	}
 };
 
+class PrimitiveInstancingResource {
+public:
+	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
+	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+
+	void initialize();
+	void terminate();
+	void update(MeshInstanceImpl* meshInstances, u32 countMax);
+
+	void resetMeshletInstanceInfoCountBuffers(CommandList* commandList);
+	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
+	void resetResourceGpuCullingBarriers(CommandList* commandList);
+
+	DescriptorHandle getPrimitiveInstancingInfoOffsetSrv() const { return _offsetSrv; }
+	DescriptorHandle getPrimitiveInstancingCountUav() const { return _primitiveInstancingCountUav; }
+	DescriptorHandle getPrimitiveInstancingCountSrv() const { return _primitiveInstancingCountSrv; }
+	DescriptorHandle getPrimitiveInstancingInfoUav() const { return _primitiveInstancingInfoUav; }
+	DescriptorHandle getPrimitiveInstancingInfoSrv() const { return _primitiveInstancingInfoSrv; }
+
+private:
+	u32 _indirectArgumentCounts[PRIMITIVE_INSTANCING_INFO_COUNT_MAX] = {};
+	GpuBuffer _primitiveInstancingInfoBuffer;
+	GpuBuffer _primitiveInstancingCountBuffer;
+	GpuBuffer _offsetBuffer;
+	DescriptorHandle _offsetSrv;
+	DescriptorHandle _primitiveInstancingCountCpuUav;
+	DescriptorHandle _primitiveInstancingCountUav;
+	DescriptorHandle _primitiveInstancingCountSrv;
+	DescriptorHandle _primitiveInstancingInfoUav;
+	DescriptorHandle _primitiveInstancingInfoSrv;
+};
+
 class Scene {
 public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 4;
 	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 16;
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
-	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
-	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 
 	void initialize();
 	void update();
@@ -271,8 +291,8 @@ public:
 	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
 	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
-	DescriptorHandle getPrimitiveInstancingInfoOffsetSrv() const { return _primitiveInstancingInfoOffsetSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
+	PrimitiveInstancingResource* getPrimitiveInstancingResource() { return &_primitiveInstancingResource; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	const u32* getIndirectArgumentInstancingCounts() const { return _indirectArgumentInstancingCounts; }
@@ -294,7 +314,7 @@ private:
 	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
-	u32 _indirectArgumentPrimitiveInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
+	PrimitiveInstancingResource _primitiveInstancingResource;
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -304,14 +324,12 @@ private:
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _meshletInstanceInfoOffsetBuffer;
-	GpuBuffer _primitiveInstancingOffsetBuffer;
 	GpuBuffer _indirectArgumentOffsetBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;
 
 	DescriptorHandle _cullingSceneConstantHandle;
 	DescriptorHandle _indirectArgumentOffsetSrv;
 	DescriptorHandle _meshletInstanceInfoOffsetSrv;
-	DescriptorHandle _primitiveInstancingInfoOffsetSrv;
 	DescriptorHandle _meshInstanceHandles;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;

@@ -532,7 +532,7 @@ void MeshRenderer::buildIndirectArgumentPrimitiveInstancing(BuildIndirectArgumen
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_COUNT, context._meshletInstanceCountSrv);
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::INDIRECT_ARGUMENT, context._indirectArgumentUav);
 
-	u32 dispatchCount = RoundUp(Scene::PRIMITIVE_INSTANCING_INFO_COUNT_MAX, 128u);
+	u32 dispatchCount = RoundUp(PrimitiveInstancingResource::PRIMITIVE_INSTANCING_INFO_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	graphicsView->resourceBarriersResetBuildIndirectArgument(commandList);
 
@@ -654,7 +654,9 @@ void MeshRenderer::gpuCulling(GpuCullingContext & context, PipelineState * pipel
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, context._scopeName);
 
+	// primitive instancing resource -> resourceBarriersGpuCullingToUAV(commandList)
 	graphicsView->resourceBarriersGpuCullingToUAV(commandList);
+	// primitive instancing resource -> resetMeshletInstanceInfoCountBuffers(commandList)
 	graphicsView->resetMeshletInstanceInfoCountBuffers(commandList);
 	graphicsView->resetIndirectArgumentCountBuffers(commandList);
 
@@ -679,6 +681,7 @@ void MeshRenderer::gpuCulling(GpuCullingContext & context, PipelineState * pipel
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	graphicsView->resetResourceGpuCullingBarriers(commandList);
+	// primitive instancing resource -> resetResourceGpuCullingBarriers(commandList)
 
 	queryHeapSystem->setCurrentMarkerName(context._scopeName);
 	queryHeapSystem->setMarker(commandList);
