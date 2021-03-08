@@ -6,6 +6,7 @@
 struct ViewInfo;
 class GraphicsView;
 class VramShaderSet;
+class PrimitiveInstancingResource;
 
 struct RenderContext {
 	CommandList* _commandList = nullptr;
@@ -62,9 +63,7 @@ struct GpuCullingContext {
 	GpuDescriptorHandle _meshletInstanceInfoUav;
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
-	GpuDescriptorHandle _primitiveInstancingInfoOffsetSrv;
-	GpuDescriptorHandle _primitiveInstancingInfoCountUav;
-	GpuDescriptorHandle _primitiveInstancingInfoUav;
+	PrimitiveInstancingResource* _primitiveInstancingResource = nullptr;
 	const char* _scopeName = nullptr;
 };
 
@@ -78,10 +77,7 @@ struct BuildIndirectArgumentContext {
 
 struct BuildIndirectArgumentPrimitiveInstancingContext {
 	CommandList* _commandList = nullptr;
-	GraphicsView* _graphicsView = nullptr;
-	GpuDescriptorHandle _meshletInstanceOffsetSrv;
-	GpuDescriptorHandle _meshletInstanceCountSrv;
-	GpuDescriptorHandle _indirectArgumentUav;
+	PrimitiveInstancingResource* _primitiveInstancingResource = nullptr;
 };
 
 struct BuildHizContext {

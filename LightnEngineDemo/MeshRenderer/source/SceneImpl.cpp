@@ -1086,21 +1086,31 @@ void PrimitiveInstancingResource::initialize() {
 		desc._sizeInByte = PRIMITIVE_INSTANCING_INFO_COUNT_MAX * sizeof(u32);
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._device = device;
-		_offsetBuffer.initialize(desc);
-		_offsetBuffer.setDebugName("Primitive Instancing Offsets");
+		_infoOffsetBuffer.initialize(desc);
+		_infoOffsetBuffer.setDebugName("Primitive Instancing Offsets");
 
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNT_MAX * sizeof(gpu::MeshletInstanceInfo);
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		_primitiveInstancingInfoBuffer.initialize(desc);
-		_primitiveInstancingInfoBuffer.setDebugName("Primitive Instancing Infos");
+		_InfoBuffer.initialize(desc);
+		_InfoBuffer.setDebugName("Primitive Instancing Infos");
 
 		desc._sizeInByte = sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
-		_primitiveInstancingCountBuffer.initialize(desc);
-		_primitiveInstancingCountBuffer.setDebugName("Primitive Instancing Counts");
+		_infoCountBuffer.initialize(desc);
+		_infoCountBuffer.setDebugName("Primitive Instancing Counts");
+
+		desc._sizeInByte = sizeof(gpu::DispatchMeshIndirectArgument) * INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._initialState = RESOURCE_STATE_INDIRECT_ARGUMENT;
+		_indirectArgumentBuffer.initialize(desc);
+		_indirectArgumentBuffer.setDebugName("Indirect Argument");
+
+		desc._sizeInByte = sizeof(u32) * gpu::SHADER_SET_COUNT_MAX;
+		_indirectArgumentCountBuffer.initialize(desc);
+		_indirectArgumentCountBuffer.setDebugName("Indirect Argument Count");
 	}
 
 	// srv
 	{
-		_offsetSrv = allocator->allocateDescriptors(1);
+		_infoOffsetSrv = allocator->allocateDescriptors(1);
 		_primitiveInstancingInfoSrv = allocator->allocateDescriptors(1);
 		_primitiveInstancingCountSrv = allocator->allocateDescriptors(1);
 
@@ -1109,20 +1119,24 @@ void PrimitiveInstancingResource::initialize() {
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
 		desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
-		device->createShaderResourceView(_offsetBuffer.getResource(), &desc, _offsetSrv._cpuHandle);
-		device->createShaderResourceView(_primitiveInstancingCountBuffer.getResource(), &desc, _primitiveInstancingCountSrv._cpuHandle);
+		device->createShaderResourceView(_infoOffsetBuffer.getResource(), &desc, _infoOffsetSrv._cpuHandle);
+		device->createShaderResourceView(_infoCountBuffer.getResource(), &desc, _primitiveInstancingCountSrv._cpuHandle);
 
 		desc._format = FORMAT_UNKNOWN;
-		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-		device->createShaderResourceView(_primitiveInstancingInfoBuffer.getResource(), &desc, _primitiveInstancingInfoSrv._cpuHandle);
+		device->createShaderResourceView(_InfoBuffer.getResource(), &desc, _primitiveInstancingInfoSrv._cpuHandle);
 	}
 
 	// uav
 	{
+		u32 incrimentSize = allocator->getIncrimentSize();
 		_primitiveInstancingInfoUav = allocator->allocateDescriptors(1);
 		_primitiveInstancingCountUav = allocator->allocateDescriptors(1);
 		_primitiveInstancingCountCpuUav = cpuAllocator->allocateDescriptors(1);
+		_indirectArgumentUav = allocator->allocateDescriptors(2);
+		_indirectArgumentCountCpuUav = cpuAllocator->allocateDescriptors(1);
 
 		UnorderedAccessViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
@@ -1130,34 +1144,49 @@ void PrimitiveInstancingResource::initialize() {
 		desc._buffer._firstElement = 0;
 		desc._buffer._numElements = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-		device->createUnorderedAccessView(_primitiveInstancingInfoBuffer.getResource(), nullptr, &desc, _primitiveInstancingInfoUav._cpuHandle);
+		device->createUnorderedAccessView(_InfoBuffer.getResource(), nullptr, &desc, _primitiveInstancingInfoUav._cpuHandle);
+
+		CpuDescriptorHandle indirectArgumentHandle = _indirectArgumentUav._cpuHandle;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
+		device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
 
 		desc._format = FORMAT_R32_TYPELESS;
-		desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._buffer._structureByteStride = 0;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
-		device->createUnorderedAccessView(_primitiveInstancingCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
+		desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
+		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
+
+		CpuDescriptorHandle countHandle = indirectArgumentHandle + incrimentSize;
+		desc._buffer._numElements = gpu::SHADER_SET_COUNT_MAX;
+		device->createUnorderedAccessView(_indirectArgumentCountBuffer.getResource(), nullptr, &desc, countHandle);
+		device->createUnorderedAccessView(_indirectArgumentCountBuffer.getResource(), nullptr, &desc, _indirectArgumentCountCpuUav._cpuHandle);
 	}
 }
 
 void PrimitiveInstancingResource::terminate() {
-	_offsetBuffer.terminate();
-	_primitiveInstancingInfoBuffer.terminate();
-	_primitiveInstancingCountBuffer.terminate();
+	_infoOffsetBuffer.terminate();
+	_InfoBuffer.terminate();
+	_infoCountBuffer.terminate();
+	_indirectArgumentBuffer.terminate();
+	_indirectArgumentCountBuffer.terminate();
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_offsetSrv);
+	allocator->discardDescriptor(_infoOffsetSrv);
 	allocator->discardDescriptor(_primitiveInstancingCountSrv);
 	allocator->discardDescriptor(_primitiveInstancingCountUav);
 	allocator->discardDescriptor(_primitiveInstancingInfoSrv);
 	allocator->discardDescriptor(_primitiveInstancingInfoUav);
+	allocator->discardDescriptor(_indirectArgumentUav);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_primitiveInstancingCountCpuUav);
+	cpuAllocator->discardDescriptor(_indirectArgumentCountCpuUav);
 }
 
 void PrimitiveInstancingResource::update(MeshInstanceImpl* meshInstances, u32 countMax) {
-	memset(_indirectArgumentCounts, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
+	memset(_infoCounts, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -1182,34 +1211,57 @@ void PrimitiveInstancingResource::update(MeshInstanceImpl* meshInstances, u32 co
 			}
 			u32 threadCount = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
 			u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
-			++_indirectArgumentCounts[shaderSetOffset + threadCount];
+			++_infoCounts[shaderSetOffset + threadCount];
 		}
 	}
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_offsetBuffer, 0, PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
+	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
 	memset(mapOffsets, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
 	for (u32 i = 1; i < PRIMITIVE_INSTANCING_INFO_COUNT_MAX; ++i) {
 		u32 prevIndex = i - 1;
-		mapOffsets[i] = mapOffsets[prevIndex] + _indirectArgumentCounts[prevIndex];
+		mapOffsets[i] = mapOffsets[prevIndex] + _infoCounts[prevIndex];
 	}
 }
 
-void PrimitiveInstancingResource::resetMeshletInstanceInfoCountBuffers(CommandList* commandList) {
+void PrimitiveInstancingResource::resetInfoCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
 	GpuDescriptorHandle gpuDescriptor = _primitiveInstancingCountUav._gpuHandle;
 	CpuDescriptorHandle cpuDescriptor = _primitiveInstancingCountCpuUav._cpuHandle;
-	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _primitiveInstancingCountBuffer.getResource(), clearValues, 0, nullptr);
+	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _infoCountBuffer.getResource(), clearValues, 0, nullptr);
+}
+
+void PrimitiveInstancingResource::resetIndirectArgumentCountBuffers(CommandList* commandList) {
+	u32 clearValues[4] = {};
+	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	u32 incrimentSize = allocater->getIncrimentSize();
+	GpuDescriptorHandle gpuDescriptor = _indirectArgumentUav._gpuHandle + incrimentSize;
+	CpuDescriptorHandle cpuDescriptor = _indirectArgumentCountCpuUav._cpuHandle;
+	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _indirectArgumentCountBuffer.getResource(), clearValues, 0, nullptr);
 }
 
 void PrimitiveInstancingResource::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
 	ResourceTransitionBarrier barriers[1] = {};
-	barriers[0] = _primitiveInstancingCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[0] = _infoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }
 
 void PrimitiveInstancingResource::resetResourceGpuCullingBarriers(CommandList* commandList) {
 	ResourceTransitionBarrier barriers[1] = {};
-	barriers[0] = _primitiveInstancingCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	barriers[0] = _infoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
+}
+
+void PrimitiveInstancingResource::resourceBarriersBuildIndirectArgument(CommandList* commandList) {
+	ResourceTransitionBarrier barriers[2] = {};
+	barriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[1] = _indirectArgumentCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
+}
+
+void PrimitiveInstancingResource::resetBuildIndirectArgumentResourceBarriers(CommandList* commandList) {
+	ResourceTransitionBarrier barriers[2] = {};
+	barriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+	barriers[1] = _indirectArgumentCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }

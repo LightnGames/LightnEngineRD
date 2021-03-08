@@ -177,12 +177,12 @@ private:
 	DescriptorHandle _meshletInstanceInfoCountSrv;
 	DescriptorHandle _meshletInstanceInfoSrv;
 	DescriptorHandle _meshletInstanceInfoUav;
-	DescriptorHandle _indirectArgumentUavHandle;
 	DescriptorHandle _cullingViewInfoCbvHandle;
 	DescriptorHandle _cullingResultUavHandle;
 	DescriptorHandle _cullingResultCpuUavHandle;
 	DescriptorHandle _currentLodLevelUav;
 	DescriptorHandle _currentLodLevelSrv;
+	DescriptorHandle _indirectArgumentUavHandle;
 	DescriptorHandle _countCpuUavHandle;
 	gpu::CullingResult _currentFrameCullingResultMapPtr;
 	const ViewInfo* _viewInfo = nullptr;
@@ -239,32 +239,41 @@ class PrimitiveInstancingResource {
 public:
 	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
 	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 4 * gpu::SHADER_SET_COUNT_MAX;
 
 	void initialize();
 	void terminate();
 	void update(MeshInstanceImpl* meshInstances, u32 countMax);
 
-	void resetMeshletInstanceInfoCountBuffers(CommandList* commandList);
+	void resetInfoCountBuffers(CommandList* commandList);
+	void resetIndirectArgumentCountBuffers(CommandList* commandList);
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
+	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
+	void resetBuildIndirectArgumentResourceBarriers(CommandList* commandList);
 
-	DescriptorHandle getPrimitiveInstancingInfoOffsetSrv() const { return _offsetSrv; }
-	DescriptorHandle getPrimitiveInstancingCountUav() const { return _primitiveInstancingCountUav; }
-	DescriptorHandle getPrimitiveInstancingCountSrv() const { return _primitiveInstancingCountSrv; }
-	DescriptorHandle getPrimitiveInstancingInfoUav() const { return _primitiveInstancingInfoUav; }
-	DescriptorHandle getPrimitiveInstancingInfoSrv() const { return _primitiveInstancingInfoSrv; }
+	GpuDescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav._gpuHandle; }
+	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
+	GpuDescriptorHandle getInfoCountUav() const { return _primitiveInstancingCountUav._gpuHandle; }
+	GpuDescriptorHandle getInfoCountSrv() const { return _primitiveInstancingCountSrv._gpuHandle; }
+	GpuDescriptorHandle getInfoUav() const { return _primitiveInstancingInfoUav._gpuHandle; }
+	GpuDescriptorHandle getInfoSrv() const { return _primitiveInstancingInfoSrv._gpuHandle; }
 
 private:
-	u32 _indirectArgumentCounts[PRIMITIVE_INSTANCING_INFO_COUNT_MAX] = {};
-	GpuBuffer _primitiveInstancingInfoBuffer;
-	GpuBuffer _primitiveInstancingCountBuffer;
-	GpuBuffer _offsetBuffer;
-	DescriptorHandle _offsetSrv;
+	u32 _infoCounts[PRIMITIVE_INSTANCING_INFO_COUNT_MAX] = {};
+	GpuBuffer _InfoBuffer;
+	GpuBuffer _infoCountBuffer;
+	GpuBuffer _infoOffsetBuffer;
+	GpuBuffer _indirectArgumentBuffer;
+	GpuBuffer _indirectArgumentCountBuffer;
+	DescriptorHandle _infoOffsetSrv;
 	DescriptorHandle _primitiveInstancingCountCpuUav;
 	DescriptorHandle _primitiveInstancingCountUav;
 	DescriptorHandle _primitiveInstancingCountSrv;
 	DescriptorHandle _primitiveInstancingInfoUav;
 	DescriptorHandle _primitiveInstancingInfoSrv;
+	DescriptorHandle _indirectArgumentUav;
+	DescriptorHandle _indirectArgumentCountCpuUav;
 };
 
 class Scene {

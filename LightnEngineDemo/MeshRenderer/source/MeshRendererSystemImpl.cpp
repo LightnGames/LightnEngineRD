@@ -88,9 +88,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._primitiveInstancingInfoOffsetSrv = _scene.getPrimitiveInstancingInfoOffsetSrv()._gpuHandle;
-		context._primitiveInstancingInfoUav = _view.getPrimitiveInstancingInfoUav()._gpuHandle;
-		context._primitiveInstancingInfoCountUav = _view.getPrimitiveInstancingCountUav()._gpuHandle;
+		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
@@ -110,10 +108,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		{
 			BuildIndirectArgumentPrimitiveInstancingContext context = {};
 			context._commandList = commandList;
-			context._graphicsView = &_view;
-			context._indirectArgumentUav = _view.getIndirectArgumentUav()._gpuHandle;
-			context._meshletInstanceCountSrv = _view.getPrimitiveInstancingCountSrv()._gpuHandle;
-			context._meshletInstanceOffsetSrv = _scene.getPrimitiveInstancingInfoOffsetSrv()._gpuHandle;
+			context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 			_meshRenderer.buildIndirectArgumentPrimitiveInstancing(context);
 		}
 	}
@@ -169,9 +164,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._primitiveInstancingInfoOffsetSrv = _scene.getPrimitiveInstancingInfoOffsetSrv()._gpuHandle;
-		context._primitiveInstancingInfoUav = _view.getPrimitiveInstancingInfoUav()._gpuHandle;
-		context._primitiveInstancingInfoCountUav = _view.getPrimitiveInstancingCountUav()._gpuHandle;
+		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
 	}
@@ -191,10 +184,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		{
 			BuildIndirectArgumentPrimitiveInstancingContext context = {};
 			context._commandList = commandList;
-			context._graphicsView = &_view;
-			context._indirectArgumentUav = _view.getIndirectArgumentUav()._gpuHandle;
-			context._meshletInstanceCountSrv = _view.getPrimitiveInstancingCountSrv()._gpuHandle;
-			context._meshletInstanceOffsetSrv = _scene.getPrimitiveInstancingInfoOffsetSrv()._gpuHandle;
+			context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 			_meshRenderer.buildIndirectArgumentPrimitiveInstancing(context);
 		}
 	}
