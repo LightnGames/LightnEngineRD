@@ -1,2 +1,2 @@
-#define UBER_DEFAULT 1
+#define UBER_PRIMITIVE_INSTANCING 1
 #include "default_mesh_uber.sfh"

@@ -13,9 +13,11 @@ struct RenderContext {
 	ViewInfo* _viewInfo = nullptr;
 	GraphicsView* _graphicsView = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
+	PrimitiveInstancingResource* _primitiveInstancingResource = nullptr;
 	const u32* _indirectArgmentOffsets = nullptr;
 	const u32* _indirectArgmentCounts = nullptr;
 	const u32* _indirectArgmentInstancingCounts = nullptr;
+	PipelineStateGroup** _primInstancingPipelineStates = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;

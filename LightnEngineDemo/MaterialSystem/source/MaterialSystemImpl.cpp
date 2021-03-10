@@ -442,23 +442,48 @@ void ShaderSetImpl::terminate() {
 }
 
 void PipelineStateSet::requestDelete(u32 shaderSetIndex){
-	_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugMeshletPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugLodLevelPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugOcclusionPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-	_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	if (_pipelineStateGroups[shaderSetIndex]) {
+		_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_pipelineStateGroups[shaderSetIndex] = nullptr;
+	}
 
-	_pipelineStateGroups[shaderSetIndex] = nullptr;
-	_depthPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugMeshletPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugLodLevelPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugOcclusionPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
-	_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+	if (_depthPipelineStateGroups[shaderSetIndex]) {
+		_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_depthPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugCullingPassPipelineStateGroups[shaderSetIndex]) {
+		_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugMeshletPipelineStateGroups[shaderSetIndex]) {
+		_debugMeshletPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugMeshletPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugLodLevelPipelineStateGroups[shaderSetIndex]) {
+		_debugLodLevelPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugLodLevelPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugOcclusionPipelineStateGroups[shaderSetIndex]) {
+		_debugOcclusionPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugOcclusionPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugDepthPipelineStateGroups[shaderSetIndex]) {
+		_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugTexcoordsPipelineStateGroups[shaderSetIndex]) {
+		_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_debugWireFramePipelineStateGroups[shaderSetIndex]) {
+		_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+		_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+	}
 }

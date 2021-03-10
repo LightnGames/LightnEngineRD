@@ -1083,7 +1083,7 @@ void PrimitiveInstancingResource::initialize() {
 	// buffer
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = PRIMITIVE_INSTANCING_INFO_COUNT_MAX * sizeof(u32);
+		desc._sizeInByte = INSTANCING_INFO_COUNT_MAX * sizeof(u32);
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._device = device;
 		_infoOffsetBuffer.initialize(desc);
@@ -1094,7 +1094,7 @@ void PrimitiveInstancingResource::initialize() {
 		_InfoBuffer.initialize(desc);
 		_InfoBuffer.setDebugName("Primitive Instancing Infos");
 
-		desc._sizeInByte = sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._sizeInByte = sizeof(u32) * INSTANCING_INFO_COUNT_MAX;
 		_infoCountBuffer.initialize(desc);
 		_infoCountBuffer.setDebugName("Primitive Instancing Counts");
 
@@ -1118,7 +1118,7 @@ void PrimitiveInstancingResource::initialize() {
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
-		desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._buffer._numElements = INSTANCING_INFO_COUNT_MAX;
 		device->createShaderResourceView(_infoOffsetBuffer.getResource(), &desc, _infoOffsetSrv._cpuHandle);
 		device->createShaderResourceView(_infoCountBuffer.getResource(), &desc, _primitiveInstancingCountSrv._cpuHandle);
 
@@ -1154,7 +1154,7 @@ void PrimitiveInstancingResource::initialize() {
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._structureByteStride = 0;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		desc._buffer._numElements = PRIMITIVE_INSTANCING_INFO_COUNT_MAX;
+		desc._buffer._numElements = INSTANCING_INFO_COUNT_MAX;
 		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountUav._cpuHandle);
 		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _primitiveInstancingCountCpuUav._cpuHandle);
 
@@ -1186,7 +1186,7 @@ void PrimitiveInstancingResource::terminate() {
 }
 
 void PrimitiveInstancingResource::update(MeshInstanceImpl* meshInstances, u32 countMax) {
-	memset(_infoCounts, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
+	memset(_infoCounts, 0, sizeof(u32) * INSTANCING_INFO_COUNT_MAX);
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -1210,15 +1210,16 @@ void PrimitiveInstancingResource::update(MeshInstanceImpl* meshInstances, u32 co
 				continue;
 			}
 			u32 threadCount = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-			u32 shaderSetOffset = shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
+			u32 shaderSetOffset = shaderSetIndex * INSTANCING_PRIMITIVE_COUNT_MAX;
 			++_infoCounts[shaderSetOffset + threadCount];
+			LTN_ASSERT(threadCount < INSTANCING_PRIMITIVE_COUNT_MAX);
 		}
 	}
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
-	memset(mapOffsets, 0, sizeof(u32) * PRIMITIVE_INSTANCING_INFO_COUNT_MAX);
-	for (u32 i = 1; i < PRIMITIVE_INSTANCING_INFO_COUNT_MAX; ++i) {
+	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, INSTANCING_INFO_COUNT_MAX);
+	memset(mapOffsets, 0, sizeof(u32) * INSTANCING_INFO_COUNT_MAX);
+	for (u32 i = 1; i < INSTANCING_INFO_COUNT_MAX; ++i) {
 		u32 prevIndex = i - 1;
 		mapOffsets[i] = mapOffsets[prevIndex] + _infoCounts[prevIndex];
 	}

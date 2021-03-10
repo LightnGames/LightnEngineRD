@@ -131,7 +131,9 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
-		context._pipelineStates = materialSystem->getDepthPipelineStateGroups();
+		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER)->_depthPipelineStateGroups;
+		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_depthPipelineStateGroups;
+		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 		_meshRenderer.render(context);
 
 		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
@@ -197,33 +199,34 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 		_view.resourceBarriersHizTextureToSrv(commandList);
 
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
 		PipelineStateGroup** pipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
 		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = materialSystem->getPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_pipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_MESHLET:
-			pipelineStates = materialSystem->getDebugMeshletPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-			pipelineStates = materialSystem->getDebugLodLevelPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-			pipelineStates = materialSystem->getDebugOcclusionPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_DEPTH:
-			pipelineStates = materialSystem->getDebugDepthPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-			pipelineStates = materialSystem->getDebugTexcoordsPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
-			pipelineStates = materialSystem->getDebugWireFramePipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugWireFramePipelineStateGroups;
 			break;
 		}
 
 		if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
-			pipelineStates = materialSystem->getDebugCullingPassPipelineStateGroups();
+			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
 		}
 
 		LTN_ASSERT(pipelineStates != nullptr);
@@ -241,6 +244,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
 		context._pipelineStates = pipelineStates;
+		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_pipelineStateGroups;
+		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
 		context._collectResult = true;
 		_meshRenderer.render(context);
 

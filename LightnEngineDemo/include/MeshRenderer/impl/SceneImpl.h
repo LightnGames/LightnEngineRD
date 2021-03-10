@@ -237,8 +237,8 @@ public:
 
 class PrimitiveInstancingResource {
 public:
-	static constexpr u32 PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
-	static constexpr u32 PRIMITIVE_INSTANCING_INFO_COUNT_MAX = PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
+	static constexpr u32 INSTANCING_INFO_COUNT_MAX = INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 4 * gpu::SHADER_SET_COUNT_MAX;
 
 	void initialize();
@@ -252,6 +252,8 @@ public:
 	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
 	void resetBuildIndirectArgumentResourceBarriers(CommandList* commandList);
 
+	GpuBuffer* getIndirectArgumentBuffer() { return &_indirectArgumentBuffer; }
+	GpuBuffer* getIndirectArgumentCountBuffer() { return &_indirectArgumentCountBuffer; }
 	GpuDescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav._gpuHandle; }
 	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
 	GpuDescriptorHandle getInfoCountUav() const { return _primitiveInstancingCountUav._gpuHandle; }
@@ -260,7 +262,7 @@ public:
 	GpuDescriptorHandle getInfoSrv() const { return _primitiveInstancingInfoSrv._gpuHandle; }
 
 private:
-	u32 _infoCounts[PRIMITIVE_INSTANCING_INFO_COUNT_MAX] = {};
+	u32 _infoCounts[INSTANCING_INFO_COUNT_MAX] = {};
 	GpuBuffer _InfoBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;

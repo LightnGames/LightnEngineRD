@@ -97,9 +97,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         if (meshletIndex == 0) {
             Meshlet meshlet = _meshlets[subMesh._meshletOffset];
             uint meshShaderThreadCount = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-            uint meshShaderThreadIndex = meshShaderThreadCount - 1;
-            
-            uint countOffsetByte = (subMeshInstance._shaderSetIndex * PRIMITIVE_INSTANCING_THREAD_COUNT_MAX + meshShaderThreadIndex) * UINT32_SIZE_IN_BYTE;
+            uint countOffsetByte = (subMeshInstance._shaderSetIndex * PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX + meshShaderThreadCount) * UINT32_SIZE_IN_BYTE;
             uint currentCount = 0;
             _primitiveInstancingInfoCounts.InterlockedAdd(countOffsetByte, 1, currentCount);
                 

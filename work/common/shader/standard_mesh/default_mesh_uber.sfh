@@ -47,6 +47,12 @@ void main(
 #if UBER_DEFAULT
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
     uint meshletIndex = meshPayload._meshletIndices[gid];
+#endif
+#if UBER_PRIMITIVE_INSTANCING
+    uint meshInstanceIndex = 0;
+    uint meshletIndex = 0;
+#endif
+
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
 
@@ -76,5 +82,4 @@ void main(
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
     }
-#endif
 }

@@ -465,6 +465,38 @@ void MeshRenderer::render(RenderContext& context) {
 			graphicsView->render(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 	}
+
+	// プリミティブインスタンシング描画
+	PrimitiveInstancingResource* primitiveInstancingResource = context._primitiveInstancingResource;
+	Resource* indirectArgumentResource = primitiveInstancingResource->getIndirectArgumentBuffer()->getResource();
+	Resource* countResource = primitiveInstancingResource->getIndirectArgumentCountBuffer()->getResource();
+	for (u32 pipelineStateIndex = 0; pipelineStateIndex < shaderSetCount; ++pipelineStateIndex) {
+		PipelineStateGroup* pipelineState = context._primInstancingPipelineStates[pipelineStateIndex];
+		if (pipelineState == nullptr) {
+			continue;
+		}
+
+		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
+		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
+		u32 indirectArgumentOffset = pipelineStateIndex * PrimitiveInstancingResource::INSTANCING_PRIMITIVE_COUNT_MAX;
+		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
+
+		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+		commandList->setPipelineState(pipelineState->getPipelineState());
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, context._meshHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, graphicsView->getMeshletInstanceInfoSrv()._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, context._meshInstanceHandle);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, context._vertexResourceDescriptors);
+		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
+
+		CommandSignature* commandSignature = pipelineState->getCommandSignature();
+		u32 commandCountMax = PrimitiveInstancingResource::INSTANCING_PRIMITIVE_COUNT_MAX;
+		graphicsView->setDrawCurrentLodDescriptorTable(commandList);
+		commandList->executeIndirect(commandSignature, commandCountMax, indirectArgumentResource, indirectArgumentOffsetSizeInByte, countResource, countBufferOffset);
+	}
 }
 
 void MeshRenderer::computeLod(ComputeLodContext& context) {
@@ -534,7 +566,7 @@ void MeshRenderer::buildIndirectArgumentPrimitiveInstancing(BuildIndirectArgumen
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::BATCHED_SUBMESH_COUNT, primitiveInstancingResource->getInfoCountSrv());
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentPrimitiveInstancingRootParameters::INDIRECT_ARGUMENT, primitiveInstancingResource->getIndirectArgumentUav());
 
-	u32 dispatchCount = RoundUp(PrimitiveInstancingResource::PRIMITIVE_INSTANCING_INFO_COUNT_MAX, 128u);
+	u32 dispatchCount = RoundUp(PrimitiveInstancingResource::INSTANCING_INFO_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	primitiveInstancingResource->resetBuildIndirectArgumentResourceBarriers(commandList);
 
