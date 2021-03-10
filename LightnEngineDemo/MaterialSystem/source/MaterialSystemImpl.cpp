@@ -51,35 +51,12 @@ void MaterialSystemImpl::processDeletion() {
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_NONE;
 			_shaderSets[shaderSetIndex].terminate();
-			_primitiveInstancingPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_primitiveInstancingDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugMeshletPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugLodLevelPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugOcclusionPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_classicPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-			_classicDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+			_pipelineStateSets[TYPE_MESH_SHADER].requestDelete(shaderSetIndex);
+			_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING].requestDelete(shaderSetIndex);
+			_pipelineStateSets[TYPE_CLASSIC].requestDelete(shaderSetIndex);
 
 			_shaderSetFileHashes[shaderSetIndex] = 0;
 			_shaderSets[shaderSetIndex] = ShaderSetImpl();
-			_primitiveInstancingPipelineStateGroups[shaderSetIndex] = nullptr;
-			_primitiveInstancingDepthPipelineStateGroups[shaderSetIndex] = nullptr;
-			_pipelineStateGroups[shaderSetIndex] = nullptr;
-			_depthPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugMeshletPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugLodLevelPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugOcclusionPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
-			_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
-			_classicPipelineStateGroups[shaderSetIndex] = nullptr;
-			_classicDepthPipelineStateGroups[shaderSetIndex] = nullptr;
 
 			_shaderSets.discard(shaderSetIndex);
 		}
@@ -126,19 +103,19 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		findIndex = _shaderSets.request();
 
 		ShaderSetImplDesc implDesc = {};
-		implDesc._debugCullingPassPipelineStateGroup = &_debugCullingPassPipelineStateGroups[findIndex];
-		implDesc._debugDepthPipelineStateGroup = &_debugDepthPipelineStateGroups[findIndex];
-		implDesc._debugLodLevelPipelineStateGroup = &_debugLodLevelPipelineStateGroups[findIndex];
-		implDesc._debugMeshletPipelineStateGroup = &_debugMeshletPipelineStateGroups[findIndex];
-		implDesc._debugOcclusionPipelineStateGroup = &_debugOcclusionPipelineStateGroups[findIndex];
-		implDesc._debugTexcoordsPipelineStateGroup = &_debugTexcoordsPipelineStateGroups[findIndex];
-		implDesc._debugWireFramePipelineStateGroup = &_debugWireFramePipelineStateGroups[findIndex];
-		implDesc._depthPipelineStateGroup = &_depthPipelineStateGroups[findIndex];
-		implDesc._pipelineStateGroup = &_pipelineStateGroups[findIndex];
-		implDesc._primitiveInstancingPipelineStateGroup = &_primitiveInstancingPipelineStateGroups[findIndex];
-		implDesc._primitiveInstancingDepthPipelineStateGroup = &_primitiveInstancingDepthPipelineStateGroups[findIndex];
-		implDesc._classicPipelineStateGroup = &_classicPipelineStateGroups[findIndex];
-		implDesc._classicDepthPipelineStateGroup = &_classicDepthPipelineStateGroups[findIndex];
+		implDesc._debugCullingPassPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugCullingPassPipelineStateGroups[findIndex];
+		implDesc._debugDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugDepthPipelineStateGroups[findIndex];
+		implDesc._debugLodLevelPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugLodLevelPipelineStateGroups[findIndex];
+		implDesc._debugMeshletPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugMeshletPipelineStateGroups[findIndex];
+		implDesc._debugOcclusionPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugOcclusionPipelineStateGroups[findIndex];
+		implDesc._debugTexcoordsPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugTexcoordsPipelineStateGroups[findIndex];
+		implDesc._debugWireFramePipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugWireFramePipelineStateGroups[findIndex];
+		implDesc._depthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._depthPipelineStateGroups[findIndex];
+		implDesc._pipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._pipelineStateGroups[findIndex];
+		implDesc._primitiveInstancingPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._pipelineStateGroups[findIndex];
+		implDesc._primitiveInstancingDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
+		implDesc._classicPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._pipelineStateGroups[findIndex];
+		implDesc._classicDepthPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._depthPipelineStateGroups[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -462,4 +439,26 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 void ShaderSetImpl::terminate() {
 	_shaderParams.terminate();
+}
+
+void PipelineStateSet::requestDelete(u32 shaderSetIndex){
+	_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugMeshletPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugLodLevelPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugOcclusionPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugDepthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugTexcoordsPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+
+	_pipelineStateGroups[shaderSetIndex] = nullptr;
+	_depthPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugMeshletPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugLodLevelPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugOcclusionPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugDepthPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugTexcoordsPipelineStateGroups[shaderSetIndex] = nullptr;
+	_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
 }

@@ -341,7 +341,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentOffsets = _scene.getMultiDrawIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-		context._pipelineStates = materialSystem->getClassicDepthPipelineStateGroups();
+		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_depthPipelineStateGroups;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
@@ -388,7 +388,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		PipelineStateGroup** pipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
 		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = materialSystem->getClassicPipelineStateGroups();
+			pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_pipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_MESHLET:
 			//pipelineStates = classicShaderSet->_debugPipelineState;
@@ -463,7 +463,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	PipelineStateGroup** pipelineStates = materialSystem->getClassicPipelineStateGroups();
+	PipelineStateGroup** pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_pipelineStateGroups;
 	u32 meshInstanceCount = _scene.getMeshInstanceCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		MeshInstanceImpl* meshInstance = _scene.getMeshInstance(meshInstanceIndex);

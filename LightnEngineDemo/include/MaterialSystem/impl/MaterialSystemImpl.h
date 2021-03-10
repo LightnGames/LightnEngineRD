@@ -86,8 +86,31 @@ private:
 	TempShaderParam* _shaderParam = nullptr;
 };
 
+class PipelineStateSet {
+public:
+	void requestDelete(u32 shaderSetIndex);
+
+public:
+	PipelineStateGroup* _pipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _depthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugCullingPassPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugOcclusionPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugMeshletPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugLodLevelPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugDepthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugWireFramePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+};
+
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {
 public:
+	enum Type {
+		TYPE_MESH_SHADER = 0,
+		TYPE_MESH_SHADER_PRIM_INSTANCING,
+		TYPE_CLASSIC,
+		TYPE_COUNT
+	};
+
 	void initialize();
 	void update();
 	void processDeletion();
@@ -105,20 +128,7 @@ public:
 	u32 getMaterialIndex(const Material* material) const;
 	bool isEnabledShaderSet(const ShaderSetImpl* shaderSet) const;
 
-	PipelineStateGroup** getPrimitiveInstancingPipelineStateGroups() { return _primitiveInstancingPipelineStateGroups; }
-	PipelineStateGroup** getPrimitiveInstancingDepthPipelineStateGroups() { return _primitiveInstancingDepthPipelineStateGroups; }
-	PipelineStateGroup** getPipelineStateGroups() { return _pipelineStateGroups; }
-	PipelineStateGroup** getDepthPipelineStateGroups() { return _depthPipelineStateGroups; }
-	PipelineStateGroup** getDebugMeshletPipelineStateGroups() { return _debugMeshletPipelineStateGroups; }
-	PipelineStateGroup** getDebugLodLevelPipelineStateGroups() { return _debugLodLevelPipelineStateGroups; }
-	PipelineStateGroup** getDebugOcclusionPipelineStateGroups() { return _debugOcclusionPipelineStateGroups; }
-	PipelineStateGroup** getDebugCullingPassPipelineStateGroups() { return _debugCullingPassPipelineStateGroups; }
-	PipelineStateGroup** getDebugDepthPipelineStateGroups() { return _debugDepthPipelineStateGroups; }
-	PipelineStateGroup** getDebugTexcoordsPipelineStateGroups() { return _debugTexcoordsPipelineStateGroups; }
-	PipelineStateGroup** getDebugWireFramePipelineStateGroups() { return _debugWireFramePipelineStateGroups; }
-
-	PipelineStateGroup** getClassicPipelineStateGroups() { return _classicPipelineStateGroups; }
-	PipelineStateGroup** getClassicDepthPipelineStateGroups() { return _classicDepthPipelineStateGroups; }
+	PipelineStateSet* getPipelineStateSet(Type type) { return &_pipelineStateSets[type]; }
 
 	virtual ShaderSet* createShaderSet(const ShaderSetDesc& desc) override;
 	virtual Material* createMaterial(const MaterialDesc& desc) override;
@@ -134,18 +144,5 @@ private:
 	u8 _shaderSetStateFlags[SHADER_SET_COUNT_MAX] = {};
 	u8 _materialUpdateFlags[MATERIAL_COUNT_MAX] = {};
 
-	PipelineStateGroup* _primitiveInstancingPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _primitiveInstancingDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _pipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _depthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugCullingPassPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugOcclusionPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugMeshletPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugLodLevelPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugWireFramePipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-
-	PipelineStateGroup* _classicPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _classicDepthPipelineStateGroups[SHADER_SET_COUNT_MAX] = {};
+	PipelineStateSet _pipelineStateSets[TYPE_COUNT] = {};
 };
