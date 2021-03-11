@@ -67,7 +67,6 @@ public:
 	void requestToDestroy();
 	PipelineState* getPipelineState() { return _pipelineState; }
 	RootSignature* getRootSignature() { return _rootSignature; }
-	CommandSignature* getCommandSignature() { return _commandSignature; }
 
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 
@@ -77,7 +76,6 @@ private:
 	RootSignature* _rootSignature = nullptr;
 	//ValueDynamicQueue _materialStructs;
 	//ShaderInfo _shaderInfo;
-	CommandSignature* _commandSignature = nullptr;
 };
 
 class LTN_MATERIAL_SYSTEM_API PipelineStateSystem {

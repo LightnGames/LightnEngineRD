@@ -28,6 +28,7 @@ StructuredBuffer<uint> _primitives : register(t10);
 StructuredBuffer<float3> _vertexPositions : register(t11);
 StructuredBuffer<uint> _vertexNormalTangents : register(t12);
 StructuredBuffer<uint> _vertexTexcoords : register(t13);
+StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t14);
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
@@ -47,11 +48,28 @@ void main(
 #if UBER_DEFAULT
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
     uint meshletIndex = meshPayload._meshletIndices[gid];
+    uint primitiveOffset = meshPayload._primitiveOffset[gid];
+    uint vertexOffset = meshPayload._vertexOffset[gid];
+    uint vertexIndexOffset = meshPayload._vertexIndexOffset[gid];
+    uint materialIndex = meshPayload._materialIndex[gid];
+    uint localIndex = gtid;
 #endif
 #if UBER_PRIMITIVE_INSTANCING
-    uint meshInstanceIndex = 0;
-    uint meshletIndex = 0;
+    uint meshletInfoIndex = dtid % _primitiveInstancingConstant._threadStepOffset;
+    uint meshletInstanceIndex = dtid / _primitiveInstancingConstant._threadStepOffset;
+    uint meshletInfoOffset = _primitiveInstancingConstant._meshletInfoOffset + meshletInstanceIndex;
+    MeshletInstanceInfo meshletInstanceInfo = _meshletInstanceInfos[meshletInfoOffset];
+    uint meshInstanceIndex = meshletInstanceInfo._meshInstanceIndex;
+    uint meshletIndex = meshletInstanceInfo._meshletIndex;
+    uint primitiveOffset = meshletInstanceInfo._primitiveOffset;
+    uint vertexOffset = meshletInstanceInfo._vertexOffset;
+    uint vertexIndexOffset = meshletInstanceInfo._vertexIndexOffset;
+    uint materialIndex = meshletInstanceInfo._materialIndex;
+    uint localIndex = gtid / _primitiveInstancingConstant._threadStepOffse;
 #endif
+    if (gtid >= 126) {
+        return;
+    }
 
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
@@ -60,17 +78,17 @@ void main(
     uint primitiveCount = meshlet._primitiveCount;
     SetMeshOutputCounts(vertexCount, primitiveCount);
 
-    if(gtid < primitiveCount){
-        uint primitiveIndex = meshlet._primitiveOffset + gtid;
-        uint packedIndex = _primitives[meshPayload._primitiveOffset[gid] + primitiveIndex];
+    if(localIndex < primitiveCount){
+        uint primitiveIndex = meshlet._primitiveOffset + localIndex;
+        uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
         tris[gtid] = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
     }
 
-    if(gtid < vertexCount){
-        uint vertexLocalIndex = meshlet._vertexOffset + gtid;
-        uint vertexIndex = _vertexIndices[meshPayload._vertexIndexOffset[gid] + vertexLocalIndex];
-        uint vertexOffset = meshPayload._vertexOffset[gid] + vertexIndex;
-        float3 positionVertex = _vertexPositions[vertexOffset];
+    if(localIndex < vertexCount){
+        uint vertexLocalIndex = meshlet._vertexOffset + localIndex;
+        uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
+        uint vertexGlobalOffset = vertexOffset + vertexIndex;
+        float3 positionVertex = _vertexPositions[vertexGlobalOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
         
         VertexOut vertexOut;
@@ -78,7 +96,7 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = meshPayload._materialIndex[gid];
+        vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
     }
