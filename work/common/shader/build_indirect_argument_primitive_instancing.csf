@@ -16,6 +16,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint batchIndex = dtid % PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
     uint shaderSetIndex = dtid / PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX;
     uint batchCount = batchIndex + 1;
+    uint primitiveCount = instanceCount * batchCount;
     uint batchCountPerGroup = 128 / batchCount;
     
     uint currentCount = 0;
@@ -25,8 +26,9 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     DispatchMeshIndirectArgument arguments;
     arguments._constant._meshletInstanceInfoOffset = _primitiveInstancingInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
     arguments._constant._instanceCount = instanceCount;
-    arguments._constant._meshletCount = batchCount;
-    arguments._dispatchX = instanceCount * batchCountPerGroup;
+    arguments._constant._meshletCount = 126 / batchCount;
+    arguments._dispatchX = (primitiveCount / 128) + 1;
+    arguments._dispatchX = 1;
     arguments._dispatchY = 1;
     arguments._dispatchZ = 1;
     

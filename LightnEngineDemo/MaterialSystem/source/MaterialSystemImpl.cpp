@@ -258,7 +258,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	meshletInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
 
 	DescriptorRange vertexDescriptorRange = {};
-	vertexDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 5, 9);
+	vertexDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 5, 10);
 
 	DescriptorRange currentLodLevelRange = {};
 	currentLodLevelRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 15);
@@ -287,8 +287,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_AMPLIFICATION);
-		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_AMPLIFICATION);
+		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
+		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
 		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
@@ -306,8 +306,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_AMPLIFICATION);
-		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_AMPLIFICATION);
+		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
+		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
 		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ROOT_DEFAULT_MESH_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);

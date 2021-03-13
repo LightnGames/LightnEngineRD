@@ -32,6 +32,12 @@ struct IndirectArgumentConstant {
     uint _meshletCount;
 };
 
+struct PrimitiveInstancingConstant {
+    uint _meshletInfoOffset;
+    uint _instanceCount;
+    uint _primitiveStepRate;
+};
+
 struct DispatchMeshIndirectArgument {
     IndirectArgumentConstant _constant;
     uint _dispatchX;
