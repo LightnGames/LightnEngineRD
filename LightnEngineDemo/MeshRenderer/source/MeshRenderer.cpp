@@ -669,7 +669,8 @@ void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, context._meshInstanceHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
-		graphicsView->render(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
+		graphicsView->render(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 	}
 
 	graphicsView->resourceBarriersHizSrvToTexture(commandList);

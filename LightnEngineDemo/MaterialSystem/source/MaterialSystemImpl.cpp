@@ -116,6 +116,9 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._primitiveInstancingDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
 		implDesc._classicPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._pipelineStateGroups[findIndex];
 		implDesc._classicDepthPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._depthPipelineStateGroups[findIndex];
+		implDesc._meshShaderCommandSignature = &_pipelineStateSets[TYPE_MESH_SHADER]._commandSignatures[findIndex];
+		implDesc._primInstancingCommandSignature = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._commandSignatures[findIndex];
+		implDesc._classicCommandSignature = &_pipelineStateSets[TYPE_CLASSIC]._commandSignatures[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -389,6 +392,26 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
 
+	// メッシュシェーダー　コマンドシグネチャ
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+
+		IndirectArgumentDesc argumentDescs[2] = {};
+		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+		argumentDescs[0].Constant._num32BitValuesToSet = 3;
+		argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_INDIRECT_CONSTANT;
+		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+
+		CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgument);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		desc._rootSignature = (*implDesc._pipelineStateGroup)->getRootSignature();
+		(*implDesc._meshShaderCommandSignature) = allocator->allocateCommandSignature();
+		(*implDesc._meshShaderCommandSignature)->initialize(desc);
+	}
+
 	// classic
 	{
 		DescriptorRange cbvDescriptorRange = {};
@@ -435,6 +458,27 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		// "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso"
 	}
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+
+		IndirectArgumentDesc argumentDescs[2] = {};
+		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+		argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
+		argumentDescs[0].Constant._num32BitValuesToSet = 2;
+		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		desc._rootSignature = (*implDesc._classicPipelineStateGroup)->getRootSignature();
+		(*implDesc._classicCommandSignature) = allocator->allocateCommandSignature();
+		(*implDesc._classicCommandSignature)->initialize(desc);
+	}
+#endif
 }
 
 void ShaderSetImpl::terminate() {
@@ -485,5 +529,10 @@ void PipelineStateSet::requestDelete(u32 shaderSetIndex){
 	if (_debugWireFramePipelineStateGroups[shaderSetIndex]) {
 		_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
 		_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_commandSignatures[shaderSetIndex]) {
+		_commandSignatures[shaderSetIndex]->terminate();
+		_commandSignatures[shaderSetIndex] = nullptr;
 	}
 }

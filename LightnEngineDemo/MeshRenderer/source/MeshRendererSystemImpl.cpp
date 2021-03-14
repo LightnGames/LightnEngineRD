@@ -349,6 +349,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_depthPipelineStateGroups;
+		context._commandSignatures = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
@@ -419,6 +420,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentCounts = _scene.getMultiDrawIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._pipelineStates = pipelineStates;
+		context._commandSignatures = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
