@@ -4,16 +4,18 @@
 #include <GfxCore/impl/DescriptorHeap.h>
 
 struct ViewInfo;
-class GraphicsView;
+class IndirectArgumentResource;
 class VramShaderSet;
 class InstancingResource;
+class GpuCullingResource;
 
 struct RenderContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
-	GraphicsView* _graphicsView = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
+	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	InstancingResource* _primitiveInstancingResource = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
 	const u32* _indirectArgmentOffsets = nullptr;
 	const u32* _indirectArgmentCounts = nullptr;
 	const u32* _indirectArgmentInstancingCounts = nullptr;
@@ -29,7 +31,8 @@ struct RenderContext {
 struct MultiIndirectRenderContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
-	GraphicsView* _graphicsView = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
+	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
 	VertexBufferView* _vertexBufferViews = nullptr;
@@ -43,7 +46,7 @@ struct MultiIndirectRenderContext {
 struct ComputeLodContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
-	GraphicsView* _graphicsView = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
 	u32 _meshInstanceCountMax = 0;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;
@@ -53,7 +56,9 @@ struct ComputeLodContext {
 struct GpuCullingContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
-	GraphicsView* _graphicsView = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
+	IndirectArgumentResource* _indirectArgumentResource = nullptr;
+	IndirectArgumentResource* _instancingIndirectArgumentResource = nullptr;
 	u32 _meshInstanceCountMax = 0;
 	GpuDescriptorHandle _indirectArgumentOffsetSrv;
 	GpuDescriptorHandle _sceneConstantCbv;
@@ -71,22 +76,17 @@ struct GpuCullingContext {
 
 struct BuildIndirectArgumentContext {
 	CommandList* _commandList = nullptr;
-	GraphicsView* _graphicsView = nullptr;
+	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	GpuDescriptorHandle _meshletInstanceOffsetSrv;
 	GpuDescriptorHandle _meshletInstanceCountSrv;
 	GpuDescriptorHandle _indirectArgumentUav;
-};
-
-struct BuildIndirectArgumentPrimitiveInstancingContext {
-	CommandList* _commandList = nullptr;
-	InstancingResource* _primitiveInstancingResource = nullptr;
 	GpuDescriptorHandle _subMeshSrv;
 };
 
 struct BuildHizContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
-	GraphicsView* _graphicsView = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
 };
 
 class MeshRenderer {
@@ -99,7 +99,6 @@ public:
 	void depthPrePassCulling(GpuCullingContext& context);
 	void mainCulling(GpuCullingContext& context);
 	void buildIndirectArgument(BuildIndirectArgumentContext& context);
-	void buildIndirectArgumentPrimitiveInstancing(BuildIndirectArgumentPrimitiveInstancingContext& context);
 	void buildHiz(BuildHizContext& context);
 
 #if ENABLE_MULTI_INDIRECT_DRAW
@@ -125,8 +124,6 @@ private:
 	RootSignature* _debugMeshletBoundsRootSignature = nullptr;
 	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
 	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
-	PipelineState* _buildIndirectArgumentPrimitiveInstancingPipelineState = nullptr;
-	RootSignature* _buildIndirectArgumentPrimitiveInstancingRootSignature = nullptr;
 #if ENABLE_MULTI_INDIRECT_DRAW
 	PipelineState* _multiDrawCullingPipelineState = nullptr;
 	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;

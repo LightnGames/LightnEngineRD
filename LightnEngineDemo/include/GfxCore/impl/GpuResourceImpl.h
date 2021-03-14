@@ -67,14 +67,7 @@ enum DebugMeshletBoundsRootParameters {
 	ROOT_PARAM_DEBUG_MESHLET_COUNT
 };
 
-enum BuildIndirectArgumentRootParameters {
-	BATCHED_SUBMESH_OFFSET = 0,
-	BATCHED_SUBMESH_COUNT,
-	INDIRECT_ARGUMENT,
-	ROOT_PARAM_COUNT
-};
-
-struct BuildIndirectArgumentPrimitiveInstancingRootParameters {
+struct BuildIndirectArgumentRootParameters {
 	enum {
 		BATCHED_SUBMESH_OFFSET = 0,
 		BATCHED_SUBMESH_COUNT,

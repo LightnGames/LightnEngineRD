@@ -48,7 +48,9 @@ private:
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;
 	DescriptorHandle _debugFixedViewConstantHandle;
-	GraphicsView _view;
+	IndirectArgumentResource _indirectArgumentResource;
+	IndirectArgumentResource _instancingIndirectArgumentResource;
+	GpuCullingResource _gpuCullingResource;
 
 	enum GeometoryType {
 		GEOMETORY_MODE_MESH_SHADER = 0,

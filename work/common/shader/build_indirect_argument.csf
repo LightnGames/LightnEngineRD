@@ -1,34 +1,35 @@
 #include "gpu_culling_function.sfh"
 
-ByteAddressBuffer _meshletInstanceInfoOffsets : register(t0);
-ByteAddressBuffer _meshletInstanceInfoCounts : register(t1);
+ByteAddressBuffer _infoOffsets : register(t0);
+ByteAddressBuffer _infoCounts : register(t1);
+StructuredBuffer<SubMesh> _subMeshes : register(t2);
 
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 
 [numthreads(128, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
-    uint instanceCount = _meshletInstanceInfoCounts.Load(dtid * UINT32_SIZE_IN_BYTE);
+    uint instanceCount = _infoCounts.Load(dtid * UINT32_SIZE_IN_BYTE);
     if (instanceCount == 0) {
         return;
     }
     
-    uint meshletIndex = dtid % MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-    uint shaderSetIndex = dtid / MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-    uint meshletCount = meshletIndex + 1;
+    uint subMeshIndex = dtid % INSTANCING_PER_SHADER_COUNT_MAX;
+    uint shaderSetIndex = dtid / INSTANCING_PER_SHADER_COUNT_MAX;
     
     uint currentCount = 0;
     uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
     _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
     
+    uint meshletCount = _subMeshes[subMeshIndex]._meshletCount;
     DispatchMeshIndirectArgument arguments;
-    arguments._constant._meshletInstanceInfoOffset = _meshletInstanceInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
+    arguments._constant._meshletInstanceInfoOffset = _infoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
     arguments._constant._instanceCount = instanceCount;
     arguments._constant._meshletCount = meshletCount;
     arguments._dispatchX = (instanceCount * meshletCount / 32) + 1;
     arguments._dispatchY = 1;
     arguments._dispatchZ = 1;
     
-    uint indirectArgumentOffset = shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX + currentCount;
+    uint indirectArgumentOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX + currentCount;
     _indirectArguments[indirectArgumentOffset] = arguments;
 }

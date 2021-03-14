@@ -1,10 +1,6 @@
 #include "gpu_driven.sfh"
 #include "constant_buffer.sfh"
 
-struct CullingViewInfo {
-    uint2 _meshletInfoGpuAddress;
-};
-
 struct MeshletBounds {
     float3 _boundsMin;
     float3 _boundsMax;

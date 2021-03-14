@@ -1,7 +1,6 @@
 #include "../gpu_culling_function.sfh"
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
-ConstantBuffer<CullingViewInfo> _cullingViewInfo : register(b1);
 ConstantBuffer<ViewInfo> _viewInfo :register(b2);
 StructuredBuffer<Mesh> _meshes : register(t0);
 StructuredBuffer<LodMesh> _lodMeshes : register(t1);

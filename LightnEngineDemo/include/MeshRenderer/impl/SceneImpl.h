@@ -28,10 +28,6 @@ struct SceneCullingInfo {
 	u32 _meshInstanceCountMax = 0;
 };
 
-struct CullingViewInfo {
-	u32 _meshletInfoGpuAddress[2] = {};
-};
-
 struct HizInfoConstant {
 	u32 _inputDepthWidth = 0;
 	u32 _inputDepthHeight = 0;
@@ -113,79 +109,38 @@ struct CullingResult :public gpu::CullingResult {
 
 };
 
-class GraphicsView {
+class IndirectArgumentResource {
 public:
-	// インスタンシング用 0~31　単品用 31~63 
 	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = gpu::SHADER_SET_COUNT_MAX * 2;
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
 
-	void initialize(const ViewInfo* viewInfo);
+	struct InitializeDesc {
+		u32 _indirectArgumentCount = 0;
+		u32 _indirectArgumentCounterCount = 0;
+	};
+
+	void initialize(const InitializeDesc& desc);
 	void terminate();
 	void update();
 
-	void setComputeLodResource(CommandList* commandList);
-	void setGpuCullingResources(CommandList* commandList);
-	void setHizResourcesPass0(CommandList* commandList);
-	void setHizResourcesPass1(CommandList* commandList);
-	void resourceBarriersComputeLodToUAV(CommandList* commandList);
-	void resetResourceComputeLodBarriers(CommandList* commandList);
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
-	void resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset);
-	void resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset);
-	void resourceBarriersHizSrvToTexture(CommandList* commandList);
-	void resourceBarriersHizTextureToSrv(CommandList* commandList);
 	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
 	void resourceBarriersResetBuildIndirectArgument(CommandList* commandList);
 	void resetIndirectArgumentCountBuffers(CommandList* commandList);
-	void resetMeshletInstanceInfoCountBuffers(CommandList* commandList);
-	void resetResultBuffers(CommandList* commandList);
-	void readbackCullingResultBuffer(CommandList* commandList);
+	void executeIndirect(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
-	void setDrawResultDescriptorTable(CommandList* commandList);
-	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
-	void render(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
-
+	GpuBuffer* getIndirectArgumentBuffer() { return &_indirectArgumentBuffer; }
+	GpuBuffer* getIndirectArgumentCountBuffer() { return &_countBuffer; }
 	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUavHandle; }
-	DescriptorHandle getMeshletInstanceCountUav() const { return _meshletInstanceInfoCountUav; }
-	DescriptorHandle getMeshletInstanceCountSrv() const { return _meshletInstanceInfoCountSrv; }
-	DescriptorHandle getMeshletInstanceInfoSrv() const { return _meshletInstanceInfoSrv; }
-	DescriptorHandle getMeshletInstanceInfoUav() const { return _meshletInstanceInfoUav; }
-	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
-	ResourceDesc getHizTextureResourceDesc(u32 level) const;
-	const CullingResult* getCullingResult() const;
 
 private:
-	GpuBuffer _currentLodLevelBuffer;
 	GpuBuffer _indirectArgumentBuffer;
 	GpuBuffer _countBuffer;
-	GpuBuffer _cullingResultBuffer;
-	GpuBuffer _cullingResultReadbackBuffer;
-	GpuBuffer _meshletInstanceInfoBuffer;
-	GpuBuffer _meshletInstanceInfoCountBuffer;
-	GpuBuffer _cullingViewConstantBuffer;
-	GpuBuffer _hizInfoConstantBuffer[2];
-	
-	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
 
-	DescriptorHandle _hizDepthTextureSrv;
-	DescriptorHandle _hizDepthTextureUav;
-	DescriptorHandle _hizInfoConstantCbv[2];
-	DescriptorHandle _meshletInstanceInfoCountCpuUav;
-	DescriptorHandle _meshletInstanceInfoCountUav;
-	DescriptorHandle _meshletInstanceInfoCountSrv;
-	DescriptorHandle _meshletInstanceInfoSrv;
-	DescriptorHandle _meshletInstanceInfoUav;
-	DescriptorHandle _cullingViewInfoCbvHandle;
-	DescriptorHandle _cullingResultUavHandle;
-	DescriptorHandle _cullingResultCpuUavHandle;
-	DescriptorHandle _currentLodLevelUav;
-	DescriptorHandle _currentLodLevelSrv;
 	DescriptorHandle _indirectArgumentUavHandle;
-	DescriptorHandle _countCpuUavHandle;
-	gpu::CullingResult _currentFrameCullingResultMapPtr;
-	const ViewInfo* _viewInfo = nullptr;
+	DescriptorHandle _countCpuUav;
 };
 
 class SubMeshInstanceImpl : public SubMeshInstance {
@@ -235,6 +190,49 @@ public:
 	}
 };
 
+class GpuCullingResource {
+public:
+	void initialize();
+	void terminate();
+	void update(const ViewInfo* viewInfo);
+
+	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
+	ResourceDesc getHizTextureResourceDesc(u32 level) const;
+	const CullingResult* getCullingResult() const;
+
+	void setComputeLodResource(CommandList* commandList);
+	void setGpuCullingResources(CommandList* commandList);
+	void setHizResourcesPass0(CommandList* commandList);
+	void setHizResourcesPass1(CommandList* commandList);
+	void resourceBarriersComputeLodToUAV(CommandList* commandList);
+	void resetResourceComputeLodBarriers(CommandList* commandList);
+	void resourceBarriersHizTextureToUav(CommandList* commandList, u32 offset);
+	void resourceBarriersHizUavtoSrv(CommandList* commandList, u32 offset);
+	void resourceBarriersHizSrvToTexture(CommandList* commandList);
+	void resourceBarriersHizTextureToSrv(CommandList* commandList);
+	void resetResultBuffers(CommandList* commandList);
+	void readbackCullingResultBuffer(CommandList* commandList);
+	void setDrawResultDescriptorTable(CommandList* commandList);
+	void setDrawCurrentLodDescriptorTable(CommandList* commandList);
+
+private:
+	GpuBuffer _currentLodLevelBuffer;
+	GpuBuffer _cullingResultBuffer;
+	GpuBuffer _cullingResultReadbackBuffer;
+	GpuBuffer _hizInfoConstantBuffer[2];
+
+	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
+
+	gpu::CullingResult _currentFrameCullingResultMapPtr;
+	DescriptorHandle _hizDepthTextureSrv;
+	DescriptorHandle _hizDepthTextureUav;
+	DescriptorHandle _hizInfoConstantCbv[2];
+	DescriptorHandle _cullingResultUavHandle;
+	DescriptorHandle _cullingResultCpuUavHandle;
+	DescriptorHandle _currentLodLevelUav;
+	DescriptorHandle _currentLodLevelSrv;
+};
+
 class InstancingResource {
 public:
 	static constexpr u32 INSTANCING_PER_SHADER_COUNT_MAX = 1024 * 2; // SUB_MESH_COUNT_MAX
@@ -251,15 +249,9 @@ public:
 	void update(const UpdateDesc& desc);
 
 	void resetInfoCountBuffers(CommandList* commandList);
-	void resetIndirectArgumentCountBuffers(CommandList* commandList);
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
-	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
-	void resetBuildIndirectArgumentResourceBarriers(CommandList* commandList);
 
-	GpuBuffer* getIndirectArgumentBuffer() { return &_indirectArgumentBuffer; }
-	GpuBuffer* getIndirectArgumentCountBuffer() { return &_indirectArgumentCountBuffer; }
-	GpuDescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUav._gpuHandle; }
 	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
 	GpuDescriptorHandle getInfoCountUav() const { return _primitiveInstancingCountUav._gpuHandle; }
 	GpuDescriptorHandle getInfoCountSrv() const { return _primitiveInstancingCountSrv._gpuHandle; }
@@ -271,16 +263,12 @@ private:
 	GpuBuffer _InfoBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
-	GpuBuffer _indirectArgumentBuffer;
-	GpuBuffer _indirectArgumentCountBuffer;
 	DescriptorHandle _infoOffsetSrv;
 	DescriptorHandle _primitiveInstancingCountCpuUav;
 	DescriptorHandle _primitiveInstancingCountUav;
 	DescriptorHandle _primitiveInstancingCountSrv;
 	DescriptorHandle _primitiveInstancingInfoUav;
 	DescriptorHandle _primitiveInstancingInfoSrv;
-	DescriptorHandle _indirectArgumentUav;
-	DescriptorHandle _indirectArgumentCountCpuUav;
 };
 
 class Scene {

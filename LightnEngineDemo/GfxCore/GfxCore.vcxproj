@@ -172,7 +172,6 @@
   <ItemGroup>
     <None Include="..\..\work\common\shader\build_hierarchical_depth.csf" />
     <None Include="..\..\work\common\shader\build_indirect_argument.csf" />
-    <None Include="..\..\work\common\shader\build_indirect_argument_primitive_instancing.csf" />
     <None Include="..\..\work\common\shader\compute_lod.csf" />
     <None Include="..\..\work\common\shader\constant_buffer.sfh" />
     <None Include="..\..\work\common\shader\debug\debug3dLine.psf" />
