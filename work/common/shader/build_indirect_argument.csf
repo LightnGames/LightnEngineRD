@@ -22,7 +22,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
     
     DispatchMeshIndirectArgument arguments;
-    arguments._constant._meshletInstanceInfoOffset= _meshletInstanceInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
+    arguments._constant._meshletInstanceInfoOffset = _meshletInstanceInfoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
     arguments._constant._instanceCount = instanceCount;
     arguments._constant._meshletCount = meshletCount;
     arguments._dispatchX = (instanceCount * meshletCount / 32) + 1;

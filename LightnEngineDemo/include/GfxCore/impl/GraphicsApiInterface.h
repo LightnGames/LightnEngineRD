@@ -997,7 +997,7 @@ struct ResourceTransitionBarrier {
 };
 
 struct CpuDescriptorHandle {
-	CpuDescriptorHandle operator + (u64 offset) {
+	CpuDescriptorHandle operator + (u64 offset) const {
 		CpuDescriptorHandle result = *this;
 		result._ptr += offset;
 		return result;
@@ -1012,7 +1012,7 @@ struct CpuDescriptorHandle {
 };
 
 struct GpuDescriptorHandle {
-	GpuDescriptorHandle operator + (u64 offset) {
+	GpuDescriptorHandle operator + (u64 offset) const {
 		GpuDescriptorHandle result = *this;
 		result._ptr += offset;
 		return result;
@@ -1027,7 +1027,7 @@ struct GpuDescriptorHandle {
 };
 
 struct DescriptorHandle {
-	DescriptorHandle operator + (u64 offset) {
+	DescriptorHandle operator + (u64 offset) const {
 		DescriptorHandle handle = *this;
 		handle += offset;
 		return handle;

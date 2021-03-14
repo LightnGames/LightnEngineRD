@@ -25,6 +25,7 @@
 
 #define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
 #define PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX 22
+#define INSTANCING_PER_SHADER_COUNT_MAX 2048
 
 struct IndirectArgumentConstant {
     uint _meshletInstanceInfoOffset;

@@ -61,8 +61,9 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint passBackfacePrimitiveCount = 0;
     uint passOcclusionPrimitiveCount = 0;
     
-    uint meshletOffset = dtid % _indirectArgumentConstant._meshletCount;
-    uint instanceOffset = dtid / _indirectArgumentConstant._meshletCount;
+    uint meshletCount = _indirectArgumentConstant._meshletCount;
+    uint meshletOffset = dtid % meshletCount;
+    uint instanceOffset = dtid / meshletCount;
     uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
     if (instanceOffset < _indirectArgumentConstant._instanceCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];

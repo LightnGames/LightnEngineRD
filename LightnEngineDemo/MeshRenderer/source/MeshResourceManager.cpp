@@ -601,6 +601,11 @@ u32 MeshResourceManager::getMeshIndex(const MeshInfo* meshInfo) const {
 	return index;
 }
 
+GpuDescriptorHandle MeshResourceManager::getSubMeshSrv() const {
+	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
+	return _meshHandles._gpuHandle + incrementSize * 2;
+}
+
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndex, meshInfo._vertexCount);

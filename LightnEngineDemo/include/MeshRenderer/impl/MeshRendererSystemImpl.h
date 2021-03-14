@@ -43,6 +43,7 @@ private:
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
+	InstancingResource _primitiveInstancingResource;
 
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;

@@ -88,7 +88,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
@@ -108,7 +108,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		{
 			BuildIndirectArgumentPrimitiveInstancingContext context = {};
 			context._commandList = commandList;
-			context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+			context._primitiveInstancingResource = &_primitiveInstancingResource;
+			context._subMeshSrv = _resourceManager.getSubMeshSrv();
 			_meshRenderer.buildIndirectArgumentPrimitiveInstancing(context);
 		}
 	}
@@ -133,7 +134,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
 		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER)->_depthPipelineStateGroups;
 		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_depthPipelineStateGroups;
-		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		_meshRenderer.render(context);
 
 		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
@@ -166,7 +167,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceInfoOffsetSrv = _scene.getMeshletInstanceOffsetSrv()._gpuHandle;
 		context._meshletInstanceInfoCountUav = _view.getMeshletInstanceCountUav()._gpuHandle;
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
 	}
@@ -186,7 +187,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		{
 			BuildIndirectArgumentPrimitiveInstancingContext context = {};
 			context._commandList = commandList;
-			context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+			context._primitiveInstancingResource = &_primitiveInstancingResource;
+			context._subMeshSrv = _resourceManager.getSubMeshSrv();
 			_meshRenderer.buildIndirectArgumentPrimitiveInstancing(context);
 		}
 	}
@@ -245,7 +247,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
 		context._pipelineStates = pipelineStates;
 		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_pipelineStateGroups;
-		context._primitiveInstancingResource = _scene.getPrimitiveInstancingResource();
+		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._collectResult = true;
 		_meshRenderer.render(context);
 
@@ -539,6 +541,7 @@ void MeshRendererSystemImpl::initialize() {
 	_resourceManager.initialize();
 	_meshRenderer.initialize();
 	_vramShaderSetSystem.initialize();
+	_primitiveInstancingResource.initialize();
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
@@ -574,6 +577,7 @@ void MeshRendererSystemImpl::terminate() {
 	_resourceManager.terminate();
 	_meshRenderer.terminate();
 	_view.terminate();
+	_primitiveInstancingResource.terminate();
 
 	_debugFixedViewConstantBuffer.terminate();
 
@@ -590,6 +594,14 @@ void MeshRendererSystemImpl::update() {
 	_resourceManager.update();
 	_view.update();
 	_vramShaderSetSystem.update();
+
+	{
+		InstancingResource::UpdateDesc desc;
+		desc._meshInstances = _scene.getMeshInstance(0);
+		desc._countMax = _scene.getMeshInstanceArrayCountMax();
+		desc._firstSubMesh = _resourceManager.getSubMeshes();
+		_primitiveInstancingResource.update(desc);
+	}
 
 	// メッシュインスタンスデバッグオプション
 	{

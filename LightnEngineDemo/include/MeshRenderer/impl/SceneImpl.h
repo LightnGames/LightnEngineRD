@@ -235,15 +235,20 @@ public:
 	}
 };
 
-class PrimitiveInstancingResource {
+class InstancingResource {
 public:
-	static constexpr u32 INSTANCING_PRIMITIVE_COUNT_MAX = 22;// 0 ~ 21 per thread group 0は同一スレッドグループのインスタンシングなし
-	static constexpr u32 INSTANCING_INFO_COUNT_MAX = INSTANCING_PRIMITIVE_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
-	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 4 * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 INSTANCING_PER_SHADER_COUNT_MAX = 1024 * 2; // SUB_MESH_COUNT_MAX
+	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = INSTANCING_PER_SHADER_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+
+	struct UpdateDesc {
+		const gpu::SubMesh* _firstSubMesh = nullptr;
+		MeshInstanceImpl* _meshInstances = nullptr;
+		u32 _countMax = 0;
+	};
 
 	void initialize();
 	void terminate();
-	void update(MeshInstanceImpl* meshInstances, u32 countMax);
+	void update(const UpdateDesc& desc);
 
 	void resetInfoCountBuffers(CommandList* commandList);
 	void resetIndirectArgumentCountBuffers(CommandList* commandList);
@@ -262,7 +267,7 @@ public:
 	GpuDescriptorHandle getInfoSrv() const { return _primitiveInstancingInfoSrv._gpuHandle; }
 
 private:
-	u32 _infoCounts[INSTANCING_INFO_COUNT_MAX] = {};
+	u32 _infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
 	GpuBuffer _InfoBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
@@ -303,9 +308,9 @@ public:
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
 	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
-	PrimitiveInstancingResource* getPrimitiveInstancingResource() { return &_primitiveInstancingResource; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
+	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
 	const u32* getIndirectArgumentInstancingCounts() const { return _indirectArgumentInstancingCounts; }
 	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
 	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
@@ -325,7 +330,6 @@ private:
 	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
-	PrimitiveInstancingResource _primitiveInstancingResource;
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;

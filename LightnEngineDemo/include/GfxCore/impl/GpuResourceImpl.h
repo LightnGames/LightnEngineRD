@@ -78,6 +78,7 @@ struct BuildIndirectArgumentPrimitiveInstancingRootParameters {
 	enum {
 		BATCHED_SUBMESH_OFFSET = 0,
 		BATCHED_SUBMESH_COUNT,
+		SUB_MESH,
 		INDIRECT_ARGUMENT,
 		ROOT_PARAM_COUNT
 	};

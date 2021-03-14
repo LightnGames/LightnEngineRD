@@ -61,7 +61,7 @@ class MeshResourceManager {
 public:
 	static constexpr u32 MESH_COUNT_MAX = 256;
 	static constexpr u32 LOD_MESH_COUNT_MAX = 1024;
-	static constexpr u32 SUB_MESH_COUNT_MAX = 2048;
+	static constexpr u32 SUB_MESH_COUNT_MAX = 1024 * 2;
 	static constexpr u32 MESHLET_COUNT_MAX = 1024 * 1024;
 	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 1024 * 4;
 	static constexpr u32 INDEX_COUNT_MAX = 1024 * 1024 * 8;
@@ -82,9 +82,11 @@ public:
 	MeshImpl* allocateMesh(const MeshDesc& desc);
 	Mesh* createMesh(const MeshDesc& desc);
 	MeshImpl* findMesh(u64 fileHash);
+	const gpu::SubMesh* getSubMeshes() const { return &_subMeshes[0]; }
 	u32 getMeshIndexFromFileHash(u64 fileHash) const;
 	u32 getMeshIndex(const MeshInfo* meshInfo) const;
 	DescriptorHandle getMeshHandle() const { return _meshHandles; }
+	GpuDescriptorHandle getSubMeshSrv() const;
 	DescriptorHandle getVertexHandle() const { return _vertexHandles; }
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
