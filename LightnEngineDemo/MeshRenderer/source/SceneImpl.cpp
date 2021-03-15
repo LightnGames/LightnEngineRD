@@ -99,7 +99,7 @@ void Scene::update() {
 		}
 	}
 
-	bool isUpdatedInstancingOffset = false;
+	_isUpdatedInstancingOffset = false;
 	u32 subMeshInstanceCount = _gpuSubMeshInstances.getArrayCountMax();
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
@@ -115,7 +115,7 @@ void Scene::update() {
 			gpu::SubMeshInstance* mapSubMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, offset);
 			*mapSubMeshInstance = gpuSubMeshInstance;
 
-			isUpdatedInstancingOffset = true;
+			_isUpdatedInstancingOffset = true;
 		}
 	}
 

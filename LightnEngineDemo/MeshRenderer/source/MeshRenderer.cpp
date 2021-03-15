@@ -373,7 +373,7 @@ void MeshRenderer::terminate()
 #endif
 }
 
-void MeshRenderer::render(RenderContext& context) {
+void MeshRenderer::render(const RenderContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
@@ -419,7 +419,7 @@ void MeshRenderer::render(RenderContext& context) {
 	}
 }
 
-void MeshRenderer::computeLod(ComputeLodContext& context) {
+void MeshRenderer::computeLod(const ComputeLodContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -444,11 +444,11 @@ void MeshRenderer::computeLod(ComputeLodContext& context) {
 	queryHeapSystem->setMarker(commandList);
 }
 
-void MeshRenderer::depthPrePassCulling(GpuCullingContext& context) {
+void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) {
 	gpuCulling(context, _gpuCullingPipelineState);
 }
 
-void MeshRenderer::buildIndirectArgument(BuildIndirectArgumentContext& context) {
+void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& context) {
 	CommandList* commandList = context._commandList;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
@@ -471,11 +471,11 @@ void MeshRenderer::buildIndirectArgument(BuildIndirectArgumentContext& context) 
 	queryHeapSystem->setMarker(commandList);
 }
 
-void MeshRenderer::mainCulling(GpuCullingContext& context) {
+void MeshRenderer::mainCulling(const GpuCullingContext& context) {
 	gpuCulling(context, _gpuOcclusionCullingPipelineState);
 }
 
-void MeshRenderer::buildHiz(BuildHizContext& context) {
+void MeshRenderer::buildHiz(const BuildHizContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -519,7 +519,7 @@ void MeshRenderer::buildHiz(BuildHizContext& context) {
 	queryHeapSystem->setMarker(commandList);
 }
 
-void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
+void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -569,17 +569,16 @@ void MeshRenderer::multiDrawRender(MultiIndirectRenderContext& context) {
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
-void MeshRenderer::multiDrawDepthPrePassCulling(GpuCullingContext& context) {
+void MeshRenderer::multiDrawDepthPrePassCulling(const GpuCullingContext& context) {
 	gpuCulling(context, _multiDrawCullingPipelineState);
 }
 
-void MeshRenderer::multiDrawMainCulling(GpuCullingContext& context) {
+void MeshRenderer::multiDrawMainCulling(const GpuCullingContext& context) {
 	gpuCulling(context, _multiDrawOcclusionCullingPipelineState);
 }
 
-void MeshRenderer::gpuCulling(GpuCullingContext& context, PipelineState* pipelineState) {
+void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) {
 	CommandList* commandList = context._commandList;
-	ViewInfo* viewInfo = context._viewInfo;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
 	IndirectArgumentResource* instancingIndirectArgumentResource = context._instancingIndirectArgumentResource;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;

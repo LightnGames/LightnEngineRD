@@ -52,7 +52,6 @@ struct ComputeLodContext {
 
 struct GpuCullingContext {
 	CommandList* _commandList = nullptr;
-	ViewInfo* _viewInfo = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	IndirectArgumentResource* _instancingIndirectArgumentResource = nullptr;
@@ -90,22 +89,22 @@ class MeshRenderer {
 public:
 	void initialize();
 	void terminate();
-	void render(RenderContext& context);
+	void render(const RenderContext& context);
 
-	void computeLod(ComputeLodContext& context);
-	void depthPrePassCulling(GpuCullingContext& context);
-	void mainCulling(GpuCullingContext& context);
-	void buildIndirectArgument(BuildIndirectArgumentContext& context);
-	void buildHiz(BuildHizContext& context);
+	void computeLod(const ComputeLodContext& context);
+	void depthPrePassCulling(const GpuCullingContext& context);
+	void mainCulling(const GpuCullingContext& context);
+	void buildIndirectArgument(const BuildIndirectArgumentContext& context);
+	void buildHiz(const BuildHizContext& context);
 
 #if ENABLE_MULTI_INDIRECT_DRAW
-	void multiDrawRender(MultiIndirectRenderContext& context);
-	void multiDrawDepthPrePassCulling(GpuCullingContext& context);
-	void multiDrawMainCulling(GpuCullingContext& context);
+	void multiDrawRender(const MultiIndirectRenderContext& context);
+	void multiDrawDepthPrePassCulling(const GpuCullingContext& context);
+	void multiDrawMainCulling(const GpuCullingContext& context);
 #endif
 
 private:
-	void gpuCulling(GpuCullingContext& context, PipelineState* pipelineState);
+	void gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState);
 
 private:
 	RootSignature* _gpuCullingRootSignature = nullptr;

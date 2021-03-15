@@ -4,7 +4,7 @@
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 #if UBER_PRIMITIVE_INSTANCING
-ConstantBuffer<PrimitiveInstancingConstant> _primitiveInstancingConstant : register(b2);
+ConstantBuffer<IndirectArgumentConstantt> _primitiveInstancingConstant : register(b2);
 #endif
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
@@ -34,9 +34,8 @@ void main(
     in payload PayloadStruct meshPayload,
 #endif
     out indices uint3 tris[126],
-    out vertices VertexOut verts[64]
+    out vertices VertexOutverts[64]
 ){
-    
 #if UBER_DEFAULT
     uint localGtid = gtid;
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
@@ -47,35 +46,30 @@ void main(
     uint materialIndex = meshPayload._materialIndex[gid];
 #endif
 #if UBER_PRIMITIVE_INSTANCING
-    uint localGtid = gtid % _primitiveInstancingConstant._primitiveStepRate;
-    uint infoIndex = gid * _primitiveInstancingConstant._primitiveStepRate;
-    uint localInstanceIndex = gtid / _primitiveInstancingConstant._primitiveStepRate;
-    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInfoOffset;
-
-    MeshletInstanceInfo meshletInstanceInfo = _meshletInstanceInfos[infoIndex + globalInstanceIndex + localInstanceIndex];
-    uint meshInstanceIndex = meshletInstanceInfo._meshInstanceIndex;
-    uint meshletIndex = meshletInstanceInfo._meshletIndex;
-    uint primitiveOffset = meshletInstanceInfo._primitiveOffset;
-    uint vertexLocalOffset = meshletInstanceInfo._vertexOffset;
-    uint vertexIndexOffset = meshletInstanceInfo._vertexIndexOffset;
-    uint materialIndex = meshletInstanceInfo._materialIndex;
+    uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
 #endif
     if (gtid >= 126) {
         return;
     }
 
-    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Meshlet meshlet = _meshlets[meshletIndex];
-
-    
-#if UBER_DEFAULT
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
-#endif
 #if UBER_PRIMITIVE_INSTANCING
-    uint vertexCount = 64;
-    uint primitiveCount = 126;
+    uint vertexInstanceIndex = gtid / vertexCount;
+    uint primitiveInstanceIndex = gtid / primitiveCount;
+    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
+    
+    MeshletInstanceInfo meshletInstanceInfo = _meshletInstanceInfos[infoIndex + globalInstanceIndex + localInstanceIndex];
+    uint meshInstanceIndex = meshletInstanceInfo._meshInstanceIndex;
+    uint primitiveOffset = meshletInstanceInfo._primitiveOffset;
+    uint vertexLocalOffset = meshletInstanceInfo._vertexOffset;
+    uint vertexIndexOffset = meshletInstanceInfo._vertexIndexOffset;
+    uint materialIndex = meshletInstanceInfo._materialIndex;
 #endif
+    
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+
     SetMeshOutputCounts(vertexCount, primitiveCount);
 
 #if UBER_PRIMITIVE_INSTANCING

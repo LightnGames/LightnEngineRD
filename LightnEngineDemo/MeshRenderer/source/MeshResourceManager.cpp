@@ -293,7 +293,8 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 
 	// Meshlet
 	{
-		fread_s(&_meshlets[meshInfo._meshletStartIndex], sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
+		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
+		fread_s(meshlets, sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
 	}
 
 	// プリミティブ
@@ -371,11 +372,9 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	}
 
 	// データVramアップロード
-	gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
 	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, sizeof(gpu::SubMesh) * meshInfo._subMeshStartIndex, meshInfo._totalSubMeshCount);
 	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, sizeof(gpu::LodMesh) * meshInfo._lodMeshStartIndex, meshInfo._totalLodMeshCount);
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
-	memcpy(meshlets, &_meshlets[meshInfo._meshletStartIndex], sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount);
 	memcpy(subMeshes, &_subMeshes[meshInfo._subMeshStartIndex], sizeof(gpu::SubMesh) * meshInfo._totalSubMeshCount);
 	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex], sizeof(gpu::LodMesh) * meshInfo._totalLodMeshCount);
 	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));

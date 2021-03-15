@@ -315,6 +315,7 @@ public:
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();
 
+	bool isUpdatedInstancingOffset() const { return _isUpdatedInstancingOffset; }
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	MeshInstance* createMeshInstance(const Mesh* mesh);
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceSrv; }
@@ -343,4 +344,5 @@ private:
 	DescriptorHandle _meshInstanceSrv;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
+	bool _isUpdatedInstancingOffset = false;
 };

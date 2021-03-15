@@ -108,56 +108,6 @@ void addIndirectArgument(uint meshInstanceIndex) {
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
         _primitiveInstancingInfos[globalOffset] = meshletInfo;
-        continue;
-        
-        //// メッシュレットインスタンシング用
-        //if (meshletIndex < MESHLET_INSTANCE_MESHLET_COUNT_MAX) {
-        //    uint meshletInstanceOffsetByte = (subMeshInstance._shaderSetIndex * MESHLET_INSTANCE_MESHLET_COUNT_MAX + meshletIndex) * UINT32_SIZE_IN_BYTE;
-        //    uint currentCount = 0;
-        //    _meshletInstanceInfoCounts.InterlockedAdd(meshletInstanceOffsetByte, 1, currentCount);
-            
-        //    uint offset = _meshletInstanceInfoOffsets.Load(meshletInstanceOffsetByte);
-        //    uint globalOffset = offset + currentCount;
-            
-        //    MeshletInstanceInfo meshletInfo;
-        //    meshletInfo._meshletIndex = subMesh._meshletOffset;
-        //    meshletInfo._meshInstanceIndex = meshInstanceIndex;
-        //    meshletInfo._materialIndex = materialInstanceIndex;
-        //    meshletInfo._vertexOffset = lodMesh._vertexOffset;
-        //    meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
-        //    meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
-        //    _meshletInstanceInfos[globalOffset] = meshletInfo;
-        //    continue;
-        //}
-        
-        //// 単品描画用
-        //uint shaderSetOffset = (SHADER_SET_COUNT_MAX + subMeshInstance._shaderSetIndex) * UINT32_SIZE_IN_BYTE;
-        //uint currentCountIndex = 0;
-        //_indirectArgumentCounts.InterlockedAdd(shaderSetOffset, 1, currentCountIndex);
-	
-        //uint instancingOffset = SHADER_SET_COUNT_MAX * MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-        //uint indirectArgumentShaderSetOffset = _indirectArgumentOffsets.Load(shaderSetOffset) + instancingOffset;
-        //uint indirectArgumentOffset = indirectArgumentShaderSetOffset + currentCountIndex;
-        //uint dispatchCount = (subMesh._meshletCount / AMPLIFICATION_DISPATCH_NUM) + 1;
-        //uint meshletInfoOffset = _meshletInstanceInfoOffsets.Load(instancingOffset) + currentCountIndex;
-		
-        //DispatchMeshIndirectArgument arguments;
-        //arguments._constant._instanceCount = 1;
-        //arguments._constant._meshletCount = subMesh._meshletCount;
-        //arguments._constant._meshletInstanceInfoOffset = meshletInfoOffset;
-        //arguments._dispatchX = dispatchCount;
-        //arguments._dispatchY = 1;
-        //arguments._dispatchZ = 1;
-        //_indirectArguments[indirectArgumentOffset] = arguments;
-		
-        //MeshletInstanceInfo meshletInfo;
-        //meshletInfo._meshletIndex = subMesh._meshletOffset;
-        //meshletInfo._meshInstanceIndex = meshInstanceIndex;
-        //meshletInfo._materialIndex = materialInstanceIndex;
-        //meshletInfo._vertexOffset = lodMesh._vertexOffset;
-        //meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
-        //meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
-        //_meshletInstanceInfos[meshletInfoOffset] = meshletInfo;
     }
 }
 
