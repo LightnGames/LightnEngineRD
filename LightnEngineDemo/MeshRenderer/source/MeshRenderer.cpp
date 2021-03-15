@@ -376,12 +376,14 @@ void MeshRenderer::terminate()
 void MeshRenderer::render(RenderContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
-	IndirectArgumentResource* instancingIndirectArgumentResource = context._indirectArgumentResource;
+	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 	u32 shaderSetCount = materialSystem->getShaderSetCount();
 
+	// インスタンシング描画
+	InstancingResource* primitiveInstancingResource = context._primitiveInstancingResource;
 	for (u32 pipelineStateIndex = 0; pipelineStateIndex < shaderSetCount; ++pipelineStateIndex) {
 		PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
 		if (pipelineState == nullptr) {
@@ -389,53 +391,6 @@ void MeshRenderer::render(RenderContext& context) {
 		}
 
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
-
-		// インスタンシング描画
-		//u32 commandInstancingCountMax = context._indirectArgmentInstancingCounts[pipelineStateIndex];
-		//if (commandInstancingCountMax > 0) {
-		//	VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
-		//	u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
-		//	u32 indirectArgumentOffset = pipelineStateIndex * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX;
-		//	u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
-
-		//	commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
-		//	commandList->setPipelineState(pipelineState->getPipelineState());
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, context._meshHandle);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, graphicsView->getMeshletInstanceInfoSrv()._gpuHandle);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, context._meshInstanceHandle);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, context._vertexResourceDescriptors);
-		//	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
-		//	
-		//	if (context._collectResult) {
-		//		graphicsView->setDrawResultDescriptorTable(commandList);
-		//	}
-		//	graphicsView->setDrawCurrentLodDescriptorTable(commandList);
-		//	graphicsView->render(commandList, pipelineState->getCommandSignature(), Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX, indirectArgumentOffsetSizeInByte, countBufferOffset);
-		//}
-
-		//// 単品描画
-		//u32 commandCountMax = context._indirectArgmentCounts[pipelineStateIndex];
-		//if (commandCountMax > 0) {
-		//	u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex] + (gpu::SHADER_SET_COUNT_MAX * Scene::MESHLET_INSTANCE_MESHLET_COUNT_MAX);
-		//	u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
-		//	LTN_ASSERT(indirectArgumentOffset + commandCountMax <= GraphicsView::INDIRECT_ARGUMENT_COUNT_MAX);
-
-		//	u32 countBufferOffset = (pipelineStateIndex + gpu::SHADER_SET_COUNT_MAX) * sizeof(u32);
-		//	commandList->setPipelineState(pipelineState->getPipelineState());
-		//	graphicsView->render(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
-		//}
-	}
-
-	// プリミティブインスタンシング描画
-	InstancingResource* primitiveInstancingResource = context._primitiveInstancingResource;
-	for (u32 pipelineStateIndex = 0; pipelineStateIndex < shaderSetCount; ++pipelineStateIndex) {
-		PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
-		if (pipelineState == nullptr) {
-			continue;
-		}
 
 		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
@@ -460,7 +415,7 @@ void MeshRenderer::render(RenderContext& context) {
 
 		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
 		CommandSignature* commandSignature = pipelineState->getCommandSignature();
-		instancingIndirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 	}
 }
 
@@ -651,9 +606,9 @@ void MeshRenderer::gpuCulling(GpuCullingContext& context, PipelineState* pipelin
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, context._meshInstanceHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO, context._subMeshDrawInfoHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, context._indirectArgumentOffsetSrv);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, context._meshletInstanceInfoOffsetSrv);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, context._meshletInstanceInfoUav);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, context._meshletInstanceInfoCountUav);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, primitiveInstancingResource->getInfoOffsetSrv());
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_COUNT, primitiveInstancingResource->getInfoCountUav());
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_INFO, primitiveInstancingResource->getInfoUav());
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MATERIAL_INSTANCE_INDEX, context._materialInstanceIndexSrv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_OFFSETS, primitiveInstancingResource->getInfoOffsetSrv());
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_PRIMITIVE_INSTANCING_INFOS, primitiveInstancingResource->getInfoUav());

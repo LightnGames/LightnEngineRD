@@ -253,10 +253,10 @@ public:
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
 
 	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
-	GpuDescriptorHandle getInfoCountUav() const { return _primitiveInstancingCountUav._gpuHandle; }
-	GpuDescriptorHandle getInfoCountSrv() const { return _primitiveInstancingCountSrv._gpuHandle; }
-	GpuDescriptorHandle getInfoUav() const { return _primitiveInstancingInfoUav._gpuHandle; }
-	GpuDescriptorHandle getInfoSrv() const { return _primitiveInstancingInfoSrv._gpuHandle; }
+	GpuDescriptorHandle getInfoCountUav() const { return _countUav._gpuHandle; }
+	GpuDescriptorHandle getInfoCountSrv() const { return _countSrv._gpuHandle; }
+	GpuDescriptorHandle getInfoUav() const { return _infoUav._gpuHandle; }
+	GpuDescriptorHandle getInfoSrv() const { return _infoSrv._gpuHandle; }
 
 private:
 	u32 _infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
@@ -264,11 +264,36 @@ private:
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
 	DescriptorHandle _infoOffsetSrv;
-	DescriptorHandle _primitiveInstancingCountCpuUav;
-	DescriptorHandle _primitiveInstancingCountUav;
-	DescriptorHandle _primitiveInstancingCountSrv;
-	DescriptorHandle _primitiveInstancingInfoUav;
-	DescriptorHandle _primitiveInstancingInfoSrv;
+	DescriptorHandle _countCpuUav;
+	DescriptorHandle _countUav;
+	DescriptorHandle _countSrv;
+	DescriptorHandle _infoUav;
+	DescriptorHandle _infoSrv;
+};
+
+class MultiDrawInstancingResource {
+public:
+	struct UpdateDesc {
+		MeshInstanceImpl* _meshInstances = nullptr;
+		u32 _countMax = 0;
+	};
+
+	void initialize();
+	void terminate();
+	void update(const UpdateDesc& desc);
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
+	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
+	GpuDescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv._gpuHandle; }
+#endif
+private:
+#if ENABLE_MULTI_INDIRECT_DRAW
+	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
+	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
+	GpuBuffer _indirectArgumentOffsetBuffer;
+	DescriptorHandle _indirectArgumentOffsetSrv;
+#endif
 };
 
 class Scene {
@@ -292,22 +317,11 @@ public:
 
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	MeshInstance* createMeshInstance(const Mesh* mesh);
-	DescriptorHandle getMeshletInstanceOffsetSrv() const { return _meshletInstanceInfoOffsetSrv; }
-	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceHandles; }
-	DescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv; }
+	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
-	const u32* getIndirectArgumentInstancingCounts() const { return _indirectArgumentInstancingCounts; }
-	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
-	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-	const u32* getMultiDrawIndirectArgumentCounts() const { return _multiDrawIndirectArgumentCounts; }
-	const u32* getMultiDrawIndirectArgumentOffsets() const { return _multiDrawIndirectArgumentOffsets; }
-	DescriptorHandle getMultiDrawIndirectArgumentOffsetSrv() const { return _multiDrawIndirectArgumentOffsetSrv; }
-#endif
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -315,9 +329,6 @@ private:
 	u8 _subMeshInstanceUpdateFlags[SUB_MESH_INSTANCE_COUNT_MAX] = {};
 	MeshInstanceImpl _meshInstances[MESH_INSTANCE_COUNT_MAX] = {};
 	SubMeshInstanceImpl _subMeshInstances[SUB_MESH_INSTANCE_COUNT_MAX] = {};
-	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
-	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
-	u32 _indirectArgumentInstancingCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
@@ -326,22 +337,10 @@ private:
 	GpuBuffer _meshInstanceBuffer;
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
-	GpuBuffer _meshletInstanceInfoOffsetBuffer;
-	GpuBuffer _indirectArgumentOffsetBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;
 
 	DescriptorHandle _cullingSceneConstantHandle;
-	DescriptorHandle _indirectArgumentOffsetSrv;
-	DescriptorHandle _meshletInstanceInfoOffsetSrv;
-	DescriptorHandle _meshInstanceHandles;
+	DescriptorHandle _meshInstanceSrv;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
-
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-	u32 _multiDrawIndirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
-	u32 _multiDrawIndirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
-	GpuBuffer _multiDrawIndirectArgumentOffsetBuffer;
-	DescriptorHandle _multiDrawIndirectArgumentOffsetSrv;
-#endif
 };

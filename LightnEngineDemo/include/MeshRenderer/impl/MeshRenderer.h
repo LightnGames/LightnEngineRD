@@ -16,9 +16,6 @@ struct RenderContext {
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	InstancingResource* _primitiveInstancingResource = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
-	const u32* _indirectArgmentOffsets = nullptr;
-	const u32* _indirectArgmentCounts = nullptr;
-	const u32* _indirectArgmentInstancingCounts = nullptr;
 	PipelineStateGroup** _primInstancingPipelineStates = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
 	GpuDescriptorHandle _meshInstanceHandle;
