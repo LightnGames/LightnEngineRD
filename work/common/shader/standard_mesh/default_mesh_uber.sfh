@@ -35,7 +35,8 @@ void main(
 #endif
     out indices uint3 tris[126],
     out vertices VertexOutverts[64]
-){
+)
+{
 #if UBER_DEFAULT
     uint localGtid = gtid;
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
@@ -48,7 +49,8 @@ void main(
 #if UBER_PRIMITIVE_INSTANCING
     uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
 #endif
-    if (gtid >= 126) {
+    if (gtid >= 126)
+    {
         return;
     }
 
@@ -58,6 +60,9 @@ void main(
 #if UBER_PRIMITIVE_INSTANCING
     uint vertexInstanceIndex = gtid / vertexCount;
     uint primitiveInstanceIndex = gtid / primitiveCount;
+    uint vertexGtid = gtid % vertexCount;
+    uint primitiveGtid = gtid % primitiveCount;
+    uint instanceCount = _primitiveInstancingConstant._instanceCount;
     uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
     
     MeshletInstanceInfo meshletInstanceInfo = _meshletInstanceInfos[infoIndex + globalInstanceIndex + localInstanceIndex];
@@ -73,19 +78,37 @@ void main(
     SetMeshOutputCounts(vertexCount, primitiveCount);
 
 #if UBER_PRIMITIVE_INSTANCING
-    if(localInstanceIndex >= _primitiveInstancingConstant._instanceCount){
-        return;
+    if(primitiveInstanceIndex < instanceCount) {
+        uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
+        uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
+        uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
+        uint indexOffset = _primitiveInstancingConstant._primitiveStepRate * localInstanceIndex;
+        unpackedIndex += uint3(indexOffset, indexOffset, indexOffset);
+        tris[gtid] = unpackedIndex;
+    }
+
+    if(vertexInstanceIndex < instanceCount) {
+        uint vertexLocalIndex = meshlet._vertexOffset + vertexGtid;
+        uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
+        uint vertexOffset = vertexLocalOffset + vertexIndex;
+        float3 positionVertex = _vertexPositions[vertexOffset];
+        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+        
+        VertexOut vertexOut;
+        vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
+        vertexOut._positionNdc = worldPos;
+        vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
+        vertexOut._meshletIndex = meshletIndex;
+        vertexOut._materialIndex = materialIndex;
+        vertexOut._meshInstanceIndex = meshInstanceIndex;
+        verts[gtid] = vertexOut;
     }
 #endif
-
+#if UBER_DEFAULT
     if(localGtid < primitiveCount){
         uint primitiveIndex = meshlet._primitiveOffset + localGtid;
         uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-#if UBER_PRIMITIVE_INSTANCING
-        uint indexOffset = _primitiveInstancingConstant._primitiveStepRate * localInstanceIndex;
-        unpackedIndex += uint3(indexOffset, indexOffset, indexOffset);
-#endif
         tris[gtid] = unpackedIndex;
     }
 
@@ -105,4 +128,5 @@ void main(
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
     }
+#endif
 }
