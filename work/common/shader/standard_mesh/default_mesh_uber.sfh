@@ -4,7 +4,7 @@
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 #if UBER_PRIMITIVE_INSTANCING
-ConstantBuffer<IndirectArgumentConstantt> _primitiveInstancingConstant : register(b2);
+ConstantBuffer<IndirectArgumentConstant> _primitiveInstancingConstant : register(b2);
 #endif
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
@@ -34,7 +34,7 @@ void main(
     in payload PayloadStruct meshPayload,
 #endif
     out indices uint3 tris[126],
-    out vertices VertexOutverts[64]
+    out vertices VertexOut verts[64]
 )
 {
 #if UBER_DEFAULT
@@ -49,8 +49,7 @@ void main(
 #if UBER_PRIMITIVE_INSTANCING
     uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
 #endif
-    if (gtid >= 126)
-    {
+    if (gtid >= 126) {
         return;
     }
 
@@ -63,31 +62,30 @@ void main(
     uint vertexGtid = gtid % vertexCount;
     uint primitiveGtid = gtid % primitiveCount;
     uint instanceCount = _primitiveInstancingConstant._instanceCount;
-    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
-    
-    MeshletInstanceInfo meshletInstanceInfo = _meshletInstanceInfos[infoIndex + globalInstanceIndex + localInstanceIndex];
-    uint meshInstanceIndex = meshletInstanceInfo._meshInstanceIndex;
-    uint primitiveOffset = meshletInstanceInfo._primitiveOffset;
-    uint vertexLocalOffset = meshletInstanceInfo._vertexOffset;
-    uint vertexIndexOffset = meshletInstanceInfo._vertexIndexOffset;
-    uint materialIndex = meshletInstanceInfo._materialIndex;
-#endif
-    
-    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    uint localInstanceOffset = gid * instanceCount;
+    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset + localInstanceOffset;
 
-    SetMeshOutputCounts(vertexCount, primitiveCount);
+    SetMeshOutputCounts(vertexCount * instanceCount, primitiveCount * instanceCount);
 
-#if UBER_PRIMITIVE_INSTANCING
     if(primitiveInstanceIndex < instanceCount) {
+        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[globalInstanceIndex + primitiveInstanceIndex];
+        uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
         uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
         uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-        uint indexOffset = _primitiveInstancingConstant._primitiveStepRate * localInstanceIndex;
+        uint indexOffset = primitiveCount * primitiveInstanceIndex;
         unpackedIndex += uint3(indexOffset, indexOffset, indexOffset);
         tris[gtid] = unpackedIndex;
     }
 
     if(vertexInstanceIndex < instanceCount) {
+        MeshletInstanceInfo vertexMeshletInstanceInfo = _meshletInstanceInfos[globalInstanceIndex + vertexInstanceIndex];
+        uint meshInstanceIndex = vertexMeshletInstanceInfo._meshInstanceIndex;
+        uint materialIndex = vertexMeshletInstanceInfo._materialIndex;
+        uint vertexLocalOffset = vertexMeshletInstanceInfo._vertexOffset;
+        uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset;
+        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    
         uint vertexLocalIndex = meshlet._vertexOffset + vertexGtid;
         uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
         uint vertexOffset = vertexLocalOffset + vertexIndex;
@@ -105,6 +103,7 @@ void main(
     }
 #endif
 #if UBER_DEFAULT
+    SetMeshOutputCounts(vertexCount, primitiveCount);
     if(localGtid < primitiveCount){
         uint primitiveIndex = meshlet._primitiveOffset + localGtid;
         uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
@@ -113,6 +112,7 @@ void main(
     }
 
     if(localGtid < vertexCount){
+        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
         uint vertexLocalIndex = meshlet._vertexOffset + localGtid;
         uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
         uint vertexOffset = vertexLocalOffset + vertexIndex;

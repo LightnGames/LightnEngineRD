@@ -110,6 +110,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
 		context._indirectArgumentResource = &_indirectArgumentResource;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
@@ -208,6 +209,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
 		context._indirectArgumentResource = &_indirectArgumentResource;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
@@ -521,8 +523,8 @@ void MeshRendererSystemImpl::initialize() {
 
 	{
 		IndirectArgumentResource::InitializeDesc desc;
-		desc._indirectArgumentCount = MeshResourceManager::SUB_MESH_COUNT_MAX;
-		desc._indirectArgumentCounterCount = MeshResourceManager::SUB_MESH_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+		desc._indirectArgumentCount = MeshResourceManager::SUB_MESH_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
 		_primIndirectArgumentResource.initialize(desc);
 	}
 

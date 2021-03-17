@@ -14,6 +14,7 @@ struct RenderContext {
 	ViewInfo* _viewInfo = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
+	IndirectArgumentResource* _primIndirectArgumentResource = nullptr;
 	InstancingResource* _primitiveInstancingResource = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	PipelineStateGroup** _primInstancingPipelineStates = nullptr;

@@ -22,18 +22,21 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     SubMesh subMesh = _subMeshes[subMeshIndex];
     uint meshletCount = subMesh._meshletCount;
     
+    IndirectArgumentConstant constant;
+    constant._meshletInstanceInfoOffset = _infoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
+    constant._instanceCount = instanceCount;
+    constant._meshletCount = meshletCount;
+    
     uint dispatchCount = (instanceCount * meshletCount / 32) + 1;
     if (meshletCount == 1) {
         Meshlet meshlet = _meshlets[subMesh._meshletOffset];
         uint instanceCountPerThreadGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
         dispatchCount = (instanceCount / instanceCountPerThreadGroup) + 1;
-        meshletCount = subMesh._meshletOffset;
+        dispatchCount = 1;
+        constant._meshletCount = subMesh._meshletOffset;
+        constant._instanceCount = instanceCountPerThreadGroup;
+        constant._instanceCount = 1;
     }
-    
-    IndirectArgumentConstant constant;
-    constant._meshletInstanceInfoOffset = _infoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);
-    constant._instanceCount = instanceCount;
-    constant._meshletCount = meshletCount;
     
     DispatchMeshIndirectArgument arguments;
     arguments._constant = constant;
@@ -45,10 +48,10 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
     uint shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
     if (meshletCount == 1) {
-        _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
-        _indirectArguments[shaderSetOffset + currentCount] = arguments;
-    } else {
         _primCountBuffer.InterlockedAdd(countOffset, 1, currentCount);
         _primIndirectArguments[shaderSetOffset + currentCount] = arguments;
+    } else {
+        _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
+        _indirectArguments[shaderSetOffset + currentCount] = arguments;
     }
 }
