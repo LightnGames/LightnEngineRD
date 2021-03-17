@@ -44,14 +44,18 @@ private:
 	MeshRenderer _meshRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
 	InstancingResource _primitiveInstancingResource;
-	MultiDrawInstancingResource _multiDrawInstancingResource;
 
 	s32 _initializedFixedView = BACK_BUFFER_COUNT;
 	GpuBuffer _debugFixedViewConstantBuffer;
 	DescriptorHandle _debugFixedViewConstantHandle;
 	IndirectArgumentResource _indirectArgumentResource;
-	IndirectArgumentResource _instancingIndirectArgumentResource;
+	IndirectArgumentResource _primIndirectArgumentResource;
 	GpuCullingResource _gpuCullingResource;
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	MultiDrawInstancingResource _multiDrawInstancingResource;
+	IndirectArgumentResource _multiDrawIndirectArgumentResource;
+#endif
 
 	enum GeometoryType {
 		GEOMETORY_MODE_MESH_SHADER = 0,

@@ -192,11 +192,15 @@ void MeshRenderer::initialize()
 		DescriptorRange indirectArgumentUavRange = {};
 		indirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
 
+		DescriptorRange primIndirectArgumentUavRange = {};
+		primIndirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 2);
+
 		RootParameter rootParameters[BuildIndirectArgumentRootParameters::ROOT_PARAM_COUNT] = {};
 		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET].initializeDescriptorTable(1, &batchedSubMeshInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT].initializeDescriptorTable(1, &batchedSubMeshInfoCountSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::SUB_MESH].initializeDescriptorTable(1, &subMeshSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParameters::PRIM_INDIRECT_ARGUMENT].initializeDescriptorTable(1, &primIndirectArgumentUavRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -398,7 +402,6 @@ void MeshRenderer::render(const RenderContext& context) {
 		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
 
 		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
-		commandList->setPipelineState(pipelineState->getPipelineState());
 		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
 		commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
@@ -414,8 +417,19 @@ void MeshRenderer::render(const RenderContext& context) {
 		}
 
 		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
-		CommandSignature* commandSignature = pipelineState->getCommandSignature();
-		indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		// メッシュレット　インスタンシング描画
+		{
+			commandList->setPipelineState(pipelineState->getPipelineState());
+			CommandSignature* commandSignature = pipelineState->getCommandSignature();
+			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		}
+
+		// メッシュレット　プリミティブインスタンシング描画
+		{
+			commandList->setPipelineState(context._primInstancingPipelineStates[pipelineStateIndex]->getPipelineState());
+			CommandSignature* commandSignature = pipelineState->getCommandSignature();
+			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		}
 	}
 }
 
@@ -451,21 +465,25 @@ void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) {
 void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& context) {
 	CommandList* commandList = context._commandList;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
+	IndirectArgumentResource* primIndirectArgumentResource = context._primIndirectArgumentResource;
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
 
-	indirectArgumentResource->resourceBarriersBuildIndirectArgument(commandList);
+	indirectArgumentResource->resourceBarriersToUav(commandList);
+	primIndirectArgumentResource->resourceBarriersToUav(commandList);
 	commandList->setComputeRootSignature(_buildIndirectArgumentRootSignature);
 	commandList->setPipelineState(_buildIndirectArgumentPipelineState);
 
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET, context._meshletInstanceOffsetSrv);
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT, context._meshletInstanceCountSrv);
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::SUB_MESH, context._subMeshSrv);
-	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, context._indirectArgumentUav);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, indirectArgumentResource->getIndirectArgumentUav());
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::PRIM_INDIRECT_ARGUMENT, primIndirectArgumentResource->getIndirectArgumentUav());
 
 	u32 dispatchCount = RoundUp(InstancingResource::INDIRECT_ARGUMENT_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
-	indirectArgumentResource->resourceBarriersResetBuildIndirectArgument(commandList);
+	indirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
+	primIndirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
 
 	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
 	queryHeapSystem->setMarker(commandList);
@@ -569,18 +587,20 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
-void MeshRenderer::multiDrawDepthPrePassCulling(const GpuCullingContext& context) {
+void MeshRenderer::multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context) {
+	context._indirectArgumentResource->resourceBarriersToUav(context._commandList);
 	gpuCulling(context, _multiDrawCullingPipelineState);
+	context._indirectArgumentResource->resourceBarriersToIndirectArgument(context._commandList);
 }
 
-void MeshRenderer::multiDrawMainCulling(const GpuCullingContext& context) {
+void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& context) {
+	context._indirectArgumentResource->resourceBarriersToUav(context._commandList);
 	gpuCulling(context, _multiDrawOcclusionCullingPipelineState);
+	context._indirectArgumentResource->resourceBarriersToIndirectArgument(context._commandList);
 }
 
 void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) {
 	CommandList* commandList = context._commandList;
-	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
-	IndirectArgumentResource* instancingIndirectArgumentResource = context._instancingIndirectArgumentResource;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
 	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 
@@ -590,10 +610,6 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	InstancingResource* primitiveInstancingResource = context._primitiveInstancingResource;
 	primitiveInstancingResource->resourceBarriersGpuCullingToUAV(commandList);
 	primitiveInstancingResource->resetInfoCountBuffers(commandList);
-	indirectArgumentResource->resourceBarriersGpuCullingToUAV(commandList);
-	instancingIndirectArgumentResource->resourceBarriersGpuCullingToUAV(commandList);
-	indirectArgumentResource->resetIndirectArgumentCountBuffers(commandList);
-	instancingIndirectArgumentResource->resetIndirectArgumentCountBuffers(commandList);
 
 	commandList->setComputeRootSignature(_gpuCullingRootSignature);
 	commandList->setPipelineState(pipelineState);
@@ -602,7 +618,7 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_SCENE_INFO, context._sceneConstantCbv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_VIEW_INFO, context._cullingViewCbv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH, context._meshHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, context._meshInstanceHandle);
+	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESH_INSTANCE, context._meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_SUB_MESH_DRAW_INFO, context._subMeshDrawInfoHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENT_OFFSETS, context._indirectArgumentOffsetSrv);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_MESHLET_INSTANCE_OFFSET, primitiveInstancingResource->getInfoOffsetSrv());
@@ -615,8 +631,6 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
-	indirectArgumentResource->resetResourceGpuCullingBarriers(commandList);
-	instancingIndirectArgumentResource->resetResourceGpuCullingBarriers(commandList);
 	primitiveInstancingResource->resetResourceGpuCullingBarriers(commandList);
 
 	queryHeapSystem->setCurrentMarkerName(context._scopeName);

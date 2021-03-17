@@ -74,31 +74,26 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	if (!isFixedCullingView) {
 		GpuCullingContext context = {};
 		context._commandList = commandList;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._instancingIndirectArgumentResource = &_instancingIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-		context._meshletInstanceInfoUav = _primitiveInstancingResource.getInfoUav();
-		context._meshletInstanceInfoOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._meshletInstanceInfoCountUav = _primitiveInstancingResource.getInfoCountUav();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
 
-	// Build indiret argument
+	// Build indirect argument
 	{
 		BuildIndirectArgumentContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._indirectArgumentUav = _indirectArgumentResource.getIndirectArgumentUav()._gpuHandle;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
 		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshSrv = _resourceManager.getSubMeshSrv();
@@ -143,31 +138,26 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	if (!isFixedCullingView) {
 		GpuCullingContext context = {};
 		context._commandList = commandList;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._instancingIndirectArgumentResource = &_instancingIndirectArgumentResource;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-		context._meshletInstanceInfoUav = _primitiveInstancingResource.getInfoUav();
-		context._meshletInstanceInfoOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._meshletInstanceInfoCountUav = _primitiveInstancingResource.getInfoCountUav();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
 	}
 
-	// Build indiret argument
+	// Build indirect argument
 	{
 		BuildIndirectArgumentContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._indirectArgumentUav = _indirectArgumentResource.getIndirectArgumentUav()._gpuHandle;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
 		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshSrv = _resourceManager.getSubMeshSrv();
@@ -295,22 +285,18 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// デプスプリパス用　GPUカリング
 	if (!isFixedCullingView) {
-		GpuCullingContext context = {};
+		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._instancingIndirectArgumentResource = &_instancingIndirectArgumentResource;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-		context._meshletInstanceInfoUav = _primitiveInstancingResource.getInfoUav();
-		context._meshletInstanceInfoOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._meshletInstanceInfoCountUav = _primitiveInstancingResource.getInfoCountSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.multiDrawDepthPrePassCulling(context);
@@ -323,7 +309,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
-		context._indirectArgumentResource = &_instancingIndirectArgumentResource;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
@@ -350,22 +336,18 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// GPUカリング
 	if (!isFixedCullingView) {
-		GpuCullingContext context = {};
+		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._instancingIndirectArgumentResource = &_instancingIndirectArgumentResource;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
-		context._meshletInstanceInfoUav = _primitiveInstancingResource.getInfoUav();
-		context._meshletInstanceInfoOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._meshletInstanceInfoCountUav = _primitiveInstancingResource.getInfoCountSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.multiDrawMainCulling(context);
@@ -396,7 +378,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
-		context._indirectArgumentResource = &_instancingIndirectArgumentResource;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
@@ -526,7 +508,6 @@ void MeshRendererSystemImpl::initialize() {
 	_meshRenderer.initialize();
 	_vramShaderSetSystem.initialize();
 	_primitiveInstancingResource.initialize();
-	_multiDrawInstancingResource.initialize();
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
@@ -542,8 +523,18 @@ void MeshRendererSystemImpl::initialize() {
 		IndirectArgumentResource::InitializeDesc desc;
 		desc._indirectArgumentCount = MeshResourceManager::SUB_MESH_COUNT_MAX;
 		desc._indirectArgumentCounterCount = MeshResourceManager::SUB_MESH_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
-		_instancingIndirectArgumentResource.initialize(desc);
+		_primIndirectArgumentResource.initialize(desc);
 	}
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	_multiDrawInstancingResource.initialize();
+	{
+		IndirectArgumentResource::InitializeDesc desc;
+		desc._indirectArgumentCount = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
+		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
+		_multiDrawIndirectArgumentResource.initialize(desc);
+	}
+#endif
 	_gpuCullingResource.initialize();
 
 	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
@@ -575,10 +566,14 @@ void MeshRendererSystemImpl::terminate() {
 	_resourceManager.terminate();
 	_meshRenderer.terminate();
 	_indirectArgumentResource.terminate();
-	_instancingIndirectArgumentResource.terminate();
+	_primIndirectArgumentResource.terminate();
 	_gpuCullingResource.terminate();
 	_primitiveInstancingResource.terminate();
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	_multiDrawIndirectArgumentResource.terminate();
 	_multiDrawInstancingResource.terminate();
+#endif
 
 	_debugFixedViewConstantBuffer.terminate();
 
@@ -593,8 +588,6 @@ void MeshRendererSystemImpl::update() {
 
 	_scene.update();
 	_resourceManager.update();
-	_indirectArgumentResource.update();
-	_instancingIndirectArgumentResource.update();
 	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
 	_vramShaderSetSystem.update();
 
@@ -603,16 +596,17 @@ void MeshRendererSystemImpl::update() {
 			InstancingResource::UpdateDesc desc;
 			desc._meshInstances = _scene.getMeshInstance(0);
 			desc._countMax = _scene.getMeshInstanceArrayCountMax();
-			desc._firstSubMesh = _resourceManager.getSubMeshes();
 			_primitiveInstancingResource.update(desc);
 		}
 
+#if ENABLE_MULTI_INDIRECT_DRAW
 		{
 			MultiDrawInstancingResource::UpdateDesc desc;
 			desc._meshInstances = _scene.getMeshInstance(0);
 			desc._countMax = _scene.getMeshInstanceArrayCountMax();
 			_multiDrawInstancingResource.update(desc);
 		}
+#endif
 	}
 
 	// メッシュインスタンスデバッグオプション

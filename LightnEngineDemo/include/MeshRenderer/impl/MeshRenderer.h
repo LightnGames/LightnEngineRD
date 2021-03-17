@@ -25,6 +25,32 @@ struct RenderContext {
 	bool _collectResult = false;
 };
 
+struct ComputeLodContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
+	u32 _meshInstanceCountMax = 0;
+	GpuDescriptorHandle _meshInstanceHandle;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _sceneConstantCbv;
+};
+
+struct GpuCullingContext {
+	CommandList* _commandList = nullptr;
+	GpuCullingResource* _gpuCullingResource = nullptr;
+	InstancingResource* _primitiveInstancingResource = nullptr;
+	GpuDescriptorHandle _indirectArgumentOffsetSrv;
+	GpuDescriptorHandle _sceneConstantCbv;
+	GpuDescriptorHandle _meshInstanceSrv;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _subMeshDrawInfoHandle;
+	GpuDescriptorHandle _cullingViewCbv;
+	GpuDescriptorHandle _materialInstanceIndexSrv;
+	u32 _meshInstanceCountMax = 0;
+	const char* _scopeName = nullptr;
+};
+
+#if ENABLE_MULTI_INDIRECT_DRAW
 struct MultiIndirectRenderContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
@@ -40,42 +66,17 @@ struct MultiIndirectRenderContext {
 	GpuDescriptorHandle _meshInstanceHandle;
 };
 
-struct ComputeLodContext {
-	CommandList* _commandList = nullptr;
-	ViewInfo* _viewInfo = nullptr;
-	GpuCullingResource* _gpuCullingResource = nullptr;
-	u32 _meshInstanceCountMax = 0;
-	GpuDescriptorHandle _meshInstanceHandle;
-	GpuDescriptorHandle _meshHandle;
-	GpuDescriptorHandle _sceneConstantCbv;
-};
-
-struct GpuCullingContext {
-	CommandList* _commandList = nullptr;
-	GpuCullingResource* _gpuCullingResource = nullptr;
+struct MultiDrawGpuCullingContext : public GpuCullingContext {
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
-	IndirectArgumentResource* _instancingIndirectArgumentResource = nullptr;
-	u32 _meshInstanceCountMax = 0;
-	GpuDescriptorHandle _indirectArgumentOffsetSrv;
-	GpuDescriptorHandle _sceneConstantCbv;
-	GpuDescriptorHandle _meshInstanceHandle;
-	GpuDescriptorHandle _meshHandle;
-	GpuDescriptorHandle _subMeshDrawInfoHandle;
-	GpuDescriptorHandle _meshletInstanceInfoOffsetSrv;
-	GpuDescriptorHandle _meshletInstanceInfoCountUav;
-	GpuDescriptorHandle _meshletInstanceInfoUav;
-	GpuDescriptorHandle _cullingViewCbv;
-	GpuDescriptorHandle _materialInstanceIndexSrv;
-	InstancingResource* _primitiveInstancingResource = nullptr;
-	const char* _scopeName = nullptr;
 };
+#endif
 
 struct BuildIndirectArgumentContext {
 	CommandList* _commandList = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
+	IndirectArgumentResource* _primIndirectArgumentResource = nullptr;
 	GpuDescriptorHandle _meshletInstanceOffsetSrv;
 	GpuDescriptorHandle _meshletInstanceCountSrv;
-	GpuDescriptorHandle _indirectArgumentUav;
 	GpuDescriptorHandle _subMeshSrv;
 };
 
@@ -99,8 +100,8 @@ public:
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	void multiDrawRender(const MultiIndirectRenderContext& context);
-	void multiDrawDepthPrePassCulling(const GpuCullingContext& context);
-	void multiDrawMainCulling(const GpuCullingContext& context);
+	void multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context);
+	void multiDrawMainCulling(const MultiDrawGpuCullingContext& context);
 #endif
 
 private:

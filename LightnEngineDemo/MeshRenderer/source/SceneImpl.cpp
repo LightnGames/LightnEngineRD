@@ -493,9 +493,6 @@ void IndirectArgumentResource::terminate() {
 	cpuAllocator->discardDescriptor(_countCpuUav);
 }
 
-void IndirectArgumentResource::update() {
-}
-
 void GpuCullingResource::setComputeLodResource(CommandList* commandList) {
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_RESULT_LEVEL, _currentLodLevelUav._gpuHandle);
 }
@@ -520,14 +517,6 @@ void GpuCullingResource::setHizResourcesPass1(CommandList* commandList) {
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INFO, _hizInfoConstantCbv[1]._gpuHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_OUTPUT_DEPTH, _hizDepthTextureUav._gpuHandle + incrimentSize * 4); // 4 ~ 5
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, _hizDepthTextureSrv._gpuHandle + incrimentSize * 3); // 3
-}
-
-
-void IndirectArgumentResource::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
-	ResourceTransitionBarrier indirectArgumentToUavBarriers[2] = {};
-	indirectArgumentToUavBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
-	indirectArgumentToUavBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
-	commandList->transitionBarriers(indirectArgumentToUavBarriers, LTN_COUNTOF(indirectArgumentToUavBarriers));
 }
 
 void GpuCullingResource::resourceBarriersComputeLodToUAV(CommandList* commandList) {
@@ -570,21 +559,14 @@ void GpuCullingResource::resourceBarriersHizTextureToSrv(CommandList* commandLis
 	commandList->transitionBarriers(textureToSrv, LTN_COUNTOF(textureToSrv));
 }
 
-void IndirectArgumentResource::resetResourceGpuCullingBarriers(CommandList* commandList) {
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
-	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
-	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
-	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
-}
-
-void IndirectArgumentResource::resourceBarriersBuildIndirectArgument(CommandList* commandList) {
+void IndirectArgumentResource::resourceBarriersToUav(CommandList* commandList) {
 	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
 	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
 }
 
-void IndirectArgumentResource::resourceBarriersResetBuildIndirectArgument(CommandList* commandList) {
+void IndirectArgumentResource::resourceBarriersToIndirectArgument(CommandList* commandList) {
 	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
 	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
 	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
@@ -732,26 +714,22 @@ void InstancingResource::terminate() {
 }
 
 void InstancingResource::update(const UpdateDesc& desc) {
-	const gpu::SubMesh* firstSubMesh = desc._firstSubMesh;
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 countMax = desc._countMax;
-	memset(_infoCounts, 0, sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX);
+	u32 infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
-		const SubMeshInfo* subMeshInfos = mesh->getSubMeshInfo();
 		const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
-		const gpu::Meshlet* meshlets = mesh->getGpuMeshlet();
 		const gpu::SubMeshInstance* subMeshInstances = meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
 		u32 subMeshStartOffset = meshInfo->_subMeshStartIndex;
 		u32 subMeshCount = meshInfo->_totalSubMeshCount;
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 			const gpu::SubMesh* subMesh = &subMeshes[subMeshIndex];
-			const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
-			u32 subMeshGlobalIndex = static_cast<u32>(subMesh - firstSubMesh);
+			u32 subMeshGlobalIndex = subMeshStartOffset + subMeshIndex;
 			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 			u32 shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
-			++_infoCounts[shaderSetOffset + subMeshGlobalIndex];
+			++infoCounts[shaderSetOffset + subMeshGlobalIndex];
 		}
 	}
 
@@ -760,7 +738,7 @@ void InstancingResource::update(const UpdateDesc& desc) {
 	memset(mapOffsets, 0, sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX);
 	for (u32 i = 1; i < INDIRECT_ARGUMENT_COUNT_MAX; ++i) {
 		u32 prevIndex = i - 1;
-		mapOffsets[i] = mapOffsets[prevIndex] + _infoCounts[prevIndex];
+		mapOffsets[i] = mapOffsets[prevIndex] + infoCounts[prevIndex];
 	}
 }
 
@@ -1001,8 +979,8 @@ void GpuCullingResource::update(const ViewInfo* viewInfo) {
 	}
 }
 
-void MultiDrawInstancingResource::initialize() {
 #if ENABLE_MULTI_INDIRECT_DRAW
+void MultiDrawInstancingResource::initialize() {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	// buffers
 	{
@@ -1015,7 +993,7 @@ void MultiDrawInstancingResource::initialize() {
 		_indirectArgumentOffsetBuffer.setDebugName("Multi Draw Indirect Argument Offsets");
 	}
 
-	// indirect argument offset
+	// srv
 	{
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		ShaderResourceViewDesc desc = {};
@@ -1029,53 +1007,40 @@ void MultiDrawInstancingResource::initialize() {
 		_indirectArgumentOffsetSrv = allocator->allocateDescriptors(1);
 		device->createShaderResourceView(_indirectArgumentOffsetBuffer.getResource(), &desc, _indirectArgumentOffsetSrv._cpuHandle);
 	}
-#endif
 }
 
 void MultiDrawInstancingResource::terminate() {
-#if ENABLE_MULTI_INDIRECT_DRAW
 	_indirectArgumentOffsetBuffer.terminate();
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_indirectArgumentOffsetSrv);
-#endif
 }
 
 void MultiDrawInstancingResource::update(const UpdateDesc& desc) {
-#if ENABLE_MULTI_INDIRECT_DRAW
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 countMax = desc._countMax;
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	memset(_indirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 
 	u32 meshletInstancingCounts[Scene::MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
-		const SubMeshInfo* subMeshInfos = mesh->getSubMeshInfo();
-		const gpu::SubMesh* subMeshes = mesh->getGpuSubMesh();
 		const gpu::SubMeshInstance* subMeshInstances = meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
 		u32 subMeshStartOffset = meshInfo->_subMeshStartIndex;
 		u32 subMeshCount = meshInfo->_totalSubMeshCount;
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-			const gpu::SubMesh& subMesh = subMeshes[subMeshIndex];
-			const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
-			u32 meshletCount = subMesh._meshletCount - 1;
 			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 			++_indirectArgumentCounts[shaderSetIndex];
 		}
 	}
 
-	// multi draw indirect argument offset
-	{
-		for (u32 shaderSetIndex = 1; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
-			u32 prevShaderIndex = shaderSetIndex - 1;
-			_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + _indirectArgumentCounts[prevShaderIndex];
-		}
-
-		u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, gpu::SHADER_SET_COUNT_MAX);
-		memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
+	for (u32 shaderSetIndex = 1; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+		u32 prevShaderIndex = shaderSetIndex - 1;
+		_indirectArgumentOffsets[shaderSetIndex] = _indirectArgumentOffsets[prevShaderIndex] + _indirectArgumentCounts[prevShaderIndex];
 	}
-#endif
+
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	u32* mapIndirectArgumentOffsets = vramUpdater->enqueueUpdate<u32>(&_indirectArgumentOffsetBuffer, 0, gpu::SHADER_SET_COUNT_MAX);
+	memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 }
+#endif

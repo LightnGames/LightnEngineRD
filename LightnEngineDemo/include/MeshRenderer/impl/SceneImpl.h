@@ -37,74 +37,51 @@ struct HizInfoConstant {
 };
 
 struct CullingResult :public gpu::CullingResult {
-	f32 getPassFrustumCullingMeshInstancePersentage() const {
-		if (_passFrustumCullingMeshInstanceCount == 0 || _testFrustumCullingMeshInstanceCount == 0) {
+	f32 getPersentage(u32 passCount, u32 testCount) const {
+		if (passCount == 0 || testCount == 0) {
 			return 0.0f;
 		}
-		return (_passFrustumCullingMeshInstanceCount / static_cast<f32>(_testFrustumCullingMeshInstanceCount)) * 100.0f;
+		return (passCount / static_cast<f32>(testCount)) * 100.0f;
+	}
+
+	f32 getPassFrustumCullingMeshInstancePersentage() const {
+		return getPersentage(_passFrustumCullingMeshInstanceCount, _testFrustumCullingMeshInstanceCount);
 	}
 
 	f32 getPassOcclusionCullingMeshInstancePersentage() const {
-		if (_passOcclusionCullingMeshInstanceCount == 0 || _testOcclusionCullingMeshInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passOcclusionCullingMeshInstanceCount / static_cast<f32>(_testOcclusionCullingMeshInstanceCount)) * 100.0f;
+		return getPersentage(_passOcclusionCullingMeshInstanceCount, _testOcclusionCullingMeshInstanceCount);
 	}
 
 	f32 getPassFrustumCullingSubMeshInstancePersentage() const {
-		if (_passFrustumCullingSubMeshInstanceCount == 0 || _testFrustumCullingSubMeshInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passFrustumCullingSubMeshInstanceCount / static_cast<f32>(_testFrustumCullingSubMeshInstanceCount)) * 100.0f;
+		return getPersentage(_passFrustumCullingSubMeshInstanceCount, _testFrustumCullingSubMeshInstanceCount);
 	}
 
 	f32 getPassOcclusionCullingSubMeshInstancePersentage() const {
-		if (_passOcclusionCullingSubMeshInstanceCount == 0 || _testOcclusionCullingSubMeshInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passOcclusionCullingSubMeshInstanceCount / static_cast<f32>(_testOcclusionCullingSubMeshInstanceCount)) * 100.0f;
+		return getPersentage(_passOcclusionCullingSubMeshInstanceCount, _testOcclusionCullingSubMeshInstanceCount);
 	}
 
 	f32 getPassFrustumCullingMeshletInstancePersentage() const {
-		if (_passFrustumCullingMeshletInstanceCount == 0 || _testFrustumCullingMeshletInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passFrustumCullingMeshletInstanceCount / static_cast<f32>(_testFrustumCullingMeshletInstanceCount)) * 100.0f;
+		return getPersentage(_passFrustumCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
 	}
 
 	f32 getPassBackfaceCullingMeshletInstancePersentage() const {
-		if (_passBackfaceCullingMeshletInstanceCount == 0 || _testBackfaceCullingMeshletInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passBackfaceCullingMeshletInstanceCount / static_cast<f32>(_testBackfaceCullingMeshletInstanceCount)) * 100.0f;
+		return getPersentage(_passBackfaceCullingMeshletInstanceCount, _testBackfaceCullingMeshletInstanceCount);
 	}
 
 	f32 getPassOcclusionCullingMeshletInstancePersentage() const {
-		if (_passOcclusionCullingMeshletInstanceCount == 0 || _testFrustumCullingMeshletInstanceCount == 0) {
-			return 0.0f;
-		}
-		return (_passOcclusionCullingMeshletInstanceCount / static_cast<f32>(_testFrustumCullingMeshletInstanceCount)) * 100.0f;
+		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
 	}
 
 	f32 getPassFrustumCullingTrianglePersentage() const {
-		if (_passFrustumCullingTriangleCount == 0 || _testFrustumCullingTriangleCount == 0) {
-			return 0.0f;
-		}
-		return (_passFrustumCullingTriangleCount / static_cast<f32>(_testFrustumCullingTriangleCount)) * 100.0f;
+		return getPersentage(_passFrustumCullingTriangleCount, _testFrustumCullingTriangleCount);
 	}
 
 	f32 getPassBackfaceCullingTrianglePersentage() const {
-		if (_passBackfaceCullingTriangleCount == 0 || _testBackfaceCullingTriangleCount == 0) {
-			return 0.0f;
-		}
-		return (_passBackfaceCullingTriangleCount / static_cast<f32>(_testBackfaceCullingTriangleCount)) * 100.0f;
+		return getPersentage(_passBackfaceCullingTriangleCount, _testBackfaceCullingTriangleCount);
 	}
 
 	f32 getPassOcclusionCullingTrianglePersentage() const {
-		if (_passOcclusionCullingTriangleCount == 0 || _testOcclusionCullingTriangleCount == 0) {
-			return 0.0f;
-		}
-		return (_passOcclusionCullingTriangleCount / static_cast<f32>(_testOcclusionCullingTriangleCount)) * 100.0f;
+		return getPersentage(_passOcclusionCullingTriangleCount, _testOcclusionCullingTriangleCount);
 	}
 
 };
@@ -122,18 +99,15 @@ public:
 
 	void initialize(const InitializeDesc& desc);
 	void terminate();
-	void update();
 
-	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
-	void resetResourceGpuCullingBarriers(CommandList* commandList);
-	void resourceBarriersBuildIndirectArgument(CommandList* commandList);
-	void resourceBarriersResetBuildIndirectArgument(CommandList* commandList);
+	void resourceBarriersToUav(CommandList* commandList);
+	void resourceBarriersToIndirectArgument(CommandList* commandList);
 	void resetIndirectArgumentCountBuffers(CommandList* commandList);
 	void executeIndirect(CommandList* commandList, CommandSignature* commandSignature, u32 commandCountMax, u32 indirectArgumentOffset, u32 countBufferOffset);
 
 	GpuBuffer* getIndirectArgumentBuffer() { return &_indirectArgumentBuffer; }
 	GpuBuffer* getIndirectArgumentCountBuffer() { return &_countBuffer; }
-	DescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUavHandle; }
+	GpuDescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUavHandle._gpuHandle; }
 
 private:
 	GpuBuffer _indirectArgumentBuffer;
@@ -220,7 +194,6 @@ private:
 	GpuBuffer _cullingResultBuffer;
 	GpuBuffer _cullingResultReadbackBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
-
 	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
 
 	gpu::CullingResult _currentFrameCullingResultMapPtr;
@@ -239,7 +212,6 @@ public:
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = INSTANCING_PER_SHADER_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 
 	struct UpdateDesc {
-		const gpu::SubMesh* _firstSubMesh = nullptr;
 		MeshInstanceImpl* _meshInstances = nullptr;
 		u32 _countMax = 0;
 	};
@@ -259,7 +231,6 @@ public:
 	GpuDescriptorHandle getInfoSrv() const { return _infoSrv._gpuHandle; }
 
 private:
-	u32 _infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
 	GpuBuffer _InfoBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
@@ -271,6 +242,7 @@ private:
 	DescriptorHandle _infoSrv;
 };
 
+#if ENABLE_MULTI_INDIRECT_DRAW
 class MultiDrawInstancingResource {
 public:
 	struct UpdateDesc {
@@ -282,19 +254,17 @@ public:
 	void terminate();
 	void update(const UpdateDesc& desc);
 
-#if ENABLE_MULTI_INDIRECT_DRAW
 	const u32* getIndirectArgumentCounts() const { return _indirectArgumentCounts; }
 	const u32* getIndirectArgumentOffsets() const { return _indirectArgumentOffsets; }
 	GpuDescriptorHandle getIndirectArgumentOffsetSrv() const { return _indirectArgumentOffsetSrv._gpuHandle; }
-#endif
+
 private:
-#if ENABLE_MULTI_INDIRECT_DRAW
 	u32 _indirectArgumentOffsets[gpu::SHADER_SET_COUNT_MAX] = {};
 	u32 _indirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 	GpuBuffer _indirectArgumentOffsetBuffer;
 	DescriptorHandle _indirectArgumentOffsetSrv;
-#endif
 };
+#endif
 
 class Scene {
 public:

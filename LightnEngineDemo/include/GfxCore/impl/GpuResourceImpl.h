@@ -73,6 +73,7 @@ struct BuildIndirectArgumentRootParameters {
 		BATCHED_SUBMESH_COUNT,
 		SUB_MESH,
 		INDIRECT_ARGUMENT,
+		PRIM_INDIRECT_ARGUMENT,
 		ROOT_PARAM_COUNT
 	};
 };

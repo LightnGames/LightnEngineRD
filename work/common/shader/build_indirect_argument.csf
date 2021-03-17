@@ -7,6 +7,8 @@ StructuredBuffer<Meshlet> _meshlets : register(t3);
 
 RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
+RWStructuredBuffer<DispatchMeshIndirectArgument> _primIndirectArguments : register(u2);
+RWByteAddressBuffer _primCountBuffer : register(u3);
 
 [numthreads(128, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
@@ -41,8 +43,12 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
     uint currentCount = 0;
     uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
-    _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
-    
-    uint indirectArgumentOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX + currentCount;
-    _indirectArguments[indirectArgumentOffset] = arguments;
+    uint shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
+    if (meshletCount == 1) {
+        _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
+        _indirectArguments[shaderSetOffset + currentCount] = arguments;
+    } else {
+        _primCountBuffer.InterlockedAdd(countOffset, 1, currentCount);
+        _primIndirectArguments[shaderSetOffset + currentCount] = arguments;
+    }
 }
