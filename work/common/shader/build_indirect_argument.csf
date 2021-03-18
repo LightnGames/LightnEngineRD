@@ -32,10 +32,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         Meshlet meshlet = _meshlets[subMesh._meshletOffset];
         uint instanceCountPerThreadGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
         dispatchCount = (instanceCount / instanceCountPerThreadGroup) + 1;
-        dispatchCount = 1;
         constant._meshletCount = subMesh._meshletOffset;
-        constant._instanceCount = instanceCountPerThreadGroup;
-        constant._instanceCount = 1;
+        constant._instanceCount = instanceCount;
     }
     
     DispatchMeshIndirectArgument arguments;
