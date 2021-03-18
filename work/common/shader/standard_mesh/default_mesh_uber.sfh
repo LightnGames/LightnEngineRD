@@ -73,7 +73,7 @@ void main(
         uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
         uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-        uint indexOffset = primitiveCount * primitiveInstanceIndex;
+        uint indexOffset = vertexCount * primitiveInstanceIndex;
         unpackedIndex += uint3(indexOffset, indexOffset, indexOffset);
         tris[gtid] = unpackedIndex;
     }

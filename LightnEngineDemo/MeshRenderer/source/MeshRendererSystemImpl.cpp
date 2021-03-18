@@ -243,9 +243,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	DescriptorHandle vertexResourceDescriptors = _resourceManager.getVertexHandle();
 	u32 pipelineStateResourceCount = materialSystem->getShaderSetCount();
 
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Indirect Shader Pass");
-	queryHeapSystem->setCurrentMarkerName("Multi Draw Indirect Shader Pass");
-	queryHeapSystem->setMarker(commandList);
+	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
 
 	GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
 	GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
@@ -290,7 +288,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
@@ -341,7 +338,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
@@ -398,7 +394,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	_gpuCullingResource.readbackCullingResultBuffer(commandList);
 
-	queryHeapSystem->setCurrentMarkerName("Main Pass");
+	queryHeapSystem->setCurrentMarkerName("Multi Draw Pass");
 	queryHeapSystem->setMarker(commandList);
 }
 #endif

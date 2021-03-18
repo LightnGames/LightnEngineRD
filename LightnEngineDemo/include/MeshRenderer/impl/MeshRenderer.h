@@ -67,8 +67,19 @@ struct MultiIndirectRenderContext {
 	GpuDescriptorHandle _meshInstanceHandle;
 };
 
-struct MultiDrawGpuCullingContext : public GpuCullingContext {
+struct MultiDrawGpuCullingContext {
+	GpuCullingResource* _gpuCullingResource = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
+	CommandList* _commandList = nullptr;
+	GpuDescriptorHandle _indirectArgumentOffsetSrv;
+	GpuDescriptorHandle _sceneConstantCbv;
+	GpuDescriptorHandle _meshInstanceSrv;
+	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _subMeshDrawInfoHandle;
+	GpuDescriptorHandle _cullingViewCbv;
+	GpuDescriptorHandle _materialInstanceIndexSrv;
+	u32 _meshInstanceCountMax = 0;
+	const char* _scopeName = nullptr;
 };
 #endif
 
@@ -107,6 +118,9 @@ public:
 
 private:
 	void gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState);
+#if ENABLE_MULTI_INDIRECT_DRAW
+	void gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState);
+#endif
 
 private:
 	RootSignature* _gpuCullingRootSignature = nullptr;

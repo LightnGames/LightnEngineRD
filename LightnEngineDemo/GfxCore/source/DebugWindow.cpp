@@ -36,7 +36,6 @@ void DebugWindow::initialize() {
 		LTN_INFO("create debug window folder %s", DEBUG_WINDOW_STRUCTURE_FOLDER_PATH);
 	}
 
-
 	s32* hWnd = app->getWindowHandle();
 	ApplicationCallBack f = [hWnd](u32 message, u64 wParam, s64 lParam) {
 		DebugGui::TranslateWindowProc(hWnd, message, wParam, lParam);
