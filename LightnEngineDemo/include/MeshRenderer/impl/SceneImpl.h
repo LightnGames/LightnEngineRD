@@ -246,7 +246,7 @@ private:
 class MultiDrawInstancingResource {
 public:
 	struct UpdateDesc {
-		MeshInstanceImpl* _meshInstances = nullptr;
+		const gpu::SubMeshInstance* _subMeshInstances = nullptr;
 		u32 _countMax = 0;
 	};
 
@@ -293,6 +293,8 @@ public:
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
+	u32 getSubMeshInstanceArrayCountMax() const { return _gpuSubMeshInstances.getArrayCountMax(); }
+	const gpu::SubMeshInstance* getSubMeshInstances() const { return &_gpuSubMeshInstances[0]; }
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};

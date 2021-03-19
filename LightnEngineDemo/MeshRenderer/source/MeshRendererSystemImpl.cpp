@@ -400,17 +400,18 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 #endif
 
 #if ENABLE_CLASSIC_VERTEX
-void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const ViewInfo* viewInfo) {
+void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo) {
 	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Classic Shader Pass");
 
 	GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
 	GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
 	GpuBuffer* indexBuffer = _resourceManager.getClassicIndexBuffer();
 
-	ResourceTransitionBarrier toVertexBarriers[3] = {};
+	ResourceTransitionBarrier toVertexBarriers[4] = {};
 	toVertexBarriers[0] = vertexPositionBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 	toVertexBarriers[1] = vertexTexcoordBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 	toVertexBarriers[2] = indexBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_INDEX_BUFFER);
+	toVertexBarriers[3] = viewInfo->_depthTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_WRITE);
 	commandList->transitionBarriers(toVertexBarriers, LTN_COUNTOF(toVertexBarriers));
 
 	VertexBufferView vertexBufferViews[2] = {};
@@ -429,7 +430,6 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 
 	commandList->setViewports(1, &viewInfo->_viewPort);
 	commandList->setScissorRects(1, &viewInfo->_scissorRect);
-
 
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
@@ -476,10 +476,11 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, const
 		}
 	}
 
-	ResourceTransitionBarrier toNonPixelShaderResourceBarriers[3] = {};
+	ResourceTransitionBarrier toNonPixelShaderResourceBarriers[4] = {};
 	toNonPixelShaderResourceBarriers[0] = vertexPositionBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	toNonPixelShaderResourceBarriers[1] = vertexTexcoordBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	toNonPixelShaderResourceBarriers[2] = indexBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	toNonPixelShaderResourceBarriers[3] = viewInfo->_depthTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
 }
 
@@ -588,24 +589,6 @@ void MeshRendererSystemImpl::update() {
 	_resourceManager.update();
 	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
 	_vramShaderSetSystem.update();
-
-	if (_scene.isUpdatedInstancingOffset()) {
-		{
-			InstancingResource::UpdateDesc desc;
-			desc._meshInstances = _scene.getMeshInstance(0);
-			desc._countMax = _scene.getMeshInstanceArrayCountMax();
-			_primitiveInstancingResource.update(desc);
-		}
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-		{
-			MultiDrawInstancingResource::UpdateDesc desc;
-			desc._meshInstances = _scene.getMeshInstance(0);
-			desc._countMax = _scene.getMeshInstanceArrayCountMax();
-			_multiDrawInstancingResource.update(desc);
-		}
-#endif
-	}
 
 	// メッシュインスタンスデバッグオプション
 	{
@@ -777,6 +760,31 @@ void MeshRendererSystemImpl::update() {
 	}
 
 	DebugWindow::End();
+
+	if (_scene.isUpdatedInstancingOffset()) {
+		switch (_geometoryType) {
+#if ENABLE_MESH_SHADER
+		case GEOMETORY_MODE_MESH_SHADER:
+		{
+			InstancingResource::UpdateDesc desc;
+			desc._meshInstances = _scene.getMeshInstance(0);
+			desc._countMax = _scene.getMeshInstanceArrayCountMax();
+			_primitiveInstancingResource.update(desc);
+			break;
+		}
+#endif
+#if ENABLE_MULTI_INDIRECT_DRAW
+		case GEOMETORY_MODE_MULTI_INDIRECT:
+		{
+			MultiDrawInstancingResource::UpdateDesc desc;
+			desc._subMeshInstances = _scene.getSubMeshInstances();
+			desc._countMax = _scene.getSubMeshInstanceArrayCountMax();
+			_multiDrawInstancingResource.update(desc);
+			break;
+		}
+#endif
+		}
+	}
 }
 
 void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo) {

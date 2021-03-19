@@ -715,6 +715,7 @@ void InstancingResource::terminate() {
 
 void InstancingResource::update(const UpdateDesc& desc) {
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
+	u32 offsetUpdateStart = 0;
 	u32 countMax = desc._countMax;
 	u32 infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
@@ -1017,21 +1018,14 @@ void MultiDrawInstancingResource::terminate() {
 }
 
 void MultiDrawInstancingResource::update(const UpdateDesc& desc) {
-	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 countMax = desc._countMax;
 	memset(_indirectArgumentCounts, 0, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 
-	u32 meshletInstancingCounts[Scene::MESHLET_INSTANCE_INFO_COUNT_MAX] = {};
-	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
-		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
-		const MeshInfo* meshInfo = mesh->getMeshInfo();
-		const gpu::SubMeshInstance* subMeshInstances = meshInstances[meshInstanceIndex].getGpuSubMeshInstance(0);
-		u32 subMeshStartOffset = meshInfo->_subMeshStartIndex;
-		u32 subMeshCount = meshInfo->_totalSubMeshCount;
-		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
-			++_indirectArgumentCounts[shaderSetIndex];
-		}
+	const gpu::SubMeshInstance* subMeshInstances = desc._subMeshInstances;
+	u32 subMeshInstanceCount = desc._countMax;
+	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
+		u32 shaderSetIndex = subMeshInstances[subMeshInstanceIndex]._shaderSetIndex;
+		++_indirectArgumentCounts[shaderSetIndex];
 	}
 
 	for (u32 shaderSetIndex = 1; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {

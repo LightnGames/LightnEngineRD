@@ -32,7 +32,7 @@ private:
 	void renderMultiIndirect(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 #if ENABLE_CLASSIC_VERTEX
-	void renderClassicVertex(CommandList* commandList, const ViewInfo* viewInfo);
+	void renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 private:
 	void setFixedDebugView(CommandList * commandList, ViewInfo* viewInfo);
