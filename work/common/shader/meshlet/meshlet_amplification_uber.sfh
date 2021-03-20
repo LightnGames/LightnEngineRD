@@ -36,13 +36,14 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, uint meshletIndex, MeshletInstanceInfo meshletInfo) {
-    _passMeshlets._meshletIndices[visibleIndex] = meshletIndex;
+void writePayloadStruct(uint visibleIndex, Meshlet meshlet, MeshletInstanceInfo meshletInfo) {
+    _passMeshlets._meshletVertexCounts[visibleIndex] = meshlet._vertexCount;
+    _passMeshlets._meshletPrimitiveCounts[visibleIndex] = meshlet._primitiveCount;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
     _passMeshlets._materialIndex[visibleIndex] = meshletInfo._materialIndex;
     _passMeshlets._vertexOffset[visibleIndex] = meshletInfo._vertexOffset;
-    _passMeshlets._vertexIndexOffset[visibleIndex] = meshletInfo._vertexIndexOffset;
-    _passMeshlets._primitiveOffset[visibleIndex] = meshletInfo._primitiveOffset;
+    _passMeshlets._vertexIndexOffset[visibleIndex] = meshletInfo._vertexIndexOffset + meshlet._vertexOffset;
+    _passMeshlets._primitiveOffset[visibleIndex] = meshletInfo._primitiveOffset + meshlet._primitiveOffset;
 }
 
 [numthreads(THREAD_NUM, 1, 1)]
@@ -108,7 +109,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         
         if (visible) {
             uint index = WavePrefixCountBits(visible);
-            writePayloadStruct(index, meshletIndex, meshletInfo);
+            writePayloadStruct(index, meshlet, meshletInfo);
         }
     }
     

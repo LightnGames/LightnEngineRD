@@ -369,6 +369,11 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		*implDesc._debugWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
 	}
 
+	// デプスオンリー (フラスタムカリングのみ)
+	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
+	pipelineStateDesc._pixelShaderFilePath = nullptr;
+	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+
 	// オクルージョンカリング可視化
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_occlusion_culling.pso";
 	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
@@ -382,12 +387,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	blendDesc._destBlendAlpha = BLEND_ZERO;
 	blendDesc._blendOpAlpha = BLEND_OP_ADD;
 	*implDesc._debugOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
-
-	// デプスオンリー (フラスタムカリングのみ)
-	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
-	pipelineStateDesc._pixelShaderFilePath = nullptr;
-	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
 
 	// classic
 	{

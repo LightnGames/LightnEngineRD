@@ -1087,7 +1087,7 @@ void PipelineStateD3D12::iniaitlize(const MeshPipelineStateDesc& desc) {
 	depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
 
 	auto rasterrizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	rasterrizerState.FillMode = toD3d12(desc._fillMode);;
+	rasterrizerState.FillMode = toD3d12(desc._fillMode);
 
 	MeshShaderPsoDesc psoDesc = {};
 	psoDesc.pRootSignature = toD3d12(desc._rootSignature);

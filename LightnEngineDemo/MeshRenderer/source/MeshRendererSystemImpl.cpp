@@ -590,6 +590,8 @@ void MeshRendererSystemImpl::update() {
 	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
 	_vramShaderSetSystem.update();
 
+	bool isUpdatedGeometryType = false;
+
 	// メッシュインスタンスデバッグオプション
 	{
 		struct MeshInstanceDebug {
@@ -625,6 +627,10 @@ void MeshRendererSystemImpl::update() {
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_visible = debug._visible;
 		_debugPrimitiveType = debug._primitiveType;
+
+		if (_geometoryType != debug._geometoryMode) {
+			isUpdatedGeometryType = true;
+		}
 		_geometoryType = debug._geometoryMode;
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_FIXED_VIEW, debug._fixedCullingView);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESH_CULLING, debug._passMeshInstanceCulling);
@@ -761,7 +767,7 @@ void MeshRendererSystemImpl::update() {
 
 	DebugWindow::End();
 
-	if (_scene.isUpdatedInstancingOffset()) {
+	if (_scene.isUpdatedInstancingOffset() || isUpdatedGeometryType) {
 		switch (_geometoryType) {
 #if ENABLE_MESH_SHADER
 		case GEOMETORY_MODE_MESH_SHADER:

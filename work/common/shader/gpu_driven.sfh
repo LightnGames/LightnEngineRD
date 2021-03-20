@@ -41,7 +41,8 @@ struct DispatchMeshIndirectArgument {
 };
 
 struct PayloadStruct { 
-    uint _meshletIndices[32]; 
+    uint _meshletVertexCounts[32];
+    uint _meshletPrimitiveCounts[32];
 	uint _meshInstanceIndices[32];
     uint _materialIndex[32];
     uint _vertexOffset[32];

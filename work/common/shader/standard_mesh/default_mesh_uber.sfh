@@ -40,7 +40,8 @@ void main(
 #if UBER_DEFAULT
     uint localGtid = gtid;
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
-    uint meshletIndex = meshPayload._meshletIndices[gid];
+    uint vertexCount = meshPayload._meshletVertexCounts[gid];
+    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
     uint primitiveOffset = meshPayload._primitiveOffset[gid];
     uint vertexLocalOffset = meshPayload._vertexOffset[gid];
     uint vertexIndexOffset = meshPayload._vertexIndexOffset[gid];
@@ -53,10 +54,10 @@ void main(
         return;
     }
 
+#if UBER_PRIMITIVE_INSTANCING
     Meshlet meshlet = _meshlets[meshletIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
-#if UBER_PRIMITIVE_INSTANCING
     uint instanceCountPerThreadGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
     uint vertexInstanceIndex = gtid / vertexCount;
     uint primitiveInstanceIndex = gtid / primitiveCount;
@@ -106,16 +107,14 @@ void main(
 #if UBER_DEFAULT
     SetMeshOutputCounts(vertexCount, primitiveCount);
     if(localGtid < primitiveCount){
-        uint primitiveIndex = meshlet._primitiveOffset + localGtid;
-        uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
+        uint packedIndex = _primitives[primitiveOffset + localGtid];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
         tris[gtid] = unpackedIndex;
     }
 
     if(localGtid < vertexCount){
         MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
-        uint vertexLocalIndex = meshlet._vertexOffset + localGtid;
-        uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
+        uint vertexIndex = _vertexIndices[vertexIndexOffset + localGtid];
         uint vertexOffset = vertexLocalOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
@@ -124,7 +123,7 @@ void main(
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
-        vertexOut._meshletIndex = meshletIndex;
+        vertexOut._meshletIndex = gid;
         vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
