@@ -171,8 +171,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
-
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
 		PipelineStateGroup** pipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
@@ -204,6 +202,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		}
 
 		LTN_ASSERT(pipelineStates != nullptr);
+		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
 
 		RenderContext context = {};
 		context._commandList = commandList;
@@ -223,9 +222,12 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_meshRenderer.render(context);
 
 		_gpuCullingResource.resourceBarriersHizSrvToTexture(commandList);
-}
+	}
 
-	_gpuCullingResource.readbackCullingResultBuffer(commandList);
+	{
+		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Readback Culling Result");
+		_gpuCullingResource.readbackCullingResultBuffer(commandList);
+	}
 
 	queryHeapSystem->setCurrentMarkerName("Main Pass");
 	queryHeapSystem->setMarker(commandList);
