@@ -636,18 +636,18 @@ void InstancingResource::initialize() {
 	// buffer
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = INDIRECT_ARGUMENT_COUNT_MAX * sizeof(u32);
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(u32);
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._device = device;
 		_infoOffsetBuffer.initialize(desc);
 		_infoOffsetBuffer.setDebugName("Primitive Instancing Offsets");
 
-		desc._sizeInByte = INDIRECT_ARGUMENT_COUNT_MAX * sizeof(gpu::MeshletInstanceInfo);
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(gpu::MeshletInstanceInfo);
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		_InfoBuffer.initialize(desc);
 		_InfoBuffer.setDebugName("Primitive Instancing Infos");
 
-		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		_infoCountBuffer.initialize(desc);
 		_infoCountBuffer.setDebugName("Primitive Instancing Counts");
 	}
@@ -662,13 +662,13 @@ void InstancingResource::initialize() {
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
-		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		device->createShaderResourceView(_infoOffsetBuffer.getResource(), &desc, _infoOffsetSrv._cpuHandle);
 		device->createShaderResourceView(_infoCountBuffer.getResource(), &desc, _countSrv._cpuHandle);
 
 		desc._format = FORMAT_UNKNOWN;
 		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
-		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 		device->createShaderResourceView(_InfoBuffer.getResource(), &desc, _infoSrv._cpuHandle);
 	}
@@ -684,14 +684,14 @@ void InstancingResource::initialize() {
 		desc._format = FORMAT_UNKNOWN;
 		desc._viewDimension = UAV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
-		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 		device->createUnorderedAccessView(_InfoBuffer.getResource(), nullptr, &desc, _infoUav._cpuHandle);
 
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._structureByteStride = 0;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNT_MAX;
+		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _countUav._cpuHandle);
 		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _countCpuUav._cpuHandle);
 	}
@@ -717,7 +717,7 @@ void InstancingResource::update(const UpdateDesc& desc) {
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 offsetUpdateStart = 0;
 	u32 countMax = desc._countMax;
-	u32 infoCounts[INDIRECT_ARGUMENT_COUNT_MAX] = {};
+	u32 infoCounts[INDIRECT_ARGUMENT_COUNTER_COUNT_MAX] = {};
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -735,9 +735,9 @@ void InstancingResource::update(const UpdateDesc& desc) {
 	}
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, INDIRECT_ARGUMENT_COUNT_MAX);
-	memset(mapOffsets, 0, sizeof(u32) * INDIRECT_ARGUMENT_COUNT_MAX);
-	for (u32 i = 1; i < INDIRECT_ARGUMENT_COUNT_MAX; ++i) {
+	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
+	memset(mapOffsets, 0, sizeof(u32) * INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
+	for (u32 i = 1; i < INDIRECT_ARGUMENT_COUNTER_COUNT_MAX; ++i) {
 		u32 prevIndex = i - 1;
 		mapOffsets[i] = mapOffsets[prevIndex] + infoCounts[prevIndex];
 	}

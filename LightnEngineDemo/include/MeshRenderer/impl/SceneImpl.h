@@ -89,7 +89,7 @@ struct CullingResult :public gpu::CullingResult {
 class IndirectArgumentResource {
 public:
 	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = gpu::SHADER_SET_COUNT_MAX * 2;
-	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = 1024 * 256;
+	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
 
 	struct InitializeDesc {
@@ -210,6 +210,7 @@ class InstancingResource {
 public:
 	static constexpr u32 INSTANCING_PER_SHADER_COUNT_MAX = 1024 * 2; // SUB_MESH_COUNT_MAX
 	static constexpr u32 INDIRECT_ARGUMENT_COUNT_MAX = INSTANCING_PER_SHADER_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT_MAX = INSTANCING_PER_SHADER_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 
 	struct UpdateDesc {
 		MeshInstanceImpl* _meshInstances = nullptr;

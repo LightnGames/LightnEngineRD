@@ -493,7 +493,7 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, indirectArgumentResource->getIndirectArgumentUav());
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::PRIM_INDIRECT_ARGUMENT, primIndirectArgumentResource->getIndirectArgumentUav());
 
-	u32 dispatchCount = RoundUp(InstancingResource::INDIRECT_ARGUMENT_COUNT_MAX, 128u);
+	u32 dispatchCount = RoundUp(InstancingResource::INDIRECT_ARGUMENT_COUNTER_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	indirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
 	primIndirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
@@ -580,7 +580,7 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 
 		u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex];
 		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
-		LTN_ASSERT(indirectArgumentOffset + commandCountMax <= IndirectArgumentResource::INDIRECT_ARGUMENT_COUNT_MAX);
+		LTN_ASSERT(indirectArgumentOffset + commandCountMax <= IndirectArgumentResource::INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
 
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 

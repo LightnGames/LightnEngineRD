@@ -63,10 +63,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint passOcclusionPrimitiveCount = 0;
     
     uint meshletCount = _indirectArgumentConstant._meshletCount;
-    uint meshletOffset = dtid % meshletCount;
-    uint instanceOffset = dtid / meshletCount;
+    uint instanceCount = _indirectArgumentConstant._instanceCount;
+    uint meshletOffset = dtid / instanceCount;
+    uint instanceOffset = dtid % instanceCount;
     uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
-    if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+    if (instanceOffset < instanceCount && meshletOffset < meshletCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
         Meshlet meshlet = _meshlets[meshletIndex];
@@ -76,6 +77,12 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         float3 boundsMin = meshletBounds._boundsMin;
         float3 boundsMax = meshletBounds._boundsMax;
         visible = true;
+        
+        uint batchInstanceCount = 1;
+        if (meshletOffset - 1 == meshletCount) {
+            uint instancesPerGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
+            batchInstanceCount = min(instanceCount - instanceOffset, instancesPerGroup);
+        }
 
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
@@ -115,7 +122,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
     
 #if UBER_CULLING_RESULT
-    if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+    if (instanceOffset < instanceCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
         Meshlet meshlet = _meshlets[meshletIndex];

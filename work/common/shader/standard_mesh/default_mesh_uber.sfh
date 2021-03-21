@@ -34,27 +34,56 @@ void main(
     in payload PayloadStruct meshPayload,
 #endif
     out indices uint3 tris[126],
-    out vertices VertexOut verts[64]
+    out vertices VertexOutverts[64]
 )
 {
+    if (gtid >= 126) {
+        return;
+    }
+    
 #if UBER_DEFAULT
     uint localGtid = gtid;
     uint meshInstanceIndex = meshPayload._meshInstanceIndices[gid];
-    uint vertexCount = meshPayload._meshletVertexCounts[gid];
-    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
     uint primitiveOffset = meshPayload._primitiveOffset[gid];
     uint vertexLocalOffset = meshPayload._vertexOffset[gid];
     uint vertexIndexOffset = meshPayload._vertexIndexOffset[gid];
     uint materialIndex = meshPayload._materialIndex[gid];
+    uint vertexCount = meshPayload._meshletVertexCounts[gid];
+    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
+    uint instancesPerGroup = min(64 / vertexCount, 126 / primitiveCount);
+    uint instanceCount = 1;
+    if(instancesPerGroup > 1){
+        
+    }
+    vertexCount *= instanceCount;
+    primitiveCount *= instanceCount;
+    
+    SetMeshOutputCounts(vertexCount, primitiveCount);
+    if(localGtid < primitiveCount){
+        uint packedIndex = _primitives[primitiveOffset + localGtid];
+        uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
+        tris[gtid] = unpackedIndex;
+    }
+
+    if(localGtid < vertexCount){
+        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+        uint vertexIndex = _vertexIndices[vertexIndexOffset + localGtid];
+        uint vertexOffset = vertexLocalOffset + vertexIndex;
+        float3 positionVertex = _vertexPositions[vertexOffset];
+        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+        
+        VertexOut vertexOut;
+        vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
+        vertexOut._positionNdc = worldPos;
+        vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
+        vertexOut._meshletIndex = gid;
+        vertexOut._materialIndex = materialIndex;
+        vertexOut._meshInstanceIndex = meshInstanceIndex;
+        verts[gtid] = vertexOut;
+    }
 #endif
 #if UBER_PRIMITIVE_INSTANCING
     uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
-#endif
-    if (gtid >= 126) {
-        return;
-    }
-
-#if UBER_PRIMITIVE_INSTANCING
     Meshlet meshlet = _meshlets[meshletIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
@@ -99,31 +128,6 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = materialIndex;
-        vertexOut._meshInstanceIndex = meshInstanceIndex;
-        verts[gtid] = vertexOut;
-    }
-#endif
-#if UBER_DEFAULT
-    SetMeshOutputCounts(vertexCount, primitiveCount);
-    if(localGtid < primitiveCount){
-        uint packedIndex = _primitives[primitiveOffset + localGtid];
-        uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-        tris[gtid] = unpackedIndex;
-    }
-
-    if(localGtid < vertexCount){
-        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
-        uint vertexIndex = _vertexIndices[vertexIndexOffset + localGtid];
-        uint vertexOffset = vertexLocalOffset + vertexIndex;
-        float3 positionVertex = _vertexPositions[vertexOffset];
-        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
-        
-        VertexOut vertexOut;
-        vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
-        vertexOut._positionNdc = worldPos;
-        vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
-        vertexOut._meshletIndex = gid;
         vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
