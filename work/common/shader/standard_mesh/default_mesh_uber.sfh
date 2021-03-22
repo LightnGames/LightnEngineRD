@@ -34,7 +34,7 @@ void main(
     in payload PayloadStruct meshPayload,
 #endif
     out indices uint3 tris[126],
-    out vertices VertexOutverts[64]
+    out vertices VertexOut verts[64]
 )
 {
     if (gtid >= 126) {
@@ -47,14 +47,15 @@ void main(
     uint bitOffset = byteIndex * 8;
     uint instanceCount = (meshPayload._instanceCounts[byteOffset] >> bitOffset) & 0xff;
     uint instanceOffset = (meshPayload._instanceOffsets[byteOffset] >> bitOffset) & 0xff;
-    uint vertexLocalGtid = gtid % vertexCount;
-    uint primitiveLocalGtid = gtid % primitiveCount;
-    uint vertexInstanceIndex = gtid / vertexCount;
-    uint primitiveInstanceIndex gtid / primitiveCount;
     
     uint vertexCount = meshPayload._meshletVertexCounts[gid];
     uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
     SetMeshOutputCounts(vertexCount * instanceCount, primitiveCount * instanceCount);
+
+    uint vertexLocalGtid = gtid % vertexCount;
+    uint primitiveLocalGtid = gtid % primitiveCount;
+    uint vertexInstanceIndex = gtid / vertexCount;
+    uint primitiveInstanceIndex = gtid / primitiveCount;
     
     if(gtid < primitiveCount){
         uint baseInstanceOffset = instanceOffset + primitiveInstanceIndex;
