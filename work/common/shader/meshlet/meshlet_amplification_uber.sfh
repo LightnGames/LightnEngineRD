@@ -36,7 +36,7 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, Meshlet meshlet, MeshletInstanceInfo meshletInfo) {
+void writePayloadStruct(uint visibleIndex, Meshlet meshlet, MeshletInstanceInfo meshletInfo){
     _passMeshlets._meshletVertexCounts[visibleIndex] = meshlet._vertexCount;
     _passMeshlets._meshletPrimitiveCounts[visibleIndex] = meshlet._primitiveCount;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
@@ -52,6 +52,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     bool passBackface = false;
     bool passOcclusion = false;
     bool visible = false;
+    bool isFirstInstance = false;
     bool isTestedFrustumCulling = false;
     bool isTestedBackfaceCulling = false;
     bool isTestedOcclusionCulling = false;
@@ -77,12 +78,17 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         float3 boundsMin = meshletBounds._boundsMin;
         float3 boundsMax = meshletBounds._boundsMax;
         visible = true;
+        isFirstInstance = true;
         
         uint batchInstanceCount = 1;
         if (meshletOffset - 1 == meshletCount) {
             uint instancesPerGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-            batchInstanceCount = min(instanceCount - instanceOffset, instancesPerGroup);
+            isFirstInstance = instanceOffset % instancesPerGroup == 0;
+            batchInstanceCount = isFirstInstance ? min(instanceCount - instanceOffset, instancesPerGroup) : 0;
         }
+        
+        uint batchInstanceOffset = 0;
+        batchInstanceOffset = WavePrefixSum(batchInstanceCount);
 
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
@@ -117,6 +123,21 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         if (visible) {
             uint index = WavePrefixCountBits(visible);
             writePayloadStruct(index, meshlet, meshletInfo);
+            
+            if (isFirstInstance) {
+                uint firstInstanceIndex = WavePrefixCountBits(isFirstInstance);
+                uint byteOffset = firstInstanceIndex / 4;
+                uint byteIndex = firstInstanceIndex % 4;
+                uint bitOffset = byteIndex * 8;
+                uint mask = ~(0xff >> bitOffset);
+                uint packedInstanceOffset = batchInstanceOffset >> bitOffset;
+                packedInstanceOffset = mask & _passMeshlets._instanceOffsets[byteOffset];
+                _passMeshlets._instanceOffsets[byteOffset] = packedInstanceOffset;
+    
+                uint packedInstanceCount = batchInstanceCount >> bitOffset;
+                packedInstanceCount = mask & _passMeshlets._instanceCounts[byteOffset];
+                _passMeshlets._instanceCounts[byteOffset] = packedInstanceCount;
+            }
         }
     }
     
@@ -173,6 +194,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
 #endif
         
-    uint visibleCount = WaveActiveCountBits(visible);
+    uint visibleCount = WaveActiveCountBits(isFirstInstance);
     DispatchMesh(visibleCount, 1, 1, _passMeshlets);
 }
