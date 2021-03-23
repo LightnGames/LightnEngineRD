@@ -34,45 +34,49 @@ void main(
     in payload PayloadStruct meshPayload,
 #endif
     out indices uint3 tris[126],
-    out vertices VertexOutverts[64]
+    out vertices VertexOut verts[64]
 )
 {
     if (gtid >= 126) {
         return;
     }
-    
 #if UBER_DEFAULT
-    uint byteOffset = gid / 4;
-    uint byteIndex = gid % 4;
-    uint bitOffset = byteIndex * 8;
-    uint instanceCount = (meshPayload._instanceCounts[byteOffset] >> bitOffset) & 0xff;
-    uint instanceOffset = (meshPayload._instanceOffsets[byteOffset] >> bitOffset) & 0xff;
+    uint vertexCount = meshPayload._meshletVertexCounts[gid];
+    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid]; 
+    uint instancePerGroup = min(64 / vertexCount, 126 / primitiveCount);
+    uint instanceCount = 1;
+    //if(meshPayload._unpackedCount > 0 && gid > meshPayload._unpackedOffset) {        
+    //    uint meshletOffset = (gid - meshPayload._unpackedOffset) * instancePerGroup;
+    //    instanceCount = min(meshPayload._unpackedCount - meshletOffset, instancePerGroup);
+    //}
+
+    uint totalVertexCount = vertexCount * instanceCount;
+    uint totalPrimitiveCount = primitiveCount * instanceCount;
+    SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);
+
     uint vertexLocalGtid = gtid % vertexCount;
     uint primitiveLocalGtid = gtid % primitiveCount;
     uint vertexInstanceIndex = gtid / vertexCount;
-    uint primitiveInstanceIndex gtid / primitiveCount;
-    
-    uint vertexCount = meshPayload._meshletVertexCounts[gid];
-    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
-    SetMeshOutputCounts(vertexCount * instanceCount, primitiveCount * instanceCount);
-    
-    if(gtid < primitiveCount){
-        uint baseInstanceOffset = instanceOffset + primitiveInstanceIndex;
-        uint primitiveOffset = meshPayload._primitiveOffset[baseInstanceOffset];
+    uint primitiveInstanceIndex = gtid / primitiveCount;
+    uint instanceOffset = gid;
+    //if(meshPayload._unpackedCount > 0 && gid > meshPayload._unpackedOffset) {
+    //    instanceOffset = meshPayload._unpackedOffset + (gid - meshPayload._unpackedOffset) * instancePerGroup;
+    //}
+
+    if(gtid < totalPrimitiveCount){
+        uint primitiveMeshletOffset = instanceOffset + primitiveInstanceIndex;
+        uint primitiveOffset = meshPayload._primitiveOffset[instanceOffset];
         uint packedIndex = _primitives[primitiveOffset + primitiveLocalGtid];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-        uint primitiveInstanceOffset = primitiveInstanceIndex * primitiveCount;
-        unpackedIndex += uint3(primitiveInstanceOffset, primitiveInstanceOffset, primitiveInstanceOffset);
         tris[gtid] = unpackedIndex;
     }
 
-    if(gtid < vertexCount){
-        uint baseInstanceOffset = instanceOffset + vertexInstanceIndex;
-        uint meshInstanceIndex = meshPayload._meshInstanceIndices[baseInstanceOffset];
-        uint vertexLocalOffset = meshPayload._vertexOffset[baseInstanceOffset];
-        uint vertexIndexOffset = meshPayload._vertexIndexOffset[baseInstanceOffset];
-        uint materialIndex = meshPayload._materialIndex[baseInstanceOffset];
-    
+    if(gtid < totalVertexCount){
+        uint vertexMeshletOffset = instanceOffset + vertexInstanceIndex;
+        uint meshInstanceIndex = meshPayload._meshInstanceIndices[vertexMeshletOffset];
+        uint vertexLocalOffset = meshPayload._vertexOffset[vertexMeshletOffset];
+        uint vertexIndexOffset = meshPayload._vertexIndexOffset[vertexMeshletOffset];
+        uint materialIndex = meshPayload._materialIndex[vertexMeshletOffset];
         MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
         uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalGtid];
         uint vertexOffset = vertexLocalOffset + vertexIndex;
@@ -89,6 +93,7 @@ void main(
         verts[gtid] = vertexOut;
     }
 #endif
+
 #if UBER_PRIMITIVE_INSTANCING
     uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
     Meshlet meshlet = _meshlets[meshletIndex];
