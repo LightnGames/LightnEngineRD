@@ -45,7 +45,7 @@ void main(
     uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid]; 
     uint instancePerGroup = min(64 / vertexCount, 126 / primitiveCount);
     uint instanceCount = 1;
-    //if(meshPayload._unpackedCount > 0 && gid > meshPayload._unpackedOffset) {        
+    //if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {        
     //    uint meshletOffset = (gid - meshPayload._unpackedOffset) * instancePerGroup;
     //    instanceCount = min(meshPayload._unpackedCount - meshletOffset, instancePerGroup);
     //}
@@ -59,7 +59,7 @@ void main(
     uint vertexInstanceIndex = gtid / vertexCount;
     uint primitiveInstanceIndex = gtid / primitiveCount;
     uint instanceOffset = gid;
-    //if(meshPayload._unpackedCount > 0 && gid > meshPayload._unpackedOffset) {
+    //if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {
     //    instanceOffset = meshPayload._unpackedOffset + (gid - meshPayload._unpackedOffset) * instancePerGroup;
     //}
 
