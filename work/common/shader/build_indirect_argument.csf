@@ -27,13 +27,16 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     constant._instanceCount = instanceCount;
     constant._meshletCount = meshletCount;
     
+    uint packThreshold = 1;
     uint dispatchCount = (instanceCount * meshletCount / 32) + 1;
-    if (meshletCount == 1) {
-        Meshlet meshlet = _meshlets[subMesh._meshletOffset];
+    if (meshletCount <= packThreshold) {
+        Meshlet meshlet = _meshlets[subMesh._meshletOffset + meshletCount - 1];
         uint instanceCountPerThreadGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-        dispatchCount = (instanceCount / instanceCountPerThreadGroup) + 1;
+        uint baseInstanceCount = (meshletCount - 1) * instanceCount;
+        uint packInstanceCount = instanceCountPerThreadGroup * instanceCount;
+        dispatchCount = baseInstanceCount + packInstanceCount;
         constant._meshletCount = subMesh._meshletOffset;
-        constant._instanceCount = instanceCount;
+        constant._instanceCount = dispatchCount;
     }
     
     DispatchMeshIndirectArgument arguments;
@@ -45,7 +48,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint currentCount = 0;
     uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
     uint shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
-    if (meshletCount == 1) {
+    if (meshletCount <= packThreshold) {
         _primCountBuffer.InterlockedAdd(countOffset, 1, currentCount);
         _primIndirectArguments[shaderSetOffset + currentCount] = arguments;
     } else {
