@@ -105,7 +105,7 @@ void main(
     uint instanceCount = 1;
     if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1){
         uint offset = (_primitiveInstancingConstant._meshletCount - 1) * _primitiveInstancingConstant._instanceCount;
-        meshletInfoLocalOffset = offset + (gid - offset) * instanceCountPerGroup;
+        meshletInfoLocalOffset = (gid - offset) * instanceCountPerGroup;
         instanceCount = min(_primitiveInstancingConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
     }
     
