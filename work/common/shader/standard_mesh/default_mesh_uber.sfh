@@ -43,35 +43,33 @@ void main(
 #if UBER_DEFAULT
     uint vertexCount = meshPayload._meshletVertexCounts[gid];
     uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid]; 
-    uint instancePerGroup = min(64 / vertexCount, 126 / primitiveCount);
     uint instanceCount = 1;
-    //if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {        
-    //    uint meshletOffset = (gid - meshPayload._unpackedOffset) * instancePerGroup;
-    //    instanceCount = min(meshPayload._unpackedCount - meshletOffset, instancePerGroup);
-    //}
+    uint instanceOffset = gid;
+    if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {
+        uint instancePerGroup = min(64 / vertexCount, 126 / primitiveCount);
+        uint offset = (gid - meshPayload._unpackedOffset) * instancePerGroup;
+        instanceCount = min(meshPayload._unpackedCount - offset, instancePerGroup);
+        instanceOffset = meshPayload._unpackedOffset + offset;
+    }
 
     uint totalVertexCount = vertexCount * instanceCount;
     uint totalPrimitiveCount = primitiveCount * instanceCount;
     SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);
 
-    uint vertexLocalGtid = gtid % vertexCount;
-    uint primitiveLocalGtid = gtid % primitiveCount;
     uint vertexInstanceIndex = gtid / vertexCount;
     uint primitiveInstanceIndex = gtid / primitiveCount;
-    uint instanceOffset = gid;
-    //if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {
-    //    instanceOffset = meshPayload._unpackedOffset + (gid - meshPayload._unpackedOffset) * instancePerGroup;
-    //}
-
     if(gtid < totalPrimitiveCount){
+        uint primitiveLocalGtid = gtid % primitiveCount;
         uint primitiveMeshletOffset = instanceOffset + primitiveInstanceIndex;
         uint primitiveOffset = meshPayload._primitiveOffset[instanceOffset];
         uint packedIndex = _primitives[primitiveOffset + primitiveLocalGtid];
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
-        tris[gtid] = unpackedIndex;
+        uint indexOffset = primitiveInstanceIndex * vertexCount;
+        tris[gtid] = unpackedIndex + uint3(indexOffset, indexOffset, indexOffset);
     }
 
     if(gtid < totalVertexCount){
+        uint vertexLocalGtid = gtid % vertexCount;
         uint vertexMeshletOffset = instanceOffset + vertexInstanceIndex;
         uint meshInstanceIndex = meshPayload._meshInstanceIndices[vertexMeshletOffset];
         uint vertexLocalOffset = meshPayload._vertexOffset[vertexMeshletOffset];
@@ -95,21 +93,30 @@ void main(
 #endif
 
 #if UBER_PRIMITIVE_INSTANCING
-    uint meshletIndex = _primitiveInstancingConstant._meshletCount;// meshletIndex
-    Meshlet meshlet = _meshlets[meshletIndex];
+    uint meshletLocalIndex = gid / _primitiveInstancingConstant._instanceCount;
+    uint instanceOffset = gid % _primitiveInstancingConstant._instanceCount;
+    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
+    uint meshletIndex = _meshletInstanceInfos[globalInstanceIndex + instanceOffset]._meshletIndex;
+    Meshlet meshlet = _meshlets[meshletIndex + meshletLocalIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
-    uint instanceCountPerThreadGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-    uint vertexInstanceIndex = gtid / vertexCount;
-    uint primitiveInstanceIndex = gtid / primitiveCount;
-    uint localInstanceOffset = gid * instanceCountPerThreadGroup;
-    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset + localInstanceOffset;
-    uint instanceCount = min(_primitiveInstancingConstant._instanceCount - localInstanceOffset, instanceCountPerThreadGroup);
+    uint instanceCountPerGroup = min(64 / vertexCount, 126 / primitiveCount);
+    uint meshletInfoLocalOffset = instanceOffset;
+    uint instanceCount = 1;
+    if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1){
+        uint offset = (_primitiveInstancingConstant._meshletCount - 1) * _primitiveInstancingConstant._instanceCount;
+        meshletInfoLocalOffset = offset + (gid - offset) * instanceCountPerGroup;
+        instanceCount = min(_primitiveInstancingConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
+    }
+    
+    uint totalVertexCount = vertexCount * instanceCount;
+    uint totalPrimitiveCount = primitiveCount * instanceCount;
+    SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);
 
-    SetMeshOutputCounts(vertexCount * instanceCount, primitiveCount * instanceCount);
-
-    if(primitiveInstanceIndex < instanceCount) {
-        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[globalInstanceIndex + primitiveInstanceIndex];
+    if(gtid < totalPrimitiveCount) {
+        uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
+        uint primitiveInstanceIndex = gtid / primitiveCount;
+        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + primitiveInstanceIndex];
         uint primitiveGtid = gtid % primitiveCount;
         uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
         uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
@@ -120,8 +127,10 @@ void main(
         tris[gtid] = unpackedIndex;
     }
 
-    if(vertexInstanceIndex < instanceCount) {
-        MeshletInstanceInfo vertexMeshletInstanceInfo = _meshletInstanceInfos[globalInstanceIndex + vertexInstanceIndex];
+    if(gtid < totalVertexCount) {
+        uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
+        uint vertexInstanceIndex = gtid / vertexCount;
+        MeshletInstanceInfo vertexMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + vertexInstanceIndex];
         uint vertexGtid = gtid % vertexCount;
         uint meshInstanceIndex = vertexMeshletInstanceInfo._meshInstanceIndex;
         uint materialIndex = vertexMeshletInstanceInfo._materialIndex;

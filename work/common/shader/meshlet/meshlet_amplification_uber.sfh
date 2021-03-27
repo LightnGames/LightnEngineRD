@@ -65,10 +65,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     bool isPacked = false;
     
     uint meshletCount = _indirectArgumentConstant._meshletCount;
-    uint meshletOffset = dtid % meshletCount;
-    uint instanceOffset = dtid / meshletCount;
+    uint instanceCount = _indirectArgumentConstant._instanceCount;
+    uint meshletOffset = dtid / instanceCount;
+    uint instanceOffset = dtid % instanceCount;
     uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
-    if (instanceOffset < _indirectArgumentConstant._instanceCount) {
+    if (instanceOffset < instanceCount && meshletOffset < meshletCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
         Meshlet meshlet = _meshlets[meshletIndex];
@@ -113,12 +114,12 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             uint index = WavePrefixCountBits(visible);
             writePayloadStruct(index, meshlet, meshletInfo);
             
-            //if (meshletOffset == meshletCount - 1) {
-            //    uint instancePerGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
-            //    isPacked = true;
-            //    visible = (WavePrefixCountBits(isPacked) % instancePerGroup) == 0;
-            //    unpackedOffset = index;
-            //}
+            if (meshletOffset == meshletCount - 1) {
+                uint instancePerGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
+                isPacked = true;
+                visible = (WavePrefixCountBits(isPacked) % instancePerGroup) == 0;
+                unpackedOffset = index;
+            }
         }
     }
     
