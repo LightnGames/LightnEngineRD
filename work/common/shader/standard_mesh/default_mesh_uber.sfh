@@ -93,19 +93,19 @@ void main(
 #endif
 
 #if UBER_PRIMITIVE_INSTANCING
-    uint meshletLocalIndex = gid / _primitiveInstancingConstant._instanceCount;
+    uint meshletLocalIndex = min(gid / _primitiveInstancingConstant._instanceCount, _primitiveInstancingConstant._meshletCount - 1);
     uint instanceOffset = gid % _primitiveInstancingConstant._instanceCount;
     uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
     uint meshletIndex = _meshletInstanceInfos[globalInstanceIndex + instanceOffset]._meshletIndex;
+
     Meshlet meshlet = _meshlets[meshletIndex + meshletLocalIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
-    uint instanceCountPerGroup = min(64 / vertexCount, 126 / primitiveCount);
     uint meshletInfoLocalOffset = instanceOffset;
     uint instanceCount = 1;
-    if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1){
-        uint offset = (_primitiveInstancingConstant._meshletCount - 1) * _primitiveInstancingConstant._instanceCount;
-        meshletInfoLocalOffset = (gid - offset) * instanceCountPerGroup;
+    if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1) {
+        uint instanceCountPerGroup = min(64 / vertexCount, 126 / primitiveCount);
+        meshletInfoLocalOffset = instanceOffset * instanceCountPerGroup;
         instanceCount = min(_primitiveInstancingConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
     }
     

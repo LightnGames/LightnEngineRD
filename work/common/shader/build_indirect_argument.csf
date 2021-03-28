@@ -1,5 +1,11 @@
 #include "gpu_culling_function.sfh"
 
+struct Constant {
+    uint _packedMeshletCount;
+};
+
+ConstantBuffer<Constant> _constant : register(b0);
+
 ByteAddressBuffer _infoOffsets : register(t0);
 ByteAddressBuffer _infoCounts : register(t1);
 StructuredBuffer<SubMesh> _subMeshes : register(t2);
@@ -27,7 +33,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     constant._instanceCount = instanceCount;
     constant._meshletCount = meshletCount;
     
-    uint packThreshold = 1;
+    uint packThreshold = _constant._packedMeshletCount;
     uint dispatchCount = (instanceCount * meshletCount / 32) + 1;
     if (meshletCount <= packThreshold) {
         Meshlet meshlet = _meshlets[subMesh._meshletOffset + meshletCount - 1];

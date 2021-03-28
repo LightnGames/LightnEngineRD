@@ -97,6 +97,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
 		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshSrv = _resourceManager.getSubMeshSrv();
+		context._buildResource = &_buildIndirectArgumentResource;
 		_meshRenderer.buildIndirectArgument(context);
 	}
 
@@ -162,6 +163,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
 		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshSrv = _resourceManager.getSubMeshSrv();
+		context._buildResource = &_buildIndirectArgumentResource;
 		_meshRenderer.buildIndirectArgument(context);
 	}
 
@@ -537,6 +539,7 @@ void MeshRendererSystemImpl::initialize() {
 	}
 #endif
 	_gpuCullingResource.initialize();
+	_buildIndirectArgumentResource.initialize();
 
 	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 
@@ -569,6 +572,7 @@ void MeshRendererSystemImpl::terminate() {
 	_indirectArgumentResource.terminate();
 	_primIndirectArgumentResource.terminate();
 	_gpuCullingResource.terminate();
+	_buildIndirectArgumentResource.terminate();
 	_primitiveInstancingResource.terminate();
 
 #if ENABLE_MULTI_INDIRECT_DRAW
@@ -605,6 +609,7 @@ void MeshRendererSystemImpl::update() {
 			bool _fixedCullingView = false;
 			GeometoryType _geometoryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
+			s32 _packedMeshletCount = 0;
 		};
 
 		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("MeshInstanceDebug");
@@ -620,12 +625,14 @@ void MeshRendererSystemImpl::update() {
 
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
+		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 100);
 		DebugWindow::End();
 
 		if (debug._drawMeshInstanceBounds) {
 			_scene.debugDrawMeshInstanceBounds();
 		}
 
+		_packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_visible = debug._visible;
 		_debugPrimitiveType = debug._primitiveType;
@@ -768,6 +775,12 @@ void MeshRendererSystemImpl::update() {
 	}
 
 	DebugWindow::End();
+
+	{
+		BuildIndirectArgumentResource::UpdateDesc desc;
+		desc._packedMeshletCount = _packedMeshletCount;
+		_buildIndirectArgumentResource.update(desc);
+	}
 
 	if (_scene.isUpdatedInstancingOffset() || isUpdatedGeometryType) {
 		switch (_geometoryType) {

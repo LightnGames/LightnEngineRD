@@ -195,12 +195,16 @@ void MeshRenderer::initialize()
 		DescriptorRange primIndirectArgumentUavRange = {};
 		primIndirectArgumentUavRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 2, 2);
 
+		DescriptorRange constantCbvRange = {};
+		constantCbvRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+
 		RootParameter rootParameters[BuildIndirectArgumentRootParameters::ROOT_PARAM_COUNT] = {};
 		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_OFFSET].initializeDescriptorTable(1, &batchedSubMeshInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::BATCHED_SUBMESH_COUNT].initializeDescriptorTable(1, &batchedSubMeshInfoCountSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::SUB_MESH].initializeDescriptorTable(1, &subMeshSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &indirectArgumentUavRange, SHADER_VISIBILITY_ALL);
 		rootParameters[BuildIndirectArgumentRootParameters::PRIM_INDIRECT_ARGUMENT].initializeDescriptorTable(1, &primIndirectArgumentUavRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParameters::CONSTANT].initializeDescriptorTable(1, &constantCbvRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -492,6 +496,7 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::SUB_MESH, context._subMeshSrv);
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::INDIRECT_ARGUMENT, indirectArgumentResource->getIndirectArgumentUav());
 	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::PRIM_INDIRECT_ARGUMENT, primIndirectArgumentResource->getIndirectArgumentUav());
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParameters::CONSTANT, context._buildResource->getConstantCbv());
 
 	u32 dispatchCount = RoundUp(InstancingResource::INDIRECT_ARGUMENT_COUNTER_COUNT_MAX, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);

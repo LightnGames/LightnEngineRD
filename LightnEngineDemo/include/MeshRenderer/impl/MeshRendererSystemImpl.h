@@ -51,6 +51,7 @@ private:
 	IndirectArgumentResource _indirectArgumentResource;
 	IndirectArgumentResource _primIndirectArgumentResource;
 	GpuCullingResource _gpuCullingResource;
+	BuildIndirectArgumentResource _buildIndirectArgumentResource;
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	MultiDrawInstancingResource _multiDrawInstancingResource;
@@ -84,6 +85,7 @@ private:
 		_cullingDebugType = flag ? _cullingDebugType | type : _cullingDebugType & ~type;
 	}
 
+	u32 _packedMeshletCount = 0;
 	bool _debugDrawMeshletBounds = false;
 	GeometoryType _geometoryType;
 	DebugPrimitiveType _debugPrimitiveType;

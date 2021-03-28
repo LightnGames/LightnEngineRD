@@ -8,6 +8,7 @@ class IndirectArgumentResource;
 class VramShaderSet;
 class InstancingResource;
 class GpuCullingResource;
+class BuildIndirectArgumentResource;
 
 struct RenderContext {
 	CommandList* _commandList = nullptr;
@@ -87,6 +88,7 @@ struct BuildIndirectArgumentContext {
 	CommandList* _commandList = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	IndirectArgumentResource* _primIndirectArgumentResource = nullptr;
+	BuildIndirectArgumentResource* _buildResource = nullptr;
 	GpuDescriptorHandle _meshletInstanceOffsetSrv;
 	GpuDescriptorHandle _meshletInstanceCountSrv;
 	GpuDescriptorHandle _subMeshSrv;

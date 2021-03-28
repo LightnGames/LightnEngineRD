@@ -74,6 +74,7 @@ struct BuildIndirectArgumentRootParameters {
 		SUB_MESH,
 		INDIRECT_ARGUMENT,
 		PRIM_INDIRECT_ARGUMENT,
+		CONSTANT,
 		ROOT_PARAM_COUNT
 	};
 };

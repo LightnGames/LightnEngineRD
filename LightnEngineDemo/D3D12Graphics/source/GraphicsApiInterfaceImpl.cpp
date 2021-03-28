@@ -1418,6 +1418,10 @@ namespace DebugGui {
 		return ImGui::DragFloat4(label, v, v_speed, v_min, v_max, format, power);
 	}
 
+	bool SliderInt(const char* label, int* v, int v_min, int v_max, const char* format) {
+		return ImGui::SliderInt(label, v, v_min, v_max, format);
+	}
+
 	bool SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power) {
 		return ImGui::SliderFloat(label, v, v_min, v_max, format, power);
 	}

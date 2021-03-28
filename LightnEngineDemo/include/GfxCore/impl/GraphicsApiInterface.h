@@ -1338,6 +1338,8 @@ namespace DebugGui {
 	bool LTN_GFX_API DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
 	bool LTN_GFX_API DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
 
+	bool LTN_GFX_API SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d");
+
 	bool LTN_GFX_API SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
 	bool LTN_GFX_API SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
 	bool LTN_GFX_API SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);

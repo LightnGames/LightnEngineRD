@@ -267,6 +267,27 @@ private:
 };
 #endif
 
+class BuildIndirectArgumentResource {
+public:
+	struct UpdateDesc {
+		u32 _packedMeshletCount = 0;
+	};
+
+	struct Constant {
+		u32 _packedMeshletCount = 0;
+	};
+
+	void initialize();
+	void terminate();
+	void update(const UpdateDesc& desc);
+
+	GpuDescriptorHandle getConstantCbv() const { return _constantCbv._gpuHandle; }
+
+private:
+	GpuBuffer _constantBuffer;
+	DescriptorHandle _constantCbv;
+};
+
 class Scene {
 public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 4;

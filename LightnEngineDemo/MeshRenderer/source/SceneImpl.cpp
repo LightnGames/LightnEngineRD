@@ -1038,3 +1038,30 @@ void MultiDrawInstancingResource::update(const UpdateDesc& desc) {
 	memcpy(mapIndirectArgumentOffsets, _indirectArgumentOffsets, sizeof(u32) * gpu::SHADER_SET_COUNT_MAX);
 }
 #endif
+
+void BuildIndirectArgumentResource::initialize() {
+	Device* device = GraphicsSystemImpl::Get()->getDevice();
+	GpuBufferDesc desc = {};
+	desc._device = device;
+	desc._sizeInByte = GetConstantBufferAligned(sizeof(Constant));
+	desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+	_constantBuffer.initialize(desc);
+	_constantBuffer.setDebugName("Build Indirect Argument Constant");
+	
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	_constantCbv = allocator->allocateDescriptors(1);
+	device->createConstantBufferView(_constantBuffer.getConstantBufferViewDesc(), _constantCbv._cpuHandle);
+}
+
+void BuildIndirectArgumentResource::terminate() {
+	_constantBuffer.terminate();
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_constantCbv);
+}
+
+void BuildIndirectArgumentResource::update(const UpdateDesc& desc) {
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	Constant* constant = vramUpdater->enqueueUpdate<Constant>(&_constantBuffer, 0, 1);
+	constant->_packedMeshletCount = desc._packedMeshletCount;
+}
