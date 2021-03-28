@@ -11,9 +11,9 @@ ByteAddressBuffer _infoCounts : register(t1);
 StructuredBuffer<SubMesh> _subMeshes : register(t2);
 StructuredBuffer<Meshlet> _meshlets : register(t3);
 
-RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
+RWStructuredBuffer<DispatchMeshIndirectArgumentAS> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
-RWStructuredBuffer<DispatchMeshIndirectArgument> _primIndirectArguments : register(u2);
+RWStructuredBuffer<DispatchMeshIndirectArgumentMS> _primIndirectArguments : register(u2);
 RWByteAddressBuffer _primCountBuffer : register(u3);
 
 [numthreads(128, 1, 1)]
@@ -43,19 +43,29 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         dispatchCount = baseInstanceCount + packInstanceCount;
     }
     
-    DispatchMeshIndirectArgument arguments;
-    arguments._constant = constant;
-    arguments._dispatchX = dispatchCount;
-    arguments._dispatchY = 1;
-    arguments._dispatchZ = 1;
-    
     uint currentCount = 0;
     uint countOffset = shaderSetIndex * UINT32_SIZE_IN_BYTE;
     uint shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
     if (meshletCount <= packThreshold) {
+        MeshShaderIndirectArgument msConstant;
+        msConstant._constant = constant;
+        msConstant._meshletOffset = subMesh._meshletOffset;
+        
+        DispatchMeshIndirectArgumentMS arguments;
+        arguments._constant = msConstant;
+        arguments._dispatchX = dispatchCount;
+        arguments._dispatchY = 1;
+        arguments._dispatchZ = 1;
+        
         _primCountBuffer.InterlockedAdd(countOffset, 1, currentCount);
         _primIndirectArguments[shaderSetOffset + currentCount] = arguments;
     } else {
+        DispatchMeshIndirectArgumentAS arguments;
+        arguments._constant = constant;
+        arguments._dispatchX = dispatchCount;
+        arguments._dispatchY = 1;
+        arguments._dispatchZ = 1;
+        
         _countBuffer.InterlockedAdd(countOffset, 1, currentCount);
         _indirectArguments[shaderSetOffset + currentCount] = arguments;
     }

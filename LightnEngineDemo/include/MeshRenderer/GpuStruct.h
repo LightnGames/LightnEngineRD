@@ -78,10 +78,20 @@ namespace gpu {
 		u32 _shaderSetIndex = 0;
 	};
 
-	struct DispatchMeshIndirectArgument {
+	struct DispatchMeshIndirectArgumentAS {
 		u32 _meshletInstanceInfoOffset = 0;
 		u32 _instanceCount = 0;
 		u32 _meshletCount = 0;
+		u32 _dispatchX = 0;
+		u32 _dispatchY = 0;
+		u32 _dispatchZ = 0;
+	};
+
+	struct DispatchMeshIndirectArgumentMS {
+		u32 _meshletInstanceInfoOffset = 0;
+		u32 _instanceCount = 0;
+		u32 _meshletCount = 0;
+		u32 _meshletOffset = 0;
 		u32 _dispatchX = 0;
 		u32 _dispatchY = 0;
 		u32 _dispatchZ = 0;

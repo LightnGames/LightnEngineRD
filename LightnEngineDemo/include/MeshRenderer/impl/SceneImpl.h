@@ -95,6 +95,7 @@ public:
 	struct InitializeDesc {
 		u32 _indirectArgumentCount = 0;
 		u32 _indirectArgumentCounterCount = 0;
+		u32 _strideInByte = 0;
 	};
 
 	void initialize(const InitializeDesc& desc);

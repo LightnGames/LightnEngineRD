@@ -107,6 +107,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
+		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING);
 		RenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
@@ -117,8 +119,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
-		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER)->_depthPipelineStateGroups;
-		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_depthPipelineStateGroups;
+		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
+		context._primInstancingPipelineStates = primPipelineStateSet->_depthPipelineStateGroups;
+		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		_meshRenderer.render(context);
@@ -174,6 +178,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
+		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING);
 		PipelineStateGroup** pipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
 		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
@@ -219,7 +224,9 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
 		context._pipelineStates = pipelineStates;
-		context._primInstancingPipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING)->_pipelineStateGroups;
+		context._primInstancingPipelineStates = primPipelineStateSet->_pipelineStateGroups;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._collectResult = true;
 		_meshRenderer.render(context);
 
@@ -309,6 +316,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
 
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
@@ -318,7 +326,8 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-		context._pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_depthPipelineStateGroups;
+		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
@@ -359,10 +368,11 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	{
 		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		PipelineStateGroup** pipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
 		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_pipelineStateGroups;
+			pipelineStates = pipelineStateSet->_pipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_MESHLET:
 			//pipelineStates = classicShaderSet->_debugPipelineState;
@@ -387,6 +397,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 		context._pipelineStates = pipelineStates;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
@@ -519,6 +530,7 @@ void MeshRendererSystemImpl::initialize() {
 		IndirectArgumentResource::InitializeDesc desc;
 		desc._indirectArgumentCount = 1024 * 256;
 		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
+		desc._strideInByte = sizeof(gpu::DispatchMeshIndirectArgumentAS);
 		_indirectArgumentResource.initialize(desc);
 	}
 
@@ -526,6 +538,7 @@ void MeshRendererSystemImpl::initialize() {
 		IndirectArgumentResource::InitializeDesc desc;
 		desc._indirectArgumentCount = MeshResourceManager::SUB_MESH_COUNT_MAX * gpu::SHADER_SET_COUNT_MAX;
 		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
+		desc._strideInByte = sizeof(gpu::DispatchMeshIndirectArgumentMS);
 		_primIndirectArgumentResource.initialize(desc);
 	}
 
@@ -535,6 +548,7 @@ void MeshRendererSystemImpl::initialize() {
 		IndirectArgumentResource::InitializeDesc desc;
 		desc._indirectArgumentCount = Scene::SUB_MESH_INSTANCE_COUNT_MAX;
 		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
+		desc._strideInByte = sizeof(gpu::StarndardMeshIndirectArguments);
 		_multiDrawIndirectArgumentResource.initialize(desc);
 	}
 #endif

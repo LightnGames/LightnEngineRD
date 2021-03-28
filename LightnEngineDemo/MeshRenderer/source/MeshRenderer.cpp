@@ -402,7 +402,6 @@ void MeshRenderer::render(const RenderContext& context) {
 		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		u32 indirectArgumentOffset = pipelineStateIndex * InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
-		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
 
 		// メッシュレット　インスタンシング描画
 		{
@@ -422,7 +421,8 @@ void MeshRenderer::render(const RenderContext& context) {
 				context._gpuCullingResource->setDrawResultDescriptorTable(commandList);
 			}
 			commandList->setPipelineState(pipelineState->getPipelineState());
-			CommandSignature* commandSignature = pipelineState->getCommandSignature();
+			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
+			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentAS);
 			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
@@ -442,7 +442,8 @@ void MeshRenderer::render(const RenderContext& context) {
 			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
 
 			commandList->setPipelineState(pipelineState->getPipelineState());
-			CommandSignature* commandSignature = pipelineState->getCommandSignature();
+			CommandSignature* commandSignature = context._primCommandSignatures[pipelineStateIndex];
+			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 	}
@@ -598,7 +599,8 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, context._meshInstanceHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
-		indirectArgumentResource->executeIndirect(commandList, pipelineState->getCommandSignature(), commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
+		indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 	}
 
 	gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);

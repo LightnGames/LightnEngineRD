@@ -442,7 +442,7 @@ void IndirectArgumentResource::initialize(const InitializeDesc& initializeDesc) 
 	// indirect argument buffers
 	{
 		GpuBufferDesc desc = {};
-		desc._sizeInByte = sizeof(gpu::DispatchMeshIndirectArgument) * initializeDesc._indirectArgumentCount;
+		desc._sizeInByte = initializeDesc._strideInByte * initializeDesc._indirectArgumentCount;
 		desc._initialState = RESOURCE_STATE_INDIRECT_ARGUMENT;
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		desc._device = device;
@@ -466,7 +466,7 @@ void IndirectArgumentResource::initialize(const InitializeDesc& initializeDesc) 
 		desc._viewDimension = UAV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
 		desc._buffer._numElements = initializeDesc._indirectArgumentCount;
-		desc._buffer._structureByteStride = sizeof(gpu::DispatchMeshIndirectArgument);
+		desc._buffer._structureByteStride = initializeDesc._strideInByte;
 		device->createUnorderedAccessView(_indirectArgumentBuffer.getResource(), nullptr, &desc, indirectArgumentHandle);
 
 		desc._buffer._numElements = initializeDesc._indirectArgumentCounterCount;

@@ -50,6 +50,9 @@ struct ShaderSetImplDesc {
 	PipelineStateGroup** _debugWireFramePipelineStateGroup = nullptr;
 	PipelineStateGroup** _classicPipelineStateGroup = nullptr;
 	PipelineStateGroup** _classicDepthPipelineStateGroup = nullptr;
+	CommandSignature** _commandSignature = nullptr;
+	CommandSignature** _msCommandSignature = nullptr;
+	CommandSignature** _multiDrawCommandSignature = nullptr;
 };
 
 struct ShaderSetImpl :public ShaderSet {
@@ -100,6 +103,7 @@ public:
 	PipelineStateGroup* _debugDepthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugWireFramePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	CommandSignature* _commandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 };
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {

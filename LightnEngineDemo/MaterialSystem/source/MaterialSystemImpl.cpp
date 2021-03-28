@@ -116,6 +116,9 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._primitiveInstancingDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
 		implDesc._classicPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._pipelineStateGroups[findIndex];
 		implDesc._classicDepthPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._depthPipelineStateGroups[findIndex];
+		implDesc._commandSignature = &_pipelineStateSets[TYPE_MESH_SHADER]._commandSignatures[findIndex];
+		implDesc._msCommandSignature = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._commandSignatures[findIndex];
+		implDesc._multiDrawCommandSignature = &_pipelineStateSets[TYPE_CLASSIC]._commandSignatures[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -325,13 +328,20 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// メッシュレット　プリミティブインスタンシング
 	{
+		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
+		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter)* ROOT_FRUSTUM_COUNT);
+		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
+
+		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
+		rootSignatureDesc._parameters = rootParameters;
+
 		// Depth Only
 		pipelineStateDesc._meshShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\standard_mesh\\default_mesh_primitive_instancing.mso";
-		*implDesc._primitiveInstancingDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+		*implDesc._primitiveInstancingDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// フラスタム ＋ オクルージョンカリング
 		pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
-		*implDesc._primitiveInstancingPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+		*implDesc._primitiveInstancingPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 	}
 
 	pipelineStateDesc._meshShaderFilePath = meshShaderPath;
@@ -434,6 +444,52 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		// "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso"
 	}
+
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+		*implDesc._commandSignature = allocator->allocateCommandSignature();
+		*implDesc._msCommandSignature = allocator->allocateCommandSignature();
+
+		IndirectArgumentDesc argumentDescs[2] = {};
+		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+		argumentDescs[0].Constant._num32BitValuesToSet = 3;
+		argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_INDIRECT_CONSTANT;
+		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+
+		CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentAS);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		desc._rootSignature = (*implDesc._pipelineStateGroup)->getRootSignature();
+		(*implDesc._commandSignature)->initialize(desc);
+
+		argumentDescs[0].Constant._num32BitValuesToSet = 4;
+		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentMS);
+		desc._rootSignature = (*implDesc._primitiveInstancingPipelineStateGroup)->getRootSignature();
+		(*implDesc._msCommandSignature)->initialize(desc);
+	}
+
+#if ENABLE_MULTI_INDIRECT_DRAW
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+
+		IndirectArgumentDesc argumentDescs[2] = {};
+		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
+		argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
+		argumentDescs[0].Constant._num32BitValuesToSet = 2;
+		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		desc._rootSignature = (*implDesc._classicPipelineStateGroup)->getRootSignature();
+		(*implDesc._multiDrawCommandSignature) = allocator->allocateCommandSignature();
+		(*implDesc._multiDrawCommandSignature)->initialize(desc);
+	}
+#endif
 }
 
 void ShaderSetImpl::terminate() {
@@ -484,5 +540,10 @@ void PipelineStateSet::requestDelete(u32 shaderSetIndex){
 	if (_debugWireFramePipelineStateGroups[shaderSetIndex]) {
 		_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
 		_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
+	}
+
+	if (_commandSignatures[shaderSetIndex]) {
+		_commandSignatures[shaderSetIndex]->terminate();
+		_commandSignatures[shaderSetIndex] = nullptr;
 	}
 }

@@ -149,25 +149,6 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
 	if (pixelShader != nullptr) {
 		pixelShader->terminate();
 	}
-
-    {
-        GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-        _commandSignature = allocator->allocateCommandSignature();
-
-        IndirectArgumentDesc argumentDescs[2] = {};
-        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-        argumentDescs[0].Constant._num32BitValuesToSet = 3;
-        argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_INDIRECT_CONSTANT;
-        argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
-
-        CommandSignatureDesc desc = {};
-        desc._device = device;
-        desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgument);
-        desc._argumentDescs = argumentDescs;
-        desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-        desc._rootSignature = _rootSignature;
-        _commandSignature->initialize(desc);
-    }
 #endif
 }
 
@@ -218,27 +199,6 @@ void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, c
     if (pixelShader != nullptr) {
         pixelShader->terminate();
     }
-
-#if ENABLE_MULTI_INDIRECT_DRAW
-    {
-        GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-
-        IndirectArgumentDesc argumentDescs[2] = {};
-        argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-        argumentDescs[0].Constant._rootParameterIndex = ROOT_CLASSIC_MESH_INFO;
-        argumentDescs[0].Constant._num32BitValuesToSet = 2;
-        argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-
-        CommandSignatureDesc desc = {};
-        desc._device = device;
-        desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
-        desc._argumentDescs = argumentDescs;
-        desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-        desc._rootSignature = _rootSignature;
-        _commandSignature = allocator->allocateCommandSignature();
-        _commandSignature->initialize(desc);
-    }
-#endif
 }
 
 u64 PipelineStateSystem::getPipelineStateGrpupHash(const PipelineStateGroup* group) const {
@@ -253,10 +213,6 @@ void PipelineStateGroup::terminate() {
 
 	if (_rootSignature != nullptr) {
 		_rootSignature->terminate();
-	}
-
-	if (_commandSignature != nullptr) {
-		_commandSignature->terminate();
 	}
 }
 

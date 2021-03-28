@@ -23,8 +23,6 @@ Texture2D<float> _hizTextures[] : register(t13);
 #define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
 #define PRIMITIVE_INSTANCING_THREAD_COUNT_MAX 126
 
-RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
-RWByteAddressBuffer _indirectArgumentCounts : register(u1);
 RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
 RWByteAddressBuffer _meshletInstanceInfoCounts : register(u3);
 RWStructuredBuffer<MeshletInstanceInfo> _primitiveInstancingInfos : register(u4);

@@ -4,7 +4,7 @@
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 #if UBER_PRIMITIVE_INSTANCING
-ConstantBuffer<IndirectArgumentConstant> _primitiveInstancingConstant : register(b2);
+ConstantBuffer<MeshShaderIndirectArgument> _primitiveInstancingConstant : register(b2);
 #endif
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
@@ -93,22 +93,23 @@ void main(
 #endif
 
 #if UBER_PRIMITIVE_INSTANCING
-    uint meshletLocalIndex = min(gid / _primitiveInstancingConstant._instanceCount, _primitiveInstancingConstant._meshletCount - 1);
-    uint instanceOffset = gid % _primitiveInstancingConstant._instanceCount;
-    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
-    uint meshletIndex = _meshletInstanceInfos[globalInstanceIndex + instanceOffset]._meshletIndex;
-
+    IndirectArgumentConstant indirectArgumentConstant = _primitiveInstancingConstant._constant;
+    uint meshletLocalIndex = min(gid / indirectArgumentConstant._instanceCount, indirectArgumentConstant._meshletCount - 1);
+    uint meshletIndex = _primitiveInstancingConstant._meshletOffset;
     Meshlet meshlet = _meshlets[meshletIndex + meshletLocalIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
+
+    uint instanceOffset = gid % indirectArgumentConstant._instanceCount;
     uint meshletInfoLocalOffset = instanceOffset;
     uint instanceCount = 1;
-    if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1) {
+    if(meshletLocalIndex == indirectArgumentConstant._meshletCount - 1) {
         uint instanceCountPerGroup = min(64 / vertexCount, 126 / primitiveCount);
         meshletInfoLocalOffset = instanceOffset * instanceCountPerGroup;
-        instanceCount = min(_primitiveInstancingConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
+        instanceCount = min(indirectArgumentConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
     }
     
+    uint globalInstanceIndex = indirectArgumentConstant._meshletInstanceInfoOffset;
     uint totalVertexCount = vertexCount * instanceCount;
     uint totalPrimitiveCount = primitiveCount * instanceCount;
     SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);
@@ -116,7 +117,7 @@ void main(
     if(gtid < totalPrimitiveCount) {
         uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
         uint primitiveInstanceIndex = gtid / primitiveCount;
-        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + primitiveInstanceIndex];
+        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + primitiveInstanceIndex]; // TODO:　メモリアクセス改善
         uint primitiveGtid = gtid % primitiveCount;
         uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
         uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;

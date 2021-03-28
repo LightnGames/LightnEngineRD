@@ -33,8 +33,20 @@ struct IndirectArgumentConstant {
     uint _meshletCount;
 };
 
-struct DispatchMeshIndirectArgument {
+struct MeshShaderIndirectArgument {
     IndirectArgumentConstant _constant;
+    uint _meshletOffset;
+};
+
+struct DispatchMeshIndirectArgumentAS {
+    IndirectArgumentConstant _constant;
+    uint _dispatchX;
+    uint _dispatchY;
+    uint _dispatchZ;
+};
+
+struct DispatchMeshIndirectArgumentMS {
+    MeshShaderIndirectArgument _constant;
     uint _dispatchX;
     uint _dispatchY;
     uint _dispatchZ;

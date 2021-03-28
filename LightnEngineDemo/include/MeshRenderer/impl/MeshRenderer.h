@@ -20,6 +20,8 @@ struct RenderContext {
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	PipelineStateGroup** _primInstancingPipelineStates = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
+	CommandSignature** _primCommandSignatures = nullptr;
+	CommandSignature** _commandSignatures = nullptr;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;
 	GpuDescriptorHandle _vertexResourceDescriptors;
@@ -60,6 +62,7 @@ struct MultiIndirectRenderContext {
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	VramShaderSet* _vramShaderSets = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
+	CommandSignature** _commandSignatures = nullptr;
 	VertexBufferView* _vertexBufferViews = nullptr;
 	IndexBufferView* _indexBufferView = nullptr;
 	u32 _numVertexBufferView = 0;
