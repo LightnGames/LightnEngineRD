@@ -316,14 +316,15 @@ void Scene::debugDrawGui() {
 	DebugGui::EndTabItem();
 }
 
-MeshInstance* Scene::createMeshInstance(const Mesh* mesh) {
+MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
 	const MeshInfo* meshInfo = mesh->getMeshInfo();
-	u32 meshInstanceIndex = _gpuMeshInstances.request(1);
-	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(meshInfo->_totalLodMeshCount);
-	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(meshInfo->_totalSubMeshCount);
+	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
+	u32 subMeshCount = meshInfo->_totalSubMeshCount;
+	u32 meshInstanceIndex = _gpuMeshInstances.request(instanceCount);
+	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(lodMeshCount);
+	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(subMeshCount);
 
 	// mesh instance î•ñ‚ð‰Šú‰»
-	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
 	for (u32 lodMeshIndex = 0; lodMeshIndex < lodMeshCount; ++lodMeshIndex) {
 		f32 threshhold = 1.0f - ((lodMeshIndex + 1) / static_cast<f32>(lodMeshCount));
 		gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[lodMeshInstanceIndex + lodMeshIndex];
@@ -332,7 +333,6 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh) {
 	}
 
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	u32 subMeshCount = meshInfo->_totalSubMeshCount;
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndex);
 		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndex);

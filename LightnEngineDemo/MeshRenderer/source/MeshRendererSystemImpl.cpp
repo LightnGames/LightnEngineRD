@@ -875,7 +875,7 @@ Mesh* MeshRendererSystemImpl::createMesh(const MeshDesc& desc) {
 }
 
 MeshInstance* MeshRendererSystemImpl::createMeshInstance(const MeshInstanceDesc& desc) {
-	return _scene.createMeshInstance(desc.mesh);
+	return _scene.createMeshInstance(desc._mesh, desc._instanceCount);
 }
 
 Mesh* MeshRendererSystemImpl::findMesh(u64 filePathHash) {

@@ -34,9 +34,15 @@ struct DebugWindowStructure :public T {
 
 		LTN_ASSERT(!fin.fail());
 		fin.close();
+
+		_data = static_cast<T>(*this);
 	}
 
 	~DebugWindowStructure() {
+		if (!memcmp(&_data, static_cast<const T*>(this), sizeof(T))) {
+			return;
+		}
+
 		char fullPath[256] = {};
 		sprintf_s(fullPath, "%s%s%s", DEBUG_WINDOW_STRUCTURE_FOLDER_PATH, _fileName, DEBUG_WINDOW_STRUCTURE_EXT);
 		std::ofstream fout;
@@ -47,6 +53,7 @@ struct DebugWindowStructure :public T {
 		fout.close();
 	}
 
+	T _data;
 	const char* _fileName = nullptr;
 #else
 	DebugWindowStructure(const char* fileName) {}

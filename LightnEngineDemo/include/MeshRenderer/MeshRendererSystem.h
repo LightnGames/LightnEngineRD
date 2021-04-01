@@ -156,7 +156,8 @@ struct MeshDesc {
 };
 
 struct MeshInstanceDesc {
-	const Mesh* mesh = nullptr;
+	const Mesh* _mesh = nullptr;
+	u32 _instanceCount = 1;
 };
 
 class LTN_MESH_RENDERER_API MeshRendererSystem {

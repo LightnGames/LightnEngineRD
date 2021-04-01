@@ -159,7 +159,7 @@ public:
 
 				MeshInstance*& meshInstance = _meshInstances[currentMeshInstanceIndex];
 				MeshInstanceDesc desc = {};
-				desc.mesh = _meshes[meshPathIndex];
+				desc._mesh = _meshes[meshPathIndex];
 				meshInstance = meshSystem->createMeshInstance(desc);
 				meshInstance->setWorldMatrix(worldMatrix);
 
@@ -302,7 +302,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		//meshInstance2->setMaterialSlotIndex(material, 0);
 		//meshInstance2->setWorldMatrix(Matrix4::translate(-1, 0, 0));
 
-		desc.mesh = mesh3;
+		desc._mesh = mesh3;
 		//meshInstance3 = meshSystem->createMeshInstance(desc);
 		//meshInstance3->setMaterialSlotIndex(material, 0);
 		//meshInstance3->setWorldMatrix(Matrix4::rotateX(DegToRad(-90.0f)) * Matrix4::translate(-1, 1, 0));
