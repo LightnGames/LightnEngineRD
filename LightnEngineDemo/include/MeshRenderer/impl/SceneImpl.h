@@ -310,7 +310,8 @@ public:
 
 	bool isUpdatedInstancingOffset() const { return _isUpdatedInstancingOffset; }
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
-	MeshInstance* createMeshInstance(const Mesh* mesh, u32 instanceCount);
+	MeshInstance* allocateMeshInstance(const Mesh** meshes, u32 instanceCount);
+	void initializeMeshInstance(MeshInstance* meshInstance, u32 offset);
 	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceSrv; }
 	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }

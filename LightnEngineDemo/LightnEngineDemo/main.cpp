@@ -139,38 +139,45 @@ public:
 			_assets[currentAssetIndex]->requestLoad();
 		}
 
-		for (u32 i = 0; i < 5; ++i) {
-			if (_meshInstanceStreamingCounter < _levelHeader._meshInstanceCount) {
-				MeshRendererSystem* meshSystem = MeshRendererSystem::Get();
-				u32 currentMeshInstanceIndex = _meshInstanceStreamingCounter++;
-				Vector4 wv[3] = {};
-				u32 meshPathIndex = 0;
-				_fin.read(reinterpret_cast<char*>(&meshPathIndex), sizeof(u32));
-				_fin.read(reinterpret_cast<char*>(&wv), sizeof(Vector4) * 3);
+		Mesh* meshes[5];
+		u32 loadMeshInstanceCount = _levelHeader._meshInstanceCount - _meshInstanceStreamingCounter;
+		for (u32 i = 0; i < loadMeshInstanceCount; ++i) {
+			u32 meshPathIndex = 0;
+			_fin.read(reinterpret_cast<char*>(&meshPathIndex), sizeof(u32));
+			meshes[i] = _meshes[meshPathIndex];
+		}
 
-				Matrix4 worldMatrix(
-					wv[0].x, wv[1].x, wv[2].x, 0.0f,
-					wv[0].y, wv[1].y, wv[2].y, 0.0f,
-					wv[0].z, wv[1].z, wv[2].z, 0.0f,
-					wv[0].w, wv[1].w, wv[2].w, 1.0f);
+		MeshRendererSystem* meshSystem = MeshRendererSystem::Get();
+		MeshInstance*& meshInstances = _meshInstances[_meshInstanceStreamingCounter];
+		MeshInstanceDesc desc = {};
+		desc._meshes = meshes;
+		desc._instanceCount = loadMeshInstanceCount;
+		meshInstances = meshSystem->allocateMeshInstance(desc);
 
-				u32 materialInstanceCount = 0;
-				_fin.read(reinterpret_cast<char*>(&materialInstanceCount), sizeof(u32));
+		for (u32 i = 0; i < loadMeshInstanceCount; ++i) {
+			MeshInstance* meshInstance = meshInstances + i;
+			_meshInstances[_meshInstanceStreamingCounter + i] = meshInstance;
+			meshSystem->initializeMeshInstance(meshInstances, i);
 
-				MeshInstance*& meshInstance = _meshInstances[currentMeshInstanceIndex];
-				MeshInstanceDesc desc = {};
-				desc._mesh = _meshes[meshPathIndex];
-				meshInstance = meshSystem->createMeshInstance(desc);
-				meshInstance->setWorldMatrix(worldMatrix);
+			Vector4 wv[3] = {};
+			_fin.read(reinterpret_cast<char*>(&wv), sizeof(Vector4) * 3);
+			Matrix4 worldMatrix = Matrix4(
+				wv[0].x, wv[1].x, wv[2].x, 0.0f,
+				wv[0].y, wv[1].y, wv[2].y, 0.0f,
+				wv[0].z, wv[1].z, wv[2].z, 0.0f,
+				wv[0].w, wv[1].w, wv[2].w, 1.0f);
 
-				for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-					u32 materialPathIndex = 0;
-					_fin.read(reinterpret_cast<char*>(&materialPathIndex), sizeof(u32));
-					Material* material = _materials[materialPathIndex];
-					meshInstance->setMaterialSlotIndex(material, materialInstanceIndex);
-				}
+			u32 materialInstanceCount = 0;
+			_fin.read(reinterpret_cast<char*>(&materialInstanceCount), sizeof(u32));
+			for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
+				u32 materialPathIndex = 0;
+				_fin.read(reinterpret_cast<char*>(&materialPathIndex), sizeof(u32));
+				Material* material = _materials[materialPathIndex];
+				meshInstance->setMaterialSlotIndex(material, materialInstanceIndex);
 			}
 		}
+
+		_meshInstanceStreamingCounter += loadMeshInstanceCount;
 
 		if (isCompletedStream()) {
 			_fin.close();

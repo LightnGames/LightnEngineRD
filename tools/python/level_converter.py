@@ -79,7 +79,9 @@ if __name__ == "__main__":
                 # mesh path
                 mesh_index = mesh_paths.index(mesh_instance['mesh_path'])
                 fout.write(struct.pack('<I', mesh_index))
-
+                
+            for mesh_instance_index in range(mesh_instance_count):
+                mesh_instance = mesh_instances[mesh_instance_index]
                 # world matrix
                 world_matrix_colmns = mesh_instance['world_matrix']
                 for colmn in world_matrix_colmns:

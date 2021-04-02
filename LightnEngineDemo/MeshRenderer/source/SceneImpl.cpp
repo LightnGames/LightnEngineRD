@@ -316,65 +316,28 @@ void Scene::debugDrawGui() {
 	DebugGui::EndTabItem();
 }
 
-MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
-	const MeshInfo* meshInfo = mesh->getMeshInfo();
-	u32 lodMeshCountPerInstance = meshInfo->_totalLodMeshCount;
-	u32 subMeshCountPerInstance = meshInfo->_totalSubMeshCount;
-	u32 lodMeshCount = lodMeshCountPerInstance * instanceCount;
-	u32 subMeshCount = subMeshCountPerInstance * instanceCount;
+MeshInstance* Scene::allocateMeshInstance(const Mesh** meshes, u32 instanceCount) {
+	u32 totalLodMeshCount = 0;
+	u32 totalSubMeshCount = 0;
+	for (u32 meshInstanceIndex = 0; meshInstanceIndex < instanceCount; ++meshInstanceIndex) {
+		const MeshInfo* meshInfo = meshes[meshInstanceIndex]->getMeshInfo();
+		totalLodMeshCount += meshInfo->_totalLodMeshCount;
+		totalSubMeshCount += meshInfo->_totalSubMeshCount;
+	}
+
 	u32 meshInstanceIndex = _gpuMeshInstances.request(instanceCount);
-	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(lodMeshCount);
-	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(subMeshCount);
+	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(totalLodMeshCount);
+	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(totalSubMeshCount);
 
-	// mesh instance 情報を初期化
-	for (u32 lodMeshIndex = 0; lodMeshIndex < lodMeshCount; ++lodMeshIndex) {
-		u32 lodMeshIndexPerInstance = lodMeshIndex % lodMeshCountPerInstance;
-		f32 threshhold = 1.0f - ((lodMeshIndexPerInstance + 1) / static_cast<f32>(lodMeshCountPerInstance));
-		gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[lodMeshInstanceIndex + lodMeshIndex];
-		lodMeshInstance._subMeshInstanceOffset = subMeshInstanceIndex + meshInfo->_subMeshOffsets[lodMeshIndexPerInstance];
-		lodMeshInstance._threshhold = threshhold;
-	}
-
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	u32 defaultMaterialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
-	u32 defaultShaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
-	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		u32 subMeshIndexPerInstance = subMeshIndex % subMeshCountPerInstance;
-		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndexPerInstance);
-		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndexPerInstance);
-		gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex + subMeshIndex];
-		subMeshInstance._materialIndex = defaultMaterialIndex;
-		subMeshInstance._shaderSetIndex = defaultShaderSetIndex;
-	}
-
+	u32 totalLodMeshCounter = 0;
+	u32 totalSubMeshCounter = 0;
 	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
-		gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex + instanceIndex];
-		gpuMeshInstance._lodMeshInstanceOffset = lodMeshInstanceIndex;
-		gpuMeshInstance._meshIndex = meshInfo->_meshIndex;
-		gpuMeshInstance._aabbMin = meshInfo->_boundsMin.getFloat3();
-		gpuMeshInstance._aabbMax = meshInfo->_boundsMax.getFloat3();
-	}
-
-	// mesh instance 情報をVramにアップロード
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32 lodMeshInstanceOffset = sizeof(gpu::LodMeshInstance) * lodMeshInstanceIndex;
-	gpu::LodMeshInstance* lodMeshInstance = vramUpdater->enqueueUpdate<gpu::LodMeshInstance>(&_lodMeshInstanceBuffer, lodMeshInstanceOffset, lodMeshCount);
-	memcpy(lodMeshInstance, &_gpuLodMeshInstances[lodMeshInstanceIndex], sizeof(gpu::LodMeshInstance) * lodMeshCount);
-
-	u32 subMeshInstanceOffset = sizeof(gpu::SubMeshInstance) * subMeshInstanceIndex;
-	gpu::SubMeshInstance* subMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, subMeshInstanceOffset, subMeshCount);
-	memcpy(subMeshInstance, &_gpuSubMeshInstances[subMeshInstanceIndex], sizeof(gpu::SubMeshInstance) * subMeshCount);
-
-	u32 meshInstanceOffset = sizeof(gpu::MeshInstance) * meshInstanceIndex;
-	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, meshInstanceOffset);
-	memcpy(mapMeshInstance, &_gpuMeshInstances[meshInstanceIndex], sizeof(gpu::MeshInstance)*instanceCount);
-
-	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
+		const MeshInfo* meshInfo = meshes[meshInstanceIndex]->getMeshInfo();
 		u32 globalMeshInstanceIndex = meshInstanceIndex + instanceIndex;
-		u32 globalLodMeshInstanceIndex = lodMeshInstanceIndex + (lodMeshCountPerInstance * instanceIndex);
-		u32 globalSubMeshInstanceIndex = subMeshInstanceIndex + (subMeshCountPerInstance * instanceIndex);
+		u32 globalLodMeshInstanceIndex = lodMeshInstanceIndex + totalLodMeshCounter;
+		u32 globalSubMeshInstanceIndex = subMeshInstanceIndex + totalSubMeshCounter;
 		MeshInstanceImpl* meshInstance = &_meshInstances[globalMeshInstanceIndex];
-		meshInstance->setMesh(mesh);
+		meshInstance->setMesh(meshes[meshInstanceIndex]);
 		meshInstance->setGpuMeshInstance(&_gpuMeshInstances[globalMeshInstanceIndex]);
 		meshInstance->setGpuLodMeshInstances(&_gpuLodMeshInstances[globalLodMeshInstanceIndex]);
 		meshInstance->setGpuSubMeshInstances(&_gpuSubMeshInstances[globalSubMeshInstanceIndex]);
@@ -383,17 +346,70 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
 		meshInstance->setStateFlags(&_meshInstanceStateFlags[globalMeshInstanceIndex]);
 		meshInstance->setWorldMatrix(Matrix4::Identity);
 		meshInstance->setEnabled();
+
+		totalLodMeshCounter += meshInfo->_totalLodMeshCount;
+		totalSubMeshCounter += meshInfo->_totalSubMeshCount;
 	}
 
+	return &_meshInstances[meshInstanceIndex];
+}
+
+void Scene::initializeMeshInstance(MeshInstance* meshInstances, u32 offset) {
+	MeshInstance* meshInstance = meshInstances + offset;
+	const Mesh* mesh = meshInstance->getMesh();
+	const MeshInfo* meshInfo = mesh->getMeshInfo();
+	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
+	u32 subMeshCount = meshInfo->_totalSubMeshCount;
+
+	// mesh instance 情報を初期化
+	for (u32 lodMeshIndex = 0; lodMeshIndex < lodMeshCount; ++lodMeshIndex) {
+		f32 threshhold = 1.0f - ((lodMeshIndex + 1) / static_cast<f32>(lodMeshCount));
+		gpu::LodMeshInstance* lodMeshInstance = meshInstance->getGpuLodMeshInstance(lodMeshIndex);
+		lodMeshInstance->_subMeshInstanceOffset = meshInfo->_subMeshStartIndex + meshInfo->_subMeshOffsets[lodMeshIndex];
+		lodMeshInstance->_threshhold = threshhold;
+	}
+
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
+	u32 defaultMaterialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
+	u32 defaultShaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		u32 index = subMeshInstanceIndex + subMeshIndex;
+		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndex);
+		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndex);
+		gpu::SubMeshInstance* subMeshInstance = meshInstance->getGpuSubMeshInstance(subMeshIndex);
+		subMeshInstance->_materialIndex = defaultMaterialIndex;
+		subMeshInstance->_shaderSetIndex = defaultShaderSetIndex;
+	}
+
+	u32 meshInstanceOffset = static_cast<u32>(meshInstance - &_meshInstances[0]);
+	u32 lodMeshInstanceOffset = static_cast<u32>(meshInstance->getGpuLodMeshInstance(0) - &_gpuLodMeshInstances[0]);
+	u32 subMeshInstanceOffset = static_cast<u32>(meshInstance->getGpuSubMeshInstance(0) - &_gpuSubMeshInstances[0]);
+	gpu::MeshInstance* gpuMeshInstance = meshInstance->getGpuMeshInstance();
+	gpuMeshInstance->_lodMeshInstanceOffset = lodMeshInstanceOffset;
+	gpuMeshInstance->_meshIndex = meshInfo->_meshIndex;
+	gpuMeshInstance->_aabbMin = meshInfo->_boundsMin.getFloat3();
+	gpuMeshInstance->_aabbMax = meshInfo->_boundsMax.getFloat3();
+
+	// mesh instance 情報をVramにアップロード
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	u32 lodMeshInstanceOffsetByte = sizeof(gpu::LodMeshInstance) * lodMeshInstanceOffset;
+	gpu::LodMeshInstance* lodMeshInstance = vramUpdater->enqueueUpdate<gpu::LodMeshInstance>(&_lodMeshInstanceBuffer, lodMeshInstanceOffset, lodMeshCount);
+	memcpy(lodMeshInstance, meshInstance->getGpuLodMeshInstance(0), sizeof(gpu::LodMeshInstance) * lodMeshCount);
+
+	u32 subMeshInstanceOffsetByte = sizeof(gpu::SubMeshInstance) * subMeshInstanceOffset;
+	gpu::SubMeshInstance* subMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, subMeshInstanceOffset, subMeshCount);
+	memcpy(subMeshInstance, meshInstance->getGpuSubMeshInstance(0), sizeof(gpu::SubMeshInstance) * subMeshCount);
+
+	u32 meshInstanceOffsetByte = sizeof(gpu::MeshInstance) * meshInstanceOffset;
+	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, meshInstanceOffset);
+	memcpy(mapMeshInstance, gpuMeshInstance, sizeof(gpu::MeshInstance));
+
+	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+		u32 index = subMeshInstanceOffset + subMeshIndex;
 		SubMeshInstanceImpl& subMeshInstance = _subMeshInstances[index];
 		subMeshInstance.setUpdateFlags(&_subMeshInstanceUpdateFlags[index]);
 		subMeshInstance.setMaterial(_defaultMaterial);
 		subMeshInstance.setPrevMaterial(_defaultMaterial);
 	}
-
-	return &_meshInstances[meshInstanceIndex];
 }
 
 void MeshInstance::requestToDelete() {
