@@ -318,34 +318,42 @@ void Scene::debugDrawGui() {
 
 MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
 	const MeshInfo* meshInfo = mesh->getMeshInfo();
-	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
-	u32 subMeshCount = meshInfo->_totalSubMeshCount;
+	u32 lodMeshCountPerInstance = meshInfo->_totalLodMeshCount;
+	u32 subMeshCountPerInstance = meshInfo->_totalSubMeshCount;
+	u32 lodMeshCount = lodMeshCountPerInstance * instanceCount;
+	u32 subMeshCount = subMeshCountPerInstance * instanceCount;
 	u32 meshInstanceIndex = _gpuMeshInstances.request(instanceCount);
 	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(lodMeshCount);
 	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(subMeshCount);
 
 	// mesh instance 情報を初期化
 	for (u32 lodMeshIndex = 0; lodMeshIndex < lodMeshCount; ++lodMeshIndex) {
-		f32 threshhold = 1.0f - ((lodMeshIndex + 1) / static_cast<f32>(lodMeshCount));
+		u32 lodMeshIndexPerInstance = lodMeshIndex % lodMeshCountPerInstance;
+		f32 threshhold = 1.0f - ((lodMeshIndexPerInstance + 1) / static_cast<f32>(lodMeshCountPerInstance));
 		gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[lodMeshInstanceIndex + lodMeshIndex];
-		lodMeshInstance._subMeshInstanceOffset = subMeshInstanceIndex + meshInfo->_subMeshOffsets[lodMeshIndex];
+		lodMeshInstance._subMeshInstanceOffset = subMeshInstanceIndex + meshInfo->_subMeshOffsets[lodMeshIndexPerInstance];
 		lodMeshInstance._threshhold = threshhold;
 	}
 
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
+	u32 defaultMaterialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
+	u32 defaultShaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndex);
-		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndex);
+		u32 subMeshIndexPerInstance = subMeshIndex % subMeshCountPerInstance;
+		const SubMeshInfo* info = mesh->getSubMeshInfo(subMeshIndexPerInstance);
+		const gpu::SubMesh* subMesh = mesh->getGpuSubMesh(subMeshIndexPerInstance);
 		gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[subMeshInstanceIndex + subMeshIndex];
-		subMeshInstance._materialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
-		subMeshInstance._shaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
+		subMeshInstance._materialIndex = defaultMaterialIndex;
+		subMeshInstance._shaderSetIndex = defaultShaderSetIndex;
 	}
 
-	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
-	gpuMeshInstance._lodMeshInstanceOffset = lodMeshInstanceIndex;
-	gpuMeshInstance._meshIndex = meshInfo->_meshIndex;
-	gpuMeshInstance._aabbMin = meshInfo->_boundsMin.getFloat3();
-	gpuMeshInstance._aabbMax = meshInfo->_boundsMax.getFloat3();
+	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
+		gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex + instanceIndex];
+		gpuMeshInstance._lodMeshInstanceOffset = lodMeshInstanceIndex;
+		gpuMeshInstance._meshIndex = meshInfo->_meshIndex;
+		gpuMeshInstance._aabbMin = meshInfo->_boundsMin.getFloat3();
+		gpuMeshInstance._aabbMax = meshInfo->_boundsMax.getFloat3();
+	}
 
 	// mesh instance 情報をVramにアップロード
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
@@ -359,18 +367,23 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
 
 	u32 meshInstanceOffset = sizeof(gpu::MeshInstance) * meshInstanceIndex;
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, meshInstanceOffset);
-	*mapMeshInstance = gpuMeshInstance;
+	memcpy(mapMeshInstance, &_gpuMeshInstances[meshInstanceIndex], sizeof(gpu::MeshInstance)*instanceCount);
 
-	MeshInstanceImpl* meshInstance = &_meshInstances[meshInstanceIndex];
-	meshInstance->setMesh(mesh);
-	meshInstance->setGpuMeshInstance(&_gpuMeshInstances[meshInstanceIndex]);
-	meshInstance->setGpuLodMeshInstances(&_gpuLodMeshInstances[lodMeshInstanceIndex]);
-	meshInstance->setGpuSubMeshInstances(&_gpuSubMeshInstances[subMeshInstanceIndex]);
-	meshInstance->setSubMeshInstance(&_subMeshInstances[subMeshInstanceIndex]);
-	meshInstance->setUpdateFlags(&_meshInstanceUpdateFlags[meshInstanceIndex]);
-	meshInstance->setStateFlags(&_meshInstanceStateFlags[meshInstanceIndex]);
-	meshInstance->setWorldMatrix(Matrix4::Identity);
-	meshInstance->setEnabled();
+	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
+		u32 globalMeshInstanceIndex = meshInstanceIndex + instanceIndex;
+		u32 globalLodMeshInstanceIndex = lodMeshInstanceIndex + (lodMeshCountPerInstance * instanceIndex);
+		u32 globalSubMeshInstanceIndex = subMeshInstanceIndex + (subMeshCountPerInstance * instanceIndex);
+		MeshInstanceImpl* meshInstance = &_meshInstances[globalMeshInstanceIndex];
+		meshInstance->setMesh(mesh);
+		meshInstance->setGpuMeshInstance(&_gpuMeshInstances[globalMeshInstanceIndex]);
+		meshInstance->setGpuLodMeshInstances(&_gpuLodMeshInstances[globalLodMeshInstanceIndex]);
+		meshInstance->setGpuSubMeshInstances(&_gpuSubMeshInstances[globalSubMeshInstanceIndex]);
+		meshInstance->setSubMeshInstance(&_subMeshInstances[globalSubMeshInstanceIndex]);
+		meshInstance->setUpdateFlags(&_meshInstanceUpdateFlags[globalMeshInstanceIndex]);
+		meshInstance->setStateFlags(&_meshInstanceStateFlags[globalMeshInstanceIndex]);
+		meshInstance->setWorldMatrix(Matrix4::Identity);
+		meshInstance->setEnabled();
+	}
 
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 		u32 index = subMeshInstanceIndex + subMeshIndex;
@@ -380,7 +393,7 @@ MeshInstance* Scene::createMeshInstance(const Mesh* mesh, u32 instanceCount) {
 		subMeshInstance.setPrevMaterial(_defaultMaterial);
 	}
 
-	return meshInstance;
+	return &_meshInstances[meshInstanceIndex];
 }
 
 void MeshInstance::requestToDelete() {
