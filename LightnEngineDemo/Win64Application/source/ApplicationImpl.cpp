@@ -1,6 +1,7 @@
 #include "ApplicationImpl.h"
 
 ApplicationSystemImpl _applicationSystem;
+InputSystemImpl _inputSystem;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	ApplicationImpl* app = static_cast<ApplicationImpl*>(ApplicationSystemImpl::Get()->getApplication());
@@ -104,4 +105,18 @@ void ApplicationSystemImpl::terminate() {
 
 ApplicationSystemImpl* ApplicationSystemImpl::Get() {
 	return &_applicationSystem;
+}
+
+void InputSystemImpl::initialize() {
+}
+
+void InputSystemImpl::terminate() {
+}
+
+InputSystem* InputSystem::Get() {
+	return &_inputSystem;
+}
+
+InputSystemImpl* InputSystemImpl::Get() {
+	return &_inputSystem;
 }

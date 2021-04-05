@@ -28,3 +28,11 @@ public:
 
 	static ApplicationSystem* Get();
 };
+
+class LTN_APP_API InputSystem {
+public:
+	virtual void initialize() = 0;
+	virtual void terminate() = 0;
+
+	static InputSystem* Get();
+};

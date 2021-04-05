@@ -156,7 +156,7 @@ struct MeshDesc {
 };
 
 struct MeshInstanceDesc {
-	const Mesh* _mesh = nullptr;
+	const Mesh** _meshes = nullptr;
 	u32 _instanceCount = 1;
 };
 
@@ -169,7 +169,7 @@ public:
 	virtual void render(CommandList* commandList, ViewInfo* viewInfo) = 0;
 	virtual Mesh* allocateMesh(const MeshDesc& desc) = 0;
 	virtual Mesh* createMesh(const MeshDesc& desc) = 0;
-	virtual MeshInstance* createMeshInstance(const MeshInstanceDesc& desc) = 0;
+	virtual void createMeshInstance(MeshInstance** outMeshInstances, const MeshInstanceDesc& desc) = 0;
 	virtual Mesh* findMesh(u64 filePathHash) = 0;
 
 	static MeshRendererSystem* Get();

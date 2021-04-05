@@ -20,7 +20,7 @@ public:
 
 	virtual Mesh* allocateMesh(const MeshDesc& desc) override;
 	virtual Mesh* createMesh(const MeshDesc& desc) override;
-	virtual MeshInstance* createMeshInstance(const MeshInstanceDesc& desc) override;
+	virtual void createMeshInstance(MeshInstance** outMeshInstances, const MeshInstanceDesc& desc) override;
 	virtual Mesh* findMesh(u64 filePathHash) override;
 
 	static MeshRendererSystemImpl* Get();

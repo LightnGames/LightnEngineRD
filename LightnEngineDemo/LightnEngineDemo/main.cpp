@@ -139,37 +139,55 @@ public:
 			_assets[currentAssetIndex]->requestLoad();
 		}
 
-		for (u32 i = 0; i < 5; ++i) {
-			if (_meshInstanceStreamingCounter < _levelHeader._meshInstanceCount) {
-				MeshRendererSystem* meshSystem = MeshRendererSystem::Get();
-				u32 currentMeshInstanceIndex = _meshInstanceStreamingCounter++;
+		u32 meshInstanceCount = min(_levelHeader._meshInstanceCount - _meshInstanceStreamingCounter, 5);
+		if (meshInstanceCount > 0) {
+			const Mesh* meshes[5];
+			Matrix4 worldMatrices[5];
+			u32 materialInstanceCounts[5];
+			u32 materialInstanceOffsets[5] = {};
+			u32 materialPathIndices[256];
+
+			for (u32 i = 0; i < meshInstanceCount; ++i) {
 				Vector4 wv[3] = {};
 				u32 meshPathIndex = 0;
+				u32 materialInstanceCount = 0;
+				u32 materialInstanceOffset = materialInstanceOffsets[i];
 				_fin.read(reinterpret_cast<char*>(&meshPathIndex), sizeof(u32));
 				_fin.read(reinterpret_cast<char*>(&wv), sizeof(Vector4) * 3);
+				_fin.read(reinterpret_cast<char*>(&materialInstanceCount), sizeof(u32));
+				_fin.read(reinterpret_cast<char*>(&materialPathIndices[materialInstanceOffset]), sizeof(u32) * materialInstanceCount);
 
-				Matrix4 worldMatrix(
+				meshes[i] = _meshes[meshPathIndex];
+				materialInstanceCounts[i] = materialInstanceCount;
+				worldMatrices[i] = Matrix4(
 					wv[0].x, wv[1].x, wv[2].x, 0.0f,
 					wv[0].y, wv[1].y, wv[2].y, 0.0f,
 					wv[0].z, wv[1].z, wv[2].z, 0.0f,
 					wv[0].w, wv[1].w, wv[2].w, 1.0f);
+				if (i < meshInstanceCount - 1) {
+					materialInstanceOffsets[i + 1] = materialInstanceOffset + materialInstanceCount;
+				}
+			}
 
-				u32 materialInstanceCount = 0;
-				_fin.read(reinterpret_cast<char*>(&materialInstanceCount), sizeof(u32));
+			MeshRendererSystem* meshSystem = MeshRendererSystem::Get();
+			MeshInstanceDesc desc = {};
+			desc._meshes = meshes;
+			desc._instanceCount = meshInstanceCount;
+			meshSystem->createMeshInstance(&_meshInstances[_meshInstanceStreamingCounter], desc);
 
-				MeshInstance*& meshInstance = _meshInstances[currentMeshInstanceIndex];
-				MeshInstanceDesc desc = {};
-				desc._mesh = _meshes[meshPathIndex];
-				meshInstance = meshSystem->createMeshInstance(desc);
-				meshInstance->setWorldMatrix(worldMatrix);
+			for (u32 i = 0; i < meshInstanceCount; ++i) {
+				MeshInstance* meshInstance = _meshInstances[_meshInstanceStreamingCounter + i];
+				meshInstance->setWorldMatrix(worldMatrices[i]);
 
+				u32 materialInstanceCount = materialInstanceCounts[i];
 				for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-					u32 materialPathIndex = 0;
-					_fin.read(reinterpret_cast<char*>(&materialPathIndex), sizeof(u32));
+					u32 materialPathOffset = materialInstanceOffsets[i] + materialInstanceIndex;
+					u32 materialPathIndex = materialPathIndices[materialPathOffset];
 					Material* material = _materials[materialPathIndex];
 					meshInstance->setMaterialSlotIndex(material, materialInstanceIndex);
 				}
 			}
+			_meshInstanceStreamingCounter += meshInstanceCount;
 		}
 
 		if (isCompletedStream()) {
@@ -302,7 +320,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		//meshInstance2->setMaterialSlotIndex(material, 0);
 		//meshInstance2->setWorldMatrix(Matrix4::translate(-1, 0, 0));
 
-		desc._mesh = mesh3;
+		//desc._meshes = mesh3;
 		//meshInstance3 = meshSystem->createMeshInstance(desc);
 		//meshInstance3->setMaterialSlotIndex(material, 0);
 		//meshInstance3->setWorldMatrix(Matrix4::rotateX(DegToRad(-90.0f)) * Matrix4::translate(-1, 1, 0));

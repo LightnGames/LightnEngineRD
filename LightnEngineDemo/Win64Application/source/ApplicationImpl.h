@@ -40,3 +40,11 @@ public:
 private:
 	ApplicationImpl _application;
 };
+
+class InputSystemImpl :public InputSystem {
+public:
+	virtual void initialize() override;
+	virtual void terminate() override;
+
+	static InputSystemImpl* Get();
+};
