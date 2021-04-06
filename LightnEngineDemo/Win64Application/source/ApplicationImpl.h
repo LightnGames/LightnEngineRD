@@ -43,8 +43,18 @@ private:
 
 class InputSystemImpl :public InputSystem {
 public:
-	virtual void initialize() override;
-	virtual void terminate() override;
+	virtual bool getKey(KeyCode keyCode) override;
+	virtual bool getKeyDown(KeyCode keyCode) override;
+	virtual bool getKeyUp(KeyCode keyCode) override;
+
+	void update();
 
 	static InputSystemImpl* Get();
+private:
+	bool isKeyDown(u8 key) const { return key & 0x80; }
+
+private:
+	u8 _keyStates[256];
+	u8 _keyDowns[256];
+	u8 _keyUps[256];
 };

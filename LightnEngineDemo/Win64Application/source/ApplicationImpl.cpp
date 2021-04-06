@@ -8,16 +8,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 	app->translateApplicationCallback(message, wParam, lParam);
 
 	switch (message) {
-	case WM_CREATE:
-		return 0;
-
-	case WM_KEYDOWN:
-		return 0;
-
-	case WM_KEYUP:
-		return 0;
-
 	case WM_PAINT:
+		_inputSystem.update();
 		return 0;
 
 	case WM_DESTROY:
@@ -25,7 +17,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		return 0;
 	}
 
-	// Handle any messages the switch statement didn't.
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
@@ -68,10 +59,8 @@ void ApplicationImpl::initialize() {
 }
 
 void ApplicationImpl::run() {
-	// Main sample loop.
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
-		// Process any messages in the queue.
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -107,10 +96,27 @@ ApplicationSystemImpl* ApplicationSystemImpl::Get() {
 	return &_applicationSystem;
 }
 
-void InputSystemImpl::initialize() {
+bool InputSystemImpl::getKey(KeyCode keyCode) {
+	return isKeyDown(_keyStates[keyCode]);
 }
 
-void InputSystemImpl::terminate() {
+bool InputSystemImpl::getKeyDown(KeyCode keyCode) {
+	return isKeyDown(_keyDowns[keyCode]);
+}
+
+bool InputSystemImpl::getKeyUp(KeyCode keyCode) {
+	return isKeyDown(_keyUps[keyCode]);
+}
+
+void InputSystemImpl::update() {
+	u8 prevKeyState[256];
+	memcpy(prevKeyState, _keyStates, sizeof(prevKeyState));
+
+	GetKeyboardState(_keyStates);
+	for (u16 i = 0; i < LTN_COUNTOF(prevKeyState); ++i) {
+		_keyDowns[i] = (!isKeyDown(prevKeyState[i])) & isKeyDown(_keyStates[i]);
+		_keyUps[i] = isKeyDown(prevKeyState[i]) & (!isKeyDown(_keyStates[i]));
+	}
 }
 
 InputSystem* InputSystem::Get() {
