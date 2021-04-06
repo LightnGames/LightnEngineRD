@@ -12,6 +12,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		_inputSystem.update();
 		return 0;
 
+	case WM_MOUSEMOVE:
+		_inputSystem.setMouseEvent(Vector2(LOWORD(lParam), HIWORD(lParam)));
+		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
@@ -96,15 +99,15 @@ ApplicationSystemImpl* ApplicationSystemImpl::Get() {
 	return &_applicationSystem;
 }
 
-bool InputSystemImpl::getKey(KeyCode keyCode) {
+bool InputSystemImpl::getKey(KeyCode keyCode) const {
 	return isKeyDown(_keyStates[keyCode]);
 }
 
-bool InputSystemImpl::getKeyDown(KeyCode keyCode) {
+bool InputSystemImpl::getKeyDown(KeyCode keyCode) const {
 	return isKeyDown(_keyDowns[keyCode]);
 }
 
-bool InputSystemImpl::getKeyUp(KeyCode keyCode) {
+bool InputSystemImpl::getKeyUp(KeyCode keyCode) const {
 	return isKeyDown(_keyUps[keyCode]);
 }
 
@@ -114,9 +117,21 @@ void InputSystemImpl::update() {
 
 	GetKeyboardState(_keyStates);
 	for (u16 i = 0; i < LTN_COUNTOF(prevKeyState); ++i) {
-		_keyDowns[i] = (!isKeyDown(prevKeyState[i])) & isKeyDown(_keyStates[i]);
-		_keyUps[i] = isKeyDown(prevKeyState[i]) & (!isKeyDown(_keyStates[i]));
+		_keyDowns[i] = (!isKeyDown(prevKeyState[i])) && isKeyDown(_keyStates[i]);
+		_keyUps[i] = isKeyDown(prevKeyState[i]) && (!isKeyDown(_keyStates[i]));
 	}
+	
+	if (isKeyDown(_keyStates[VK_LBUTTON]) && (!isKeyDown(prevKeyState[VK_LBUTTON]))) {
+		_mousePositions[MOUSE_EVENT_L_DOWN] = _mousePosition;
+	}
+
+	if ((!isKeyDown(_keyStates[VK_LBUTTON])) && isKeyDown(prevKeyState[VK_LBUTTON])) {
+		_mousePositions[MOUSE_EVENT_L_UP] = _mousePosition;
+	}
+}
+
+void InputSystemImpl::setMouseEvent(Vector2 position) {
+	_mousePosition = position;
 }
 
 InputSystem* InputSystem::Get() {

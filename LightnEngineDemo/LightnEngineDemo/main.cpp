@@ -139,12 +139,13 @@ public:
 			_assets[currentAssetIndex]->requestLoad();
 		}
 
-		u32 meshInstanceCount = min(_levelHeader._meshInstanceCount - _meshInstanceStreamingCounter, 5);
+		constexpr u32 LOAD_COUNT = 5;
+		u32 meshInstanceCount = min(_levelHeader._meshInstanceCount - _meshInstanceStreamingCounter, LOAD_COUNT);
 		if (meshInstanceCount > 0) {
-			const Mesh* meshes[5];
-			Matrix4 worldMatrices[5];
-			u32 materialInstanceCounts[5];
-			u32 materialInstanceOffsets[5] = {};
+			const Mesh* meshes[LOAD_COUNT];
+			Matrix4 worldMatrices[LOAD_COUNT];
+			u32 materialInstanceCounts[LOAD_COUNT];
+			u32 materialInstanceOffsets[LOAD_COUNT] = {};
 			u32 materialPathIndices[256];
 
 			for (u32 i = 0; i < meshInstanceCount; ++i) {
@@ -164,6 +165,7 @@ public:
 					wv[0].y, wv[1].y, wv[2].y, 0.0f,
 					wv[0].z, wv[1].z, wv[2].z, 0.0f,
 					wv[0].w, wv[1].w, wv[2].w, 1.0f);
+				LTN_ASSERT(materialInstanceOffset + materialInstanceCount < LTN_COUNTOF(materialPathIndices));
 				if (i < meshInstanceCount - 1) {
 					materialInstanceOffsets[i + 1] = materialInstanceOffset + materialInstanceCount;
 				}

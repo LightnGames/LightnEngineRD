@@ -31,6 +31,12 @@ public:
 
 class LTN_APP_API InputSystem {
 public:
+	enum MouseEvent {
+		MOUSE_EVENT_L_DOWN = 0,
+		MOUSE_EVENT_L_UP,
+		MOUSE_EVENT_COUNT
+	};
+
 	// from WinUser.h
 	enum KeyCode {
 		KEY_CODE_SHIFT = 0x10,
@@ -116,9 +122,11 @@ public:
 		KEY_STATE_UP,
 	};
 
-	virtual bool getKey(KeyCode keyCode) = 0;
-	virtual bool getKeyDown(KeyCode keyCode) = 0;
-	virtual bool getKeyUp(KeyCode keyCode) = 0;
+	virtual bool getKey(KeyCode keyCode) const = 0;
+	virtual bool getKeyDown(KeyCode keyCode) const = 0;
+	virtual bool getKeyUp(KeyCode keyCode) const = 0;
+	virtual Vector2 getMousePosition() const = 0;
+	virtual Vector2 getMousePosition(MouseEvent mouseEvent) const = 0;
 
 	static InputSystem* Get();
 };

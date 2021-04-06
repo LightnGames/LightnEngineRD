@@ -43,11 +43,14 @@ private:
 
 class InputSystemImpl :public InputSystem {
 public:
-	virtual bool getKey(KeyCode keyCode) override;
-	virtual bool getKeyDown(KeyCode keyCode) override;
-	virtual bool getKeyUp(KeyCode keyCode) override;
+	virtual bool getKey(KeyCode keyCode) const override;
+	virtual bool getKeyDown(KeyCode keyCode) const override;
+	virtual bool getKeyUp(KeyCode keyCode) const override;
+	virtual Vector2 getMousePosition() const override { return _mousePosition; }
+	virtual Vector2 getMousePosition(MouseEvent mouseEvent) const override { return _mousePositions[mouseEvent]; }
 
 	void update();
+	void setMouseEvent(Vector2 position);
 
 	static InputSystemImpl* Get();
 private:
@@ -57,4 +60,6 @@ private:
 	u8 _keyStates[256];
 	u8 _keyDowns[256];
 	u8 _keyUps[256];
+	Vector2 _mousePosition;
+	Vector2 _mousePositions[MOUSE_EVENT_COUNT] = {};
 };

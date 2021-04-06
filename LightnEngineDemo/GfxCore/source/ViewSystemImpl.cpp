@@ -128,10 +128,41 @@ void ViewSystemImpl::update() {
 	DebugWindow::SliderAngle("fov", &debug.fov, 0.1f);
 	DebugWindow::End();
 
+	InputSystem* inputSystem = InputSystem::Get();
+	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
+	Vector3 rightDirection= cameraRotate.mv[0].toVector3();
+	Vector3 upDirection = cameraRotate.mv[1].toVector3();
+	Vector3 forwardDirection = cameraRotate.mv[2].toVector3();
+	Vector3 moveDirection = Vector3::Zero;
+	if (inputSystem->getKey(InputSystem::KEY_CODE_W)) {
+		moveDirection += forwardDirection;
+	}
+
+	if (inputSystem->getKey(InputSystem::KEY_CODE_S)) {
+		moveDirection -= forwardDirection;
+	}
+
+	if (inputSystem->getKey(InputSystem::KEY_CODE_D)) {
+		moveDirection += rightDirection;
+	}
+
+	if (inputSystem->getKey(InputSystem::KEY_CODE_A)) {
+		moveDirection -= rightDirection;
+	}
+
+	if (inputSystem->getKey(InputSystem::KEY_CODE_E)) {
+		moveDirection += upDirection;
+	}
+
+	if (inputSystem->getKey(InputSystem::KEY_CODE_Q)) {
+		moveDirection -= upDirection;
+	}
+	moveDirection = Vector3::normalize(moveDirection);
+	debug.position += moveDirection;
+
 	f32 farClip = 300;
 	f32 nearClip = 0.1f;
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
-	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
 	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(debug.position);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
