@@ -396,7 +396,7 @@ void MeshRenderer::render(const RenderContext& context) {
 			continue;
 		}
 
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
 
 		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
 		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
@@ -453,8 +453,7 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
 
 	commandList->setComputeRootSignature(_computeLodRootSignature);
 	commandList->setPipelineState(_computeLodPipelineState);
@@ -469,9 +468,6 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) {
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	gpuCullingResource->resetResourceComputeLodBarriers(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Compute Lod");
-	queryHeapSystem->setMarker(commandList);
 }
 
 void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) {
@@ -482,8 +478,7 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 	CommandList* commandList = context._commandList;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
 	IndirectArgumentResource* primIndirectArgumentResource = context._primIndirectArgumentResource;
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Build Indirect Argument");
 
 	indirectArgumentResource->resourceBarriersToUav(commandList);
 	primIndirectArgumentResource->resourceBarriersToUav(commandList);
@@ -503,9 +498,6 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 	commandList->dispatch(dispatchCount, 1, 1);
 	indirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
 	primIndirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Build Indirect Argument");
-	queryHeapSystem->setMarker(commandList);
 }
 
 void MeshRenderer::mainCulling(const GpuCullingContext& context) {
@@ -516,8 +508,7 @@ void MeshRenderer::buildHiz(const BuildHizContext& context) {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_BLUE, "Build Hiz");
 
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->setComputeRootSignature(_buildHizRootSignature);
@@ -551,9 +542,6 @@ void MeshRenderer::buildHiz(const BuildHizContext& context) {
 
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Build Hiz");
-	queryHeapSystem->setMarker(commandList);
 }
 
 void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
@@ -561,7 +549,6 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 	u32 shaderSetCount = materialSystem->getShaderSetCount();
@@ -582,7 +569,7 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 			continue;
 		}
 
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
 
 		u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex];
 		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
@@ -616,12 +603,10 @@ void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& contex
 }
 
 void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) {
+	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 	CommandList* commandList = context._commandList;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
-	u32 meshInstanceCountMax = context._meshInstanceCountMax;
-
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, context._scopeName);
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, context._scopeName);
 
 	InstancingResource* primitiveInstancingResource = context._primitiveInstancingResource;
 	primitiveInstancingResource->resourceBarriersGpuCullingToUAV(commandList);
@@ -648,19 +633,14 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	primitiveInstancingResource->resetResourceGpuCullingBarriers(commandList);
-
-	queryHeapSystem->setCurrentMarkerName(context._scopeName);
-	queryHeapSystem->setMarker(commandList);
 }
 
 void MeshRenderer::gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) {
+	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 	CommandList* commandList = context._commandList;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
-	u32 meshInstanceCountMax = context._meshInstanceCountMax;
-
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, context._scopeName);
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, context._scopeName);
 
 	indirectArgumentResource->resourceBarriersToUav(commandList);
 	indirectArgumentResource->resetIndirectArgumentCountBuffers(commandList);
@@ -681,7 +661,4 @@ void MeshRenderer::gpuCulling(const MultiDrawGpuCullingContext& context, Pipelin
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	indirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
-
-	queryHeapSystem->setCurrentMarkerName(context._scopeName);
-	queryHeapSystem->setMarker(commandList);
 }

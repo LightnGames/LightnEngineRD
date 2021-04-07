@@ -167,8 +167,7 @@ void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Debug Draw");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, "Debug Draw");
 
 	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
 	commandList->setRenderTargets(1, &currentRenderTargetHandle, nullptr);

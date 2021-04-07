@@ -121,12 +121,20 @@ void InputSystemImpl::update() {
 		_keyUps[i] = isKeyDown(prevKeyState[i]) && (!isKeyDown(_keyStates[i]));
 	}
 	
-	if (isKeyDown(_keyStates[VK_LBUTTON]) && (!isKeyDown(prevKeyState[VK_LBUTTON]))) {
+	if (isKeyDown(_keyStates[KEY_CODE_LBUTTON]) && (!isKeyDown(prevKeyState[KEY_CODE_LBUTTON]))) {
 		_mousePositions[MOUSE_EVENT_L_DOWN] = _mousePosition;
 	}
 
-	if ((!isKeyDown(_keyStates[VK_LBUTTON])) && isKeyDown(prevKeyState[VK_LBUTTON])) {
+	if ((!isKeyDown(_keyStates[KEY_CODE_LBUTTON])) && isKeyDown(prevKeyState[KEY_CODE_LBUTTON])) {
 		_mousePositions[MOUSE_EVENT_L_UP] = _mousePosition;
+	}
+
+	if (isKeyDown(_keyStates[KEY_CODE_RBUTTON]) && (!isKeyDown(prevKeyState[KEY_CODE_RBUTTON]))) {
+		_mousePositions[MOUSE_EVENT_R_DOWN] = _mousePosition;
+	}
+
+	if ((!isKeyDown(_keyStates[KEY_CODE_LBUTTON])) && isKeyDown(prevKeyState[KEY_CODE_RBUTTON])) {
+		_mousePositions[MOUSE_EVENT_R_UP] = _mousePosition;
 	}
 }
 

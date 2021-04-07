@@ -62,11 +62,8 @@ void DebugWindow::beginFrame() {
 
 void DebugWindow::renderFrame(CommandList* commandList) {
 #if DEBUG_WINDOW_ENABLE
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "ImGui");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "ImGui");
 	DebugGui::RenderDebugWindowGui(commandList);
-	queryHeapSystem->setCurrentMarkerName("ImGui");
-	queryHeapSystem->setMarker(commandList);
 #endif
 }
 

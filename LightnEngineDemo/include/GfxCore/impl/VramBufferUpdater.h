@@ -59,6 +59,7 @@ private:
 	u32 getStagingBufferStartOffset(const void* allocatedPtr) const;
 
 private:
+	static constexpr u32 OVER_RUN_MARKER = 0xfbfbfbfbU;
 	UpdateHeader _updateHeaders[BUFFER_HEADER_COUNT_MAX] = {};
 	StagingUpdateHeader _stagingUpdateHeaders[BUFFER_HEADER_COUNT_MAX] = {};
 	TextureUpdateHeader _textureUpdateHeaders[TEXTURE_HEADER_COUNT_MAX] = {};

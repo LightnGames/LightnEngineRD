@@ -1266,8 +1266,11 @@ constexpr Format BACK_BUFFER_FORMAT = FORMAT_R8G8B8A8_UNORM;
 namespace DebugMarker {
 	class LTN_GFX_API ScopedEvent {
 	public:
+		ScopedEvent() {}
 		ScopedEvent(CommandList* commandList, const Color4& color, const char* name, ...);
 		~ScopedEvent();
+
+		void setEvent(CommandList* commandList, const Color4& color, const char* name, va_list va);
 	private:
 		CommandList* _commandList = nullptr;
 	};
@@ -1277,7 +1280,7 @@ namespace DebugMarker {
 	void LTN_GFX_API popMarker(CommandList* commandList);
 }
 
-#define DEBUG_MARKER_SCOPED_EVENT(...) DebugMarker::ScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_GPU_SCOPED_EVENT(...) DebugMarker::ScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
 
 namespace DebugGui {
 	using ColorEditFlags = s32;

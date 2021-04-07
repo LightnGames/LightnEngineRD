@@ -162,8 +162,6 @@ void GraphicsSystemImpl::render() {
 	CommandList* commandList = allocater->allocateCommandList(compleatedFenceValue);
 	commandList->initialize(commandListDesc);
 
-	QueryHeapSystem::Get()->setMarker(commandList);
-
 	DescriptorHeap* descriptorHeaps[] = { _srvCbvUavGpuDescriptorAllocator.getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 	_vramBufferUpdater.populateCommandList(commandList);
@@ -183,7 +181,7 @@ void GraphicsSystemImpl::render() {
 	// hdr buffer からバックバッファにコピー
 	{
 		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "HDR to LDR");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, "HDR to LDR");
 
 		ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
 		GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];

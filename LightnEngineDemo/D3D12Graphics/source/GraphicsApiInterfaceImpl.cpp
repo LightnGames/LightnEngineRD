@@ -1291,15 +1291,19 @@ namespace DebugMarker {
 	}
 
 	ScopedEvent::ScopedEvent(CommandList* commandList, const Color4& color, const char* name, ...) {
-		_commandList = commandList;
 		va_list va;
 		va_start(va, name);
-		pushMarker(commandList, color, name, va);
+		setEvent(commandList, color, name, va);
 		va_end(va);
 	}
 
 	ScopedEvent::~ScopedEvent() {
 		popMarker(_commandList);
+	}
+
+	void ScopedEvent::setEvent(CommandList* commandList, const Color4& color, const char* name, va_list va) {
+		_commandList = commandList;
+		pushMarker(commandList, color, name, va);
 	}
 
 	void setMarker(CommandList* commandList, const Color4& color, const char* name, ...) {

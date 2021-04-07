@@ -34,11 +34,16 @@ public:
 	enum MouseEvent {
 		MOUSE_EVENT_L_DOWN = 0,
 		MOUSE_EVENT_L_UP,
+		MOUSE_EVENT_R_DOWN,
+		MOUSE_EVENT_R_UP,
 		MOUSE_EVENT_COUNT
 	};
 
 	// from WinUser.h
 	enum KeyCode {
+		KEY_CODE_LBUTTON =       0x01,
+		KEY_CODE_RBUTTON =        0x02,
+
 		KEY_CODE_SHIFT = 0x10,
 		KEY_CODE_CONTROL = 0x11,
 		KEY_CODE_MENU = 0x12,

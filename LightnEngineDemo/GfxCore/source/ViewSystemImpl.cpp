@@ -128,11 +128,22 @@ void ViewSystemImpl::update() {
 	DebugWindow::SliderAngle("fov", &debug.fov, 0.1f);
 	DebugWindow::End();
 
+	// マウス右クリックでの画面回転
 	InputSystem* inputSystem = InputSystem::Get();
+	if (inputSystem->getKey(InputSystem::KEY_CODE_RBUTTON)) {
+		Vector2 beginMousePosition = inputSystem->getMousePosition(InputSystem::MOUSE_EVENT_R_DOWN);
+		Vector2 currentMousePosition = inputSystem->getMousePosition();
+		Vector2 distance = currentMousePosition - beginMousePosition;
+		debug.cameraAngle._x += distance._x;
+		debug.cameraAngle._y += distance._y;
+	}
+
+	// W/A/S/D キーボードによる移動
 	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
 	Vector3 rightDirection= cameraRotate.mv[0].toVector3();
 	Vector3 upDirection = cameraRotate.mv[1].toVector3();
 	Vector3 forwardDirection = cameraRotate.mv[2].toVector3();
+	Vector3 rotate = Vector3::Zero;
 	Vector3 moveDirection = Vector3::Zero;
 	if (inputSystem->getKey(InputSystem::KEY_CODE_W)) {
 		moveDirection += forwardDirection;
@@ -157,11 +168,15 @@ void ViewSystemImpl::update() {
 	if (inputSystem->getKey(InputSystem::KEY_CODE_Q)) {
 		moveDirection -= upDirection;
 	}
-	moveDirection = Vector3::normalize(moveDirection);
+
+	constexpr f32 DEBUG_CAMERA_MOVE_SPEED = 0.2f;
+	moveDirection = Vector3::normalize(moveDirection) * DEBUG_CAMERA_MOVE_SPEED;
 	debug.position += moveDirection;
 
+	// メインビュー用定数バッファ
 	f32 farClip = 300;
 	f32 nearClip = 0.1f;
+	f32 fovHalfTan = tanf(debug.fov / 2.0f);
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
 	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(debug.position);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
@@ -173,13 +188,13 @@ void ViewSystemImpl::update() {
 	viewConstant->_position = debug.position.getFloat3();
 	viewConstant->_nearAndFarClip._x = nearClip;
 	viewConstant->_nearAndFarClip._y = farClip;
-	viewConstant->_halfFovTanX = tanf(debug.fov / 2.0f) * aspectRate;
-	viewConstant->_halfFovTanY = tanf(debug.fov / 2.0f);
+	viewConstant->_halfFovTanX = fovHalfTan * aspectRate;
+	viewConstant->_halfFovTanY = fovHalfTan;
 	viewConstant->_viewPortSizeX = static_cast<u32>(_mainView._viewPort._width);
 	viewConstant->_viewPortSizeY = static_cast<u32>(_mainView._viewPort._height);
 	viewConstant->_upDirection = Matrix4::transformNormal(Vector3::Up, cameraRotate).getFloat3();
 
-	f32 fovHalfTan = tanf(debug.fov / 2.0f);
+	// メインビュー用　フラスタム平面
 	Vector3 sideForward = Vector3::Forward * fovHalfTan * aspectRate;
 	Vector3 forward = Vector3::Forward * fovHalfTan;
 	Vector3 rightNormal = Matrix4::transformNormal(Vector3::Right + sideForward, cameraRotate).getNormalize();

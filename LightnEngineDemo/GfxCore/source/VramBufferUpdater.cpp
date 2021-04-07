@@ -9,6 +9,9 @@ void VramBufferUpdater::initialize() {
 	_stagingBuffer.initialize(desc);
 	_stagingBuffer.setDebugName("Vram Updater Staging");
 	_stagingMapPtr = _stagingBuffer.map<u8>();
+
+	// 範囲外アクセス検知用マーカーを最初に挿入
+	*reinterpret_cast<u32*>(_stagingMapPtr) = OVER_RUN_MARKER;
 }
 
 void VramBufferUpdater::terminate() {
@@ -42,6 +45,12 @@ void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 numSubResourc
 	LTN_ASSERT(copySizeInByte > 0);
 	u32 headerIndex = _textureUpdateHeaderCount++; // atomic incriment
 	void* stagingBufferPtr = allocateUpdateBuffer(copySizeInByte, GetTextureBufferAligned(copySizeInByte));
+
+	// 範囲外アクセスチェック
+	LTN_ASSERT(*reinterpret_cast<u32*>(stagingBufferPtr) == OVER_RUN_MARKER);
+
+	// 範囲外アクセス検知のために末尾にマーカーを入れる
+	memcpy(reinterpret_cast<u32*>(stagingBufferPtr) + copySizeInByte, &OVER_RUN_MARKER, sizeof(u32));
 
 	TextureUpdateHeader& header = _textureUpdateHeaders[headerIndex];
 	header._dstTexture = dstTexture;
@@ -92,8 +101,7 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 		return UNKNOWN_RESOURCE_INDEX;
 	};
 
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Vram Updater");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Vram Updater");
 
 	// vram to vram
 	for (u32 headerIndex = 0; headerIndex < _updateHeaderCount; ++headerIndex) {
@@ -191,9 +199,6 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	_updateHeaderCount = 0;
 	_stagingUpdateHeaderCount = 0;
 	_textureUpdateHeaderCount = 0;
-
-	queryHeapSystem->setCurrentMarkerName("Vram Updater");
-	queryHeapSystem->setMarker(commandList);
 }
 
 void* VramBufferUpdater::allocateUpdateBuffer(u32 sizeInByte, u32 alignment) {

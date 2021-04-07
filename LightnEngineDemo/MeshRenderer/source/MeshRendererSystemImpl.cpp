@@ -18,16 +18,13 @@ MeshRendererSystemImpl* MeshRendererSystemImpl::Get() {
 
 #if ENABLE_MESH_SHADER
 void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo* viewInfo) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 	DescriptorHandle vertexResourceDescriptors = _resourceManager.getVertexHandle();
 
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Mesh Shader Pass");
-	queryHeapSystem->setCurrentMarkerName("Mesh Shader Pass");
-	queryHeapSystem->setMarker(commandList);
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Mesh Shader Pass");
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
@@ -103,7 +100,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// デプスプリパス
 	{
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
@@ -126,9 +123,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._primitiveInstancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		_meshRenderer.render(context);
-
-		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
-		queryHeapSystem->setMarker(commandList);
 	}
 
 	// build hiz
@@ -173,7 +167,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// 描画
 	{
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
@@ -234,18 +228,14 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	{
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Readback Culling Result");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Readback Culling Result");
 		_gpuCullingResource.readbackCullingResultBuffer(commandList);
 	}
-
-	queryHeapSystem->setCurrentMarkerName("Main Pass");
-	queryHeapSystem->setMarker(commandList);
 }
 #endif
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewInfo* viewInfo) {
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
 	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
 	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
@@ -254,7 +244,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	DescriptorHandle vertexResourceDescriptors = _resourceManager.getVertexHandle();
 	u32 pipelineStateResourceCount = materialSystem->getShaderSetCount();
 
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
 
 	GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
 	GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
@@ -314,7 +304,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// デプスプリパス
 	{
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		MultiIndirectRenderContext context = {};
@@ -332,9 +322,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
 		_meshRenderer.multiDrawRender(context);
-
-		queryHeapSystem->setCurrentMarkerName("Depth Prepass");
-		queryHeapSystem->setMarker(commandList);
 	}
 
 	// build hiz
@@ -366,7 +353,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// 描画
 	{
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		PipelineStateGroup** pipelineStates = nullptr;
@@ -402,21 +389,15 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indexBufferView = &indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
 		_meshRenderer.multiDrawRender(context);
-
-		queryHeapSystem->setCurrentMarkerName("Main Pass");
-		queryHeapSystem->setMarker(commandList);
 	}
 
 	_gpuCullingResource.readbackCullingResultBuffer(commandList);
-
-	queryHeapSystem->setCurrentMarkerName("Multi Draw Pass");
-	queryHeapSystem->setMarker(commandList);
 }
 #endif
 
 #if ENABLE_CLASSIC_VERTEX
 void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo) {
-	DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::RED, "Classic Shader Pass");
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Classic Shader Pass");
 
 	GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
 	GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
@@ -829,8 +810,7 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 
 	// レンダーターゲットクリア
 	{
-		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::GREEN, "Setup Draw");
+		DEBUG_MARKER_GPU_SCOPED_EVENT(commandList, Color4::GREEN, "Setup Draw");
 
 		f32 clearColor[4] = {};
 		DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
