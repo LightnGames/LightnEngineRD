@@ -331,7 +331,6 @@ private:
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
 	MultiDynamicQueue<gpu::SubMeshInstance> _gpuSubMeshInstances;
-	Matrix34 _meshInstanceWorldMatrics[MESH_INSTANCE_COUNT_MAX] = {};
 
 	GpuBuffer _meshInstanceBuffer;
 	GpuBuffer _meshInstanceWorldMatrixBuffer;

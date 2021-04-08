@@ -27,6 +27,8 @@ RWStructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(u2);
 RWByteAddressBuffer _meshletInstanceInfoCounts : register(u3);
 RWStructuredBuffer<MeshletInstanceInfo> _primitiveInstancingInfos : register(u4);
 RWByteAddressBuffer _primitiveInstancingInfoCounts : register(u5);
+RWStructuredBuffer<MeshletInstancePrimitiveInfo> _meshletPrimitiveInfos : register(u6);
+RWStructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(u7);
 #if UBER_CULLING_RESULT
 RWByteAddressBuffer _cullingResult : register(u6);
 #endif
@@ -106,6 +108,14 @@ void addIndirectArgument(uint meshInstanceIndex) {
         meshletInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
         meshletInfo._primitiveOffset = lodMesh._primitiveOffset;
         _primitiveInstancingInfos[globalOffset] = meshletInfo;
+        
+        MeshletInstancePrimitiveInfo meshletPrimitiveInfo;
+        meshletPrimitiveInfo._materialIndex = materialInstanceIndex;
+        meshletPrimitiveInfo._vertexOffset = lodMesh._vertexOffset;
+        meshletPrimitiveInfo._vertexIndexOffset = lodMesh._vertexIndexOffset;
+        meshletPrimitiveInfo._primitiveOffset = lodMesh._primitiveOffset;
+        _meshletPrimitiveInfos[globalOffset] = meshletPrimitiveInfo;     
+        _meshletInstanceMeshInstanceIndices[globalOffset] = meshInstanceIndex;
     }
 }
 
