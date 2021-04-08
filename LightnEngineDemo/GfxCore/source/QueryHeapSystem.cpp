@@ -32,10 +32,8 @@ void QueryHeapSystem::terminate() {
 
 void QueryHeapSystem::update() {
 	// カウンタをリセット　初期値として先頭に0を詰めておく
-	_currentFrameGpuMarkerCount = 1;
-	_currentFrameCpuMarkerCount = 1;
-	_currentGpuTimeStamps[0] = 0;
-	_currentCpuTimeStamps[0] = 0;
+	_currentFrameGpuMarkerCount = 0;
+	_currentFrameCpuMarkerCount = 0;
 }
 
 void QueryHeapSystem::requestTimeStamp(CommandList* commandList, u32 frameIndex) {

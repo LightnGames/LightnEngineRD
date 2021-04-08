@@ -224,6 +224,28 @@ Quaternion operator * (const Quaternion& q, f32 s);
 Quaternion operator * (f32 s, const Quaternion& q);
 Quaternion operator / (const Quaternion& q, f32 s);
 
+struct LTN_CORE_API Matrix34 {
+	Matrix34() :m{
+		{0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f} } {}
+	Matrix34(
+		f32 m11, f32 m12, f32 m13,
+		f32 m21, f32 m22, f32 m23,
+		f32 m31, f32 m32, f32 m33,
+		f32 m41, f32 m42, f32 m43) :m{
+			{ m11, m12, m13},
+			{ m21, m22, m23},
+			{ m31, m32, m33},
+			{ m41, m42, m43} } {}
+
+	union {
+		f32 m[4][3];
+		Vector3 mv[4];
+	};
+};
+
 struct LTN_CORE_API Matrix4 {
 	Matrix4() :m{
 			{0.0f, 0.0f, 0.0f, 0.0f},
@@ -290,6 +312,7 @@ struct LTN_CORE_API Matrix4 {
 	//ワールド行列からワールド座標を取得
 	Vector3 positionFromWorld() const;
 	Vector3 scaleFromWorld() const;
+	Matrix34 getMatrix34() const;
 
 	//クォータニオンから回転行列を生成
 	static Matrix4 matrixFromQuaternion(const Quaternion& q);

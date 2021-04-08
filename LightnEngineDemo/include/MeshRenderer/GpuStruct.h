@@ -57,6 +57,18 @@ namespace gpu {
 		f32 _apexOffset = 0;
 	};
 
+	struct MeshletPrimitiveInfo {
+		u32 _vertexCount;
+		u32 _primitiveCount;
+	};
+
+	struct MeshletInstancePrimitiveInfo {
+		u32 _materialIndex;
+		u32 _vertexOffset;
+		u32 _vertexIndexOffset;
+		u32 _primitiveOffset;
+	};
+
 	struct MeshInstance {
 		u32 _stateFlags;
 		u32 _meshIndex = 0;

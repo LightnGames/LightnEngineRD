@@ -11,18 +11,23 @@ StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<LodMesh> _lodMeshes : register(t2);
 StructuredBuffer<SubMesh> _subMeshes : register(t3);
-StructuredBuffer<Meshlet> _meshlets : register(t4);
+//StructuredBuffer<Meshlet> _meshlets : register(t4);
 
 StructuredBuffer<MeshInstance> _meshInstances : register(t5);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
 
-StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t9);
+//StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t9);
 StructuredBuffer<uint> _vertexIndices : register(t10);
 StructuredBuffer<uint> _primitives : register(t11);
 StructuredBuffer<float3> _vertexPositions : register(t12);
 StructuredBuffer<uint> _vertexNormalTangents : register(t13);
 StructuredBuffer<uint> _vertexTexcoords : register(t14);
+
+StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t15);
+StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : register(t16);
+StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t17);
+//StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t18);
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
@@ -96,7 +101,7 @@ void main(
     IndirectArgumentConstant indirectArgumentConstant = _primitiveInstancingConstant._constant;
     uint meshletLocalIndex = min(gid / indirectArgumentConstant._instanceCount, indirectArgumentConstant._meshletCount - 1);
     uint meshletIndex = _primitiveInstancingConstant._meshletOffset;
-    Meshlet meshlet = _meshlets[meshletIndex + meshletLocalIndex];
+    MeshletPrimitiveInfo meshlet = _meshletPrimitiveInfos[meshletIndex + meshletLocalIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
 
@@ -117,31 +122,29 @@ void main(
     if(gtid < totalPrimitiveCount) {
         uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
         uint primitiveInstanceIndex = gtid / primitiveCount;
-        MeshletInstanceInfo primitiveMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + primitiveInstanceIndex]; // TODO:　メモリアクセス改善
+
+        MeshletInstancePrimitiveInfo primitiveMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoOffset + primitiveInstanceIndex];
         uint primitiveGtid = gtid % primitiveCount;
-        uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
-        uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
-        uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
+        uint primitiveIndex = primitiveMeshletInstanceInfo._primitiveOffset + primitiveGtid;
+        uint packedIndex = _primitives[primitiveIndex];
+
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
         uint indexOffset = vertexCount * primitiveInstanceIndex;
-        unpackedIndex += uint3(indexOffset, indexOffset, indexOffset);
-        tris[gtid] = unpackedIndex;
+        tris[gtid] = unpackedIndex + uint3(indexOffset, indexOffset, indexOffset);
     }
 
     if(gtid < totalVertexCount) {
         uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
         uint vertexInstanceIndex = gtid / vertexCount;
-        MeshletInstanceInfo vertexMeshletInstanceInfo = _meshletInstanceInfos[infoOffset + vertexInstanceIndex];
+        uint infoIndex = infoOffset + vertexInstanceIndex;
+        MeshletInstancePrimitiveInfo vertexMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoIndex];
         uint vertexGtid = gtid % vertexCount;
-        uint meshInstanceIndex = vertexMeshletInstanceInfo._meshInstanceIndex;
-        uint materialIndex = vertexMeshletInstanceInfo._materialIndex;
-        uint vertexLocalOffset = vertexMeshletInstanceInfo._vertexOffset;
-        uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset;
+        uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[infoIndex];
         MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     
-        uint vertexLocalIndex = meshlet._vertexOffset + vertexGtid;
-        uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
-        uint vertexOffset = vertexLocalOffset + vertexIndex;
+        uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset + vertexGtid;
+        uint vertexIndex = _vertexIndices[vertexIndexOffset];
+        uint vertexOffset = vertexMeshletInstanceInfo._vertexOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
         float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
         
@@ -150,7 +153,7 @@ void main(
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
         vertexOut._meshletIndex = meshletIndex;
-        vertexOut._materialIndex = materialIndex;
+        vertexOut._materialIndex = vertexMeshletInstanceInfo._materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;
     }

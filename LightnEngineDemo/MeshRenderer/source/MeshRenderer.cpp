@@ -10,8 +10,7 @@
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
 
-void MeshRenderer::initialize()
-{
+void MeshRenderer::initialize() {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 
@@ -360,8 +359,7 @@ void MeshRenderer::initialize()
 	}
 }
 
-void MeshRenderer::terminate()
-{
+void MeshRenderer::terminate() {
 	_gpuCullingPassPipelineState->terminate();
 	_gpuOcclusionCullingPipelineState->terminate();
 	_gpuCullingRootSignature->terminate();
@@ -381,7 +379,7 @@ void MeshRenderer::terminate()
 #endif
 }
 
-void MeshRenderer::render(const RenderContext& context) {
+void MeshRenderer::render(const RenderContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
@@ -403,30 +401,7 @@ void MeshRenderer::render(const RenderContext& context) {
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		u32 indirectArgumentOffset = pipelineStateIndex * InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
 
-		// メッシュレット　インスタンシング描画
-		{
-			PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
-			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, context._meshHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, primitiveInstancingResource->getInfoSrv());
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, context._meshInstanceHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, context._vertexResourceDescriptors);
-			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
-
-			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
-			if (context._collectResult) {
-				context._gpuCullingResource->setDrawResultDescriptorTable(commandList);
-			}
-			commandList->setPipelineState(pipelineState->getPipelineState());
-			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentAS);
-			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
-		}
-
-		// メッシュレット　プリミティブインスタンシング描画
+		// メッシュシェーダー
 		{
 			PipelineStateGroup* pipelineState = context._primInstancingPipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
@@ -446,10 +421,34 @@ void MeshRenderer::render(const RenderContext& context) {
 			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
+
+		// メッシュシェーダー + 増幅シェーダー
+		{
+			PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
+			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH, context._meshHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESHLET_INFO, primitiveInstancingResource->getInfoSrv());
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_MESH_INSTANCE, context._meshInstanceHandle);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_VERTEX_RESOURCES, context._vertexResourceDescriptors);
+			commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_TEXTURES, textureDescriptors._gpuHandle);
+
+			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
+			if (context._collectResult) {
+				context._gpuCullingResource->setDrawResultDescriptorTable(commandList);
+			}
+
+			commandList->setPipelineState(pipelineState->getPipelineState());
+			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
+			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentAS);
+			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+		}
 	}
 }
 
-void MeshRenderer::computeLod(const ComputeLodContext& context) {
+void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -470,11 +469,11 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) {
 	gpuCullingResource->resetResourceComputeLodBarriers(commandList);
 }
 
-void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) {
+void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) const {
 	gpuCulling(context, _gpuCullingPipelineState);
 }
 
-void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& context) {
+void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& context) const {
 	CommandList* commandList = context._commandList;
 	IndirectArgumentResource* indirectArgumentResource = context._indirectArgumentResource;
 	IndirectArgumentResource* primIndirectArgumentResource = context._primIndirectArgumentResource;
@@ -500,11 +499,11 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 	primIndirectArgumentResource->resourceBarriersToIndirectArgument(commandList);
 }
 
-void MeshRenderer::mainCulling(const GpuCullingContext& context) {
+void MeshRenderer::mainCulling(const GpuCullingContext& context) const {
 	gpuCulling(context, _gpuOcclusionCullingPipelineState);
 }
 
-void MeshRenderer::buildHiz(const BuildHizContext& context) {
+void MeshRenderer::buildHiz(const BuildHizContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -544,7 +543,7 @@ void MeshRenderer::buildHiz(const BuildHizContext& context) {
 	gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);
 }
 
-void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
+void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -575,8 +574,6 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
 		LTN_ASSERT(indirectArgumentOffset + commandCountMax <= IndirectArgumentResource::INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
 
-		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
-
 		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 		commandList->setPipelineState(pipelineState->getPipelineState());
 		commandList->setVertexBuffers(0, context._numVertexBufferView, context._vertexBufferViews);
@@ -586,6 +583,8 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, context._meshInstanceHandle);
 		commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
+
+		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
 		indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 	}
@@ -594,15 +593,15 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) {
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
-void MeshRenderer::multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context) {
+void MeshRenderer::multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context) const {
 	gpuCulling(context, _multiDrawCullingPipelineState);
 }
 
-void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& context) {
+void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& context) const {
 	gpuCulling(context, _multiDrawOcclusionCullingPipelineState);
 }
 
-void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) {
+void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) const {
 	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 	CommandList* commandList = context._commandList;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
@@ -635,7 +634,7 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	primitiveInstancingResource->resetResourceGpuCullingBarriers(commandList);
 }
 
-void MeshRenderer::gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) {
+void MeshRenderer::gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) const {
 	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 	CommandList* commandList = context._commandList;
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;

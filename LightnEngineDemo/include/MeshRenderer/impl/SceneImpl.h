@@ -234,6 +234,8 @@ public:
 
 private:
 	GpuBuffer _InfoBuffer;
+	GpuBuffer _primitiveInfoBuffer;
+	GpuBuffer _primitiveInfoMeshInstanceIndexBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
 	DescriptorHandle _infoOffsetSrv;
@@ -329,8 +331,10 @@ private:
 	MultiDynamicQueue<gpu::MeshInstance> _gpuMeshInstances;
 	MultiDynamicQueue<gpu::LodMeshInstance> _gpuLodMeshInstances;
 	MultiDynamicQueue<gpu::SubMeshInstance> _gpuSubMeshInstances;
+	Matrix34 _meshInstanceWorldMatrics[MESH_INSTANCE_COUNT_MAX] = {};
 
 	GpuBuffer _meshInstanceBuffer;
+	GpuBuffer _meshInstanceWorldMatrixBuffer;
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;

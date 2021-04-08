@@ -54,6 +54,10 @@ void MeshResourceManager::initialize() {
 		desc._sizeInByte = MESHLET_COUNT_MAX * sizeof(gpu::Meshlet);
 		_meshletBuffer.initialize(desc);
 		_meshletBuffer.setDebugName("Meshlet");
+
+		desc._sizeInByte = MESHLET_COUNT_MAX * sizeof(gpu::MeshletPrimitiveInfo);
+		_meshletPrimitiveInfoBuffer.initialize(desc);
+		_meshletPrimitiveInfoBuffer.setDebugName("Meshlet Primitive Info");
 	}
 
 	_meshes.initialize(MESH_COUNT_MAX);
@@ -160,6 +164,7 @@ void MeshResourceManager::terminate() {
 	_lodMeshBuffer.terminate();
 	_subMeshBuffer.terminate();
 	_meshletBuffer.terminate();
+	_meshletPrimitiveInfoBuffer.terminate();
 	_subMeshDrawInfoBuffer.terminate();
 
 #if ENABLE_CLASSIC_VERTEX
@@ -293,8 +298,18 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 
 	// Meshlet
 	{
-		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * meshInfo._meshletStartIndex, meshInfo._totalMeshletCount);
+		u32 startIndex = meshInfo._meshletStartIndex;
+		u32 count = meshInfo._totalMeshletCount;
+		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * startIndex, count);
 		fread_s(meshlets, sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
+
+		gpu::MeshletPrimitiveInfo* meshletPrimitiveInfos = vramUpdater->enqueueUpdate<gpu::MeshletPrimitiveInfo>(&_meshletPrimitiveInfoBuffer, sizeof(gpu::MeshletInstancePrimitiveInfo) * startIndex, count);
+		for (u32 i = 0; i < meshInfo._totalMeshletCount; ++i) {
+			const gpu::Meshlet& meshlet = meshlets[i];
+			gpu::MeshletPrimitiveInfo& info = meshletPrimitiveInfos[i];
+			info._vertexCount = meshlet._vertexCount;
+			info._primitiveCount = meshlet._primitiveCount;
+		}
 	}
 
 	// プリミティブ

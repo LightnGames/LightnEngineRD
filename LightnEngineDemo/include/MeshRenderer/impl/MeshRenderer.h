@@ -107,24 +107,24 @@ class MeshRenderer {
 public:
 	void initialize();
 	void terminate();
-	void render(const RenderContext& context);
 
-	void computeLod(const ComputeLodContext& context);
-	void depthPrePassCulling(const GpuCullingContext& context);
-	void mainCulling(const GpuCullingContext& context);
-	void buildIndirectArgument(const BuildIndirectArgumentContext& context);
-	void buildHiz(const BuildHizContext& context);
+	void render(const RenderContext& context) const;
+	void computeLod(const ComputeLodContext& context) const;
+	void depthPrePassCulling(const GpuCullingContext& context) const;
+	void mainCulling(const GpuCullingContext& context) const;
+	void buildIndirectArgument(const BuildIndirectArgumentContext& context) const;
+	void buildHiz(const BuildHizContext& context) const;
 
 #if ENABLE_MULTI_INDIRECT_DRAW
-	void multiDrawRender(const MultiIndirectRenderContext& context);
-	void multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context);
-	void multiDrawMainCulling(const MultiDrawGpuCullingContext& context);
+	void multiDrawRender(const MultiIndirectRenderContext& context) const;
+	void multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context) const;
+	void multiDrawMainCulling(const MultiDrawGpuCullingContext& context) const;
 #endif
 
 private:
-	void gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState);
+	void gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) const;
 #if ENABLE_MULTI_INDIRECT_DRAW
-	void gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState);
+	void gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) const;
 #endif
 
 private:

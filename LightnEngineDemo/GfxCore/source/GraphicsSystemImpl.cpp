@@ -162,20 +162,16 @@ void GraphicsSystemImpl::render() {
 	CommandList* commandList = allocater->allocateCommandList(compleatedFenceValue);
 	commandList->initialize(commandListDesc);
 
+	// 描画開始時の時間計測マーカーを追加
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+	queryHeapSystem->setGpuMarker(commandList);
+	queryHeapSystem->setCpuMarker("");
+
 	DescriptorHeap* descriptorHeaps[] = { _srvCbvUavGpuDescriptorAllocator.getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 	_vramBufferUpdater.populateCommandList(commandList);
 
 	_renderPass(commandList);
-
-	// test
-	//commandList->setViewports(1, &viewInfo->_viewPort);
-	//commandList->setScissorRects(1, &viewInfo->_scissorRect);
-	//commandList->setGraphicsRootSignature(_rootSignature);
-	//commandList->setPipelineState(_pipelineState);
-	//commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//commandList->drawInstanced(3, 1, 0, 0);
-
 	_debugWindow.renderFrame(commandList);
 
 	// hdr buffer からバックバッファにコピー
@@ -185,16 +181,22 @@ void GraphicsSystemImpl::render() {
 
 		ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
 		GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
-		viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-		currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_COPY_DEST);
+		ResourceTransitionBarrier barriers[2] = {};
+		barriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
+		barriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_DEST);
+		
+		ResourceTransitionBarrier resetBarriers[2] = {};
+		resetBarriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_RENDER_TARGET);
+		resetBarriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_PRESENT);
+
+		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 		commandList->copyResource(currentRtvTexture.getResource(), viewInfo->_hdrTexture.getResource());
-		viewInfo->_hdrTexture.transitionResource(commandList, RESOURCE_STATE_RENDER_TARGET);
-		currentRtvTexture.transitionResource(commandList, RESOURCE_STATE_PRESENT);
+		commandList->transitionBarriers(resetBarriers, LTN_COUNTOF(resetBarriers));
 	}
 
 
 	// タイムスタンプ更新
-	QueryHeapSystem::Get()->requestTimeStamp(commandList, _frameIndex);
+	queryHeapSystem->requestTimeStamp(commandList, _frameIndex);
 
 	_commandQueue->executeCommandLists(1, &commandList);
 

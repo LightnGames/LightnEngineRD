@@ -129,6 +129,7 @@ private:
 	GpuBuffer _lodMeshBuffer;
 	GpuBuffer _subMeshBuffer;
 	GpuBuffer _meshletBuffer;
+	GpuBuffer _meshletPrimitiveInfoBuffer;
 
 	DescriptorHandle _meshHandles;
 	DescriptorHandle _vertexHandles;

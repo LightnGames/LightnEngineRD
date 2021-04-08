@@ -22,6 +22,10 @@ void Scene::initialize() {
 		_meshInstanceBuffer.initialize(desc);
 		_meshInstanceBuffer.setDebugName("Mesh Instance");
 
+		desc._sizeInByte = MESH_INSTANCE_COUNT_MAX * sizeof(Matrix34);
+		_meshInstanceWorldMatrixBuffer.initialize(desc);
+		_meshInstanceWorldMatrixBuffer.setDebugName("Mesh Instance World Matrix");
+
 		desc._sizeInByte = LOD_MESH_INSTANCE_COUNT_MAX * sizeof(gpu::LodMeshInstance);
 		_lodMeshInstanceBuffer.initialize(desc);
 		_lodMeshInstanceBuffer.setDebugName("Lod Mesh Instance");
@@ -148,6 +152,7 @@ void Scene::processDeletion() {
 
 void Scene::terminate() {
 	_meshInstanceBuffer.terminate();
+	_meshInstanceWorldMatrixBuffer.terminate();
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_sceneCullingConstantBuffer.terminate();
@@ -175,6 +180,7 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
 	Matrix4 matrixWorld = meshInstance.getWorldMatrix();
+	Matrix4 transposedMatrixWorld = matrixWorld.transpose();
 	Vector3 worldScale = matrixWorld.getScale();
 
 	AABB meshInstanceLocalBounds(meshInfo->_boundsMin, meshInfo->_boundsMax);
@@ -186,11 +192,14 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 	gpuMeshInstance._stateFlags = 1;
 	gpuMeshInstance._boundsRadius = boundsRadius;
 	gpuMeshInstance._worldScale = Max(worldScale._x, Max(worldScale._y, worldScale._z));
-	gpuMeshInstance._matrixWorld = matrixWorld.transpose();
+	gpuMeshInstance._matrixWorld = transposedMatrixWorld;
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, sizeof(gpu::MeshInstance) * meshInstanceIndex);
 	*mapMeshInstance = gpuMeshInstance;
+
+	Matrix34* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix34>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix34) * meshInstanceIndex);
+	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix34();
 }
 
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
@@ -526,8 +535,6 @@ void GpuCullingResource::setComputeLodResource(CommandList* commandList) {
 }
 
 void GpuCullingResource::setGpuCullingResources(CommandList* commandList) {
-	//commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_INDIRECT_ARGUMENTS, _indirectArgumentUavHandle._gpuHandle);
-	//commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_VIEW_INFO, _cullingViewInfoCbvHandle._gpuHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
 	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_HIZ, _hizDepthTextureSrv._gpuHandle);
@@ -675,9 +682,17 @@ void InstancingResource::initialize() {
 		_InfoBuffer.initialize(desc);
 		_InfoBuffer.setDebugName("Primitive Instancing Infos");
 
-		desc._sizeInByte = sizeof(u32) * INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(u32);
 		_infoCountBuffer.initialize(desc);
 		_infoCountBuffer.setDebugName("Primitive Instancing Counts");
+
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(gpu::MeshletInstancePrimitiveInfo);
+		_primitiveInfoBuffer.initialize(desc);
+		_primitiveInfoBuffer.setDebugName("Meshlet Primitive Instance Info");
+
+		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(u32);
+		_primitiveInfoMeshInstanceIndexBuffer.initialize(desc);
+		_primitiveInfoMeshInstanceIndexBuffer.setDebugName("Meshlet Primitive Instance Mesh Instance Index");
 	}
 
 	// srv
@@ -729,6 +744,8 @@ void InstancingResource::terminate() {
 	_infoOffsetBuffer.terminate();
 	_InfoBuffer.terminate();
 	_infoCountBuffer.terminate();
+	_primitiveInfoBuffer.terminate();
+	_primitiveInfoMeshInstanceIndexBuffer.terminate();
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_infoOffsetSrv);

@@ -107,6 +107,18 @@ struct Meshlet {
 	float _apexOffset;
 };
 
+struct MeshletPrimitiveInfo {
+    uint _vertexCount;
+    uint _primitiveCount;
+};
+
+struct MeshletInstancePrimitiveInfo {
+    uint _materialIndex;
+    uint _vertexOffset;
+    uint _vertexIndexOffset;
+    uint _primitiveOffset;
+};
+
 struct MeshInstance {
 	uint _stateFlags;
 	uint _meshIndex;
