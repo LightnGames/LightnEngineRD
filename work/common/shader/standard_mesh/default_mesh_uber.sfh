@@ -12,22 +12,23 @@ StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<LodMesh> _lodMeshes : register(t2);
 StructuredBuffer<SubMesh> _subMeshes : register(t3);
 //StructuredBuffer<Meshlet> _meshlets : register(t4);
+StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t5);
 
-StructuredBuffer<MeshInstance> _meshInstances : register(t5);
-StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
-StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
+StructuredBuffer<MeshInstance> _meshInstances : register(t6);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t7);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t8);
 
-//StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t9);
-StructuredBuffer<uint> _vertexIndices : register(t10);
-StructuredBuffer<uint> _primitives : register(t11);
-StructuredBuffer<float3> _vertexPositions : register(t12);
-StructuredBuffer<uint> _vertexNormalTangents : register(t13);
-StructuredBuffer<uint> _vertexTexcoords : register(t14);
+//StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t10);
+StructuredBuffer<uint> _vertexIndices : register(t11);
+StructuredBuffer<uint> _primitives : register(t12);
+StructuredBuffer<float3> _vertexPositions : register(t13);
+StructuredBuffer<uint> _vertexNormalTangents : register(t14);
+StructuredBuffer<uint> _vertexTexcoords : register(t15);
 
-StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t15);
-StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : register(t16);
-StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t17);
-//StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t18);
+//ByteAddressBuffer _currentLodLevels : register(t16);
+StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : register(t17);
+StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]

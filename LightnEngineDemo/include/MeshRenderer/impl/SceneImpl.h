@@ -231,6 +231,10 @@ public:
 	GpuDescriptorHandle getInfoCountSrv() const { return _countSrv._gpuHandle; }
 	GpuDescriptorHandle getInfoUav() const { return _infoUav._gpuHandle; }
 	GpuDescriptorHandle getInfoSrv() const { return _infoSrv._gpuHandle; }
+	GpuDescriptorHandle getMeshInstanceIndexUav() const { return _primitiveInfoMeshInstanceIndexUav._gpuHandle; }
+	GpuDescriptorHandle getMeshInstanceIndexSrv() const { return _primitiveInfoMeshInstanceIndexSrv._gpuHandle; }
+	GpuDescriptorHandle getPrimitiveInfoUav() const { return _primitiveInfoUav._gpuHandle; }
+	GpuDescriptorHandle getPrimitiveInfoSrv() const { return _primitiveInfoSrv._gpuHandle; }
 
 private:
 	GpuBuffer _InfoBuffer;
@@ -244,6 +248,10 @@ private:
 	DescriptorHandle _countSrv;
 	DescriptorHandle _infoUav;
 	DescriptorHandle _infoSrv;
+	DescriptorHandle _primitiveInfoUav;
+	DescriptorHandle _primitiveInfoSrv;
+	DescriptorHandle _primitiveInfoMeshInstanceIndexUav;
+	DescriptorHandle _primitiveInfoMeshInstanceIndexSrv;
 };
 
 #if ENABLE_MULTI_INDIRECT_DRAW
@@ -313,8 +321,9 @@ public:
 	bool isUpdatedInstancingOffset() const { return _isUpdatedInstancingOffset; }
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	void allocateMeshInstance(MeshInstance** outMeshInstances, const Mesh** meshes, u32 instanceCount);
-	DescriptorHandle getMeshInstanceHandles() const { return _meshInstanceSrv; }
-	DescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle; }
+	GpuDescriptorHandle getMeshInstanceSrv() const { return _meshInstanceSrv._gpuHandle; }
+	GpuDescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle._gpuHandle; }
+	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
@@ -340,6 +349,7 @@ private:
 
 	DescriptorHandle _cullingSceneConstantHandle;
 	DescriptorHandle _meshInstanceSrv;
+	DescriptorHandle _meshInstanceWorldMatrixSrv;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
 	bool _isUpdatedInstancingOffset = false;

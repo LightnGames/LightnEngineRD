@@ -30,7 +30,7 @@ RWByteAddressBuffer _primitiveInstancingInfoCounts : register(u5);
 RWStructuredBuffer<MeshletInstancePrimitiveInfo> _meshletPrimitiveInfos : register(u6);
 RWStructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(u7);
 #if UBER_CULLING_RESULT
-RWByteAddressBuffer _cullingResult : register(u6);
+RWByteAddressBuffer _cullingResult : register(u8);
 #endif
 
 #define THREAD_NUM 128

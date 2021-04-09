@@ -568,6 +568,12 @@ struct InputElementDesc {
 };
 
 struct DescriptorRange {
+	DescriptorRange(DescriptorRangeType rangeType,
+		u32 numDescriptors,
+		u32 baseShaderRegister,
+		DescriptorRangeFlags flags = DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
+		:_rangeType(rangeType), _numDescriptors(numDescriptors), _baseShaderRegister(baseShaderRegister),_flags(flags){}
+
 	void initialize(DescriptorRangeType rangeType,
 		u32 numDescriptors,
 		u32 baseShaderRegister,

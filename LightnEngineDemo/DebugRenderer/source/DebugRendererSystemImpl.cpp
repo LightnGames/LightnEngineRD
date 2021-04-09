@@ -21,11 +21,8 @@ void DebugRendererSystemImpl::initialize() {
 		_pipelineState = allocator->allocatePipelineState();
 		_rootSignature = allocator->allocateRootSignature();
 
-		DescriptorRange cbvDescriptorRange = {};
-		cbvDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange srvDescriptorRange = {};
-		srvDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange cbvDescriptorRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		DescriptorRange srvDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
 		RootParameter rootParameters[2] = {};
 		rootParameters[0].initializeDescriptorTable(1, &cbvDescriptorRange, SHADER_VISIBILITY_VERTEX);

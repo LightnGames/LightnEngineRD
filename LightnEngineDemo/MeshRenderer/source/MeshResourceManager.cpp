@@ -75,8 +75,8 @@ void MeshResourceManager::initialize() {
 	// descriptors
 	{
 		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_meshHandles = allocater->allocateDescriptors(4);
-		_vertexHandles = allocater->allocateDescriptors(5);
+		_meshSrv = allocater->allocateDescriptors(5);
+		_vertexSrv = allocater->allocateDescriptors(5);
 		_subMeshDrawInfoSrv = allocater->allocateDescriptors(1);
 		u64 incrimentSize = static_cast<u64>(allocater->getIncrimentSize());
 
@@ -88,7 +88,7 @@ void MeshResourceManager::initialize() {
 
 		// mesh
 		{
-			CpuDescriptorHandle handle = _meshHandles._cpuHandle;
+			CpuDescriptorHandle handle = _meshSrv._cpuHandle;
 
 			desc._buffer._numElements = MESH_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::Mesh);
@@ -106,6 +106,10 @@ void MeshResourceManager::initialize() {
 			desc._buffer._structureByteStride = sizeof(gpu::Meshlet);
 			device->createShaderResourceView(_meshletBuffer.getResource(), &desc, handle + incrimentSize * 3);
 
+			desc._buffer._numElements = MESHLET_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(gpu::MeshletPrimitiveInfo);
+			device->createShaderResourceView(_meshletPrimitiveInfoBuffer.getResource(), &desc, handle + incrimentSize * 4);
+
 			desc._buffer._numElements = SUB_MESH_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::SubMeshDrawInfo);
 			device->createShaderResourceView(_subMeshDrawInfoBuffer.getResource(), &desc, _subMeshDrawInfoSrv._cpuHandle);
@@ -113,7 +117,7 @@ void MeshResourceManager::initialize() {
 
 		// vertex
 		{
-			CpuDescriptorHandle handle = _vertexHandles._cpuHandle;
+			CpuDescriptorHandle handle = _vertexSrv._cpuHandle;
 
 			desc._buffer._numElements = VERTEX_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(u32);
@@ -186,8 +190,8 @@ void MeshResourceManager::terminate() {
 	_primitiveBinaryHeaders.terminate();
 
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocater->discardDescriptor(_meshHandles);
-	allocater->discardDescriptor(_vertexHandles);
+	allocater->discardDescriptor(_meshSrv);
+	allocater->discardDescriptor(_vertexSrv);
 	allocater->discardDescriptor(_subMeshDrawInfoSrv);
 }
 
@@ -617,7 +621,7 @@ u32 MeshResourceManager::getMeshIndex(const MeshInfo* meshInfo) const {
 
 GpuDescriptorHandle MeshResourceManager::getSubMeshSrv() const {
 	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
-	return _meshHandles._gpuHandle + incrementSize * 2;
+	return _meshSrv._gpuHandle + incrementSize * 2;
 }
 
 void MeshResourceManager::deleteMesh(u32 meshIndex) {

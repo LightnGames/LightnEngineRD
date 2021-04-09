@@ -205,7 +205,6 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	const MeshInstanceImpl& meshInstanceInfo = _meshInstances[meshInstanceIndex];
 	const MeshInfo* meshInfo = meshInstanceInfo.getMesh()->getMeshInfo();
-
 	const gpu::MeshInstance& meshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset];
 	const gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset];
@@ -441,7 +440,7 @@ void MeshInstance::setMaterialSlotIndex(Material* material, u32 slotIndex) {
 
 void MeshInstance::setMaterial(Material* material, u64 slotNameHash) {
 	u32 slotIndex = getMaterialSlotIndex(slotNameHash);
-	LTN_ASSERT(slotIndex != static_cast<u32>(-1));
+	LTN_ASSERT(slotIndex != gpu::INVALID_INDEX);
 	setMaterialSlotIndex(material, slotIndex);
 }
 
@@ -535,9 +534,9 @@ void GpuCullingResource::setComputeLodResource(CommandList* commandList) {
 }
 
 void GpuCullingResource::setGpuCullingResources(CommandList* commandList) {
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_GPU_HIZ, _hizDepthTextureSrv._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::HIZ, _hizDepthTextureSrv._gpuHandle);
 }
 
 void GpuCullingResource::setHizResourcesPass0(CommandList* commandList) {
@@ -647,12 +646,12 @@ void GpuCullingResource::readbackCullingResultBuffer(CommandList* commandList) {
 }
 
 void GpuCullingResource::setDrawResultDescriptorTable(CommandList* commandList) {
-	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
-	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_HIZ, _hizDepthTextureSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::HIZ, _hizDepthTextureSrv._gpuHandle);
 }
 
 void GpuCullingResource::setDrawCurrentLodDescriptorTable(CommandList* commandList) {
-	commandList->setGraphicsRootDescriptorTable(ROOT_DEFAULT_MESH_LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
 }
 
 ResourceDesc GpuCullingResource::getHizTextureResourceDesc(u32 level) const {
@@ -796,14 +795,18 @@ void InstancingResource::resetInfoCountBuffers(CommandList* commandList) {
 }
 
 void InstancingResource::resourceBarriersGpuCullingToUAV(CommandList* commandList) {
-	ResourceTransitionBarrier barriers[1] = {};
+	ResourceTransitionBarrier barriers[3] = {};
 	barriers[0] = _infoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[1] = _primitiveInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[2] = _primitiveInfoMeshInstanceIndexBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }
 
 void InstancingResource::resetResourceGpuCullingBarriers(CommandList* commandList) {
-	ResourceTransitionBarrier barriers[1] = {};
+	ResourceTransitionBarrier barriers[3] = {};
 	barriers[0] = _infoCountBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	barriers[1] = _primitiveInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	barriers[2] = _primitiveInfoMeshInstanceIndexBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }
 

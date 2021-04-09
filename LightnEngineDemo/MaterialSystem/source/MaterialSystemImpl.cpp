@@ -240,44 +240,26 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
 	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
-	constexpr u32 TEXTURE_BASE_REGISTER = 25;
+	constexpr u32 TEXTURE_BASE_REGISTER = 29;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
-	DescriptorRange cullingViewCbvRange = {};
-	cullingViewCbvRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+	DescriptorRange cullingViewCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+	DescriptorRange viewCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+	DescriptorRange materialDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	DescriptorRange meshDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 5, 1);
+	DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 4, 6);
+	DescriptorRange meshletInfoSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+	DescriptorRange vertexDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 5, 11);
+	DescriptorRange currentLodLevelRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 16);
+	DescriptorRange meshletInstancePrimitiveInfoRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 17);
+	DescriptorRange meshletInstanceMeshInstanceIndexRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 18);
+	DescriptorRange meshletInstanceWorldMatrixRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 19);
+	DescriptorRange hizRange(DESCRIPTOR_RANGE_TYPE_SRV, 8, 20);
+	DescriptorRange textureDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
+	DescriptorRange cullingResultDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
-	DescriptorRange viewCbvRange = {};
-	viewCbvRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-	DescriptorRange materialDescriptorRange = {};
-	materialDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-	DescriptorRange meshDescriptorRange = {};
-	meshDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 4, 1);
-
-	DescriptorRange meshInstanceDescriptorRange = {};
-	meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 4, 5);
-
-	DescriptorRange meshletInfoSrvRange = {};
-	meshletInfoSrvRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
-
-	DescriptorRange vertexDescriptorRange = {};
-	vertexDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 5, 10);
-
-	DescriptorRange currentLodLevelRange = {};
-	currentLodLevelRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 15);
-
-	DescriptorRange hizRange = {};
-	hizRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 8, 16);
-
-	DescriptorRange textureDescriptorRange = {};
-	textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
-
-	DescriptorRange cullingResultDescriptorRange = {};
-	cullingResultDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-
-	constexpr u32 ROOT_FRUSTUM_COUNT = ROOT_DEFAULT_MESH_COUNT - 2;
+	constexpr u32 ROOT_FRUSTUM_COUNT = DefaultMeshRootParameter::ROOT_DEFAULT_MESH_COUNT - 2;
 	RootParameter furstumCullingRootParameters[ROOT_FRUSTUM_COUNT] = {};
-	RootParameter furstumOcclusionCullingRootParameters[ROOT_DEFAULT_MESH_COUNT] = {};
+	RootParameter furstumOcclusionCullingRootParameters[DefaultMeshRootParameter::ROOT_DEFAULT_MESH_COUNT] = {};
 
 	RootSignatureDesc rootSignatureDescFurstumCulling = {};
 	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
@@ -285,37 +267,31 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// メッシュレット　フラスタムカリングのみ
 	{
 		RootParameter* rootParameters = furstumCullingRootParameters;
-		rootParameters[ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
-		rootParameters[ROOT_DEFAULT_MESH_VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
-		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
+		rootParameters[DefaultMeshRootParameter::VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
+		rootParameters[DefaultMeshRootParameter::TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESHLET_PRIMITIVE_INFO].initializeDescriptorTable(1, &meshletInstancePrimitiveInfoRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESHLET_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &meshletInstanceMeshInstanceIndexRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshletInstanceWorldMatrixRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumCulling._device = device;
 		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(furstumCullingRootParameters);
 		rootSignatureDescFurstumCulling._parameters = rootParameters;
+		memcpy(furstumOcclusionCullingRootParameters, rootParameters, sizeof(RootParameter)*ROOT_FRUSTUM_COUNT);
 	}
 
 	// メッシュレット　フラスタム + オクルージョンカリング
 	{
 		RootParameter* rootParameters = furstumOcclusionCullingRootParameters;
-		rootParameters[ROOT_DEFAULT_MESH_CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
-		rootParameters[ROOT_DEFAULT_MESH_VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
-		rootParameters[ROOT_DEFAULT_MESH_TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_DEFAULT_MESH_HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
 
 		rootSignatureDescFurstumOcclusionCulling._device = device;
 		rootSignatureDescFurstumOcclusionCulling._numParameters = LTN_COUNTOF(furstumOcclusionCullingRootParameters);
@@ -330,7 +306,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	{
 		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
 		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter)* ROOT_FRUSTUM_COUNT);
-		rootParameters[ROOT_DEFAULT_MESH_INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParameter::INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
 		rootSignatureDesc._parameters = rootParameters;
@@ -400,17 +376,10 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// classic
 	{
-		DescriptorRange cbvDescriptorRange = {};
-		cbvDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-		DescriptorRange meshInstanceDescriptorRange = {};
-		meshInstanceDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-		DescriptorRange materialDescriptorRange = {};
-		materialDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-		DescriptorRange textureDescriptorRange = {};
-		textureDescriptorRange.initialize(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
+		DescriptorRange cbvDescriptorRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange materialDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange textureDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
 
 		RootParameter rootParameters[ROOT_CLASSIC_MESH_COUNT] = {};
 		rootParameters[ROOT_CLASSIC_MESH_SCENE_CONSTANT].initializeDescriptorTable(1, &cbvDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -453,7 +422,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		IndirectArgumentDesc argumentDescs[2] = {};
 		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
 		argumentDescs[0].Constant._num32BitValuesToSet = 3;
-		argumentDescs[0].Constant._rootParameterIndex = ROOT_DEFAULT_MESH_INDIRECT_CONSTANT;
+		argumentDescs[0].Constant._rootParameterIndex = DefaultMeshRootParameter::INDIRECT_CONSTANT;
 		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 
 		CommandSignatureDesc desc = {};

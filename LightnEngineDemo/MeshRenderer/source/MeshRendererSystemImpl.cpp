@@ -18,11 +18,10 @@ MeshRendererSystemImpl* MeshRendererSystemImpl::Get() {
 
 #if ENABLE_MESH_SHADER
 void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo* viewInfo) {
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceSrv();
+	GpuDescriptorHandle meshHandle = _resourceManager.getMeshSrv();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
-	DescriptorHandle vertexResourceDescriptors = _resourceManager.getVertexHandle();
 
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Mesh Shader Pass");
 
@@ -39,10 +38,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._viewInfo = viewInfo;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshInstanceHandle = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		_meshRenderer.computeLod(context);
 	}
 
@@ -73,14 +72,14 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
+		context._instancingResource = &_primitiveInstancingResource;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
@@ -113,15 +112,15 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 		context._primInstancingPipelineStates = primPipelineStateSet->_depthPipelineStateGroups;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
+		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
+		context._scene = &_scene;
 		_meshRenderer.render(context);
 	}
 
@@ -138,15 +137,15 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	if (!isFixedCullingView) {
 		GpuCullingContext context = {};
 		context._commandList = commandList;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
+		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
@@ -210,17 +209,17 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._viewInfo = viewInfo;
 		context._indirectArgumentResource = &_indirectArgumentResource;
 		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
-		context._primitiveInstancingResource = &_primitiveInstancingResource;
+		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-		context._vertexResourceDescriptors = vertexResourceDescriptors._gpuHandle;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStates;
 		context._primInstancingPipelineStates = primPipelineStateSet->_pipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
+		context._scene = &_scene;
 		context._collectResult = true;
 		_meshRenderer.render(context);
 
@@ -236,12 +235,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewInfo* viewInfo) {
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
+	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceSrv();
+	GpuDescriptorHandle meshHandle = _resourceManager.getMeshSrv();
 	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
-	DescriptorHandle vertexResourceDescriptors = _resourceManager.getVertexHandle();
 	u32 pipelineStateResourceCount = materialSystem->getShaderSetCount();
 
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
@@ -277,10 +275,10 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._viewInfo = viewInfo;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshInstanceHandle = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		_meshRenderer.computeLod(context);
 	}
 
@@ -291,12 +289,12 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
-		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.multiDrawDepthPrePassCulling(context);
@@ -315,7 +313,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
@@ -340,12 +338,12 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshHandle()._gpuHandle;
-		context._meshInstanceSrv = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv()._gpuHandle;
+		context._sceneConstantCbv = _scene.getSceneCbv();
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
-		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrvHandle()._gpuHandle;
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
 		context._scopeName = "Main Culling";
 		_meshRenderer.multiDrawMainCulling(context);
@@ -382,7 +380,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._pipelineStates = pipelineStates;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
@@ -429,7 +427,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceHandles()._gpuHandle;
+	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceSrv();
 	PipelineStateGroup** pipelineStates = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC)->_pipelineStateGroups;
 	u32 meshInstanceCount = _scene.getMeshInstanceCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {

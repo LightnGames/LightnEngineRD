@@ -9,6 +9,7 @@ class VramShaderSet;
 class InstancingResource;
 class GpuCullingResource;
 class BuildIndirectArgumentResource;
+class Scene;
 
 struct RenderContext {
 	CommandList* _commandList = nullptr;
@@ -16,16 +17,16 @@ struct RenderContext {
 	VramShaderSet* _vramShaderSets = nullptr;
 	IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	IndirectArgumentResource* _primIndirectArgumentResource = nullptr;
-	InstancingResource* _primitiveInstancingResource = nullptr;
+	InstancingResource* _instancingResource = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	PipelineStateGroup** _primInstancingPipelineStates = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
 	CommandSignature** _primCommandSignatures = nullptr;
 	CommandSignature** _commandSignatures = nullptr;
-	GpuDescriptorHandle _meshInstanceHandle;
-	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _meshSrv;
 	GpuDescriptorHandle _vertexResourceDescriptors;
 	GpuDescriptorHandle _debugFixedViewCbv;
+	const Scene* _scene = nullptr;
 	bool _collectResult = false;
 };
 
@@ -42,12 +43,12 @@ struct ComputeLodContext {
 struct GpuCullingContext {
 	CommandList* _commandList = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
-	InstancingResource* _primitiveInstancingResource = nullptr;
+	InstancingResource* _instancingResource = nullptr;
 	GpuDescriptorHandle _indirectArgumentOffsetSrv;
 	GpuDescriptorHandle _sceneConstantCbv;
 	GpuDescriptorHandle _meshInstanceSrv;
 	GpuDescriptorHandle _meshHandle;
-	GpuDescriptorHandle _subMeshDrawInfoHandle;
+	GpuDescriptorHandle _subMeshDrawInfoSrv;
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
 	u32 _meshInstanceCountMax = 0;
@@ -68,7 +69,7 @@ struct MultiIndirectRenderContext {
 	u32 _numVertexBufferView = 0;
 	const u32* _indirectArgmentOffsets = nullptr;
 	const u32* _indirectArgmentCounts = nullptr;
-	GpuDescriptorHandle _meshInstanceHandle;
+	GpuDescriptorHandle _meshInstanceSrv;
 };
 
 struct MultiDrawGpuCullingContext {
@@ -78,7 +79,7 @@ struct MultiDrawGpuCullingContext {
 	GpuDescriptorHandle _indirectArgumentOffsetSrv;
 	GpuDescriptorHandle _sceneConstantCbv;
 	GpuDescriptorHandle _meshInstanceSrv;
-	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _meshSrv;
 	GpuDescriptorHandle _subMeshDrawInfoHandle;
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;

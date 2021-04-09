@@ -85,9 +85,9 @@ public:
 	const gpu::SubMesh* getSubMeshes() const { return &_subMeshes[0]; }
 	u32 getMeshIndexFromFileHash(u64 fileHash) const;
 	u32 getMeshIndex(const MeshInfo* meshInfo) const;
-	DescriptorHandle getMeshHandle() const { return _meshHandles; }
+	GpuDescriptorHandle getMeshSrv() const { return _meshSrv._gpuHandle; }
 	GpuDescriptorHandle getSubMeshSrv() const;
-	DescriptorHandle getVertexHandle() const { return _vertexHandles; }
+	GpuDescriptorHandle getVertexSrv() const { return _vertexSrv._gpuHandle; }
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
 	GpuBuffer* getTexcoordVertexBuffer() { return &_texcoordVertexBuffer; }
@@ -96,7 +96,7 @@ public:
 	GpuBuffer* getClassicIndexBuffer() { return &_classicIndexBuffer; }
 #endif
 
-	DescriptorHandle getSubMeshDrawInfoSrvHandle() const { return _subMeshDrawInfoSrv; }
+	GpuDescriptorHandle getSubMeshDrawInfoSrv() const { return _subMeshDrawInfoSrv._gpuHandle; }
 
 private:
 	void deleteMesh(u32 meshIndex);
@@ -131,8 +131,8 @@ private:
 	GpuBuffer _meshletBuffer;
 	GpuBuffer _meshletPrimitiveInfoBuffer;
 
-	DescriptorHandle _meshHandles;
-	DescriptorHandle _vertexHandles;
+	DescriptorHandle _meshSrv;
+	DescriptorHandle _vertexSrv;
 	Mesh* _defaultCube = nullptr;
 
 #if ENABLE_CLASSIC_VERTEX
