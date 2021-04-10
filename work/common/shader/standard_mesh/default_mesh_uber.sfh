@@ -28,7 +28,7 @@ StructuredBuffer<uint> _vertexTexcoords : register(t15);
 //ByteAddressBuffer _currentLodLevels : register(t16);
 StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : register(t17);
 StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
-StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
+StructuredBuffer<float3x4> _meshInstanceWorldMatrics : register(t19);
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
@@ -126,8 +126,9 @@ void main(
 
         MeshletInstancePrimitiveInfo primitiveMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoOffset + primitiveInstanceIndex];
         uint primitiveGtid = gtid % primitiveCount;
-        uint primitiveIndex = primitiveMeshletInstanceInfo._primitiveOffset + primitiveGtid;
-        uint packedIndex = _primitives[primitiveIndex];
+        uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
+        uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
+        uint packedIndex = _primitives[primitiveOffset + primitiveIndex];
 
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
         uint indexOffset = vertexCount * primitiveInstanceIndex;
@@ -140,14 +141,16 @@ void main(
         uint infoIndex = infoOffset + vertexInstanceIndex;
         MeshletInstancePrimitiveInfo vertexMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoIndex];
         uint vertexGtid = gtid % vertexCount;
+        uint vertexLocalOffset = vertexMeshletInstanceInfo._vertexOffset;
+        uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset;
         uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[infoIndex];
-        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+        float3x4 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
     
-        uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset + vertexGtid;
-        uint vertexIndex = _vertexIndices[vertexIndexOffset];
-        uint vertexOffset = vertexMeshletInstanceInfo._vertexOffset + vertexIndex;
+        uint vertexLocalIndex = meshlet._vertexOffset + vertexGtid;
+        uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
+        uint vertexOffset = vertexLocalOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
-        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+        float4 worldPos = float4(mul(matrixWorld, positionVertex), 1);
         
         VertexOut vertexOut;
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);

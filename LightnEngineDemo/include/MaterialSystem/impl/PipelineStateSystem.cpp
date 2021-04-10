@@ -106,6 +106,7 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     _pipelineState = allocator->allocatePipelineState();
     _rootSignature = allocator->allocateRootSignature();
     _rootSignature->iniaitlize(rootSignatureDesc);
+    _rootSignature->setDebugName(desc._meshShaderFilePath);
 
     ShaderBlob* meshShader = allocator->allocateShaderBlob();
     ShaderBlob* amplificationShader = nullptr;
@@ -140,6 +141,7 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     pipelineStateDesc._blendDesc = desc._blendDesc;
 	pipelineStateDesc._fillMode = desc._fillMode;
     _pipelineState->iniaitlize(pipelineStateDesc);
+    _pipelineState->setDebugName(desc._meshShaderFilePath);
 
     meshShader->terminate();
     if (amplificationShader != nullptr) {

@@ -58,7 +58,9 @@ namespace gpu {
 	};
 
 	struct MeshletPrimitiveInfo {
+		u32 _vertexOffset;
 		u32 _vertexCount;
+		u32 _primitiveOffset;
 		u32 _primitiveCount;
 	};
 

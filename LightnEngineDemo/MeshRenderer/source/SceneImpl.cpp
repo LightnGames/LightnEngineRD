@@ -22,7 +22,7 @@ void Scene::initialize() {
 		_meshInstanceBuffer.initialize(desc);
 		_meshInstanceBuffer.setDebugName("Mesh Instance");
 
-		desc._sizeInByte = MESH_INSTANCE_COUNT_MAX * sizeof(Matrix34);
+		desc._sizeInByte = MESH_INSTANCE_COUNT_MAX * sizeof(Matrix43);
 		_meshInstanceWorldMatrixBuffer.initialize(desc);
 		_meshInstanceWorldMatrixBuffer.setDebugName("Mesh Instance World Matrix");
 
@@ -44,6 +44,7 @@ void Scene::initialize() {
 	{
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshInstanceSrv = allocator->allocateDescriptors(3);
+		_meshInstanceWorldMatrixSrv = allocator->allocateDescriptors(1);
 
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
@@ -68,6 +69,12 @@ void Scene::initialize() {
 			desc._buffer._numElements = SUB_MESH_INSTANCE_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::SubMeshInstance);
 			device->createShaderResourceView(_subMeshInstanceBuffer.getResource(), &desc, handle + incrimentSize * 2);
+		}
+
+		{
+			desc._buffer._numElements = MESH_INSTANCE_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(Matrix43);
+			device->createShaderResourceView(_meshInstanceWorldMatrixBuffer.getResource(), &desc, _meshInstanceWorldMatrixSrv._cpuHandle);
 		}
 
 		// scene constant
@@ -167,6 +174,7 @@ void Scene::terminate() {
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceSrv);
+	allocator->discardDescriptor(_meshInstanceWorldMatrixSrv);
 	allocator->discardDescriptor(_cullingSceneConstantHandle);
 }
 
@@ -198,8 +206,8 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, sizeof(gpu::MeshInstance) * meshInstanceIndex);
 	*mapMeshInstance = gpuMeshInstance;
 
-	Matrix34* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix34>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix34) * meshInstanceIndex);
-	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix34();
+	Matrix43* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
+	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix43();
 }
 
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
@@ -699,6 +707,8 @@ void InstancingResource::initialize() {
 		_infoOffsetSrv = allocator->allocateDescriptors(1);
 		_infoSrv = allocator->allocateDescriptors(1);
 		_countSrv = allocator->allocateDescriptors(1);
+		_primitiveInfoSrv = allocator->allocateDescriptors(1);
+		_primitiveInfoMeshInstanceIndexSrv = allocator->allocateDescriptors(1);
 
 		ShaderResourceViewDesc desc = {};
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
@@ -713,6 +723,12 @@ void InstancingResource::initialize() {
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 		device->createShaderResourceView(_InfoBuffer.getResource(), &desc, _infoSrv._cpuHandle);
+
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstancePrimitiveInfo);
+		device->createShaderResourceView(_primitiveInfoBuffer.getResource(), &desc, _primitiveInfoSrv._cpuHandle);
+
+		desc._buffer._structureByteStride = sizeof(u32);
+		device->createShaderResourceView(_primitiveInfoMeshInstanceIndexBuffer.getResource(), &desc, _primitiveInfoMeshInstanceIndexSrv._cpuHandle);
 	}
 
 	// uav
@@ -720,6 +736,8 @@ void InstancingResource::initialize() {
 		u32 incrimentSize = allocator->getIncrimentSize();
 		_infoUav = allocator->allocateDescriptors(1);
 		_countUav = allocator->allocateDescriptors(1);
+		_primitiveInfoUav = allocator->allocateDescriptors(1);
+		_primitiveInfoMeshInstanceIndexUav = allocator->allocateDescriptors(1);
 		_countCpuUav = cpuAllocator->allocateDescriptors(1);
 
 		UnorderedAccessViewDesc desc = {};
@@ -729,6 +747,12 @@ void InstancingResource::initialize() {
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
 		device->createUnorderedAccessView(_InfoBuffer.getResource(), nullptr, &desc, _infoUav._cpuHandle);
+
+		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstancePrimitiveInfo);
+		device->createUnorderedAccessView(_primitiveInfoBuffer.getResource(), nullptr, &desc, _primitiveInfoUav._cpuHandle);
+
+		desc._buffer._structureByteStride = sizeof(u32);
+		device->createUnorderedAccessView(_primitiveInfoMeshInstanceIndexBuffer.getResource(), nullptr, &desc, _primitiveInfoMeshInstanceIndexUav._cpuHandle);
 
 		desc._format = FORMAT_R32_TYPELESS;
 		desc._buffer._structureByteStride = 0;
@@ -752,6 +776,10 @@ void InstancingResource::terminate() {
 	allocator->discardDescriptor(_countUav);
 	allocator->discardDescriptor(_infoSrv);
 	allocator->discardDescriptor(_infoUav);
+	allocator->discardDescriptor(_primitiveInfoSrv);
+	allocator->discardDescriptor(_primitiveInfoMeshInstanceIndexSrv);
+	allocator->discardDescriptor(_primitiveInfoUav);
+	allocator->discardDescriptor(_primitiveInfoMeshInstanceIndexUav);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_countCpuUav);

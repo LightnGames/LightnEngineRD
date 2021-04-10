@@ -57,15 +57,19 @@ void QueryHeapSystem::setCpuFrequency() {
 }
 
 void QueryHeapSystem::debugDrawTimeStamps() {
-	if (DebugGui::BeginTabBar("Perf")) {
+	DebugGui::Start("Perf");
+	if (DebugGui::BeginTabBar("TabBar")) {
 		if (DebugGui::BeginTabItem("GPU")) {
 			debugDrawGpuPerf();
+			DebugGui::EndTabItem();
 		}
 		if (DebugGui::BeginTabItem("CPU")) {
-			debugDrawGpuPerf();
+			debugDrawCpuPerf();
+			DebugGui::EndTabItem();
 		}
 		DebugGui::EndTabBar();
 	}
+	DebugGui::End();
 }
 
 void QueryHeapSystem::debugDrawCpuPerf() {

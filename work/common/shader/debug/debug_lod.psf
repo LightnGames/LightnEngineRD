@@ -6,7 +6,7 @@ ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 
 StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<MeshInstance> _meshInstances : register(t5);
-ByteAddressBuffer _currentLodLevels : register(t15);
+ByteAddressBuffer _currentLodLevels : register(t16);
 
 float3 heatMap(float unormValue) {
     float redValue = min(unormValue * 2.0, 1.0);

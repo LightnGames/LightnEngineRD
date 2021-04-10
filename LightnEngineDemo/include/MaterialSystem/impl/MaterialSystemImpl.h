@@ -104,6 +104,7 @@ public:
 	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugWireFramePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	CommandSignature* _commandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	CommandSignature* _depthCommandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 };
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {

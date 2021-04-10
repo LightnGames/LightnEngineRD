@@ -595,8 +595,8 @@ Vector3 Matrix4::scaleFromWorld() const {
 	return Vector3();
 }
 
-Matrix34 Matrix4::getMatrix34() const {
-	return Matrix34(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], m[3][2]);
+Matrix43 Matrix4::getMatrix43() const {
+	return Matrix43(m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0], m[2][1], m[2][2], m[2][3]);
 }
 
 Matrix4 Matrix4::matrixFromQuaternion(const Quaternion& q) {

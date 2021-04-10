@@ -246,13 +246,35 @@ struct LTN_CORE_API Matrix34 {
 	};
 };
 
+struct LTN_CORE_API Matrix43 {
+	Matrix43() :m{
+		{0.0f, 0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f, 0.0f}} {
+	}
+	Matrix43(
+		f32 m11, f32 m12, f32 m13, f32 m14,
+		f32 m21, f32 m22, f32 m23, f32 m24,
+		f32 m31, f32 m32, f32 m33, f32 m34) :m{
+			{ m11, m12, m13, m14},
+			{ m21, m22, m23, m24},
+			{ m31, m32, m33, m34}} {
+	}
+
+	union {
+		f32 m[3][4];
+		Vector4 mv[3];
+	};
+};
+
 struct LTN_CORE_API Matrix4 {
 	Matrix4() :m{
 			{0.0f, 0.0f, 0.0f, 0.0f},
 			{0.0f, 0.0f, 0.0f, 0.0f},
 			{0.0f, 0.0f, 0.0f, 0.0f},
 			{0.0f, 0.0f, 0.0f, 0.0f}} {}
-	Matrix4(f32 m11, f32 m12, f32 m13, f32 m14,
+	Matrix4(
+		f32 m11, f32 m12, f32 m13, f32 m14,
 		f32 m21, f32 m22, f32 m23, f32 m24,
 		f32 m31, f32 m32, f32 m33, f32 m34,
 		f32 m41, f32 m42, f32 m43, f32 m44) :m{
@@ -312,7 +334,7 @@ struct LTN_CORE_API Matrix4 {
 	//ワールド行列からワールド座標を取得
 	Vector3 positionFromWorld() const;
 	Vector3 scaleFromWorld() const;
-	Matrix34 getMatrix34() const;
+	Matrix43 getMatrix43() const;
 
 	//クォータニオンから回転行列を生成
 	static Matrix4 matrixFromQuaternion(const Quaternion& q);

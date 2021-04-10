@@ -46,12 +46,6 @@ void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 numSubResourc
 	u32 headerIndex = _textureUpdateHeaderCount++; // atomic incriment
 	void* stagingBufferPtr = allocateUpdateBuffer(copySizeInByte, GetTextureBufferAligned(copySizeInByte));
 
-	// 範囲外アクセスチェック
-	LTN_ASSERT(*reinterpret_cast<u32*>(stagingBufferPtr) == OVER_RUN_MARKER);
-
-	// 範囲外アクセス検知のために末尾にマーカーを入れる
-	memcpy(reinterpret_cast<u32*>(stagingBufferPtr) + copySizeInByte, &OVER_RUN_MARKER, sizeof(u32));
-
 	TextureUpdateHeader& header = _textureUpdateHeaders[headerIndex];
 	header._dstTexture = dstTexture;
 	header._numSubresources = numSubResource;

@@ -108,7 +108,9 @@ struct Meshlet {
 };
 
 struct MeshletPrimitiveInfo {
+    uint _vertexOffset;
     uint _vertexCount;
+    uint _primitiveOffset;
     uint _primitiveCount;
 };
 

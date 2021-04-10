@@ -305,7 +305,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// メッシュレット　プリミティブインスタンシング
 	{
 		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
-		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter)* ROOT_FRUSTUM_COUNT);
+		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter) * ROOT_FRUSTUM_COUNT);
 		rootParameters[DefaultMeshRootParameter::INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
@@ -358,7 +358,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// デプスオンリー (フラスタムカリングのみ)
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
 	pipelineStateDesc._pixelShaderFilePath = nullptr;
-	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumCulling);
+	*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 	// オクルージョンカリング可視化
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_occlusion_culling.pso";
