@@ -122,6 +122,7 @@ void GraphicsSystemImpl::initialize() {
 
 	// タイムスタンプのためにGPU周波数を取得
 	QueryHeapSystem::Get()->setGpuFrequency(_commandQueue);
+	QueryHeapSystem::Get()->setCpuFrequency();
 
 	_initialized = true;
 }
@@ -163,9 +164,10 @@ void GraphicsSystemImpl::render() {
 	commandList->initialize(commandListDesc);
 
 	// 描画開始時の時間計測マーカーを追加
+	constexpr char BEGIN_FRAME_MARKER_NAME[] = "Begin Frame";
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	queryHeapSystem->setGpuMarker(commandList);
-	queryHeapSystem->setCpuMarker("");
+	queryHeapSystem->setGpuMarker(commandList, BEGIN_FRAME_MARKER_NAME);
+	queryHeapSystem->setCpuMarker(BEGIN_FRAME_MARKER_NAME);
 
 	DescriptorHeap* descriptorHeaps[] = { _srvCbvUavGpuDescriptorAllocator.getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
