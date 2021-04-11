@@ -129,14 +129,16 @@ void ViewSystemImpl::update() {
 	DebugWindow::End();
 
 	// マウス右クリックでの画面回転
+	static Vector2 prevMousePosition = Vector2(0, 0);
 	InputSystem* inputSystem = InputSystem::Get();
+	Vector2 currentMousePosition = inputSystem->getMousePosition();
 	if (inputSystem->getKey(InputSystem::KEY_CODE_RBUTTON)) {
-		Vector2 beginMousePosition = inputSystem->getMousePosition(InputSystem::MOUSE_EVENT_R_DOWN);
-		Vector2 currentMousePosition = inputSystem->getMousePosition();
-		Vector2 distance = currentMousePosition - beginMousePosition;
-		debug.cameraAngle._x += distance._x;
-		debug.cameraAngle._y += distance._y;
+		constexpr f32 SCALE = 0.005f;
+		Vector2 distance = currentMousePosition - prevMousePosition;
+		debug.cameraAngle._x += distance._y * SCALE;
+		debug.cameraAngle._y += distance._x * SCALE;
 	}
+	prevMousePosition = currentMousePosition;
 
 	// W/A/S/D キーボードによる移動
 	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);

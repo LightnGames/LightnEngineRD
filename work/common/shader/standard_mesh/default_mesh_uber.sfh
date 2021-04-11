@@ -28,7 +28,7 @@ StructuredBuffer<uint> _vertexTexcoords : register(t15);
 //ByteAddressBuffer _currentLodLevels : register(t16);
 StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : register(t17);
 StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
-StructuredBuffer<float3x4> _meshInstanceWorldMatrics : register(t19);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
@@ -81,11 +81,11 @@ void main(
         uint vertexLocalOffset = meshPayload._vertexOffset[vertexMeshletOffset];
         uint vertexIndexOffset = meshPayload._vertexIndexOffset[vertexMeshletOffset];
         uint materialIndex = meshPayload._materialIndex[vertexMeshletOffset];
-        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
         uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalGtid];
         uint vertexOffset = vertexLocalOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
-        float4 worldPos = mul(float4(positionVertex, 1), meshInstance._matrixWorld);
+        float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
+        float4 worldPos = float4(mul(float4(positionVertex, 1), matrixWorld), 1);
         
         VertexOut vertexOut;
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
@@ -144,13 +144,13 @@ void main(
         uint vertexLocalOffset = vertexMeshletInstanceInfo._vertexOffset;
         uint vertexIndexOffset = vertexMeshletInstanceInfo._vertexIndexOffset;
         uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[infoIndex];
-        float3x4 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
+        float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
     
         uint vertexLocalIndex = meshlet._vertexOffset + vertexGtid;
         uint vertexIndex = _vertexIndices[vertexIndexOffset + vertexLocalIndex];
         uint vertexOffset = vertexLocalOffset + vertexIndex;
         float3 positionVertex = _vertexPositions[vertexOffset];
-        float4 worldPos = float4(mul(matrixWorld, positionVertex), 1);
+        float4 worldPos = float4(mul(float4(positionVertex, 1), matrixWorld), 1);
         
         VertexOut vertexOut;
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);

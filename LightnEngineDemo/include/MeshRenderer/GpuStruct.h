@@ -78,7 +78,6 @@ namespace gpu {
 		f32 _boundsRadius;
 		Float3 _aabbMin;
 		Float3 _aabbMax;
-		Matrix4 _matrixWorld;
 		f32 _worldScale = 0.0f;
 	};
 

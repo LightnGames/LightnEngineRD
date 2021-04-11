@@ -313,7 +313,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
@@ -380,7 +380,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStates;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;

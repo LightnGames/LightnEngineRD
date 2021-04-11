@@ -15,11 +15,11 @@ struct MeshInstanceInfo {
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 ConstantBuffer<MeshInstanceInfo> _meshInstanceInfo : register(b1);
 
-StructuredBuffer<MeshInstance> _meshInstances : register(t0);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t0);
 
 VertexOut main(VSInput input){
-    float4x4 matrixWorld = _meshInstances[_meshInstanceInfo._meshInstanceIndex]._matrixWorld;
-    float4 worldPos = mul(float4(input._position, 1), matrixWorld);
+    float4x3 matrixWorld = _meshInstanceWorldMatrics[_meshInstanceInfo._meshInstanceIndex];
+    float4 worldPos = float4(mul(float4(input._position, 1), matrixWorld), 1);
     
     VertexOut vertexOut;
     vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);

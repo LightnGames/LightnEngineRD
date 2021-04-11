@@ -8,11 +8,15 @@ StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<LodMesh> _lodMeshes : register(t2);
 StructuredBuffer<SubMesh> _subMeshes : register(t3);
 StructuredBuffer<Meshlet> _meshlets : register(t4);
+StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t5);
 
-StructuredBuffer<MeshInstance> _meshInstances : register(t5);
-StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t6);
-StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t7);
-StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t9);
+StructuredBuffer<MeshInstance> _meshInstances : register(t6);
+StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t7);
+StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t8);
+StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t10);
+StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
+
 #if UBER_OCCLUSION
 Texture2D<float> _hizTextures[8] : register(t20);
 #endif
@@ -46,8 +50,7 @@ void writePayloadStruct(uint visibleIndex, Meshlet meshlet, MeshletInstanceInfo 
 }
 
 [numthreads(THREAD_NUM, 1, 1)]
-void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
-{
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
     bool passFrustum = false;
     bool passBackface = false;
     bool passOcclusion = false;
@@ -72,9 +75,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     if (instanceOffset < instanceCount && meshletOffset < meshletCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+        uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[meshletInfoOffset];
         Meshlet meshlet = _meshlets[meshletIndex];
-        MeshInstance meshInstance = _meshInstances[meshletInfo._meshInstanceIndex];
-        MeshletBounds meshletBounds = computeTransformedBounds(meshInstance, meshlet);
+        MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+        float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
+        MeshletBounds meshletBounds = computeTransformedBounds(matrixWorld, meshInstance._worldScale, meshlet);
         ViewInfo viewInfo = _viewInfo;
         float3 boundsMin = meshletBounds._boundsMin;
         float3 boundsMax = meshletBounds._boundsMax;

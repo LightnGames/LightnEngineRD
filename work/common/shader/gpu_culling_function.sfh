@@ -48,16 +48,15 @@ bool isEnabledMeshInstance(MeshInstance meshInstance) {
     return meshInstance._stateFlags != 0;
 }
 
-MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshlet) {
-    float4x4 worldMatrix = meshInstance._matrixWorld;
+MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, Meshlet meshlet){
     float3 boundsMin = meshlet._aabbMin;
     float3 boundsMax = meshlet._aabbMax;
     float3 boundsSize = boundsMax - boundsMin;
     
-    float3 worldMatrixCol0 = worldMatrix[0].xyz * boundsSize.x;
-    float3 worldMatrixCol1 = worldMatrix[1].xyz * boundsSize.y;
-    float3 worldMatrixCol2 = worldMatrix[2].xyz * boundsSize.z;
-    float3 boundsWorldMin = mul(float4(boundsMin, 1.0), worldMatrix).xyz;
+    float3 worldMatrixCol0 = matrixWorld[0].xyz * boundsSize.x;
+    float3 worldMatrixCol1 = matrixWorld[1].xyz * boundsSize.y;
+    float3 worldMatrixCol2 = matrixWorld[2].xyz * boundsSize.z;
+    float3 boundsWorldMin = mul(float4(boundsMin, 1.0), matrixWorld);
     
     const float3 points[8] = {
         worldMatrixCol0 + worldMatrixCol1 + worldMatrixCol2,
@@ -77,9 +76,8 @@ MeshletBounds computeTransformedBounds(MeshInstance meshInstance, Meshlet meshle
         resultBoundsMax = max(resultBoundsMax, boundsWorldMin + points[pointIndex]);
     }
     
-    float worldScale = meshInstance._worldScale;
     float4 normalCone = UnpackCone(meshlet._normalAndCutoff);
-    float3 resultBoundsNormal = mul(normalCone.xyz, (float3x3) worldMatrix);
+    float3 resultBoundsNormal = mul(normalCone.xyz, (float3x3)matrixWorld);
     
     MeshletBounds bounds;
     bounds._boundsMin = resultBoundsMin;

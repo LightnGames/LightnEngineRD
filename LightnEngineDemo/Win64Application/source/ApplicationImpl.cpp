@@ -4,22 +4,27 @@ ApplicationSystemImpl _applicationSystem;
 InputSystemImpl _inputSystem;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	ApplicationImpl* app = static_cast<ApplicationImpl*>(ApplicationSystemImpl::Get()->getApplication());
-	app->translateApplicationCallback(message, wParam, lParam);
-
+	bool isDef = false;
 	switch (message) {
 	case WM_PAINT:
 		_inputSystem.update();
-		return 0;
-
+		isDef = true;
+		break;
 	case WM_MOUSEMOVE:
 		_inputSystem.setMouseEvent(Vector2(LOWORD(lParam), HIWORD(lParam)));
-		return 0;
+		isDef = true;
+		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		isDef = true;
+		break;
+	}
+	ApplicationImpl* app = static_cast<ApplicationImpl*>(ApplicationSystemImpl::Get()->getApplication());
+	app->translateApplicationCallback(message, wParam, lParam);
+
+	if (isDef) {
 		return 0;
 	}
-
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 

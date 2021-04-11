@@ -96,6 +96,7 @@ struct SubMesh {
 	uint _materialSlotIndex;
 };
 
+// Meshlet Bounds
 struct Meshlet {
 	uint _vertexOffset;
 	uint _vertexCount;
@@ -128,7 +129,6 @@ struct MeshInstance {
 	float _boundsRadius;
 	float3 _aabbMin;
 	float3 _aabbMax;
-	float4x4 _matrixWorld;
 	float _worldScale;
 };
 

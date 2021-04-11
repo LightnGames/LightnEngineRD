@@ -69,7 +69,7 @@ struct MultiIndirectRenderContext {
 	u32 _numVertexBufferView = 0;
 	const u32* _indirectArgmentOffsets = nullptr;
 	const u32* _indirectArgmentCounts = nullptr;
-	GpuDescriptorHandle _meshInstanceSrv;
+	GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
 };
 
 struct MultiDrawGpuCullingContext {

@@ -200,7 +200,6 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 	gpuMeshInstance._stateFlags = 1;
 	gpuMeshInstance._boundsRadius = boundsRadius;
 	gpuMeshInstance._worldScale = Max(worldScale._x, Max(worldScale._y, worldScale._z));
-	gpuMeshInstance._matrixWorld = transposedMatrixWorld;
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, sizeof(gpu::MeshInstance) * meshInstanceIndex);
