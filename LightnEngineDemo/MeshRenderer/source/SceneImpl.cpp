@@ -537,7 +537,7 @@ void IndirectArgumentResource::terminate() {
 }
 
 void GpuCullingResource::setComputeLodResource(CommandList* commandList) {
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_RESULT_LEVEL, _currentLodLevelUav._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::RESULT_LEVEL, _currentLodLevelUav._gpuHandle);
 }
 
 void GpuCullingResource::setGpuCullingResources(CommandList* commandList) {
@@ -547,17 +547,17 @@ void GpuCullingResource::setGpuCullingResources(CommandList* commandList) {
 }
 
 void GpuCullingResource::setHizResourcesPass0(CommandList* commandList) {
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INFO, _hizInfoConstantCbv[0]._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_OUTPUT_DEPTH, _hizDepthTextureUav._gpuHandle); // 0 ~ 3
+	commandList->setComputeRootDescriptorTable(BuildHizRootParameters::HIZ_INFO, _hizInfoConstantCbv[0]._gpuHandle);
+	commandList->setComputeRootDescriptorTable(BuildHizRootParameters::OUTPUT_DEPTH, _hizDepthTextureUav._gpuHandle); // 0 ~ 3
 }
 
 void GpuCullingResource::setHizResourcesPass1(CommandList* commandList) {
 	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	u64 incrimentSize = static_cast<u64>(descriptorHeapAllocater->getIncrimentSize());
 
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INFO, _hizInfoConstantCbv[1]._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_OUTPUT_DEPTH, _hizDepthTextureUav._gpuHandle + incrimentSize * 4); // 4 ~ 5
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, _hizDepthTextureSrv._gpuHandle + incrimentSize * 3); // 3
+	commandList->setComputeRootDescriptorTable(BuildHizRootParameters::HIZ_INFO, _hizInfoConstantCbv[1]._gpuHandle);
+	commandList->setComputeRootDescriptorTable(BuildHizRootParameters::OUTPUT_DEPTH, _hizDepthTextureUav._gpuHandle + incrimentSize * 4); // 4 ~ 5
+	commandList->setComputeRootDescriptorTable(BuildHizRootParameters::INPUT_DEPTH, _hizDepthTextureSrv._gpuHandle + incrimentSize * 3); // 3
 }
 
 void GpuCullingResource::resourceBarriersComputeLodToUAV(CommandList* commandList) {

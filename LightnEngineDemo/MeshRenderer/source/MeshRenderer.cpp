@@ -194,12 +194,12 @@ void MeshRenderer::initialize() {
 		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
 		DescriptorRange resultLodLevelDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
-		RootParameter rootParameters[ROOT_PARAM_LOD_COUNT] = {};
-		rootParameters[ROOT_PARAM_LOD_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_VIEW_INFO].initializeDescriptorTable(1, &cullingViewInfoConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_LOD_RESULT_LEVEL].initializeDescriptorTable(1, &resultLodLevelDescriptorRange, SHADER_VISIBILITY_ALL);
+		RootParameter rootParameters[GpuComputeLodRootParam::COUNT] = {};
+		rootParameters[GpuComputeLodRootParam::SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::VIEW_INFO].initializeDescriptorTable(1, &cullingViewInfoConstantRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::LOD_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::RESULT_LEVEL].initializeDescriptorTable(1, &resultLodLevelDescriptorRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -233,13 +233,13 @@ void MeshRenderer::initialize() {
 		DescriptorRange meshInstanceWorldMatrixRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
 		DescriptorRange lineDrawIndirectRange(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
 
-		RootParameter rootParameters[ROOT_PARAM_DEBUG_MESHLET_COUNT] = {};
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshInstanceWorldMatrixRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT].initializeDescriptorTable(1, &lineDrawIndirectRange, SHADER_VISIBILITY_ALL);
+		RootParameter rootParameters[DebugMeshletBoundsRootParam::COUNT] = {};
+		rootParameters[DebugMeshletBoundsRootParam::SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugMeshletBoundsRootParam::MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugMeshletBoundsRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugMeshletBoundsRootParam::LOD_LEVEL].initializeDescriptorTable(1, &currentLodLevelRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugMeshletBoundsRootParam::MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshInstanceWorldMatrixRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugMeshletBoundsRootParam::INDIRECT_ARGUMENT].initializeDescriptorTable(1, &lineDrawIndirectRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -270,10 +270,10 @@ void MeshRenderer::initialize() {
 		DescriptorRange inputDepthRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange outpuDepthRange(DESCRIPTOR_RANGE_TYPE_UAV, gpu::HIERACHICAL_DEPTH_COUNT / 2, 0);
 
-		RootParameter rootParameters[ROOT_PARAM_HIZ_COUNT] = {};
-		rootParameters[ROOT_PARAM_HIZ_INFO].initializeDescriptorTable(1, &buildHizInfoConstantRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_HIZ_INPUT_DEPTH].initializeDescriptorTable(1, &inputDepthRange, SHADER_VISIBILITY_ALL);
-		rootParameters[ROOT_PARAM_HIZ_OUTPUT_DEPTH].initializeDescriptorTable(1, &outpuDepthRange, SHADER_VISIBILITY_ALL);
+		RootParameter rootParameters[BuildHizRootParameters::COUNT] = {};
+		rootParameters[BuildHizRootParameters::HIZ_INFO].initializeDescriptorTable(1, &buildHizInfoConstantRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildHizRootParameters::INPUT_DEPTH].initializeDescriptorTable(1, &inputDepthRange, SHADER_VISIBILITY_ALL);
+		rootParameters[BuildHizRootParameters::OUTPUT_DEPTH].initializeDescriptorTable(1, &outpuDepthRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -402,10 +402,10 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	gpuCullingResource->setComputeLodResource(commandList);
 	gpuCullingResource->resourceBarriersComputeLodToUAV(commandList);
 
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_SCENE_INFO, context._sceneConstantCbv);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH, context._meshHandle);
-	commandList->setComputeRootDescriptorTable(ROOT_PARAM_LOD_MESH_INSTANCE, context._meshInstanceHandle);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::SCENE_INFO, context._sceneConstantCbv);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::VIEW_INFO, viewInfo->_cbvHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::LOD_MESH, context._meshHandle);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::MESH_INSTANCE, context._meshInstanceHandle);
 
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
@@ -458,7 +458,7 @@ void MeshRenderer::buildHiz(const BuildHizContext& context) const {
 
 	// pass 0
 	{
-		commandList->setComputeRootDescriptorTable(ROOT_PARAM_HIZ_INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
+		commandList->setComputeRootDescriptorTable(BuildHizRootParameters::INPUT_DEPTH, viewInfo->_depthSrv._gpuHandle);
 		gpuCullingResource->resourceBarriersHizTextureToUav(commandList, 0);
 		gpuCullingResource->setHizResourcesPass0(commandList);
 
