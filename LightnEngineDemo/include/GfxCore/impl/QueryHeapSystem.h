@@ -21,6 +21,9 @@ public:
 	void setGpuMarker(CommandList* commandList, const char* markerName = nullptr);
 	void setCpuMarker(const char* markerName);
 
+	f32 getCurrentCpuFrameTime() const;
+	f32 getCurrentGpuFrameTime() const;
+
 	static QueryHeapSystem* Get();
 
 private:
@@ -40,11 +43,12 @@ class LTN_GFX_CORE_API CpuGpuScopedEvent {
 public:
 	CpuGpuScopedEvent(CommandList* commandList, const Color4& color, const char* name, ...) {
 		_commandList = commandList;
-		_name = name;
 		va_list va;
 		va_start(va, name);
 		_gpuMarker.setEvent(commandList, color, name, va);
 		va_end(va);
+
+		vsprintf_s(_name, name, va);
 	}
 	~CpuGpuScopedEvent() {
 		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
@@ -54,7 +58,7 @@ public:
 private:
 	DebugMarker::ScopedEvent _gpuMarker;
 	CommandList* _commandList = nullptr;
-	const char* _name = nullptr;
+	char _name[DebugMarker::SET_NAME_LENGTH_COUNT_MAX] = {};
 };
 
 #define DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(...) CpuGpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)

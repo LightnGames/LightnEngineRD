@@ -1267,7 +1267,6 @@ void QueryHeapD3D12::terminate() {
 
 
 namespace DebugMarker {
-	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 128;
 	void setMarker(CommandList* commandList, const Color4& color, const char* name, va_list va) {
 		char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
 		vsprintf_s(nameBuffer, name, va);

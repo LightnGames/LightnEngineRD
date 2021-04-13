@@ -1270,6 +1270,7 @@ constexpr u32 BACK_BUFFER_COUNT = 3;
 constexpr Format BACK_BUFFER_FORMAT = FORMAT_R8G8B8A8_UNORM;
 
 namespace DebugMarker {
+	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 128;
 	class LTN_GFX_API ScopedEvent {
 	public:
 		ScopedEvent() {}

@@ -59,11 +59,16 @@ void QueryHeapSystem::setCpuFrequency() {
 void QueryHeapSystem::debugDrawTimeStamps() {
 	DebugGui::Start("Perf");
 	if (DebugGui::BeginTabBar("TabBar")) {
-		if (DebugGui::BeginTabItem("GPU")) {
+		constexpr char format[] = "%s / %-5.2f";
+		char cpuTitle[128];
+		char gpuTitle[128];
+		sprintf_s(cpuTitle, format, "CPU", getCurrentCpuFrameTime());
+		sprintf_s(gpuTitle, format, "GPU", getCurrentGpuFrameTime());
+		if (DebugGui::BeginTabItem(gpuTitle)) {
 			debugDrawGpuPerf();
 			DebugGui::EndTabItem();
 		}
-		if (DebugGui::BeginTabItem("CPU")) {
+		if (DebugGui::BeginTabItem(cpuTitle)) {
 			debugDrawCpuPerf();
 			DebugGui::EndTabItem();
 		}
@@ -136,6 +141,18 @@ void QueryHeapSystem::setCpuMarker(const char* markerName) {
 	u32 currentFrameIndex = _currentFrameCpuMarkerCount++;
 	_currentCpuTimeStamps[currentFrameIndex] = static_cast<u64>(counter.QuadPart);
 	sprintf_s(_debugCpuMarkerNames[currentFrameIndex], "%s", markerName);
+}
+
+f32 QueryHeapSystem::getCurrentCpuFrameTime() const {
+	f32 freq = 1000.0f / _cpuFrequency; // ms
+	u64 delta = _currentCpuTimeStamps[_currentFrameCpuMarkerCount - 1] - _currentCpuTimeStamps[0];
+	return delta * freq;
+}
+
+f32 QueryHeapSystem::getCurrentGpuFrameTime() const {
+	f32 freq = 1000.0f / _gpuFrequency; // ms
+	u64 delta = _currentGpuTimeStamps[_currentFrameGpuMarkerCount - 1] - _currentGpuTimeStamps[0];
+	return delta * freq;
 }
 
 QueryHeapSystem* QueryHeapSystem::Get() {

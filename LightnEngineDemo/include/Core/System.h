@@ -3,6 +3,7 @@
 #include <Core/CoreModuleSettings.h>
 #include <Core/Math.h>
 #include <string.h>
+#include <stdio.h>
 
 #define TARGET_WIN64 1
 
