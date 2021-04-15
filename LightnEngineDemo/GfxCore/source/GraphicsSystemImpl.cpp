@@ -158,42 +158,41 @@ void GraphicsSystemImpl::render() {
 	sprintf_s(name, "CommandList %d", _frameIndex);
 	commandListDesc._debugName = name;
 
+	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	u64 compleatedFenceValue = _commandQueue->getCompleatedValue();
 	GraphicsApiInstanceAllocator* allocater = GraphicsApiInstanceAllocator::Get();
 	CommandList* commandList = allocater->allocateCommandList(compleatedFenceValue);
 	commandList->initialize(commandListDesc);
 
-	// 描画開始時の時間計測マーカーを追加
-	constexpr char BEGIN_FRAME_MARKER_NAME[] = "Begin Frame";
-	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-	queryHeapSystem->setGpuMarker(commandList, BEGIN_FRAME_MARKER_NAME);
-	queryHeapSystem->setCpuMarker(BEGIN_FRAME_MARKER_NAME);
-
-	DescriptorHeap* descriptorHeaps[] = { _srvCbvUavGpuDescriptorAllocator.getDescriptorHeap() };
-	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
-	_vramBufferUpdater.populateCommandList(commandList);
-
-	_renderPass(commandList);
-	_debugWindow.renderFrame(commandList);
-
-	// hdr buffer からバックバッファにコピー
 	{
-		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, "HDR to LDR");
+		// 描画開始時の時間計測マーカーを追加
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "End Frame");
 
-		ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
-		GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
-		ResourceTransitionBarrier barriers[2] = {};
-		barriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
-		barriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_DEST);
-		
-		ResourceTransitionBarrier resetBarriers[2] = {};
-		resetBarriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_RENDER_TARGET);
-		resetBarriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_PRESENT);
+		DescriptorHeap* descriptorHeaps[] = { _srvCbvUavGpuDescriptorAllocator.getDescriptorHeap() };
+		commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
+		_vramBufferUpdater.populateCommandList(commandList);
 
-		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
-		commandList->copyResource(currentRtvTexture.getResource(), viewInfo->_hdrTexture.getResource());
-		commandList->transitionBarriers(resetBarriers, LTN_COUNTOF(resetBarriers));
+		_renderPass(commandList);
+		_debugWindow.renderFrame(commandList);
+
+		// hdr buffer からバックバッファにコピー
+		{
+			DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::GREEN, "HDR to LDR");
+
+			ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
+			GpuTexture& currentRtvTexture = _backBuffers[_frameIndex];
+			ResourceTransitionBarrier barriers[2] = {};
+			barriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
+			barriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_DEST);
+
+			ResourceTransitionBarrier resetBarriers[2] = {};
+			resetBarriers[0] = viewInfo->_hdrTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_RENDER_TARGET);
+			resetBarriers[1] = currentRtvTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_PRESENT);
+
+			commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
+			commandList->copyResource(currentRtvTexture.getResource(), viewInfo->_hdrTexture.getResource());
+			commandList->transitionBarriers(resetBarriers, LTN_COUNTOF(resetBarriers));
+		}
 	}
 
 

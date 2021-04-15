@@ -1287,8 +1287,6 @@ namespace DebugMarker {
 	void LTN_GFX_API popMarker(CommandList* commandList);
 }
 
-#define DEBUG_MARKER_GPU_SCOPED_EVENT(...) DebugMarker::ScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
-
 namespace DebugGui {
 	using ColorEditFlags = s32;
 
@@ -1372,13 +1370,14 @@ namespace DebugGui {
 	void LTN_GFX_API NextColumn();
 	void LTN_GFX_API Separator();
 	void LTN_GFX_API SameLine(f32 offsetFromStartX = 0.0f, f32 spacing = -1.0f);
-	void LTN_GFX_API SetColumnWidth(int column_index, float width);
+	void LTN_GFX_API SetColumnWidth(s32 columnIndex, f32 width);
 	void LTN_GFX_API Image(GpuDescriptorHandle user_texture_id, const Vector2& size, const Vector2& uv0 = Vector2(0, 0), const Vector2& uv1 = Vector2(1, 1),
 		const Color4& tint_col = Color4::WHITE, const Color4& border_col = Color4::BLACK,
 		ColorChannelFilter channel = COLOR_CHANNEL_FILTER_DEFAULT, const Vector2& colorRange = Vector2(0, 1), TextureSmplerType samplerType = TEXTURE_SAMPLE_TYPE_LINER);
 	void LTN_GFX_API ProgressBar(float fraction, const Vector2& sizeArg = Vector2(-1, 0), const char* overlay = nullptr);
 	void LTN_GFX_API AddRectFilled(const Vector2& min, const Vector2& max, const Color4& col, f32 rounding = 0.0f, DrawCornerFlags roundingCorners = DrawCornerFlags_All);
 
+	f32 LTN_GFX_API GetColumnWidth(s32 columnIndex = -1);
 	Vector2 LTN_GFX_API GetItemInnerSpacing();
 	Vector2 LTN_GFX_API GetCursorScreenPos();
 }

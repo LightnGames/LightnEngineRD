@@ -1503,8 +1503,12 @@ namespace DebugGui {
 		ImGui::SameLine(offsetFromStartX, spacing);
 	}
 
-	void SetColumnWidth(int column_index, float width) {
-		ImGui::SetColumnWidth(column_index, width);
+	void SetColumnWidth(s32 columnIndex, f32 width) {
+		ImGui::SetColumnWidth(columnIndex, width);
+	}
+
+	f32 GetColumnWidth(s32 columnIndex) {
+		return ImGui::GetColumnWidth(columnIndex);
 	}
 
 	Vector2 GetItemInnerSpacing() {
