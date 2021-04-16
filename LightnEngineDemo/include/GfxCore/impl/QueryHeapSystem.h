@@ -3,6 +3,37 @@
 #include <GfxCore/GfxModuleSettings.h>
 #include <GfxCore/impl/GpuResourceImpl.h>
 
+struct PerfInfo {
+public:
+	static constexpr u32 NEST_LEVEL_COUNT_MAX = 16;
+	static constexpr u32 TIME_STAMP_COUNT_MAX = 64;
+	static constexpr u32 TICK_COUNT_MAX = TIME_STAMP_COUNT_MAX * 2; // begin end
+	static constexpr u32 DEBUG_MARKER_NAME_COUNT_MAX = 128;
+
+	struct TickInfo {
+		u16 _beginMarkerIndex = 0;
+		u16 _endMarkerIndex = 0;
+	};
+
+	u32 pushTick(const char* markerName);
+	u32 pushMarker(u32 tickIndex);
+	u32 popMarker(u32 tickIndex);
+
+	void reset();
+	void debugDrawTree(u32 tickIndex);
+
+	u64 _ticks[TICK_COUNT_MAX] = {};
+	u64 _frequency = 0;
+	u32 _currentFrameMarkerCount = 0;
+	u32 _currentTickCount = 0;
+	u32 _currentNestLevel = 0;
+	u32 _currentNestMarkerIndices[NEST_LEVEL_COUNT_MAX] = {};
+	u32 _markerParentIndices[TIME_STAMP_COUNT_MAX] = {};
+	u32 _markerNestLevelIndices[TIME_STAMP_COUNT_MAX] = {};
+	TickInfo _tickInfos[TIME_STAMP_COUNT_MAX] = {};
+	char _markerNames[TIME_STAMP_COUNT_MAX][DEBUG_MARKER_NAME_COUNT_MAX] = {};
+};
+
 class LTN_GFX_CORE_API QueryHeapSystem {
 public:
 	static constexpr u32 NEST_COUNT_MAX = 16;
@@ -23,9 +54,7 @@ public:
 	u32 pushGpuMarker(CommandList* commandList, const char* markerName);
 	void popGpuMarker(CommandList* commandList, u32 markerIndex);
 	u32 pushCpuMarker(const char* markerName);
-	//void popCpuMarker(u32 markerIndex);
-
-	void debugDrawTree(u32 tickIndex);
+	void popCpuMarker(u32 markerIndex);
 
 	f32 getCurrentCpuFrameTime() const;
 	f32 getCurrentGpuFrameTime() const;
@@ -33,27 +62,11 @@ public:
 	static QueryHeapSystem* Get();
 
 private:
-	struct TickInfo {
-		u16 _beginMarkerIndex = 0;
-		u16 _endMarkerIndex = 0;
-	};
-
 	GpuBuffer _timeStampBuffer;
 	QueryHeap* _queryHeap = nullptr;
-	u64 _gpuTicks[TICK_COUNT_MAX] = {};
-	u64 _cpuTicks[TICK_COUNT_MAX] = {};
-	u64 _gpuFrequency = 0;
-	u64 _cpuFrequency = 0;
-	u32 _currentFrameCpuMarkerCount = 0;
-	u32 _currentFrameGpuMarkerCount = 0;
-	u32 _currentTickCount = 0;
-	u32 _currentNestGpuLevel = 0;
-	u32 _currentNestMarkerIndices[NEST_COUNT_MAX] = {};
-	u32 _nestGpuParentIndices[GPU_TIME_STAMP_COUNT_MAX] = {};
-	u32 _nestGpuIndices[GPU_TIME_STAMP_COUNT_MAX] = {};
-	TickInfo _gpuTickInfos[GPU_TIME_STAMP_COUNT_MAX] = {};
-	char _debugGpuMarkerNames[GPU_TIME_STAMP_COUNT_MAX][DEBUG_MARKER_NAME_COUNT_MAX] = {};
-	char _debugCpuMarkerNames[GPU_TIME_STAMP_COUNT_MAX][DEBUG_MARKER_NAME_COUNT_MAX] = {};
+
+	PerfInfo _gpuPerf;
+	PerfInfo _cpuPerf;
 };
 
 class LTN_GFX_CORE_API GpuScopedEvent {
@@ -91,17 +104,19 @@ public:
 		va_end(va);
 
 		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		_tickIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
-		queryHeapSystem->pushCpuMarker(_name);
+		_gpuTickIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
+		_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
 	}
 	~CpuGpuScopedEvent() {
 		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		queryHeapSystem->popGpuMarker(_commandList, _tickIndex);
+		queryHeapSystem->popGpuMarker(_commandList, _gpuTickIndex);
+		queryHeapSystem->popCpuMarker(_cpuTickIndex);
 	}
 private:
 	DebugMarker::ScopedEvent _gpuMarker;
 	CommandList* _commandList = nullptr;
-	u32 _tickIndex = 0;
+	u32 _gpuTickIndex = 0;
+	u32 _cpuTickIndex = 0;
 	char _name[DebugMarker::SET_NAME_LENGTH_COUNT_MAX] = {};
 };
 
