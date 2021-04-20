@@ -46,13 +46,15 @@ void QueryHeapSystem::requestTimeStamp(CommandList* commandList, u32 frameIndex)
 }
 
 void QueryHeapSystem::setGpuFrequency(CommandQueue* commandQueue) {
-	commandQueue->getTimestampFrequency(&_gpuPerf._frequency);
+	u64 frequency = 0;
+	commandQueue->getTimestampFrequency(&frequency);
+	_gpuPerf._msFrequency = 1000.0f / frequency;
 }
 
 void QueryHeapSystem::setCpuFrequency() {
 	LARGE_INTEGER freq;
 	QueryPerformanceFrequency(&freq);
-	_cpuPerf._frequency = static_cast<u64>(freq.QuadPart);
+	_cpuPerf._msFrequency = 1000.0f / static_cast<u64>(freq.QuadPart);
 }
 
 void QueryHeapSystem::debugDrawTimeStamps() {
@@ -79,8 +81,15 @@ void QueryHeapSystem::debugDrawCpuPerf() {
 		return;
 	}
 
+	static bool flat = false;
+	DebugWindow::Checkbox("flat", &flat);
+
 	DebugGui::Columns(2, "tree", true);
-	_cpuPerf.debugDrawTree(0);
+	if (flat) {
+		_cpuPerf.debugDrawTree(0);
+	} else {
+		_cpuPerf.debugDrawFlat();
+	}
 	DebugGui::Columns(1);
 }
 
@@ -89,8 +98,15 @@ void QueryHeapSystem::debugDrawGpuPerf() {
 		return;
 	}
 
+	static bool flat = false;
+	DebugWindow::Checkbox("flat", &flat);
+
 	DebugGui::Columns(2, "tree", true);
-	_gpuPerf.debugDrawTree(0);
+	if (flat) {
+		_gpuPerf.debugDrawTree(0);
+	} else {
+		_gpuPerf.debugDrawFlat();
+	}
 	DebugGui::Columns(1);
 }
 
@@ -133,9 +149,8 @@ f32 QueryHeapSystem::getCurrentCpuFrameTime() const {
 		return 0.0f;
 	}
 	const PerfInfo::TickInfo& tickInfo = _cpuPerf._tickInfos[0];
-	f32 freq = 1000.0f / _cpuPerf._frequency; // ms
 	u64 delta = _cpuPerf._ticks[tickInfo._endMarkerIndex] - _cpuPerf._ticks[tickInfo._beginMarkerIndex];
-	return delta * freq;
+	return delta * _cpuPerf._msFrequency;
 }
 
 f32 QueryHeapSystem::getCurrentGpuFrameTime() const {
@@ -143,9 +158,8 @@ f32 QueryHeapSystem::getCurrentGpuFrameTime() const {
 		return 0.0f;
 	}
 	const PerfInfo::TickInfo& tickInfo = _gpuPerf._tickInfos[0];
-	f32 freq = 1000.0f / _gpuPerf._frequency; // ms
 	u64 delta = _gpuPerf._ticks[tickInfo._endMarkerIndex] - _gpuPerf._ticks[tickInfo._beginMarkerIndex];
-	return delta * freq;
+	return delta * _gpuPerf._msFrequency;
 }
 
 QueryHeapSystem* QueryHeapSystem::Get() {
@@ -204,21 +218,17 @@ void PerfInfo::debugDrawTree(u32 tickIndex) {
 		childNestCount += (_markerNestLevelIndices[n] == childNestLevel) ? 1 : 0;
 	}
 
-	Vector2 offset(12, 0);
-	Vector2 size(150, 15);
-	f32 rectScale = 0.2f;
-	f32 freq = 1000.0f / _frequency; // ms
 	const TickInfo& tickInfo = _tickInfos[tickIndex];
 	u64 startDelta = _ticks[tickInfo._beginMarkerIndex] - _ticks[0];
 	u64 endDelta = _ticks[tickInfo._endMarkerIndex] - _ticks[0];
-	f32 startTime = startDelta * freq;
-	f32 endTime = endDelta * freq;
-	f32 frameTime = (endDelta - startDelta) * freq;
+	f32 startTime = startDelta * _msFrequency;
+	f32 endTime = endDelta * _msFrequency;
+	f32 frameTime = (endDelta - startDelta) * _msFrequency;
 	Vector2 currenCursortScreenPos = Vector2(DebugGui::GetColumnWidth(), DebugGui::GetCursorScreenPos()._y);
-	Vector2 currentScreenPos = currenCursortScreenPos + offset;
-	Vector2 startSize(size._x * startTime * rectScale, size._y);
-	Vector2 endSize(size._x * frameTime * rectScale, size._y);
-	Vector2 startOrigin = currenCursortScreenPos + offset;
+	Vector2 currentScreenPos = currenCursortScreenPos + _perfBarOffset;
+	Vector2 startSize(_perfBarSize._x * startTime * _perfBarRectScale, _perfBarSize._y);
+	Vector2 endSize(_perfBarSize._x * frameTime * _perfBarRectScale, _perfBarSize._y);
+	Vector2 startOrigin = currenCursortScreenPos + _perfBarOffset;
 	Vector2 endOrigin = startOrigin + Vector2(startSize._x, 0);
 	bool open2 = DebugGui::TreeNode(static_cast<s32>(tickIndex), "%-24s %-4.2f ms", _markerNames[tickIndex], frameTime);
 	if (!open2) {
@@ -251,5 +261,28 @@ void PerfInfo::debugDrawTree(u32 tickIndex) {
 
 	if (nextMarkerIndex > 0) {
 		debugDrawTree(nextMarkerIndex);
+	}
+}
+
+void PerfInfo::debugDrawFlat() {
+	for (u32 tickIndex = 0; tickIndex < _currentTickCount; ++tickIndex) {
+		const TickInfo& tickInfo = _tickInfos[tickIndex];
+		u64 startDelta = _ticks[tickInfo._beginMarkerIndex] - _ticks[0];
+		u64 endDelta = _ticks[tickInfo._endMarkerIndex] - _ticks[0];
+		f32 startTime = startDelta * _msFrequency;
+		f32 endTime = endDelta * _msFrequency;
+		f32 frameTime = (endDelta - startDelta) * _msFrequency;
+		Vector2 currenCursortScreenPos = Vector2(DebugGui::GetColumnWidth(), DebugGui::GetCursorScreenPos()._y);
+		Vector2 currentScreenPos = currenCursortScreenPos + _perfBarOffset;
+		Vector2 startSize(_perfBarSize._x * startTime * _perfBarRectScale, _perfBarSize._y);
+		Vector2 endSize(_perfBarSize._x * frameTime * _perfBarRectScale, _perfBarSize._y);
+		Vector2 startOrigin = currenCursortScreenPos + _perfBarOffset;
+		Vector2 endOrigin = startOrigin + Vector2(startSize._x, 0);
+
+		DebugGui::Text("%-24s %-4.2f ms", _markerNames[tickIndex], frameTime);
+		DebugGui::NextColumn();
+		DebugGui::AddRectFilled(startOrigin, startOrigin + startSize, Color4::DEEP_GREEN, DebugGui::DrawCornerFlags_None);
+		DebugGui::AddRectFilled(endOrigin, endOrigin + endSize, Color4::DEEP_RED, DebugGui::DrawCornerFlags_None);
+		DebugGui::NextColumn();
 	}
 }

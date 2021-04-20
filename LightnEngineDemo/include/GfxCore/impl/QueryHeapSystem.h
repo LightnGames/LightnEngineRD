@@ -7,8 +7,11 @@ struct PerfInfo {
 public:
 	static constexpr u32 NEST_LEVEL_COUNT_MAX = 16;
 	static constexpr u32 TIME_STAMP_COUNT_MAX = 64;
-	static constexpr u32 TICK_COUNT_MAX = TIME_STAMP_COUNT_MAX * 2; // begin end
+	static constexpr u32 TICK_COUNT_MAX = TIME_STAMP_COUNT_MAX * 2; // begin And end
 	static constexpr u32 DEBUG_MARKER_NAME_COUNT_MAX = 128;
+	const Vector2 _perfBarOffset = Vector2(12, 0);
+	const Vector2 _perfBarSize = Vector2(150, 15);
+	const f32 _perfBarRectScale = 0.2f;
 
 	struct TickInfo {
 		u16 _beginMarkerIndex = 0;
@@ -21,9 +24,10 @@ public:
 
 	void reset();
 	void debugDrawTree(u32 tickIndex);
+	void debugDrawFlat();
 
 	u64 _ticks[TICK_COUNT_MAX] = {};
-	u64 _frequency = 0;
+	f32 _msFrequency = 0;
 	u32 _currentFrameMarkerCount = 0;
 	u32 _currentTickCount = 0;
 	u32 _currentNestLevel = 0;
