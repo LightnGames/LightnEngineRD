@@ -66,7 +66,8 @@ struct ShaderSetImpl :public ShaderSet {
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 
 	u8 _shaderParamStateFlags[MATERIAL_COUNT_MAX] = {};
-	DynamicQueue<TempShaderParam> _shaderParams;
+	u8* _datas = nullptr;
+	DynamicQueueController _shaderParamInstances;
 };
 
 struct MaterialImpl :public Material {

@@ -27,8 +27,8 @@ void MaterialSystemImpl::processDeletion() {
 		if (_materialStateFlags[materialIndex] & MATERIAL_STATE_FLAG_REQEST_DESTROY) {
 			MaterialImpl& material = _materials[materialIndex];
 			ShaderSetImpl* shaderSet = material.getShaderSet();
-			u32 shaderParamIndex = shaderSet->_shaderParams.getArrayIndex(material.getShaderParam());
-			shaderSet->_shaderParams.discard(shaderParamIndex);
+			u32 shaderParamIndex = static_cast<u32>(material.getShaderParam() - reinterpret_cast<TempShaderParam*>(shaderSet->_datas));
+			shaderSet->_shaderParamInstances.discard(shaderParamIndex);
 
 			_materialStateFlags[materialIndex] = MATERIAL_STATE_FLAG_NONE;
 			_materialFileHashes[materialIndex] = 0;
@@ -157,8 +157,8 @@ Material* MaterialSystemImpl::createMaterial(const MaterialDesc& desc) {
 	LTN_ASSERT(shaderSetIndex != static_cast<u32>(-1));
 
 	ShaderSetImpl* shaderSet = &_shaderSets[shaderSetIndex];
-	u32 shaderSetMaterialIndex = shaderSet->_shaderParams.request();
-	TempShaderParam* shaderParam = &shaderSet->_shaderParams[shaderSetMaterialIndex];
+	u32 shaderSetMaterialIndex = shaderSet->_shaderParamInstances.request();
+	TempShaderParam* shaderParam = &reinterpret_cast<TempShaderParam*>(shaderSet->_datas)[shaderSetMaterialIndex];
 	shaderParam->_color = Color4::WHITE;
 	shaderParam->_albedoTexture = TextureSystemImpl::Get()->findTexture(textureFileHashes[0]);
 
@@ -212,7 +212,8 @@ void ShaderSetImpl::setTexture(Texture* texture, u64 parameterNameHash) {
 }
 
 void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& implDesc) {
-	_shaderParams.initialize(MATERIAL_COUNT_MAX);
+	_shaderParamInstances.initialize(MATERIAL_COUNT_MAX);
+	_datas = reinterpret_cast<u8*>(new TempShaderParam[MATERIAL_COUNT_MAX]);
 
 	// アセット実パスに変換
 	char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
@@ -462,7 +463,9 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 }
 
 void ShaderSetImpl::terminate() {
-	_shaderParams.terminate();
+	_shaderParamInstances.terminate();
+	delete[] _datas;
+	_datas = nullptr;
 }
 
 void PipelineStateSet::requestDelete(u32 shaderSetIndex){
