@@ -39,7 +39,7 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, Meshlet meshlet, MeshletInstanceInfo meshletInfo) {
+void writePayloadStruct(uint visibleIndex, MeshletPrimitiveInfo meshlet, MeshletInstanceInfo meshletInfo) {
     _passMeshlets._meshletVertexCounts[visibleIndex] = meshlet._vertexCount;
     _passMeshlets._meshletPrimitiveCounts[visibleIndex] = meshlet._primitiveCount;
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
@@ -77,6 +77,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
         uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[meshletInfoOffset];
         Meshlet meshlet = _meshlets[meshletIndex];
+        MeshletPrimitiveInfo meshletPrimitive = _meshletPrimitiveInfos[meshletIndex];
         MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
         float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
         MeshletBounds meshletBounds = computeTransformedBounds(matrixWorld, meshInstance._worldScale, meshlet);
@@ -88,7 +89,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
         isTestedFrustumCulling = true;
-        testFrustumPrimitiveCount = meshlet._primitiveCount;
+        testFrustumPrimitiveCount = meshletPrimitive._primitiveCount;
         visible = passFrustum;
 #endif
         
@@ -117,10 +118,10 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         
         if (visible) {
             uint index = WavePrefixCountBits(visible);
-            writePayloadStruct(index, meshlet, meshletInfo);
+            writePayloadStruct(index, meshletPrimitive, meshletInfo);
             
             if (meshletOffset == meshletCount - 1) {
-                uint instancePerGroup = min(64 / meshlet._vertexCount, 126 / meshlet._primitiveCount);
+                uint instancePerGroup = min(64 / meshletPrimitive._vertexCount, 126 / meshletPrimitive._primitiveCount);
                 isPacked = true;
                 visible = (WavePrefixCountBits(isPacked) % instancePerGroup) == 0;
                 unpackedOffset = index;
@@ -133,19 +134,19 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     if (instanceOffset < _indirectArgumentConstant._instanceCount) {
         MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
-        Meshlet meshlet = _meshlets[meshletIndex];
+        MeshletPrimitiveInfo meshletPrimitive = _meshletPrimitiveInfos[meshletIndex];
         if (passFrustum) {
-            passFrustumPrimitiveCount = meshlet._primitiveCount;
-            testBackfacePrimitiveCount = meshlet._primitiveCount;
+            passFrustumPrimitiveCount = meshletPrimitive._primitiveCount;
+            testBackfacePrimitiveCount = meshletPrimitive._primitiveCount;
         }
     
         if (passBackface) {
-            testOcclusionPrimitiveCount = meshlet._primitiveCount;
-            passBackfacePrimitiveCount = meshlet._primitiveCount;
+            testOcclusionPrimitiveCount = meshletPrimitive._primitiveCount;
+            passBackfacePrimitiveCount = meshletPrimitive._primitiveCount;
         }
     
         if (passOcclusion) {
-            passOcclusionPrimitiveCount = meshlet._primitiveCount;
+            passOcclusionPrimitiveCount = meshletPrimitive._primitiveCount;
         }
     
         uint currentCount = 0;

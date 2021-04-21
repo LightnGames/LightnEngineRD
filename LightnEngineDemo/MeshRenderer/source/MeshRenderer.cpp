@@ -150,7 +150,7 @@ void MeshRenderer::initialize() {
 
 		DescriptorRange batchedSubMeshInfoOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange batchedSubMeshInfoCountSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-		DescriptorRange subMeshSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 2);
+		DescriptorRange subMeshSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 3, 2);
 		DescriptorRange indirectArgumentUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);;
 		DescriptorRange primIndirectArgumentUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 2, 2);
 		DescriptorRange constantCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);

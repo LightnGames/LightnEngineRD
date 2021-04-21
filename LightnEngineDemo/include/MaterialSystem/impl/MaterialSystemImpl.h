@@ -37,8 +37,16 @@ struct TempShaderParamGpu {
 };
 
 struct ShaderSetImplDesc {
-	PipelineStateGroup** _primitiveInstancingPipelineStateGroup = nullptr;
-	PipelineStateGroup** _primitiveInstancingDepthPipelineStateGroup = nullptr;
+	PipelineStateGroup** _primPipelineStateGroup = nullptr;
+	PipelineStateGroup** _primDepthPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimCullingPassPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimOcclusionPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimMeshletPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimLodLevelPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimDepthPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimTexcoordsPipelineStateGroup = nullptr;
+	PipelineStateGroup** _debugPrimWireFramePipelineStateGroup = nullptr;
+
 	PipelineStateGroup** _pipelineStateGroup = nullptr;
 	PipelineStateGroup** _depthPipelineStateGroup = nullptr;
 	PipelineStateGroup** _debugCullingPassPipelineStateGroup = nullptr;

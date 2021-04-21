@@ -173,32 +173,41 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
 		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING);
 		PipelineStateGroup** pipelineStates = nullptr;
+		PipelineStateGroup** msPipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
 		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
 			pipelineStates = pipelineStateSet->_pipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_pipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_MESHLET:
 			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugMeshletPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
 			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugLodLevelPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
 			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugOcclusionPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_DEPTH:
 			pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugDepthPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
 			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugTexcoordsPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
 			pipelineStates = pipelineStateSet->_debugWireFramePipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugWireFramePipelineStateGroups;
 			break;
 		}
 
 		if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
 			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_debugCullingPassPipelineStateGroups;
 		}
 
 		LTN_ASSERT(pipelineStates != nullptr);
@@ -381,7 +390,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
-		context._pipelineStates = pipelineStates;
+		context._pipelineStates = pipelineStateSet->_pipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = vertexBufferViews;
 		context._indexBufferView = &indexBufferView;

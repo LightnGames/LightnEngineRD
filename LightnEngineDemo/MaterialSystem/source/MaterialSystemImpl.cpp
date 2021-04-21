@@ -110,10 +110,19 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._debugOcclusionPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugOcclusionPipelineStateGroups[findIndex];
 		implDesc._debugTexcoordsPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugTexcoordsPipelineStateGroups[findIndex];
 		implDesc._debugWireFramePipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugWireFramePipelineStateGroups[findIndex];
+
+		implDesc._debugPrimCullingPassPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugCullingPassPipelineStateGroups[findIndex];
+		implDesc._debugPrimDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugDepthPipelineStateGroups[findIndex];
+		implDesc._debugPrimLodLevelPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugLodLevelPipelineStateGroups[findIndex];
+		implDesc._debugPrimMeshletPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugMeshletPipelineStateGroups[findIndex];
+		implDesc._debugPrimOcclusionPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugOcclusionPipelineStateGroups[findIndex];
+		implDesc._debugPrimTexcoordsPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugTexcoordsPipelineStateGroups[findIndex];
+		implDesc._debugPrimWireFramePipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugWireFramePipelineStateGroups[findIndex];
+
 		implDesc._depthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._depthPipelineStateGroups[findIndex];
 		implDesc._pipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._pipelineStateGroups[findIndex];
-		implDesc._primitiveInstancingPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._pipelineStateGroups[findIndex];
-		implDesc._primitiveInstancingDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
+		implDesc._primPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._pipelineStateGroups[findIndex];
+		implDesc._primDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
 		implDesc._classicPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._pipelineStateGroups[findIndex];
 		implDesc._classicDepthPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._depthPipelineStateGroups[findIndex];
 		implDesc._commandSignature = &_pipelineStateSets[TYPE_MESH_SHADER]._commandSignatures[findIndex];
@@ -314,11 +323,11 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		// Depth Only
 		pipelineStateDesc._meshShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\standard_mesh\\default_mesh_primitive_instancing.mso";
-		*implDesc._primitiveInstancingDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+		*implDesc._primDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// フラスタム ＋ オクルージョンカリング
 		pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
-		*implDesc._primitiveInstancingPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+		*implDesc._primPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 	}
 
 	pipelineStateDesc._meshShaderFilePath = meshShaderPath;
@@ -436,7 +445,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		argumentDescs[0].Constant._num32BitValuesToSet = 4;
 		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentMS);
-		desc._rootSignature = (*implDesc._primitiveInstancingPipelineStateGroup)->getRootSignature();
+		desc._rootSignature = (*implDesc._primPipelineStateGroup)->getRootSignature();
 		(*implDesc._msCommandSignature)->initialize(desc);
 	}
 

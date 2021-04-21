@@ -1452,7 +1452,7 @@ void exportMesh(const char* fileName) {
 	VectorArray<MeshletPrimitiveInfo> meshletPrimitiveL(meshletCount);
 	for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
 		const Meshlet& meshlet = m_meshlets[meshletIndex];
-		MeshletPrimitiveInfo& info = meshletsL[meshletIndex];
+		MeshletPrimitiveInfo& info = meshletPrimitiveL[meshletIndex];
 		info._vertexIndexOffset = meshlet.VertOffset;
 		info._vertexCount = meshlet.VertCount;
 		info._primitiveCount = meshlet.PrimCount;
