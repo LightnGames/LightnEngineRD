@@ -86,9 +86,9 @@ void QueryHeapSystem::debugDrawCpuPerf() {
 
 	DebugGui::Columns(2, "tree", true);
 	if (flat) {
-		_cpuPerf.debugDrawTree(0);
-	} else {
 		_cpuPerf.debugDrawFlat();
+	} else {
+		_cpuPerf.debugDrawTree(0);
 	}
 	DebugGui::Columns(1);
 }
@@ -103,9 +103,9 @@ void QueryHeapSystem::debugDrawGpuPerf() {
 
 	DebugGui::Columns(2, "tree", true);
 	if (flat) {
-		_gpuPerf.debugDrawTree(0);
-	} else {
 		_gpuPerf.debugDrawFlat();
+	} else {
+		_gpuPerf.debugDrawTree(0);
 	}
 	DebugGui::Columns(1);
 }

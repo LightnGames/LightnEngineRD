@@ -948,11 +948,14 @@ struct LodInfo {
 	uint32 primitiveCount = 0;
 };
 
-struct MeshletCullInfo {
+struct MeshletPrimitiveInfo {
 	uint32 _vertexIndexOffset;
 	uint32 _vertexCount;
 	uint32 _primitiveOffset;
 	uint32 _primitiveCount;
+};
+
+struct MeshletCullInfo {
 	Float3 _aabbMin;
 	Float3 _aabbMax;
 	uint32 _normalAndCutoff;
@@ -1438,17 +1441,22 @@ void exportMesh(const char* fileName) {
 	uint32 meshletCount = m_meshlets.size();
 	VectorArray<MeshletCullInfo> meshletsL(meshletCount);
 	for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
-		const Meshlet& meshlet = m_meshlets[meshletIndex];
 		const CullData& cullData = m_cullData[meshletIndex];
 		MeshletCullInfo& info = meshletsL[meshletIndex];
-		info._vertexIndexOffset = meshlet.VertOffset;
-		info._vertexCount = meshlet.VertCount;
-		info._primitiveCount = meshlet.PrimCount;
-		info._primitiveOffset = meshlet.PrimOffset;
 		info._aabbMax = Float3(cullData.BoundingBoxMax.x, cullData.BoundingBoxMax.y, cullData.BoundingBoxMax.z);
 		info._aabbMin = Float3(cullData.BoundingBoxMin.x, cullData.BoundingBoxMin.y, cullData.BoundingBoxMin.z);
 		info._apexOffset = cullData.ApexOffset;
 		memcpy(&info._normalAndCutoff, cullData.NormalCone, sizeof(uint32));
+	}
+
+	VectorArray<MeshletPrimitiveInfo> meshletPrimitiveL(meshletCount);
+	for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
+		const Meshlet& meshlet = m_meshlets[meshletIndex];
+		MeshletPrimitiveInfo& info = meshletsL[meshletIndex];
+		info._vertexIndexOffset = meshlet.VertOffset;
+		info._vertexCount = meshlet.VertCount;
+		info._primitiveCount = meshlet.PrimCount;
+		info._primitiveOffset = meshlet.PrimOffset;
 	}
 
 	uint32 meshletVertexIndexCount = static_cast<uint32>(m_uniqueVertexIndices.size());
@@ -1464,7 +1472,8 @@ void exportMesh(const char* fileName) {
 	uint32 subMeshSize = subMeshCount * sizeof(SubMeshInfo);
 	uint32 boundingBoxSize = sizeof(XMFLOAT3) * 2;
 	uint32 lodInfoSize = sizeof(LodInfo) * lodCount;
-	uint32 meshletSize = sizeof(MeshletCullInfo) * meshletCount;
+	uint32 meshletPrimitiveSize = sizeof(MeshletPrimitiveInfo) * meshletCount;
+	uint32 meshletCullSize = sizeof(MeshletCullInfo) * meshletCount;
 	uint32 materialNameHashesSize = sizeof(ullong64) * materialCount;
 	uint32 classicIndexSize = sizeof(uint32) * classicIndexCount;
 
@@ -1511,7 +1520,8 @@ void exportMesh(const char* fileName) {
 	fout.write(reinterpret_cast<const char*>(materialNameHashes.data()), materialNameHashesSize);
 	fout.write(reinterpret_cast<const char*>(subMeshInfos.data()), subMeshSize);
 	fout.write(reinterpret_cast<const char*>(lodInfos.data()), lodInfoSize);
-	fout.write(reinterpret_cast<const char*>(meshletsL.data()), meshletSize);
+	fout.write(reinterpret_cast<const char*>(meshletPrimitiveL.data()), meshletPrimitiveSize);
+	fout.write(reinterpret_cast<const char*>(meshletsL.data()), meshletCullSize);
 	fout.write(reinterpret_cast<const char*>(m_primitiveIndices.data()), primitiveSize);
 	fout.write(reinterpret_cast<const char*>(m_uniqueVertexIndices.data()), indicesSize);
 	fout.write(reinterpret_cast<const char*>(positionsL.data()), positionVerticesSize);

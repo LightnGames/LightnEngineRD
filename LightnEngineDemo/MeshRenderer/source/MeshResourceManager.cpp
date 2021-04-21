@@ -304,18 +304,11 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	{
 		u32 startIndex = meshInfo._meshletStartIndex;
 		u32 count = meshInfo._totalMeshletCount;
-		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * startIndex, count);
-		fread_s(meshlets, sizeof(gpu::Meshlet) * meshInfo._totalMeshletCount, sizeof(gpu::Meshlet), meshInfo._totalMeshletCount, fin);
-
 		gpu::MeshletPrimitiveInfo* meshletPrimitiveInfos = vramUpdater->enqueueUpdate<gpu::MeshletPrimitiveInfo>(&_meshletPrimitiveInfoBuffer, sizeof(gpu::MeshletPrimitiveInfo) * startIndex, count);
-		for (u32 i = 0; i < meshInfo._totalMeshletCount; ++i) {
-			const gpu::Meshlet& meshlet = meshlets[i];
-			gpu::MeshletPrimitiveInfo& info = meshletPrimitiveInfos[i];
-			info._vertexCount = meshlet._vertexCount;
-			info._primitiveCount = meshlet._primitiveCount;
-			info._vertexOffset = meshlet._vertexOffset;
-			info._primitiveOffset = meshlet._primitiveOffset;
-		}
+		fread_s(meshletPrimitiveInfos, sizeof(gpu::MeshletPrimitiveInfo) * count, sizeof(gpu::MeshletPrimitiveInfo), count, fin);
+		
+		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * startIndex, count);
+		fread_s(meshlets, sizeof(gpu::Meshlet) * count, sizeof(gpu::Meshlet), count, fin);
 	}
 
 	// プリミティブ

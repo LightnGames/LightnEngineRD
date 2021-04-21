@@ -98,10 +98,6 @@ struct SubMesh {
 
 // Meshlet Bounds
 struct Meshlet {
-	uint _vertexOffset;
-	uint _vertexCount;
-	uint _primitiveOffset;
-	uint _primitiveCount;
 	float3 _aabbMin;
 	float3 _aabbMax;
 	uint _normalAndCutoff;

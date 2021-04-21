@@ -47,10 +47,6 @@ namespace gpu {
 	};
 
 	struct Meshlet {
-		u32 _vertexOffset = 0;
-		u32 _vertexCount = 0;
-		u32 _primitiveOffset = 0;
-		u32 _primitiveCount = 0;
 		Float3 _aabbMin;
 		Float3 _aabbMax;
 		u32 _normalAndCutoff;
