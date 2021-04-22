@@ -32,17 +32,25 @@ def convert(shader_file_path):
         os.makedirs(shader_output_dir)
         print("mkdir %s" % shader_output_dir)
 
-    #base_color_hash = xxhash.xxh32(b'BaseColor').intdigest()
-    #albedo_texture_index_hash = xxhash.xxh32(b'AlbedoTextureIndex').intdigest()
-    #shader_parameters = list()
-    #shader_parameters.append([base_color_hash, 0])
-    #shader_parameters.append([albedo_texture_index_hash, 12])
-    #shader_parameter_size_in_byte = 16
-    #shader_info_output_ext = SHADER_INFO_EXT[shader_ext]
-    #shader_info_path = "%s\\%s.%s" % (shader_output_dir, shader_file_name, shader_info_output_ext)
-    #with open(shader_info_path, "wb") as fout:
-        #for shader_parameter in shader_parameters:
-            #fout.write(struct.pack(">II", shader_parameter[0], shader_parameter[1]))
+
+    # Shader Param Type
+    # 0: float
+    # 1: float2
+    # 2: float3
+    # 3: uint
+    # 4: texture
+    if shader_output_ext == 'pso':
+        base_color_hash = xxhash.xxh32(b'BaseColor').intdigest()
+        albedo_texture_index_hash = xxhash.xxh32(b'AlbedoTextureIndex').intdigest()
+        shader_parameters = []
+        shader_parameters.append([base_color_hash, 2])
+        shader_parameters.append([albedo_texture_index_hash, 4])
+        shader_info_output_ext = SHADER_INFO_EXT[shader_ext]
+        shader_info_path = "%s\\%s.%s" % (shader_output_dir, shader_file_name, shader_info_output_ext)
+        with open(shader_info_path, "wb") as fout:
+            fout.write(struct.pack(">H", len(shader_parameters)))
+            for shader_parameter in shader_parameters:
+                fout.write(struct.pack(">IH", shader_parameter[0], shader_parameter[1]))
 
     # DXCシェーダーコンパイラでシェーダーをビルドする
     cmd = []

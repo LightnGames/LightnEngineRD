@@ -158,14 +158,9 @@ void VramShaderSet::updateMaterialParameter(u32 materialInstanceIndex) {
 	u32 offset = sizeof(MaterialParameter) * materialInstanceIndex;
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialImpl* material = _materialInstances[materialInstanceIndex];
-	TempShaderParam* srcParam = material->getShaderParam();
 	MaterialParameter* mapParam = vramUpdater->enqueueUpdate<MaterialParameter>(&_parameterBuffer, offset);
-	u32 textureIndex = 0;
-	if (srcParam->_albedoTexture != nullptr) {
-		textureIndex = TextureSystemImpl::Get()->getTextureIndex(srcParam->_albedoTexture);
-	}
-	mapParam->_baseColor = srcParam->_color;
-	mapParam->_albedoTextureIndex = textureIndex;
+	mapParam->_baseColor = *material->getParameter<Color4>(StrHash32("BaseColor"));
+	mapParam->_albedoTextureIndex = *material->getParameter<u32>(StrHash32("AlbedoTextureIndex"));
 }
 
 void VramShaderSet::removeMaterialInstance(u32 materialInstanceIndex) {

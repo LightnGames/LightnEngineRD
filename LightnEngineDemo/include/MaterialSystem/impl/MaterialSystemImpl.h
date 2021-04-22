@@ -26,11 +26,6 @@ enum ShaderSetMaterialStateFlags {
 	SHADER_SET_MATERIAL_STATE_REQUEST_DESTROY = 1 << 0,
 };
 
-struct TempShaderParam {
-	Color4 _color;
-	Texture* _albedoTexture = nullptr;
-};
-
 struct TempShaderParamGpu {
 	Color4 _color;
 	u32 _albedoTextureIndex;
@@ -65,6 +60,7 @@ struct ShaderSetImplDesc {
 
 struct ShaderSetImpl :public ShaderSet {
 	static constexpr u32 MATERIAL_COUNT_MAX = 128;
+	static constexpr u32 SHADER_PARAMETER_COUNT_MAX = 64;
 	virtual void requestToDelete() override;
 	virtual void setTexture(Texture* texture, u64 parameterNameHash) override;
 
@@ -73,29 +69,43 @@ struct ShaderSetImpl :public ShaderSet {
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 
+	u32 _parameterNameHashes[SHADER_PARAMETER_COUNT_MAX] = {};
+	u16 _parameterTypes[SHADER_PARAMETER_COUNT_MAX] = {};
+	u16 _parameterByteOffset[SHADER_PARAMETER_COUNT_MAX] = {};
+	u16 _parameterSizeInByte = 0;
+	u16 _parameterCount = 0;
+
 	u8 _shaderParamStateFlags[MATERIAL_COUNT_MAX] = {};
-	u8* _datas = nullptr;
+	u8* _parameterDatas = nullptr;
 	DynamicQueueController _shaderParamInstances;
 };
 
 struct MaterialImpl :public Material {
 	static constexpr u32 TEXTURE_COUNT_MAX = 8;
 	virtual void requestToDelete() override;
-	virtual void setTexture(Texture* texture, u64 parameterNameHash) override;
+	virtual void setTexture(u32 nameHash, Texture* texture) override;
+
 	ShaderSetImpl* getShaderSet() { return _shaderSet; }
 	const ShaderSetImpl* getShaderSet() const { return _shaderSet; }
-	TempShaderParam* getShaderParam() { return _shaderParam; }
+	const u8* getShaderSetStateFlags() const { return _shaderSetStateFlags; }
 
+	void setParameterDataPtr(u8* dataPtr) { _parameterData = dataPtr; }
 	void setShaderSetStateFlags(u8* flags) { _shaderSetStateFlags = flags; }
-	void setShaderParam(TempShaderParam* param) { _shaderParam = param; }
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 	void setShaderSet(ShaderSetImpl* shaderSet) { _shaderSet = shaderSet; }
 
+protected:
+	virtual const u8* getParameterRaw(u32 nameHash) const override;
+	virtual void setParameterRaw(u32 nameHash, const void* dataPtr) override;
+
+private:
+	u16 findParameter(u32 nameHash) const;
+
 private:
 	u8* _shaderSetStateFlags = nullptr;
 	ShaderSetImpl* _shaderSet = nullptr;
-	TempShaderParam* _shaderParam = nullptr;
+	u8* _parameterData = nullptr;
 };
 
 class PipelineStateSet {

@@ -27,7 +27,7 @@ void MaterialSystemImpl::processDeletion() {
 		if (_materialStateFlags[materialIndex] & MATERIAL_STATE_FLAG_REQEST_DESTROY) {
 			MaterialImpl& material = _materials[materialIndex];
 			ShaderSetImpl* shaderSet = material.getShaderSet();
-			u32 shaderParamIndex = static_cast<u32>(material.getShaderParam() - reinterpret_cast<TempShaderParam*>(shaderSet->_datas));
+			u32 shaderParamIndex = static_cast<u32>(material.getShaderSetStateFlags() - shaderSet->_shaderParamStateFlags);
 			shaderSet->_shaderParamInstances.discard(shaderParamIndex);
 
 			_materialStateFlags[materialIndex] = MATERIAL_STATE_FLAG_NONE;
@@ -102,32 +102,36 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 	if (findIndex == gpu::INVALID_INDEX) {
 		findIndex = _shaderSets.request();
 
+		PipelineStateSet& meshShaderPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER];
+		PipelineStateSet& primInstancingPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING];
+		PipelineStateSet& classicPipelineStateSet = _pipelineStateSets[TYPE_CLASSIC];
+
 		ShaderSetImplDesc implDesc = {};
-		implDesc._debugCullingPassPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugCullingPassPipelineStateGroups[findIndex];
-		implDesc._debugDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugDepthPipelineStateGroups[findIndex];
-		implDesc._debugLodLevelPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugLodLevelPipelineStateGroups[findIndex];
-		implDesc._debugMeshletPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugMeshletPipelineStateGroups[findIndex];
-		implDesc._debugOcclusionPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugOcclusionPipelineStateGroups[findIndex];
-		implDesc._debugTexcoordsPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugTexcoordsPipelineStateGroups[findIndex];
-		implDesc._debugWireFramePipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._debugWireFramePipelineStateGroups[findIndex];
+		implDesc._debugCullingPassPipelineStateGroup = &meshShaderPipelineStateSet._debugCullingPassPipelineStateGroups[findIndex];
+		implDesc._debugDepthPipelineStateGroup = &meshShaderPipelineStateSet._debugDepthPipelineStateGroups[findIndex];
+		implDesc._debugLodLevelPipelineStateGroup = &meshShaderPipelineStateSet._debugLodLevelPipelineStateGroups[findIndex];
+		implDesc._debugMeshletPipelineStateGroup = &meshShaderPipelineStateSet._debugMeshletPipelineStateGroups[findIndex];
+		implDesc._debugOcclusionPipelineStateGroup = &meshShaderPipelineStateSet._debugOcclusionPipelineStateGroups[findIndex];
+		implDesc._debugTexcoordsPipelineStateGroup = &meshShaderPipelineStateSet._debugTexcoordsPipelineStateGroups[findIndex];
+		implDesc._debugWireFramePipelineStateGroup = &meshShaderPipelineStateSet._debugWireFramePipelineStateGroups[findIndex];
+		implDesc._commandSignature = &meshShaderPipelineStateSet._commandSignatures[findIndex];
 
-		implDesc._debugPrimCullingPassPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugCullingPassPipelineStateGroups[findIndex];
-		implDesc._debugPrimDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugDepthPipelineStateGroups[findIndex];
-		implDesc._debugPrimLodLevelPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugLodLevelPipelineStateGroups[findIndex];
-		implDesc._debugPrimMeshletPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugMeshletPipelineStateGroups[findIndex];
-		implDesc._debugPrimOcclusionPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugOcclusionPipelineStateGroups[findIndex];
-		implDesc._debugPrimTexcoordsPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugTexcoordsPipelineStateGroups[findIndex];
-		implDesc._debugPrimWireFramePipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._debugWireFramePipelineStateGroups[findIndex];
+		implDesc._debugPrimCullingPassPipelineStateGroup = &primInstancingPipelineStateSet._debugCullingPassPipelineStateGroups[findIndex];
+		implDesc._debugPrimDepthPipelineStateGroup = &primInstancingPipelineStateSet._debugDepthPipelineStateGroups[findIndex];
+		implDesc._debugPrimLodLevelPipelineStateGroup = &primInstancingPipelineStateSet._debugLodLevelPipelineStateGroups[findIndex];
+		implDesc._debugPrimMeshletPipelineStateGroup = &primInstancingPipelineStateSet._debugMeshletPipelineStateGroups[findIndex];
+		implDesc._debugPrimOcclusionPipelineStateGroup = &primInstancingPipelineStateSet._debugOcclusionPipelineStateGroups[findIndex];
+		implDesc._debugPrimTexcoordsPipelineStateGroup = &primInstancingPipelineStateSet._debugTexcoordsPipelineStateGroups[findIndex];
+		implDesc._debugPrimWireFramePipelineStateGroup = &primInstancingPipelineStateSet._debugWireFramePipelineStateGroups[findIndex];
+		implDesc._msCommandSignature = &primInstancingPipelineStateSet._commandSignatures[findIndex];
 
-		implDesc._depthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._depthPipelineStateGroups[findIndex];
-		implDesc._pipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER]._pipelineStateGroups[findIndex];
-		implDesc._primPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._pipelineStateGroups[findIndex];
-		implDesc._primDepthPipelineStateGroup = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._depthPipelineStateGroups[findIndex];
-		implDesc._classicPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._pipelineStateGroups[findIndex];
-		implDesc._classicDepthPipelineStateGroup = &_pipelineStateSets[TYPE_CLASSIC]._depthPipelineStateGroups[findIndex];
-		implDesc._commandSignature = &_pipelineStateSets[TYPE_MESH_SHADER]._commandSignatures[findIndex];
-		implDesc._msCommandSignature = &_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING]._commandSignatures[findIndex];
-		implDesc._multiDrawCommandSignature = &_pipelineStateSets[TYPE_CLASSIC]._commandSignatures[findIndex];
+		implDesc._depthPipelineStateGroup = &meshShaderPipelineStateSet._depthPipelineStateGroups[findIndex];
+		implDesc._pipelineStateGroup = &meshShaderPipelineStateSet._pipelineStateGroups[findIndex];
+		implDesc._primPipelineStateGroup = &primInstancingPipelineStateSet._pipelineStateGroups[findIndex];
+		implDesc._primDepthPipelineStateGroup = &primInstancingPipelineStateSet._depthPipelineStateGroups[findIndex];
+		implDesc._classicPipelineStateGroup = &classicPipelineStateSet._pipelineStateGroups[findIndex];
+		implDesc._classicDepthPipelineStateGroup = &classicPipelineStateSet._depthPipelineStateGroups[findIndex];
+		implDesc._multiDrawCommandSignature = &classicPipelineStateSet._commandSignatures[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -167,20 +171,21 @@ Material* MaterialSystemImpl::createMaterial(const MaterialDesc& desc) {
 
 	ShaderSetImpl* shaderSet = &_shaderSets[shaderSetIndex];
 	u32 shaderSetMaterialIndex = shaderSet->_shaderParamInstances.request();
-	TempShaderParam* shaderParam = &reinterpret_cast<TempShaderParam*>(shaderSet->_datas)[shaderSetMaterialIndex];
-	shaderParam->_color = Color4::WHITE;
-	shaderParam->_albedoTexture = TextureSystemImpl::Get()->findTexture(textureFileHashes[0]);
 
 	u32 materialIndex = _materials.request();
 	MaterialImpl* material = &_materials[materialIndex];
 	material->setShaderSetStateFlags(&shaderSet->_shaderParamStateFlags[shaderSetMaterialIndex]);
-	material->setShaderParam(shaderParam);
+	material->setParameterDataPtr(&shaderSet->_parameterDatas[shaderSet->_parameterSizeInByte*shaderSetMaterialIndex]);
 	material->setShaderSet(shaderSet);
 	material->setStateFlags(&_materialStateFlags[materialIndex]);
 	material->setUpdateFlags(&_materialUpdateFlags[materialIndex]);
 	_materialFileHashes[materialIndex] = StrHash(desc._filePath);
 	_materialStateFlags[materialIndex] |= MATERIAL_STATE_FLAG_CREATED;
 	_materialUpdateFlags[materialIndex] |= MATERIAL_UPDATE_FLAG_UPDATE_PARAMS;
+
+	material->setParameter<Color4>(StrHash32("BaseColor"), Color4::WHITE);
+	material->setTexture(StrHash32("AlbedoTextureIndex"), TextureSystemImpl::Get()->findTexture(textureFileHashes[0]));
+
 	return material;
 }
 
@@ -208,9 +213,38 @@ void MaterialImpl::requestToDelete() {
 	*_stateFlags |= MATERIAL_STATE_FLAG_REQEST_DESTROY;
 }
 
-void MaterialImpl::setTexture(Texture* texture, u64 parameterNameHash) {
-	_shaderParam->_albedoTexture = texture;
+void MaterialImpl::setTexture(u32 nameHash, Texture* texture) {
+	setParameter<u32>(nameHash, TextureSystemImpl::Get()->getTextureIndex(texture));
+}
+
+const u8* MaterialImpl::getParameterRaw(u32 nameHash) const {
+	u16 findIndex = findParameter(nameHash);
+	LTN_ASSERT(findIndex != INVALID_PARAMETER_INDEX);
+	return &_parameterData[_shaderSet->_parameterByteOffset[findIndex]];
+}
+
+void MaterialImpl::setParameterRaw(u32 nameHash, const void* dataPtr) {
+	u16 findIndex = findParameter(nameHash);
+	LTN_ASSERT(findIndex != INVALID_PARAMETER_INDEX);
+
+	u16 copySizeInByte = PARAM_TYPE_SIZE_IN_BYTE[_shaderSet->_parameterTypes[findIndex]];
+	u16 offset = _shaderSet->_parameterByteOffset[findIndex];
+	u8* basePtr = &_parameterData[_shaderSet->_parameterByteOffset[findIndex]];
+	memcpy(basePtr + offset, dataPtr, copySizeInByte);
+
 	*_updateFlags |= MATERIAL_UPDATE_FLAG_UPDATE_PARAMS;
+}
+
+u16 MaterialImpl::findParameter(u32 nameHash) const {
+	u16 parameterCount = _shaderSet->_parameterCount;
+	u32* parameterNameHashes = _shaderSet->_parameterNameHashes;
+	for (u16 parameterIndex = 0; parameterIndex < parameterCount; ++parameterIndex) {
+		if (nameHash == parameterNameHashes[parameterIndex]) {
+			return parameterIndex;
+		}
+	}
+
+	return INVALID_PARAMETER_INDEX;
 }
 
 void ShaderSetImpl::requestToDelete() {
@@ -222,28 +256,66 @@ void ShaderSetImpl::setTexture(Texture* texture, u64 parameterNameHash) {
 
 void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& implDesc) {
 	_shaderParamInstances.initialize(MATERIAL_COUNT_MAX);
-	_datas = reinterpret_cast<u8*>(new TempShaderParam[MATERIAL_COUNT_MAX]);
-
-	// アセット実パスに変換
-	char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
-
-	// IO読み取り初期化
-	std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
-	fin.exceptions(std::ios::badbit);
-	LTN_ASSERT(!fin.fail());
 
 	u32 meshShaderNameLength = 0;
 	u32 pixelShaderNameLength = 0;
 	char meshShaderName[FILE_PATH_COUNT_MAX] = {};
 	char pixelShaderName[FILE_PATH_COUNT_MAX] = {};
 
-	fin.read(reinterpret_cast<char*>(&meshShaderNameLength), sizeof(u32));
-	fin.read(reinterpret_cast<char*>(meshShaderName), meshShaderNameLength);
-	fin.read(reinterpret_cast<char*>(&pixelShaderNameLength), sizeof(u32));
-	fin.read(reinterpret_cast<char*>(pixelShaderName), pixelShaderNameLength);
+	// シェーダーパス
+	{
+		char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
+		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
-	fin.close();
+		std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
+		fin.exceptions(std::ios::badbit);
+		LTN_ASSERT(!fin.fail());
+
+		fin.read(reinterpret_cast<char*>(&meshShaderNameLength), sizeof(u32));
+		fin.read(reinterpret_cast<char*>(meshShaderName), meshShaderNameLength);
+		fin.read(reinterpret_cast<char*>(&pixelShaderNameLength), sizeof(u32));
+		fin.read(reinterpret_cast<char*>(pixelShaderName), pixelShaderNameLength);
+
+		fin.close();
+	}
+
+	// シェーダーパラメーター
+	{
+		char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
+		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+
+		// シェーダーパスから Info パスに変換
+		char* str = shaderSetFilePath;
+		while (*str != '.') {
+			str++;
+		}
+
+		// .vso -> .vsInfo
+		// .pso -> .psinfo
+		memcpy(str + 2, "info", 4);
+
+		std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
+		fin.exceptions(std::ios::badbit);
+		LTN_ASSERT(!fin.fail());
+
+		u16 parameterSizeInByte = 0;
+		u16 parameterCount = 0;
+		fin.read(reinterpret_cast<char*>(&_parameterCount), sizeof(u16));
+		for (u32 parameterIndex = 0; parameterIndex < parameterCount; ++parameterIndex) {
+			u32& nameHash = _parameterNameHashes[parameterIndex];
+			u16& type = _parameterTypes[parameterIndex];
+			fin.read(reinterpret_cast<char*>(&nameHash), sizeof(u32));
+			fin.read(reinterpret_cast<char*>(&type), sizeof(u16));
+			parameterSizeInByte += Material::PARAM_TYPE_SIZE_IN_BYTE[type];
+		}
+
+		_parameterSizeInByte = parameterSizeInByte;
+		_parameterCount = parameterCount;
+
+		fin.close();
+	}
+
+	_parameterDatas = new u8[_parameterSizeInByte * MATERIAL_COUNT_MAX];
 
 	char meshShaderPath[FILE_PATH_COUNT_MAX] = {};
 	char pixelShaderPath[FILE_PATH_COUNT_MAX] = {};
@@ -333,7 +405,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 	pipelineStateDesc._pixelShaderFilePath = pixelShaderPath;
 
-	// GPUカリング無効デバッグ用
+	// GPU カリング無効デバッグ用
 	pipelineStateDesc._amplificationShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_pass.aso";
 	*implDesc._debugCullingPassPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
@@ -353,7 +425,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_depth.pso";
 	*implDesc._debugDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
-	// Texcoords デバッグ用
+	// TexCoords デバッグ用
 	pipelineStateDesc._pixelShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_texcoords.pso";
 	*implDesc._debugTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
@@ -420,8 +492,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		desc._pixelShaderFilePath = nullptr;
 		desc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 		*implDesc._classicDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
-
-		// "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_meshlet.pso"
 	}
 
 	{
@@ -473,8 +543,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 void ShaderSetImpl::terminate() {
 	_shaderParamInstances.terminate();
-	delete[] _datas;
-	_datas = nullptr;
+	delete[] _parameterDatas;
+	_parameterDatas = nullptr;
 }
 
 void PipelineStateSet::requestDelete(u32 shaderSetIndex){
