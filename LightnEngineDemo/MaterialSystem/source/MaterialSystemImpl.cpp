@@ -219,18 +219,23 @@ void MaterialImpl::setTexture(u32 nameHash, Texture* texture) {
 
 const u8* MaterialImpl::getParameterRaw(u32 nameHash) const {
 	u16 findIndex = findParameter(nameHash);
-	LTN_ASSERT(findIndex != INVALID_PARAMETER_INDEX);
+	if (findIndex == INVALID_PARAMETER_INDEX) {
+		return nullptr;
+	}
+
 	return &_parameterData[_shaderSet->_parameterByteOffset[findIndex]];
 }
 
 void MaterialImpl::setParameterRaw(u32 nameHash, const void* dataPtr) {
 	u16 findIndex = findParameter(nameHash);
-	LTN_ASSERT(findIndex != INVALID_PARAMETER_INDEX);
+	if (findIndex == INVALID_PARAMETER_INDEX) {
+		return;
+	}
 
 	u16 copySizeInByte = PARAM_TYPE_SIZE_IN_BYTE[_shaderSet->_parameterTypes[findIndex]];
 	u16 offset = _shaderSet->_parameterByteOffset[findIndex];
-	u8* basePtr = &_parameterData[_shaderSet->_parameterByteOffset[findIndex]];
-	memcpy(basePtr + offset, dataPtr, copySizeInByte);
+	u8* basePtr = &_parameterData[offset];
+	memcpy(basePtr, dataPtr, copySizeInByte);
 
 	*_updateFlags |= MATERIAL_UPDATE_FLAG_UPDATE_PARAMS;
 }
@@ -279,10 +284,15 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		fin.close();
 	}
 
+	char meshShaderPath[FILE_PATH_COUNT_MAX] = {};
+	char pixelShaderPath[FILE_PATH_COUNT_MAX] = {};
+	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
+	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
+
 	// シェーダーパラメーター
 	{
 		char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
 		// シェーダーパスから Info パスに変換
 		char* str = shaderSetFilePath;
@@ -292,7 +302,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		// .vso -> .vsInfo
 		// .pso -> .psinfo
-		memcpy(str + 2, "info", 4);
+		memcpy(str + 3, "info\0", 6);
 
 		std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
 		fin.exceptions(std::ios::badbit);
@@ -300,12 +310,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		u16 parameterSizeInByte = 0;
 		u16 parameterCount = 0;
-		fin.read(reinterpret_cast<char*>(&_parameterCount), sizeof(u16));
+		fin.read(reinterpret_cast<char*>(&parameterCount), sizeof(u16));
 		for (u32 parameterIndex = 0; parameterIndex < parameterCount; ++parameterIndex) {
 			u32& nameHash = _parameterNameHashes[parameterIndex];
 			u16& type = _parameterTypes[parameterIndex];
 			fin.read(reinterpret_cast<char*>(&nameHash), sizeof(u32));
 			fin.read(reinterpret_cast<char*>(&type), sizeof(u16));
+			_parameterByteOffset[parameterIndex] = parameterSizeInByte;
 			parameterSizeInByte += Material::PARAM_TYPE_SIZE_IN_BYTE[type];
 		}
 
@@ -316,11 +327,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	}
 
 	_parameterDatas = new u8[_parameterSizeInByte * MATERIAL_COUNT_MAX];
-
-	char meshShaderPath[FILE_PATH_COUNT_MAX] = {};
-	char pixelShaderPath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
-	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
 	constexpr u32 TEXTURE_BASE_REGISTER = 29;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();

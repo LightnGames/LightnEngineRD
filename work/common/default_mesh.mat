@@ -1,1 +1,5 @@
 shader_set : common/default_mesh.sseto
+textures : 
+ BaseMap : common/common_black.dds
+ NormalMap : common/common_black.dds
+ PackedARM : common/common_black.dds

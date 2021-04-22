@@ -11,7 +11,7 @@ void TextureSystemImpl::initialize() {
 	_descriptors = allocater->allocateDescriptors(TEXTURE_COUNT_MAX);
 
     TextureDesc desc = {};
-    desc._filePath = "common/common_black.DDS";
+    desc._filePath = "common/common_black.dds";
     _commonBlackTexture = allocateTexture(desc);
     _commonBlackTexture->getAsset()->requestLoad();
     loadTexture(0);

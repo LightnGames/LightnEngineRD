@@ -7,11 +7,12 @@ class Texture;
 
 struct LTN_MATERIAL_SYSTEM_API Material {
 	static constexpr u16 INVALID_PARAMETER_INDEX = static_cast<u16>(-1);
-	static constexpr u16 PARAM_TYPE_SIZE_IN_BYTE[] = { 4,8,12,4,4 };
+	static constexpr u16 PARAM_TYPE_SIZE_IN_BYTE[] = { 4,8,12,16,4,4 };
 	enum ShaderValiableType {
 		FLOAT = 0,
 		FLOAT2,
 		FLOAT3,
+		FLOAT4,
 		UINT,
 		TEXTURE,
 		COUNT
