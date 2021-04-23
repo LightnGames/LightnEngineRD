@@ -414,6 +414,13 @@ enum ColorWriteEnable{
 	COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
 };
 
+struct QueryVideoMemoryInfo {
+	u64 _budget = 0;
+	u64 _currentUsage = 0;
+	u64 _availableForReservation = 0;
+	u64 _currentReservation = 0;
+};
+
 struct RenderTargetBlendDesc {
 	bool _blendEnable = false;
 	bool _logicOpEnable = false;
@@ -1117,6 +1124,7 @@ struct LTN_GFX_API HardwareFactory {
 struct LTN_GFX_API HardwareAdapter {
 	virtual void initialize(const HardwareAdapterDesc& desc) = 0;
 	virtual void terminate() = 0;
+	virtual QueryVideoMemoryInfo queryVideoMemoryInfo() = 0;
 };
 
 struct LTN_GFX_API Device {

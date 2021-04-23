@@ -329,8 +329,9 @@ struct HardwareFactoryD3D12 :public HardwareFactory {
 struct HardwareAdapterD3D12 :public HardwareAdapter {
 	virtual void initialize(const HardwareAdapterDesc& desc) override;
 	virtual void terminate() override;
+	virtual QueryVideoMemoryInfo queryVideoMemoryInfo() override;
 
-	IDXGIAdapter1* _adapter = nullptr;
+	IDXGIAdapter3* _adapter = nullptr;
 	u8* _stateFlags = nullptr;
 };
 

@@ -251,7 +251,7 @@ void HardwareFactoryD3D12::terminate() {
 
 void HardwareAdapterD3D12::initialize(const HardwareAdapterDesc& desc) {
 	IDXGIFactory4* factory = static_cast<HardwareFactoryD3D12*>(desc._factory)->_factory;
-	for (u32 adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters1(adapterIndex, &_adapter); ++adapterIndex) {
+	for (u32 adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters(adapterIndex, reinterpret_cast<IDXGIAdapter**>(&_adapter)); ++adapterIndex) {
 		DXGI_ADAPTER_DESC1 desc;
 		_adapter->GetDesc1(&desc);
 
@@ -268,6 +268,18 @@ void HardwareAdapterD3D12::initialize(const HardwareAdapterDesc& desc) {
 void HardwareAdapterD3D12::terminate() {
 	_adapter->Release();
 	*_stateFlags = GRAPHICS_INTERFACE_STATE_REQUEST_DELETE;
+}
+
+QueryVideoMemoryInfo HardwareAdapterD3D12::queryVideoMemoryInfo() {
+	DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
+	_adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
+
+	QueryVideoMemoryInfo info;
+	info._budget = videoMemoryInfo.Budget;
+	info._availableForReservation = videoMemoryInfo.AvailableForReservation;
+	info._currentReservation = videoMemoryInfo.CurrentReservation;
+	info._currentUsage = videoMemoryInfo.CurrentUsage;
+	return info;
 }
 
 void DeviceD3D12::initialize(const DeviceDesc& desc) {

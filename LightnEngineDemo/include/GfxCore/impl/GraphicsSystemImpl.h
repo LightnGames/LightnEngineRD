@@ -36,6 +36,8 @@ private:
 
 private:
 	Device* _device = nullptr;
+	HardwareFactory* _factory = nullptr;
+	HardwareAdapter* _adapter = nullptr;
 	SwapChain* _swapChain = nullptr;
 	CommandQueue* _commandQueue = nullptr;
 

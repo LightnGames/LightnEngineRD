@@ -14,16 +14,16 @@ void GraphicsSystemImpl::initialize() {
 
 	HardwareFactoryDesc factoryDesc = {};
 	factoryDesc._flags = HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG;
-	HardwareFactory* factory = allocator->allocateHardwareFactroy();
-	factory->initialize(factoryDesc);
+	_factory = allocator->allocateHardwareFactroy();
+	_factory->initialize(factoryDesc);
 
 	HardwareAdapterDesc adapterDesc = {};
-	adapterDesc._factory = factory;
-	HardwareAdapter* adapter = allocator->allocateHardwareAdapter();
-	adapter->initialize(adapterDesc);
+	adapterDesc._factory = _factory;
+	_adapter = allocator->allocateHardwareAdapter();
+	_adapter->initialize(adapterDesc);
 
 	DeviceDesc deviceDesc = {};
-	deviceDesc._adapter = adapter;
+	deviceDesc._adapter = _adapter;
 	deviceDesc._debugName = "Device";
 	_device = allocator->allocateDevice();
 	_device->initialize(deviceDesc);
@@ -46,12 +46,9 @@ void GraphicsSystemImpl::initialize() {
 	swapChainDesc._height = screenHeight;
 	swapChainDesc._commandQueue = _commandQueue;
 	swapChainDesc._hWnd = app->getWindowHandle();
-	swapChainDesc._factory = factory;
+	swapChainDesc._factory = _factory;
 	_swapChain = allocator->allocateSwapChain();
 	_swapChain->initialize(swapChainDesc);
-
-	factory->terminate();
-	adapter->terminate();
 
 	DescriptorHeapDesc descriptorAllocatorDesc = {};
 	descriptorAllocatorDesc._device = _device;
@@ -227,6 +224,8 @@ void GraphicsSystemImpl::terminate() {
 	_srvCbvUavCpuDescriptorAllocator.terminate();
 	_commandQueue->terminate();
 	_swapChain->terminate();
+	_factory->terminate();
+	_adapter->terminate();
 	_device->terminate();
 
 	GraphicsApiInstanceAllocator::Get()->update();
