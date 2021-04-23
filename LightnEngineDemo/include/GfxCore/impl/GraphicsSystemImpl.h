@@ -24,6 +24,7 @@ public:
 	DescriptorHeapAllocator* getSrvCbvUavGpuDescriptorAllocator() { return  &_srvCbvUavGpuDescriptorAllocator; }
 	VramBufferUpdater* getVramUpdater() { return &_vramBufferUpdater; }
 	Device* getDevice() { return _device; }
+	HardwareAdapter* getHardWareAdaptor() { return _adapter; }
 	u32 getFrameIndex() const { return _frameIndex; }
 	void setRenderPass(RenderPass pass) { _renderPass = pass; }
 	bool isInitialized() const;
