@@ -225,7 +225,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStates;
-		context._primInstancingPipelineStates = primPipelineStateSet->_pipelineStateGroups;
+		context._primInstancingPipelineStates = msPipelineStates;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._scene = &_scene;
@@ -369,15 +369,19 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 			pipelineStates = pipelineStateSet->_pipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_MESHLET:
-			//pipelineStates = classicShaderSet->_debugPipelineState;
+			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
+			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
+			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_DEPTH:
+			pipelineStates = pipelineStateSet->_debugDepthPipelineStateGroups;
 			break;
 		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
+			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
 			break;
 		}
 
@@ -463,15 +467,15 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 			commandList->setIndexBuffer(&indexBufferView);
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_MESH_INSTANCE, meshInstanceHandle);
-			commandList->setGraphicsRootDescriptorTable(ROOT_CLASSIC_MESH_TEXTURES, textureDescriptors._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE, meshInstanceHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
 
 			u32 instanceInfo[2] = {};
 			instanceInfo[0] = meshInstanceIndex;
 			instanceInfo[1] = meshInstance->getGpuSubMeshInstance(subMeshIndex)->_materialIndex;
-			commandList->setGraphicsRoot32BitConstants(ROOT_CLASSIC_MESH_INFO, LTN_COUNTOF(instanceInfo), instanceInfo, 0);
+			commandList->setGraphicsRoot32BitConstants(ClassicMeshRootParam::MESH_INFO, LTN_COUNTOF(instanceInfo), instanceInfo, 0);
 
 			u32 vertexOffset = lodMeshVertexOffset;
 			u32 indexOffset = subMeshInfo->_classiciIndexOffset;

@@ -653,12 +653,12 @@ void GpuCullingResource::readbackCullingResultBuffer(CommandList* commandList) {
 }
 
 void GpuCullingResource::setDrawResultDescriptorTable(CommandList* commandList) {
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::HIZ, _hizDepthTextureSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::HIZ, _hizDepthTextureSrv._gpuHandle);
 }
 
 void GpuCullingResource::setDrawCurrentLodDescriptorTable(CommandList* commandList) {
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParameter::LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
 }
 
 ResourceDesc GpuCullingResource::getHizTextureResourceDesc(u32 level) const {

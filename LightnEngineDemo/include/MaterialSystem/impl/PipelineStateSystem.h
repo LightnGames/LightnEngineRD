@@ -10,7 +10,7 @@ enum PipelineStateGrpupFlags {
 	PIPELINE_STATE_GROUP_FLAG_REQUEST_DESTROY = 1 << 0,
 };
 
-struct DefaultMeshRootParameter {
+namespace DefaultMeshRootParam {
 	enum {
 		CULLING_VIEW_CONSTANT = 0,
 		VIEW_CONSTANT,
@@ -32,13 +32,15 @@ struct DefaultMeshRootParameter {
 
 };
 
-enum ClassicMeshRootParameterIndex {
-	ROOT_CLASSIC_MESH_SCENE_CONSTANT = 0,
-	ROOT_CLASSIC_MESH_INFO,
-	ROOT_CLASSIC_MESH_MATERIALS,
-	ROOT_CLASSIC_MESH_MESH_INSTANCE,
-	ROOT_CLASSIC_MESH_TEXTURES,
-	ROOT_CLASSIC_MESH_COUNT
+namespace ClassicMeshRootParam {
+	enum {
+		SCENE_CONSTANT = 0,
+		MESH_INFO,
+		MATERIALS,
+		MESH_INSTANCE,
+		TEXTURES,
+		COUNT
+	};
 };
 
 struct MeshShaderPipelineStateGroupDesc {
