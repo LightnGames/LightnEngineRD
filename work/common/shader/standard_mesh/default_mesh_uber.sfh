@@ -47,8 +47,10 @@ void main(
         return;
     }
 #if UBER_DEFAULT
-    uint vertexCount = meshPayload._meshletVertexCounts[gid];
-    uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid]; 
+    uint meshletPackIndex = visibleIndex / 4;
+    uint meshletBitShift = (visibleIndex % 4) * 2;
+    uint vertexCount = (meshPayload._meshletVertexCounts[meshletPackIndex] >> meshletBitShift) & 0xff;
+    uint primitiveCount = (meshPayload._meshletPrimitiveCounts[meshletPackIndex] >> meshletBitShift) & 0xff;
     uint instanceCount = 1;
     uint instanceOffset = gid;
     if(meshPayload._unpackedCount > 0 && gid >= meshPayload._unpackedOffset) {

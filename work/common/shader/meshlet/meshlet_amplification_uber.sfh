@@ -40,8 +40,10 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
 }
 
 void writePayloadStruct(uint visibleIndex, MeshletPrimitiveInfo meshlet, MeshletInstanceInfo meshletInfo) {
-    _passMeshlets._meshletVertexCounts[visibleIndex] = meshlet._vertexCount;
-    _passMeshlets._meshletPrimitiveCounts[visibleIndex] = meshlet._primitiveCount;
+    uint meshletPackIndex = visibleIndex / 4;
+    uint meshletBitShift = (visibleIndex % 4) * 8;
+    _passMeshlets._meshletVertexCounts[meshletPackIndex] |= (meshlet._vertexCount << meshletBitShift);
+    _passMeshlets._meshletPrimitiveCounts[meshletPackIndex] |= (meshlet._primitiveCount << meshletBitShift);
     _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
     _passMeshlets._materialIndex[visibleIndex] = meshletInfo._materialIndex;
     _passMeshlets._vertexOffset[visibleIndex] = meshletInfo._vertexOffset;
