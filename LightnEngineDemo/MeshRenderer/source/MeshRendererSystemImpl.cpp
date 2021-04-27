@@ -225,7 +225,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStates;
-		context._primInstancingPipelineStates = primPipelineStateSet->_pipelineStateGroups;
+		context._primInstancingPipelineStates = msPipelineStates;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._scene = &_scene;

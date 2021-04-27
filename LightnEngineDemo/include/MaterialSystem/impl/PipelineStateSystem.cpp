@@ -7,6 +7,7 @@ PipelineStateSystem _pipelineStateSystem;
 
 void PipelineStateSystem::initialize() {
     _pipelineStates.initialize(PIPELINE_STATE_GROUP_COUNT_MAX);
+    _sharedRootsignatures.initialize(PIPELINE_STATE_GROUP_COUNT_MAX);
 }
 
 void PipelineStateSystem::update() {
@@ -35,8 +36,8 @@ void PipelineStateSystem::processDeletion() {
 }
 
 void PipelineStateSystem::terminate() {
-    LTN_ASSERT(_pipelineStates.getInstanceCount() == 0);
     _pipelineStates.terminate();
+    _sharedRootsignatures.terminate();
 }
 
 u32 PipelineStateSystem::getGroupIndex(const PipelineStateGroup* pipelineState) const {

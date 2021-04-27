@@ -53,8 +53,8 @@ struct DispatchMeshIndirectArgumentMS {
 };
 
 struct PayloadStruct { 
-    uint _meshletVertexCounts[8]; // 8bit * 32 elements
-    uint _meshletPrimitiveCounts[8]; // 8bit * 32 elements
+    uint _meshletVertexCounts[32]; // 8bit * 32 elements
+    uint _meshletPrimitiveCounts[32]; // 8bit * 32 elements
 	uint _meshInstanceIndices[32];
     uint _materialIndex[32];
     uint _vertexOffset[32];
