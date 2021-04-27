@@ -40,7 +40,7 @@ constexpr u32 FILE_PATH_COUNT_MAX = 128;
 LTN_CORE_API u32 StrLength(const char* str);
 LTN_CORE_API u64 StrHash(const char* str);
 LTN_CORE_API u32 StrHash32(const char* str);
-LTN_CORE_API u64 BinHash(const char* bin, u32 length);
+LTN_CORE_API u64 BinHash(const void* bin, u32 length);
 
 constexpr u32 GetAligned(u32 size, u32 alignSize) {
 	return size + (alignSize - (size % alignSize));

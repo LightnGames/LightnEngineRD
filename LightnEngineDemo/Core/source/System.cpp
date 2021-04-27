@@ -16,6 +16,6 @@ u32 StrHash32(const char* str) {
 	return XXH32(str, StrLength(str), 0);
 }
 
-u64 BinHash(const char* bin, u32 length) {
+u64 BinHash(const void* bin, u32 length) {
 	return XXH64(bin, length, 0);
 }

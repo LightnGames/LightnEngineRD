@@ -60,30 +60,28 @@ struct ClassicPipelineStateGroupDesc {
 	const char* _pixelShaderFilePath = nullptr;
 };
 
-struct ShaderInfo {
-	// constant buffers
-	// textures
-	// shader resource views
+struct SharedRootSignature {
+	u32 _refCount = 0;
+	RootSignature* _rootSignature = nullptr;
 };
 
 class PipelineStateGroup {
 public:
 	static constexpr u32 MATERIAL_STRUCT_COUNT_MAX = 64;
-	void initialize(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
-	void initialize(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
+	void initialize(const MeshShaderPipelineStateGroupDesc& desc, SharedRootSignature* rootSignature);
+	void initialize(const ClassicPipelineStateGroupDesc& desc, SharedRootSignature* rootSignature);
 	void terminate();
 	void requestToDestroy();
 	PipelineState* getPipelineState() { return _pipelineState; }
-	RootSignature* getRootSignature() { return _rootSignature; }
+	RootSignature* getRootSignature() { return _sharedRootSignature->_rootSignature; }
+	SharedRootSignature* getSharedRootSignature() { return _sharedRootSignature; }
 
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 
 private:
 	u8* _stateFlags = nullptr;
 	PipelineState* _pipelineState = nullptr;
-	RootSignature* _rootSignature = nullptr;
-	//ValueDynamicQueue _materialStructs;
-	//ShaderInfo _shaderInfo;
+	SharedRootSignature* _sharedRootSignature = nullptr;
 };
 
 class LTN_MATERIAL_SYSTEM_API PipelineStateSystem {
@@ -104,10 +102,15 @@ public:
 
 	static PipelineStateSystem* Get();
 private:
+	u32 createSharedRootSignature(const RootSignatureDesc& desc);
+	u64 createRootSignatureDescHash(const RootSignatureDesc& desc) const;
 	u32 findPipelineStateGroup(u64 hash) const;
+	u32 findSharedRootsignature(u64 hash) const;
 
 private:
 	DynamicQueue<PipelineStateGroup> _pipelineStates;
+	DynamicQueue<SharedRootSignature> _sharedRootsignatures;
+	u64 _sharedRootSignatureHashes[PIPELINE_STATE_GROUP_COUNT_MAX] = {};
 	u64 _pipelineStateHashes[PIPELINE_STATE_GROUP_COUNT_MAX] = {};
 	u8 _stateFlags[PIPELINE_STATE_GROUP_COUNT_MAX] = {};
 	u16 _refCounts[PIPELINE_STATE_GROUP_COUNT_MAX] = {};

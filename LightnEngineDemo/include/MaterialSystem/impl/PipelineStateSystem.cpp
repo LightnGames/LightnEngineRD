@@ -18,7 +18,17 @@ void PipelineStateSystem::processDeletion() {
         if (_stateFlags[pipelineStateIndex] & PIPELINE_STATE_GROUP_FLAG_REQUEST_DESTROY) {
             _pipelineStateHashes[pipelineStateIndex] = 0;
             _stateFlags[pipelineStateIndex] = PIPELINE_STATE_GROUP_FLAG_NONE;
-            _pipelineStates[pipelineStateIndex].terminate();
+			PipelineStateGroup& pipelineStateGroup = _pipelineStates[pipelineStateIndex];
+			SharedRootSignature* sharedRootSignature = pipelineStateGroup.getSharedRootSignature();
+			u32 remainingRefCount = --sharedRootSignature->_refCount;
+			if (remainingRefCount == 0) {
+				sharedRootSignature->_rootSignature->terminate();
+				u32 sharedRootSignatureIndex = static_cast<u32>(sharedRootSignature - &_sharedRootsignatures[0]);
+				_sharedRootsignatures.discard(sharedRootSignatureIndex);
+				_sharedRootSignatureHashes[sharedRootSignatureIndex] = 0;
+			}
+
+			pipelineStateGroup.terminate();
             _pipelineStates.discard(pipelineStateIndex);
         }
     }
@@ -41,22 +51,34 @@ PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const MeshShad
     if (desc._amplificationShaderFilePath != nullptr) {
         amplificationShaderHash = StrHash(desc._amplificationShaderFilePath);
     }
+
     u64 pixelShaderHash = 0;
 	if (desc._pixelShaderFilePath != nullptr) {
 		pixelShaderHash = StrHash(desc._pixelShaderFilePath);
 	}
 
+	u64 rootsignatureDescHash = createRootSignatureDescHash(rootSignatureDesc);
+	u32 findRootSignatureIndex = findSharedRootsignature(rootsignatureDescHash);
+	if (findRootSignatureIndex == gpu::INVALID_INDEX) {
+		findRootSignatureIndex = createSharedRootSignature(rootSignatureDesc);
+		_sharedRootSignatureHashes[findRootSignatureIndex] = rootsignatureDescHash;
+	}
+
 	u64 shaderHash = meshShaderHash + amplificationShaderHash + pixelShaderHash;
-    u32 findIndex = findPipelineStateGroup(shaderHash);
-    if (findIndex == gpu::INVALID_INDEX) {
-        findIndex = _pipelineStates.request();
-        PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
-		pipelineState->initialize(desc, rootSignatureDesc);
-        pipelineState->setStateFlags(&_stateFlags[findIndex]);
-        _pipelineStateHashes[findIndex] = shaderHash;
+    u32 findPipelineStateIndex = findPipelineStateGroup(shaderHash);
+    if (findPipelineStateIndex == gpu::INVALID_INDEX) {
+        findPipelineStateIndex = _pipelineStates.request();
+		SharedRootSignature* sharedRootSignature = &_sharedRootsignatures[findRootSignatureIndex];
+        PipelineStateGroup* pipelineState = &_pipelineStates[findPipelineStateIndex];
+		pipelineState->initialize(desc, sharedRootSignature);
+        pipelineState->setStateFlags(&_stateFlags[findPipelineStateIndex]);
+        _pipelineStateHashes[findPipelineStateIndex] = shaderHash;
     }
 
-    PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
+	SharedRootSignature* sharedRootSignature = &_sharedRootsignatures[findRootSignatureIndex];
+	sharedRootSignature->_refCount++;
+
+    PipelineStateGroup* pipelineState = &_pipelineStates[findPipelineStateIndex];
     return pipelineState;
 }
 
@@ -67,12 +89,20 @@ PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const ClassicP
         pixelShaderHash = StrHash(desc._pixelShaderFilePath);
     }
 
+	u64 rootsignatureDescHash = createRootSignatureDescHash(rootSignatureDesc);
+	u32 findRootSignatureIndex = findSharedRootsignature(rootsignatureDescHash);
+	if (findRootSignatureIndex == gpu::INVALID_INDEX) {
+		findRootSignatureIndex = createSharedRootSignature(rootSignatureDesc);
+		_sharedRootSignatureHashes[findRootSignatureIndex] = rootsignatureDescHash;
+	}
+
     u64 shaderHash = vertexShaderHash + pixelShaderHash;
     u32 findIndex = findPipelineStateGroup(shaderHash);
     if (findIndex == gpu::INVALID_INDEX) {
         findIndex = _pipelineStates.request();
+		SharedRootSignature* sharedRootSignature = &_sharedRootsignatures[findRootSignatureIndex];
         PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];
-        pipelineState->initialize(desc, rootSignatureDesc);
+        pipelineState->initialize(desc, sharedRootSignature);
         pipelineState->setStateFlags(&_stateFlags[findIndex]);
         _pipelineStateHashes[findIndex] = shaderHash;
     }
@@ -83,6 +113,23 @@ PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const ClassicP
 
 PipelineStateSystem* PipelineStateSystem::Get() {
     return &_pipelineStateSystem;
+}
+
+u32 PipelineStateSystem::createSharedRootSignature(const RootSignatureDesc& desc) {
+	u32 allocateIndex = _sharedRootsignatures.request();
+	LTN_ASSERT(_sharedRootSignatureHashes[allocateIndex] == 0);
+
+	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+	SharedRootSignature* sharedRootSignature = &_sharedRootsignatures[allocateIndex];
+	LTN_ASSERT(sharedRootSignature->_refCount == 0);
+
+	sharedRootSignature->_rootSignature = allocator->allocateRootSignature();
+	sharedRootSignature->_rootSignature->iniaitlize(desc);
+	return allocateIndex;
+}
+
+u64 PipelineStateSystem::createRootSignatureDescHash(const RootSignatureDesc& desc) const {
+	return BinHash(desc._parameters, sizeof(RootParameter)*desc._numParameters);
 }
 
 u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
@@ -98,15 +145,23 @@ u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
     return findIndex;
 }
 
-void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+u32 PipelineStateSystem::findSharedRootsignature(u64 hash) const {
+	u32 findIndex = gpu::INVALID_INDEX;
+	u32 sharedRootsignatureCount = _sharedRootsignatures.getArrayCountMax();
+	for (u32 sharedRootsignatureIndex = 0; sharedRootsignatureIndex < sharedRootsignatureCount; ++sharedRootsignatureIndex) {
+		if (_sharedRootSignatureHashes[sharedRootsignatureIndex] == hash) {
+			findIndex = sharedRootsignatureIndex;
+			break;
+		}
+	}
+
+	return findIndex;
+}
+
+void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc, SharedRootSignature* sharedRootSignature) {
 #if ENABLE_MESH_SHADER
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-
-    _pipelineState = allocator->allocatePipelineState();
-    _rootSignature = allocator->allocateRootSignature();
-    _rootSignature->iniaitlize(rootSignatureDesc);
-    _rootSignature->setDebugName(desc._meshShaderFilePath);
 
     ShaderBlob* meshShader = allocator->allocateShaderBlob();
     ShaderBlob* amplificationShader = nullptr;
@@ -134,14 +189,16 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     pipelineStateDesc._numRenderTarget = 1;
     pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
     pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineStateDesc._rootSignature = _rootSignature;
+    pipelineStateDesc._rootSignature = sharedRootSignature->_rootSignature;
     pipelineStateDesc._sampleDesc._count = 1;
     pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
 	pipelineStateDesc._depthComparisonFunc = desc._depthComparisonFunc;
     pipelineStateDesc._blendDesc = desc._blendDesc;
 	pipelineStateDesc._fillMode = desc._fillMode;
+    _pipelineState = allocator->allocatePipelineState();
     _pipelineState->iniaitlize(pipelineStateDesc);
     _pipelineState->setDebugName(desc._meshShaderFilePath);
+	_sharedRootSignature = sharedRootSignature;
 
     meshShader->terminate();
     if (amplificationShader != nullptr) {
@@ -154,7 +211,7 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
 #endif
 }
 
-void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc) {
+void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, SharedRootSignature* sharedRootSignature) {
     Device* device = GraphicsSystemImpl::Get()->getDevice();
     GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 
@@ -168,10 +225,6 @@ void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, c
         pixelShader->initialize(desc._pixelShaderFilePath);
         pixelShaderByteCode = pixelShader->getShaderByteCode();;
     }
-
-    _pipelineState = allocator->allocatePipelineState();
-    _rootSignature = allocator->allocateRootSignature();
-    _rootSignature->iniaitlize(rootSignatureDesc);
 
     InputElementDesc inputElements[2] = {};
     inputElements[0]._inputSlot = 0;
@@ -189,13 +242,15 @@ void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, c
     pipelineStateDesc._numRenderTarget = 1;
     pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
     pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineStateDesc._rootSignature = _rootSignature;
+    pipelineStateDesc._rootSignature = sharedRootSignature->_rootSignature;
     pipelineStateDesc._sampleDesc._count = 1;
     pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
     pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
     pipelineStateDesc._inputElements = inputElements;
     pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
+    _pipelineState = allocator->allocatePipelineState();
     _pipelineState->iniaitlize(pipelineStateDesc);
+	_sharedRootSignature = sharedRootSignature;
 
     vertexShader->terminate();
     if (pixelShader != nullptr) {
@@ -211,10 +266,6 @@ u64 PipelineStateSystem::getPipelineStateGrpupHash(const PipelineStateGroup* gro
 void PipelineStateGroup::terminate() {
 	if (_pipelineState != nullptr) {
 		_pipelineState->terminate();
-	}
-
-	if (_rootSignature != nullptr) {
-		_rootSignature->terminate();
 	}
 }
 

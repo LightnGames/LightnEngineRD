@@ -877,7 +877,6 @@ struct ComputePipelineStateDesc {
 };
 
 struct StaticSamplerDesc {
-
 };
 
 struct RootSignatureDesc {
