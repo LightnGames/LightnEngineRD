@@ -332,7 +332,6 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 		u32 dstOffset = sizeof(VertexPosition) * vertexBinaryIndex;
 		VertexPosition* vertexPtr = vramUpdater->enqueueUpdate<VertexPosition>(&_positionVertexBuffer, dstOffset, vertexCount);
 		fread_s(vertexPtr, sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
-		int n = 0;
 	}
 
 	// –@ü / Úü

@@ -101,8 +101,8 @@ void main(
 #if UBER_PRIMITIVE_INSTANCING
     IndirectArgumentConstant indirectArgumentConstant = _primitiveInstancingConstant._constant;
     uint meshletLocalIndex = min(gid / indirectArgumentConstant._instanceCount, indirectArgumentConstant._meshletCount - 1);
-    uint meshletIndex = _primitiveInstancingConstant._meshletOffset;
-    MeshletPrimitiveInfo meshlet = _meshletPrimitiveInfos[meshletIndex + meshletLocalIndex];
+    uint meshletIndex = _primitiveInstancingConstant._meshletOffset + meshletLocalIndex;
+    MeshletPrimitiveInfo meshlet = _meshletPrimitiveInfos[meshletIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
 

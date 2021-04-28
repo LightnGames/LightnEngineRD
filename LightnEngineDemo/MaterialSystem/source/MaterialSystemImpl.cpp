@@ -429,36 +429,36 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		// メッシュレットデバッグ用
 		pipelineStateDesc._pixelShaderFilePath = psDebugMeshletFilePath;
-		*implDesc._debugPrimMeshletPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugPrimMeshletPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// LodLevel デバッグ用
 		pipelineStateDesc._pixelShaderFilePath = psDebugLodFilePath;
-		*implDesc._debugPrimLodLevelPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugPrimLodLevelPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// Depth デバッグ用
 		pipelineStateDesc._pixelShaderFilePath = psDebugDepthFilePath;
-		*implDesc._debugPrimDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugPrimDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// TexCoords デバッグ用
 		pipelineStateDesc._pixelShaderFilePath = psDebugTexCoordFilePath;
-		*implDesc._debugPrimTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugPrimTexcoordsPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 
 		// ワイヤーフレーム表示
 		{
 			MeshShaderPipelineStateGroupDesc desc = pipelineStateDesc;
 			desc._fillMode = FILL_MODE_WIREFRAME;
 			desc._pixelShaderFilePath = psDebugWireFilePath;
-			*implDesc._debugPrimWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDescFurstumOcclusionCulling);
+			*implDesc._debugPrimWireFramePipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 		}
 
 		// オクルージョンカリング可視化
 		pipelineStateDesc._pixelShaderFilePath = psDebugOcclusionFilePath;
 		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
 		pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
-		*implDesc._debugPrimOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+		*implDesc._debugPrimOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
 	}
 
-	// メッシュシェーダー　＋　増幅シェーダー
+	// メッシュシェーダー + 増幅シェーダー
 	{
 		pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 
@@ -545,6 +545,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		*implDesc._classicDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 	}
 
+	// コマンドシグネチャ
 	{
 		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 		*implDesc._commandSignature = allocator->allocateCommandSignature();
