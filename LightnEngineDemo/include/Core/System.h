@@ -293,7 +293,6 @@ public:
 	}
 
 	void terminate() {
-		LTN_ASSERT(_controller.getInstanceCount() == 0);
 		delete[] _data;
 		_controller.terminate();
 	}

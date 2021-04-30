@@ -301,9 +301,9 @@ private:
 
 class Scene {
 public:
-	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 8;
-	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 32;
-	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 128;
+	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 16;
+	static constexpr u32 LOD_MESH_INSTANCE_COUNT_MAX = 1024 * 64;
+	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
 

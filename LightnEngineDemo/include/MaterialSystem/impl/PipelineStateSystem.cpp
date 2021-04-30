@@ -22,6 +22,7 @@ void PipelineStateSystem::processDeletion() {
 			PipelineStateGroup& pipelineStateGroup = _pipelineStates[pipelineStateIndex];
 			SharedRootSignature* sharedRootSignature = pipelineStateGroup.getSharedRootSignature();
 			u32 remainingRefCount = --sharedRootSignature->_refCount;
+            LTN_ASSERT(remainingRefCount != gpu::INVALID_INDEX);
 			if (remainingRefCount == 0) {
 				sharedRootSignature->_rootSignature->terminate();
 				u32 sharedRootSignatureIndex = static_cast<u32>(sharedRootSignature - &_sharedRootsignatures[0]);
@@ -36,6 +37,8 @@ void PipelineStateSystem::processDeletion() {
 }
 
 void PipelineStateSystem::terminate() {
+    LTN_ASSERT(_pipelineStates.getInstanceCount() == 0);
+    LTN_ASSERT(_sharedRootsignatures.getInstanceCount() == 0);
     _pipelineStates.terminate();
     _sharedRootsignatures.terminate();
 }
@@ -74,10 +77,9 @@ PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const MeshShad
 		pipelineState->initialize(desc, sharedRootSignature);
         pipelineState->setStateFlags(&_stateFlags[findPipelineStateIndex]);
         _pipelineStateHashes[findPipelineStateIndex] = shaderHash;
-    }
 
-	SharedRootSignature* sharedRootSignature = &_sharedRootsignatures[findRootSignatureIndex];
-	sharedRootSignature->_refCount++;
+        sharedRootSignature->_refCount++;
+    }
 
     PipelineStateGroup* pipelineState = &_pipelineStates[findPipelineStateIndex];
     return pipelineState;
@@ -106,6 +108,8 @@ PipelineStateGroup* PipelineStateSystem::createPipelineStateGroup(const ClassicP
         pipelineState->initialize(desc, sharedRootSignature);
         pipelineState->setStateFlags(&_stateFlags[findIndex]);
         _pipelineStateHashes[findIndex] = shaderHash;
+
+        sharedRootSignature->_refCount++;
     }
 
     PipelineStateGroup* pipelineState = &_pipelineStates[findIndex];

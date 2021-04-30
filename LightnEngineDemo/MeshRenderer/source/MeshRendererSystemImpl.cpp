@@ -631,7 +631,7 @@ void MeshRendererSystemImpl::update() {
 
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
-		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 100);
+		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 		DebugWindow::End();
 
 		if (debug._drawMeshInstanceBounds) {
