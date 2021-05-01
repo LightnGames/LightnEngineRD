@@ -127,38 +127,6 @@ struct StaticArray {
 	const T& operator [](u32 index) { return _array[index]; }
 };
 
-template<class T>
-class DynamicArray {
-public:
-	void initialize(u32 numElements) {
-		_array = new T[numElements];
-		_elementCount = numElements;
-	}
-
-	void resize(u32 numElements) {
-		T* newArray = new T[numElements];
-		for (u32 i = 0; i < _elementCount; ++i) {
-			newArray[i] = _array[i];
-		}
-		terminate();
-		_array = newArray;
-		_elementCount = numElements;
-	}
-
-	void terminate() {
-		delete[] _array;
-		_array = nullptr;
-		_elementCount = 0;
-	}
-
-	T& operator [](u32 index) { return _array[index]; }
-	const T& operator [](u32 index) const { return _array[index]; }
-
-private:
-	T* _array = nullptr;
-	u32 _elementCount = 0;
-};
-
 template <class T, u32 N>
 struct LinerArray {
 	T _array[N];
@@ -282,6 +250,38 @@ public:
 	u32 _arrayCountMax = 0;
 	u32 _sizeCountMax = 0;
 	u32 _emptyIndicesCount = 0;
+};
+
+template <class T>
+class DynamicArray {
+public:
+	void initialize(u32 numElements) {
+		_array = new T[numElements]();
+		_elementCount = numElements;
+	}
+
+	void resize(u32 numElements) {
+		T* newArray = new T[numElements];
+		for (u32 i = 0; i < _elementCount; ++i) {
+			newArray[i] = _array[i];
+		}
+		terminate();
+		_array = newArray;
+		_elementCount = numElements;
+	}
+
+	void terminate() {
+		delete[] _array;
+		_array = nullptr;
+		_elementCount = 0;
+	}
+
+	T& operator [](u32 index) { return _array[index]; }
+	const T& operator [](u32 index) const { return _array[index]; }
+
+private:
+	T* _array = nullptr;
+	u32 _elementCount = 0;
 };
 
 template <class T>

@@ -30,7 +30,8 @@ public:
 private:
 	GpuBuffer _parameterBuffer;
 	DescriptorHandle _materialParameterSrv;
-	DynamicQueue<MaterialImpl*> _materialInstances;
+	DynamicQueueController _materialInstances;
+	DynamicArray<MaterialImpl*> _materials;
 };
 
 class VramShaderSetSystem {

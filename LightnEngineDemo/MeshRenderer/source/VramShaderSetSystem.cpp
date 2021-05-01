@@ -143,6 +143,7 @@ void VramShaderSet::initialize() {
 	}
 
 	_materialInstances.initialize(MATERIAL_INSTANCE_COUNT_MAX);
+	_materials.initialize(MATERIAL_INSTANCE_COUNT_MAX);
 }
 
 void VramShaderSet::terminate() {
@@ -152,12 +153,13 @@ void VramShaderSet::terminate() {
 
 	LTN_ASSERT(_materialInstances.getInstanceCount() == 0);
 	_materialInstances.terminate();
+	_materials.terminate();
 }
 
 void VramShaderSet::updateMaterialParameter(u32 materialInstanceIndex) {
 	u32 offset = sizeof(MaterialParameter) * materialInstanceIndex;
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	MaterialImpl* material = _materialInstances[materialInstanceIndex];
+	MaterialImpl* material = _materials[materialInstanceIndex];
 	MaterialParameter* mapParam = vramUpdater->enqueueUpdate<MaterialParameter>(&_parameterBuffer, offset);
 	mapParam->_baseColor = *material->getParameter<Color4>(StrHash32("BaseColor"));
 	mapParam->_albedoTextureIndex = *material->getParameter<u32>(StrHash32("AlbedoTextureIndex"));
@@ -165,12 +167,12 @@ void VramShaderSet::updateMaterialParameter(u32 materialInstanceIndex) {
 
 void VramShaderSet::removeMaterialInstance(u32 materialInstanceIndex) {
 	_materialInstances.discard(materialInstanceIndex);
-	_materialInstances[materialInstanceIndex] = nullptr;
+	_materials[materialInstanceIndex] = nullptr;
 }
 
 u32 VramShaderSet::addMaterialInstance(MaterialImpl* material) {
 	u32 materialInstanceIndex = _materialInstances.request();
-	_materialInstances[materialInstanceIndex] = material;
+	_materials[materialInstanceIndex] = material;
 	return materialInstanceIndex;
 }
 
@@ -178,7 +180,7 @@ u32 VramShaderSet::findMaterialInstance(Material* material) const {
 	u32 materialInstanceCount = _materialInstances.getArrayCountMax();
 	u32 findIndex = gpu::INVALID_INDEX;
 	for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
-		if (_materialInstances[materialInstanceIndex] == material) {
+		if (_materials[materialInstanceIndex] == material) {
 			findIndex = materialInstanceIndex;
 			break;
 		}

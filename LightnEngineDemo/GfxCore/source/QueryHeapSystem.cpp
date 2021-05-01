@@ -269,12 +269,11 @@ void PerfInfo::debugDrawTree(u32 tickIndex) {
 }
 
 void PerfInfo::debugDrawFlat() {
-	for (u32 tickIndex = 0; tickIndex < _currentTickCount; ++tickIndex) {
-		const TickInfo& tickInfo = _tickInfos[tickIndex];
-		u64 startDelta = _ticks[tickInfo._beginMarkerIndex] - _ticks[0];
-		u64 endDelta = _ticks[tickInfo._endMarkerIndex] - _ticks[0];
+	for (u32 tickIndex = 1; tickIndex < _currentTickCount; ++tickIndex) {
+		u32 prevTickIndex = tickIndex - 1;
+		u64 startDelta = _ticks[prevTickIndex] - _ticks[0];
+		u64 endDelta = _ticks[tickIndex] - _ticks[0];
 		f32 startTime = startDelta * _msFrequency;
-		f32 endTime = endDelta * _msFrequency;
 		f32 frameTime = (endDelta - startDelta) * _msFrequency;
 		Vector2 currenCursortScreenPos = Vector2(DebugGui::GetColumnWidth(), DebugGui::GetCursorScreenPos()._y);
 		Vector2 currentScreenPos = currenCursortScreenPos + _perfBarOffset;
