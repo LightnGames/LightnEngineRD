@@ -387,9 +387,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	}
 
 	PipelineStateSystem* pipelineStateSystem = PipelineStateSystem::Get();
-	MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
-	pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-
 	RenderTargetBlendDesc debugOcclusionBlendDesc = {};
 	debugOcclusionBlendDesc._blendEnable = true;
 	debugOcclusionBlendDesc._srcBlend = BLEND_SRC_ALPHA;
@@ -412,6 +409,9 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// メッシュシェーダーのみ
 	{
+		MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
+		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+
 		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
 		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter) * ROOT_FRUSTUM_COUNT);
 		rootParameters[DefaultMeshRootParam::INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
@@ -460,6 +460,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// メッシュシェーダー + 増幅シェーダー
 	{
+		MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
+		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 		pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 
 		// GPU カリング無効デバッグ用
@@ -541,7 +543,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		*implDesc._classicPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 
 		desc._pixelShaderFilePath = nullptr;
-		desc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 		*implDesc._classicDepthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 	}
 

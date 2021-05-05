@@ -70,6 +70,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	if (!isFixedCullingView) {
 		GpuCullingContext context = {};
 		context._commandList = commandList;
+		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshSrv();
@@ -79,7 +80,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._instancingResource = &_primitiveInstancingResource;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
