@@ -11,7 +11,7 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t5);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t6);
 ByteAddressBuffer _indirectArgumentOffsets : register(t7);
 ByteAddressBuffer _currentLodLevels : register(t8);
-//StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t9);
+StructuredBuffer<SubMeshDrawInfo> _subMeshDrawInfos : register(t9);
 ByteAddressBuffer _meshletInstanceInfoOffsets : register(t10);
 ByteAddressBuffer _materialInstanceIndices : register(t11);
 ByteAddressBuffer _primitiveInstancingOffsets : register(t12);
@@ -131,8 +131,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     float3 boundsMin = meshInstance._aabbMin;
     float3 boundsMax = meshInstance._aabbMax;
     bool passCulling = true;
-    bool passFrustum = true;
-    bool passOcclusion = true;
+    bool passFrustum = false;
+    bool passOcclusion = false;
     bool testFrustum = false;
     bool testOcclusion = false;
     Mesh mesh = getMesh(meshInstance);
@@ -158,31 +158,46 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         if (testOcclusion) {
             float hizDepthValue = sampleHiz(hizSize, sampleSize, coords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
             passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
+            passCulling = passOcclusion;
         }
     }
-    passCulling = passFrustum && passOcclusion;
 #endif
     
 #if UBER_CULLING_RESULT
+    uint meshletCount = 0;
+    uint triangleCount = 0;
+    for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex) {
+        uint subMeshIndex = lodMesh._subMeshOffset + subMeshLocalIndex;
+        meshletCount += _subMeshes[subMeshIndex]._meshletCount;
+        triangleCount += _subMeshDrawInfos[subMeshIndex]._indexCount / 3;
+    }
     uint currentCount = 0;
     if (testFrustum) {
         _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
         _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, triangleCount, currentCount);
+        _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, meshletCount, currentCount);
     }
     
     if (testOcclusion) {
         _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
         _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+        _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, triangleCount, currentCount);
+        _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, meshletCount, currentCount);
     }
     
     if (passFrustum) {
         _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
         _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, triangleCount, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, meshletCount, currentCount);
     }
     
     if (passOcclusion) {
         _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESH_INSTANCE_COUNT_OFFSET, 1, currentCount);
         _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_SUBMESH_INSTANCE_COUNT_OFFSET, subMeshCount, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, triangleCount, currentCount);
+        _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, meshletCount, currentCount);
     }
 #endif
     

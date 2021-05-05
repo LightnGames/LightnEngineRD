@@ -658,111 +658,133 @@ void MeshRendererSystemImpl::update() {
 
 	{
 		DebugWindow::StartWindow("Culling Results");
-		constexpr char format3[] = "%-7.3f%% ( %-6d/ %-6d)";
+		constexpr char format3[] = "%7.3f%% ( %-6s/ %-6s)";
 		constexpr char format2[] = "%-12s";
 		char t[128];
 		const CullingResult* cullingResult = _gpuCullingResource.getCullingResult();
+		if (DebugGui::BeginTabBar("CullingResultTabBar")) {
+			if (DebugGui::BeginTabItem("Summny")) {
+				DebugGui::Text("This is the Cucumber tab1!\nblah blah blah blah blah");
+				DebugGui::EndTabItem();
+			}
+			if (DebugGui::BeginTabItem("Frustum")) {
+				{
+					ThreeDigiets testFrustumCullingCount(cullingResult->_testFrustumCullingMeshInstanceCount);
+					ThreeDigiets passFrustumCullingCount(cullingResult->_passFrustumCullingMeshInstanceCount);
+					f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingMeshInstancePersentage();
+					sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount.get(), testFrustumCullingCount.get());
+					DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Mesh Instance");
+				}
 
-		// メッシュインスタンス GPUカリング結果表示
-		DebugGui::Text("Mesh Instance");
+				{
+					ThreeDigiets testFrustumCullingCount(cullingResult->_testFrustumCullingSubMeshInstanceCount);
+					ThreeDigiets passFrustumCullingCount(cullingResult->_passFrustumCullingSubMeshInstanceCount);
+					f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingSubMeshInstancePersentage();
+					sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount.get(), testFrustumCullingCount.get());
+					DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Sub Mesh Instance");
+				}
 
-		u32 testFrustumCullingCount = cullingResult->_testFrustumCullingMeshInstanceCount;
-		u32 passFrustumCullingCount = cullingResult->_passFrustumCullingMeshInstanceCount;
-		u32 testOcclusionCullingCount = cullingResult->_testOcclusionCullingMeshInstanceCount;
-		u32 passOcclusionCullingCount = cullingResult->_passOcclusionCullingMeshInstanceCount;
-		f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingMeshInstancePersentage();
-		f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingMeshInstancePersentage();
+				{
+					ThreeDigiets testFrustumCullingCount(cullingResult->_testFrustumCullingMeshletInstanceCount);
+					ThreeDigiets passFrustumCullingCount(cullingResult->_passFrustumCullingMeshletInstanceCount);
+					f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingMeshletInstancePersentage();
 
-		sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount, testFrustumCullingCount);
-		DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
-		DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-		DebugGui::Text(format2, "Frustum Culling");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount.get(), testFrustumCullingCount.get());
+					DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Meshlet Instance");
+				}
 
-		sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount, testOcclusionCullingCount);
-		DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-		DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-		DebugGui::Text(format2, "Occlusion Culling");
+				{
+					ThreeDigiets testFrustumCullingCount(cullingResult->_testFrustumCullingTriangleCount);
+					ThreeDigiets passFrustumCullingCount(cullingResult->_passFrustumCullingTriangleCount);
+					f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingTrianglePersentage();
 
-		// サブメッシュインスタンス GPUカリング結果表示
-		{
-			DebugGui::Text("Sub Mesh Instance");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount.get(), testFrustumCullingCount.get());
+					DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Triangle");
+				}
 
-			u32 testFrustumCullingCount = cullingResult->_testFrustumCullingSubMeshInstanceCount;
-			u32 passFrustumCullingCount = cullingResult->_passFrustumCullingSubMeshInstanceCount;
-			u32 testOcclusionCullingCount = cullingResult->_testOcclusionCullingSubMeshInstanceCount;
-			u32 passOcclusionCullingCount = cullingResult->_passOcclusionCullingSubMeshInstanceCount;
-			f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingSubMeshInstancePersentage();
-			f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingSubMeshInstancePersentage();
+				DebugGui::EndTabItem();
+			}
+			if (DebugGui::BeginTabItem("Occlusion")) {
+				{
+					ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingMeshInstanceCount);
+					ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingMeshInstanceCount);
+					f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingMeshInstancePersentage();
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount, testFrustumCullingCount);
-			DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Frustum Culling");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+					DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Mesh Instance");
+				}
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount, testOcclusionCullingCount);
-			DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Occlusion Culling");
-		}
+				{
+					ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingSubMeshInstanceCount);
+					ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingSubMeshInstanceCount);
+					f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingSubMeshInstancePersentage();
 
-		// メッシュレットインスタンス GPUカリング結果表示
-		{
-			DebugGui::Text("Meshlet Instance");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+					DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Sub Mesh Instance");
+				}
 
-			u32 testFrustumCullingCount = cullingResult->_testFrustumCullingMeshletInstanceCount;
-			u32 passFrustumCullingCount = cullingResult->_passFrustumCullingMeshletInstanceCount;
-			u32 testBackfaceCullingCount = cullingResult->_testBackfaceCullingMeshletInstanceCount;
-			u32 passBackfaceCullingCount = cullingResult->_passBackfaceCullingMeshletInstanceCount;
-			u32 testOcclusionCullingCount = cullingResult->_testOcclusionCullingMeshletInstanceCount;
-			u32 passOcclusionCullingCount = cullingResult->_passOcclusionCullingMeshletInstanceCount;
-			f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingMeshletInstancePersentage();
-			f32 passBackfaceCullingPersentage = cullingResult->getPassBackfaceCullingMeshletInstancePersentage();
-			f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingMeshletInstancePersentage();
+				{
+					ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingMeshletInstanceCount);
+					ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingMeshletInstanceCount);
+					f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingMeshletInstancePersentage();
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount, testFrustumCullingCount);
-			DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Frustum Culling");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+					DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Meshlet Instance");
+				}
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passBackfaceCullingPersentage, passBackfaceCullingCount, testBackfaceCullingCount);
-			DebugGui::ProgressBar(passBackfaceCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Backface Culling");
+				{
+					ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingTriangleCount);
+					ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingTriangleCount);
+					f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingTrianglePersentage();
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount, testOcclusionCullingCount);
-			DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Occlusion Culling");
-		}
+					sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+					DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Triangle");
+				}
 
-		// ポリゴン数 GPUカリング結果表示
-		{
-			DebugGui::Text("Triangle");
+				DebugGui::EndTabItem();
+			}
+			if (DebugGui::BeginTabItem("Backface")) {
+				{
+					ThreeDigiets testBackfaceCullingCount(cullingResult->_testBackfaceCullingMeshletInstanceCount);
+					ThreeDigiets passBackfaceCullingCount(cullingResult->_passBackfaceCullingMeshletInstanceCount);
+					f32 passBackfaceCullingPersentage = cullingResult->getPassBackfaceCullingMeshletInstancePersentage();
 
-			u32 testFrustumCullingCount = cullingResult->_testFrustumCullingTriangleCount;
-			u32 passFrustumCullingCount = cullingResult->_passFrustumCullingTriangleCount;
-			u32 testBackfaceCullingCount = cullingResult->_testBackfaceCullingTriangleCount;
-			u32 passBackfaceCullingCount = cullingResult->_passBackfaceCullingTriangleCount;
-			u32 testOcclusionCullingCount = cullingResult->_testOcclusionCullingTriangleCount;
-			u32 passOcclusionCullingCount = cullingResult->_passOcclusionCullingTriangleCount;
-			f32 passFrustumCullingPersentage = cullingResult->getPassFrustumCullingTrianglePersentage();
-			f32 passBackfaceCullingPersentage = cullingResult->getPassBackfaceCullingTrianglePersentage();
-			f32 passOcclusionCullingPersentage = cullingResult->getPassOcclusionCullingTrianglePersentage();
+					sprintf_s(t, LTN_COUNTOF(t), format3, passBackfaceCullingPersentage, passBackfaceCullingCount.get(), testBackfaceCullingCount.get());
+					DebugGui::ProgressBar(passBackfaceCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Meshlet Instance");
+				}
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passFrustumCullingPersentage, passFrustumCullingCount, testFrustumCullingCount);
-			DebugGui::ProgressBar(passFrustumCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Frustum Culling");
+				{
+					ThreeDigiets testBackfaceCullingCount(cullingResult->_testBackfaceCullingTriangleCount);
+					ThreeDigiets passBackfaceCullingCount(cullingResult->_passBackfaceCullingTriangleCount);
+					f32 passBackfaceCullingPersentage = cullingResult->getPassBackfaceCullingTrianglePersentage();
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passBackfaceCullingPersentage, passBackfaceCullingCount, testBackfaceCullingCount);
-			DebugGui::ProgressBar(passBackfaceCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Backface Culling");
+					sprintf_s(t, LTN_COUNTOF(t), format3, passBackfaceCullingPersentage, passBackfaceCullingCount.get(), testBackfaceCullingCount.get());
+					DebugGui::ProgressBar(passBackfaceCullingPersentage / 100.0f, Vector2(0, 0), t);
+					DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+					DebugGui::Text(format2, "Triangle");
+				}
 
-			sprintf_s(t, LTN_COUNTOF(t), format3, passOcclusionCullingPersentage, passOcclusionCullingCount, testOcclusionCullingCount);
-			DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-			DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-			DebugGui::Text(format2, "Occlusion Culling");
+				DebugGui::EndTabItem();
+			}
+			DebugGui::EndTabBar();
 		}
 
 		DebugWindow::End();

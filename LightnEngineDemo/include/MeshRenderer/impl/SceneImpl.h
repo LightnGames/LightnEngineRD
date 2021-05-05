@@ -69,7 +69,7 @@ struct CullingResult :public gpu::CullingResult {
 	}
 
 	f32 getPassOcclusionCullingMeshletInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
+		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testOcclusionCullingMeshletInstanceCount);
 	}
 
 	f32 getPassFrustumCullingTrianglePersentage() const {
