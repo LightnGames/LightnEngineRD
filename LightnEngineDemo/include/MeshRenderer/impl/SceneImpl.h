@@ -52,12 +52,20 @@ struct CullingResult :public gpu::CullingResult {
 		return getPersentage(_passOcclusionCullingMeshInstanceCount, _testOcclusionCullingMeshInstanceCount);
 	}
 
+	f32 getPassSummaryCullingMeshInstancePersentage() const {
+		return getPersentage(_passOcclusionCullingMeshInstanceCount, _testFrustumCullingMeshInstanceCount);
+	}
+
 	f32 getPassFrustumCullingSubMeshInstancePersentage() const {
 		return getPersentage(_passFrustumCullingSubMeshInstanceCount, _testFrustumCullingSubMeshInstanceCount);
 	}
 
 	f32 getPassOcclusionCullingSubMeshInstancePersentage() const {
 		return getPersentage(_passOcclusionCullingSubMeshInstanceCount, _testOcclusionCullingSubMeshInstanceCount);
+	}
+
+	f32 getPassSummaryCullingSubMeshInstancePersentage() const {
+		return getPersentage(_passOcclusionCullingSubMeshInstanceCount, _testFrustumCullingSubMeshInstanceCount);
 	}
 
 	f32 getPassFrustumCullingMeshletInstancePersentage() const {
@@ -72,6 +80,10 @@ struct CullingResult :public gpu::CullingResult {
 		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testOcclusionCullingMeshletInstanceCount);
 	}
 
+	f32 getPassSummaryCullingMeshletInstancePersentage() const {
+		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
+	}
+
 	f32 getPassFrustumCullingTrianglePersentage() const {
 		return getPersentage(_passFrustumCullingTriangleCount, _testFrustumCullingTriangleCount);
 	}
@@ -82,6 +94,10 @@ struct CullingResult :public gpu::CullingResult {
 
 	f32 getPassOcclusionCullingTrianglePersentage() const {
 		return getPersentage(_passOcclusionCullingTriangleCount, _testOcclusionCullingTriangleCount);
+	}
+
+	f32 getPassSummaryCullingTrianglePersentage() const {
+		return getPersentage(_passOcclusionCullingTriangleCount, _testFrustumCullingTriangleCount);
 	}
 
 };

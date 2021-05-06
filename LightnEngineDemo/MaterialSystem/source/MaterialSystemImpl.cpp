@@ -600,7 +600,7 @@ void ShaderSetImpl::terminate() {
 	_parameterDatas = nullptr;
 }
 
-void PipelineStateSet::requestDelete(u32 shaderSetIndex){
+void PipelineStateSet::requestDelete(u32 shaderSetIndex) {
 	if (_pipelineStateGroups[shaderSetIndex]) {
 		_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
 		_pipelineStateGroups[shaderSetIndex] = nullptr;

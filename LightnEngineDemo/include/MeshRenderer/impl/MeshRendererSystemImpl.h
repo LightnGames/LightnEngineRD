@@ -36,6 +36,8 @@ private:
 #endif
 private:
 	void setFixedDebugView(CommandList * commandList, ViewInfo* viewInfo);
+	void debugDrawGpuCullingResult();
+	void debugDrawAmplificationCullingResult();
 
 private:
 	bool _visible = true;
