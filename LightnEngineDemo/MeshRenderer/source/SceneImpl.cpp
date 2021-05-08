@@ -646,7 +646,7 @@ void GpuCullingResource::readbackCullingResultBuffer(CommandList* commandList) {
 	commandList->copyBufferRegion(_cullingResultReadbackBuffer.getResource(), offset, _cullingResultBuffer.getResource(), 0, sizeof(gpu::CullingResult));
 	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
 
-	MemoryRange range = { frameIndex, frameIndex + 1 };
+	MemoryRange range(frameIndex, frameIndex + 1);
 	gpu::CullingResult* mapPtr = _cullingResultReadbackBuffer.map<gpu::CullingResult>(&range);
 	memcpy(&_currentFrameCullingResultMapPtr, mapPtr, sizeof(gpu::CullingResult));
 	_cullingResultReadbackBuffer.unmap();
@@ -683,11 +683,7 @@ void InstancingResource::initialize() {
 		_infoOffsetBuffer.initialize(desc);
 		_infoOffsetBuffer.setDebugName("Primitive Instancing Offsets");
 
-		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(gpu::MeshletInstanceInfo);
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		_InfoBuffer.initialize(desc);
-		_InfoBuffer.setDebugName("Primitive Instancing Infos");
-
 		desc._sizeInByte = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX * sizeof(u32);
 		_infoCountBuffer.initialize(desc);
 		_infoCountBuffer.setDebugName("Primitive Instancing Counts");
@@ -704,8 +700,7 @@ void InstancingResource::initialize() {
 	// srv
 	{
 		_infoOffsetSrv = allocator->allocateDescriptors(1);
-		_infoSrv = allocator->allocateDescriptors(1);
-		_countSrv = allocator->allocateDescriptors(1);
+		_infoCountSrv = allocator->allocateDescriptors(1);
 		_primitiveInfoSrv = allocator->allocateDescriptors(1);
 		_primitiveInfoMeshInstanceIndexSrv = allocator->allocateDescriptors(1);
 
@@ -715,14 +710,11 @@ void InstancingResource::initialize() {
 		desc._buffer._flags = BUFFER_SRV_FLAG_RAW;
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
 		device->createShaderResourceView(_infoOffsetBuffer.getResource(), &desc, _infoOffsetSrv._cpuHandle);
-		device->createShaderResourceView(_infoCountBuffer.getResource(), &desc, _countSrv._cpuHandle);
+		device->createShaderResourceView(_infoCountBuffer.getResource(), &desc, _infoCountSrv._cpuHandle);
 
 		desc._format = FORMAT_UNKNOWN;
 		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-		device->createShaderResourceView(_InfoBuffer.getResource(), &desc, _infoSrv._cpuHandle);
-
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstancePrimitiveInfo);
 		device->createShaderResourceView(_primitiveInfoBuffer.getResource(), &desc, _primitiveInfoSrv._cpuHandle);
 
@@ -733,20 +725,16 @@ void InstancingResource::initialize() {
 	// uav
 	{
 		u32 incrimentSize = allocator->getIncrimentSize();
-		_infoUav = allocator->allocateDescriptors(1);
-		_countUav = allocator->allocateDescriptors(1);
+		_infoCountUav = allocator->allocateDescriptors(1);
 		_primitiveInfoUav = allocator->allocateDescriptors(1);
 		_primitiveInfoMeshInstanceIndexUav = allocator->allocateDescriptors(1);
-		_countCpuUav = cpuAllocator->allocateDescriptors(1);
+		_infoCountCpuUav = cpuAllocator->allocateDescriptors(1);
 
 		UnorderedAccessViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
 		desc._viewDimension = UAV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstanceInfo);
-		device->createUnorderedAccessView(_InfoBuffer.getResource(), nullptr, &desc, _infoUav._cpuHandle);
-
 		desc._buffer._structureByteStride = sizeof(gpu::MeshletInstancePrimitiveInfo);
 		device->createUnorderedAccessView(_primitiveInfoBuffer.getResource(), nullptr, &desc, _primitiveInfoUav._cpuHandle);
 
@@ -757,31 +745,28 @@ void InstancingResource::initialize() {
 		desc._buffer._structureByteStride = 0;
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
 		desc._buffer._numElements = INDIRECT_ARGUMENT_COUNTER_COUNT_MAX;
-		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _countUav._cpuHandle);
-		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _countCpuUav._cpuHandle);
+		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _infoCountUav._cpuHandle);
+		device->createUnorderedAccessView(_infoCountBuffer.getResource(), nullptr, &desc, _infoCountCpuUav._cpuHandle);
 	}
 }
 
 void InstancingResource::terminate() {
 	_infoOffsetBuffer.terminate();
-	_InfoBuffer.terminate();
 	_infoCountBuffer.terminate();
 	_primitiveInfoBuffer.terminate();
 	_primitiveInfoMeshInstanceIndexBuffer.terminate();
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_infoOffsetSrv);
-	allocator->discardDescriptor(_countSrv);
-	allocator->discardDescriptor(_countUav);
-	allocator->discardDescriptor(_infoSrv);
-	allocator->discardDescriptor(_infoUav);
+	allocator->discardDescriptor(_infoCountSrv);
+	allocator->discardDescriptor(_infoCountUav);
 	allocator->discardDescriptor(_primitiveInfoSrv);
 	allocator->discardDescriptor(_primitiveInfoMeshInstanceIndexSrv);
 	allocator->discardDescriptor(_primitiveInfoUav);
 	allocator->discardDescriptor(_primitiveInfoMeshInstanceIndexUav);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
-	cpuAllocator->discardDescriptor(_countCpuUav);
+	cpuAllocator->discardDescriptor(_infoCountCpuUav);
 }
 
 void InstancingResource::update(const UpdateDesc& desc) {
@@ -816,8 +801,8 @@ void InstancingResource::update(const UpdateDesc& desc) {
 
 void InstancingResource::resetInfoCountBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
-	GpuDescriptorHandle gpuDescriptor = _countUav._gpuHandle;
-	CpuDescriptorHandle cpuDescriptor = _countCpuUav._cpuHandle;
+	GpuDescriptorHandle gpuDescriptor = _infoCountUav._gpuHandle;
+	CpuDescriptorHandle cpuDescriptor = _infoCountCpuUav._cpuHandle;
 	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _infoCountBuffer.getResource(), clearValues, 0, nullptr);
 }
 

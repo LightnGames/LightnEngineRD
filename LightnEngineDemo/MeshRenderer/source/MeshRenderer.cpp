@@ -24,18 +24,14 @@ void MeshRenderer::initialize() {
 		DescriptorRange indirectArgumentOffsetRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
 		DescriptorRange lodLevelSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
 		DescriptorRange subMeshInfoSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
-		DescriptorRange meshletInstanceInfoOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
-		DescriptorRange materialInstanceIndexSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
-		DescriptorRange primitiveInstancingInfoOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
+		DescriptorRange materialInstanceIndexSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+		DescriptorRange primitiveInstancingInfoOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
 		DescriptorRange hizSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
 		DescriptorRange indirectArgumentUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
-		DescriptorRange meshletInstanceInfoUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
-		DescriptorRange meshletInstanceInfoCountUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
-		DescriptorRange primitiveInstancingInfoUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
-		DescriptorRange primitiveInstancingInfoCountUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
-		DescriptorRange meshletPrimitiveInfoUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 6);
-		DescriptorRange meshletMeshInstanceIndexUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 7);
-		DescriptorRange cullingResultUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 8);
+		DescriptorRange primitiveInstancingInfoCountUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
+		DescriptorRange meshletPrimitiveInfoUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
+		DescriptorRange meshletMeshInstanceIndexUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
+		DescriptorRange cullingResultUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
 
 		// culling root signature
 		{
@@ -52,12 +48,8 @@ void MeshRenderer::initialize() {
 			rootParameters[GpuCullingRootParam::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::SUB_MESH_DRAW_INFO].initializeDescriptorTable(1, &subMeshInfoSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[GpuCullingRootParam::MESHLET_INSTANCE_OFFSET].initializeDescriptorTable(1, &meshletInstanceInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[GpuCullingRootParam::MESHLET_INSTANCE_INFO].initializeDescriptorTable(1, &meshletInstanceInfoUavRange, SHADER_VISIBILITY_ALL);
-			rootParameters[GpuCullingRootParam::MESHLET_INSTANCE_COUNT].initializeDescriptorTable(1, &meshletInstanceInfoCountUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::MATERIAL_INSTANCE_INDEX].initializeDescriptorTable(1, &materialInstanceIndexSrvRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::PRIMITIVE_INSTANCING_OFFSETS].initializeDescriptorTable(1, &primitiveInstancingInfoOffsetSrvRange, SHADER_VISIBILITY_ALL);
-			rootParameters[GpuCullingRootParam::PRIMITIVE_INSTANCING_INFOS].initializeDescriptorTable(1, &primitiveInstancingInfoUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::PRIMITIVE_INSTANCING_COUNTS].initializeDescriptorTable(1, &primitiveInstancingInfoCountUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::MESHLET_PRIMITIVE_INFO].initializeDescriptorTable(1, &meshletPrimitiveInfoUavRange, SHADER_VISIBILITY_ALL);
 			rootParameters[GpuCullingRootParam::MESHLET_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &meshletMeshInstanceIndexUavRange, SHADER_VISIBILITY_ALL);
@@ -347,7 +339,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH, context._meshSrv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getInfoSrv());
+			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getPrimitiveInfoSrv());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE, scene->getMeshInstanceSrv());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VERTEX_RESOURCES, context._vertexResourceDescriptors);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
@@ -361,7 +353,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 
 			commandList->setPipelineState(pipelineState->getPipelineState());
 			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentAS);
+			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
@@ -373,7 +365,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH, context._meshSrv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getInfoSrv());
+			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getPrimitiveInfoSrv());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE, scene->getMeshInstanceSrv());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VERTEX_RESOURCES, context._vertexResourceDescriptors);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
@@ -564,12 +556,8 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE, context._meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::SUB_MESH_DRAW_INFO, context._subMeshDrawInfoSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSETS, context._indirectArgumentOffsetSrv);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESHLET_INSTANCE_OFFSET, instancingResource->getInfoOffsetSrv());
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESHLET_INSTANCE_COUNT, instancingResource->getInfoCountUav());
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESHLET_INSTANCE_INFO, instancingResource->getInfoUav());
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MATERIAL_INSTANCE_INDEX, context._materialInstanceIndexSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::PRIMITIVE_INSTANCING_OFFSETS, instancingResource->getInfoOffsetSrv());
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::PRIMITIVE_INSTANCING_INFOS, instancingResource->getInfoUav());
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::PRIMITIVE_INSTANCING_COUNTS, instancingResource->getInfoCountUav());
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESHLET_PRIMITIVE_INFO, instancingResource->getPrimitiveInfoUav());
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESHLET_MESH_INSTANCE_INDEX, instancingResource->getMeshInstanceIndexUav());

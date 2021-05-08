@@ -99,23 +99,22 @@ void main(
 #endif
 
 #if UBER_PRIMITIVE_INSTANCING
-    IndirectArgumentConstant indirectArgumentConstant = _primitiveInstancingConstant._constant;
-    uint meshletLocalIndex = min(gid / indirectArgumentConstant._instanceCount, indirectArgumentConstant._meshletCount - 1);
+    uint meshletLocalIndex = min(gid / _primitiveInstancingConstant._instanceCount, _primitiveInstancingConstant._meshletCount - 1);
     uint meshletIndex = _primitiveInstancingConstant._meshletOffset + meshletLocalIndex;
     MeshletPrimitiveInfo meshlet = _meshletPrimitiveInfos[meshletIndex];
     uint vertexCount = meshlet._vertexCount;
     uint primitiveCount = meshlet._primitiveCount;
 
-    uint instanceOffset = gid % indirectArgumentConstant._instanceCount;
+    uint instanceOffset = gid % _primitiveInstancingConstant._instanceCount;
     uint meshletInfoLocalOffset = instanceOffset;
     uint instanceCount = 1;
-    if(meshletLocalIndex == indirectArgumentConstant._meshletCount - 1) {
+    if(meshletLocalIndex == _primitiveInstancingConstant._meshletCount - 1) {
         uint instanceCountPerGroup = min(64 / vertexCount, 126 / primitiveCount);
         meshletInfoLocalOffset = instanceOffset * instanceCountPerGroup;
-        instanceCount = min(indirectArgumentConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
+        instanceCount = min(_primitiveInstancingConstant._instanceCount - meshletInfoLocalOffset, instanceCountPerGroup);
     }
     
-    uint globalInstanceIndex = indirectArgumentConstant._meshletInstanceInfoOffset;
+    uint globalInstanceIndex = _primitiveInstancingConstant._meshletInstanceInfoOffset;
     uint totalVertexCount = vertexCount * instanceCount;
     uint totalPrimitiveCount = primitiveCount * instanceCount;
     SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);

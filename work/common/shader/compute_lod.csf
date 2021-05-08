@@ -14,7 +14,7 @@ RWByteAddressBuffer _resultLodLevels : register(u0);
 [numthreads(THREAD_NUM, 1, 1)] 
 void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
     uint meshInstanceIndex = groupID.x * THREAD_NUM + groupThreadID.x;
-    if (meshInstanceIndex > (_sceneCullingInfo._meshInstanceCount - 1)) {
+    if (meshInstanceIndex >= _sceneCullingInfo._meshInstanceCount) {
         return;
     }
 	
@@ -26,12 +26,12 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     Mesh mesh = _meshes[meshInstance._meshIndex];
     if(mesh._stateFlags == MESH_STATE_ALLOCATED){
         mesh = _meshes[0];
+        return;
     }
 	
     float3 boundsCenter = (meshInstance._aabbMin + meshInstance._aabbMax) / 2.0;
     float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._position;
-    float3 cameraDirection = _viewInfo._frustumPlanes[4].xyz;
-    float boundsDepth = max(dot(cameraDirection, viewSpaceBoundsCenter), 0.0);
+    float boundsDepth = length(viewSpaceBoundsCenter);
     float screenRadius = meshInstance._boundsRadius / (_viewInfo._halfFovTan.y * boundsDepth);
     float screenDimeter = screenRadius * 2;
     float screenArea = screenDimeter * screenDimeter;
@@ -47,5 +47,5 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
         }
     }
 	
-    _resultLodLevels.Store(meshInstanceIndex * 4, lodLevel);
+    _resultLodLevels.Store(meshInstanceIndex * UINT32_SIZE_IN_BYTE, lodLevel);
 }

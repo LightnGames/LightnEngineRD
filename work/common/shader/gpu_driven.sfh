@@ -27,22 +27,11 @@
 #define PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX 22
 #define INSTANCING_PER_SHADER_COUNT_MAX 4096
 
-struct IndirectArgumentConstant {
+struct MeshShaderIndirectArgument {
     uint _meshletInstanceInfoOffset;
     uint _instanceCount;
     uint _meshletCount;
-};
-
-struct MeshShaderIndirectArgument {
-    IndirectArgumentConstant _constant;
     uint _meshletOffset;
-};
-
-struct DispatchMeshIndirectArgumentAS {
-    IndirectArgumentConstant _constant;
-    uint _dispatchX;
-    uint _dispatchY;
-    uint _dispatchZ;
 };
 
 struct DispatchMeshIndirectArgumentMS {
@@ -63,15 +52,6 @@ struct PayloadStruct {
     uint _unpackedOffset;
     uint _unpackedCount;
 }; 
-
-struct MeshletInstanceInfo {
-	uint _meshletIndex;
-    uint _meshInstanceIndex;
-	uint _materialIndex;
-	uint _vertexOffset;
-    uint _vertexIndexOffset;
-    uint _primitiveOffset;
-};
 
 #define MESH_STATE_NONE 0
 #define MESH_STATE_ALLOCATED 1

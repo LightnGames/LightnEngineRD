@@ -121,6 +121,7 @@ void InputSystemImpl::update() {
 	memcpy(prevKeyState, _keyStates, sizeof(prevKeyState));
 
 	GetKeyboardState(_keyStates);
+
 	for (u16 i = 0; i < LTN_COUNTOF(prevKeyState); ++i) {
 		_keyDowns[i] = (!isKeyDown(prevKeyState[i])) && isKeyDown(_keyStates[i]);
 		_keyUps[i] = isKeyDown(prevKeyState[i]) && (!isKeyDown(_keyStates[i]));

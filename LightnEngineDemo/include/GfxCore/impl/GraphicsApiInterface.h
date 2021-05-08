@@ -973,6 +973,7 @@ struct IndexBufferView {
 };
 
 struct MemoryRange {
+	MemoryRange(u64 begin, u64 end):_begin(begin),_end(end){}
 	u64 _begin = 0;
 	u64 _end = 0;
 };

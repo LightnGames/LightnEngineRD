@@ -243,27 +243,22 @@ public:
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
 
 	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
-	GpuDescriptorHandle getInfoCountUav() const { return _countUav._gpuHandle; }
-	GpuDescriptorHandle getInfoCountSrv() const { return _countSrv._gpuHandle; }
-	GpuDescriptorHandle getInfoUav() const { return _infoUav._gpuHandle; }
-	GpuDescriptorHandle getInfoSrv() const { return _infoSrv._gpuHandle; }
+	GpuDescriptorHandle getInfoCountUav() const { return _infoCountUav._gpuHandle; }
+	GpuDescriptorHandle getInfoCountSrv() const { return _infoCountSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceIndexUav() const { return _primitiveInfoMeshInstanceIndexUav._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceIndexSrv() const { return _primitiveInfoMeshInstanceIndexSrv._gpuHandle; }
 	GpuDescriptorHandle getPrimitiveInfoUav() const { return _primitiveInfoUav._gpuHandle; }
 	GpuDescriptorHandle getPrimitiveInfoSrv() const { return _primitiveInfoSrv._gpuHandle; }
 
 private:
-	GpuBuffer _InfoBuffer;
 	GpuBuffer _primitiveInfoBuffer;
 	GpuBuffer _primitiveInfoMeshInstanceIndexBuffer;
 	GpuBuffer _infoCountBuffer;
 	GpuBuffer _infoOffsetBuffer;
 	DescriptorHandle _infoOffsetSrv;
-	DescriptorHandle _countCpuUav;
-	DescriptorHandle _countUav;
-	DescriptorHandle _countSrv;
-	DescriptorHandle _infoUav;
-	DescriptorHandle _infoSrv;
+	DescriptorHandle _infoCountCpuUav;
+	DescriptorHandle _infoCountUav;
+	DescriptorHandle _infoCountSrv;
 	DescriptorHandle _primitiveInfoUav;
 	DescriptorHandle _primitiveInfoSrv;
 	DescriptorHandle _primitiveInfoMeshInstanceIndexUav;

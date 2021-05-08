@@ -840,7 +840,7 @@ void MeshRendererSystemImpl::initialize() {
 		IndirectArgumentResource::InitializeDesc desc;
 		desc._indirectArgumentCount = 1024 * 256;
 		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
-		desc._strideInByte = sizeof(gpu::DispatchMeshIndirectArgumentAS);
+		desc._strideInByte = sizeof(gpu::DispatchMeshIndirectArgumentMS);
 		_indirectArgumentResource.initialize(desc);
 	}
 

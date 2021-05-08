@@ -360,7 +360,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[DefaultMeshRootParam::MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
-		rootParameters[DefaultMeshRootParam::INDIRECT_CONSTANT].initializeConstant(2, 3, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParam::INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESHLET_INFO].initializeDescriptorTable(1, &meshletInfoSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexDescriptorRange, SHADER_VISIBILITY_MESH);
 		rootParameters[DefaultMeshRootParam::TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -412,12 +412,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
 		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 
-		RootParameter rootParameters[ROOT_FRUSTUM_COUNT] = {};
-		memcpy(rootParameters, furstumCullingRootParameters, sizeof(RootParameter) * ROOT_FRUSTUM_COUNT);
-		rootParameters[DefaultMeshRootParam::INDIRECT_CONSTANT].initializeConstant(2, 4, SHADER_VISIBILITY_ALL);
-
 		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
-		rootSignatureDesc._parameters = rootParameters;
+		rootSignatureDesc._parameters = furstumCullingRootParameters;
 
 		// Depth Only
 		pipelineStateDesc._meshShaderFilePath = msPrimitiveInstancingFilePath;
@@ -554,20 +550,19 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		IndirectArgumentDesc argumentDescs[2] = {};
 		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
-		argumentDescs[0].Constant._num32BitValuesToSet = 3;
+		argumentDescs[0].Constant._num32BitValuesToSet = 4;
 		argumentDescs[0].Constant._rootParameterIndex = DefaultMeshRootParam::INDIRECT_CONSTANT;
 		argumentDescs[1]._type = INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 
 		CommandSignatureDesc desc = {};
 		desc._device = device;
-		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentAS);
+		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentMS);
+
 		desc._argumentDescs = argumentDescs;
 		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
 		desc._rootSignature = (*implDesc._pipelineStateGroup)->getRootSignature();
 		(*implDesc._commandSignature)->initialize(desc);
 
-		argumentDescs[0].Constant._num32BitValuesToSet = 4;
-		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentMS);
 		desc._rootSignature = (*implDesc._primPipelineStateGroup)->getRootSignature();
 		(*implDesc._msCommandSignature)->initialize(desc);
 	}

@@ -1,7 +1,7 @@
 ﻿#include "../gpu_culling_function.sfh"
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b1);
-ConstantBuffer<IndirectArgumentConstant> _indirectArgumentConstant : register(b2);
+ConstantBuffer<MeshShaderIndirectArgument> _indirectArgumentConstant : register(b2);
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<Mesh> _meshes : register(t1);
@@ -13,7 +13,7 @@ StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t5);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t7);
 StructuredBuffer<SubMeshInstance> _subMeshInstances : register(t8);
-StructuredBuffer<MeshletInstanceInfo> _meshletInstanceInfos : register(t10);
+StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstanceInfos : register(t10);
 StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
 StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
 
@@ -39,10 +39,10 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     return !(viewAngle > meshletBounds._cutoff);
 }
 
-void writePayloadStruct(uint visibleIndex, MeshletPrimitiveInfo meshlet, MeshletInstanceInfo meshletInfo) {
+void writePayloadStruct(uint visibleIndex, uint meshInstanceIndex, MeshletPrimitiveInfo meshlet, MeshletInstancePrimitiveInfo meshletInfo) {
     _passMeshlets._meshletVertexCounts[visibleIndex] = meshlet._vertexCount;
     _passMeshlets._meshletPrimitiveCounts[visibleIndex] = meshlet._primitiveCount;
-    _passMeshlets._meshInstanceIndices[visibleIndex] = meshletInfo._meshInstanceIndex;
+    _passMeshlets._meshInstanceIndices[visibleIndex] = meshInstanceIndex;
     _passMeshlets._materialIndex[visibleIndex] = meshletInfo._materialIndex;
     _passMeshlets._vertexOffset[visibleIndex] = meshletInfo._vertexOffset;
     _passMeshlets._vertexIndexOffset[visibleIndex] = meshletInfo._vertexIndexOffset + meshlet._vertexOffset;
@@ -73,8 +73,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint instanceOffset = dtid % instanceCount;
     uint meshletInfoOffset = _indirectArgumentConstant._meshletInstanceInfoOffset + instanceOffset;
     if (instanceOffset < instanceCount && meshletOffset < meshletCount) {
-        MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
-        uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+        MeshletInstancePrimitiveInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+        uint meshletIndex = _indirectArgumentConstant._meshletOffset + meshletOffset;
         uint meshInstanceIndex = _meshletInstanceMeshInstanceIndices[meshletInfoOffset];
         Meshlet meshlet = _meshlets[meshletIndex];
         MeshletPrimitiveInfo meshletPrimitive = _meshletPrimitiveInfos[meshletIndex];
@@ -118,7 +118,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         
         if (visible) {
             uint index = WavePrefixCountBits(visible);
-            writePayloadStruct(index, meshletPrimitive, meshletInfo);
+            writePayloadStruct(index, meshInstanceIndex ,meshletPrimitive, meshletInfo);
             
             if (meshletOffset == meshletCount - 1) {
                 uint instancePerGroup = min(64 / meshletPrimitive._vertexCount, 126 / meshletPrimitive._primitiveCount);
@@ -132,8 +132,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
 #if UBER_CULLING_RESULT
     if (instanceOffset < _indirectArgumentConstant._instanceCount) {
-        MeshletInstanceInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
-        uint meshletIndex = meshletInfo._meshletIndex + meshletOffset;
+        MeshletInstancePrimitiveInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
+        uint meshletIndex = _indirectArgumentConstant._meshletOffset + meshletOffset;
         MeshletPrimitiveInfo meshletPrimitive = _meshletPrimitiveInfos[meshletIndex];
         if (passFrustum) {
             passFrustumPrimitiveCount = meshletPrimitive._primitiveCount;
