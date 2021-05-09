@@ -542,7 +542,7 @@ void GpuCullingResource::setComputeLodResource(CommandList* commandList) {
 
 void GpuCullingResource::setGpuCullingResources(CommandList* commandList) {
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::LOD_LEVEL, _currentLodLevelSrv._gpuHandle);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_RESULT, _gpuCullingResultUavHandle._gpuHandle);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::HIZ, _hizDepthTextureSrv._gpuHandle);
 }
 
@@ -633,27 +633,48 @@ void IndirectArgumentResource::executeIndirect(CommandList* commandList, Command
 // カリング結果バッファクリア
 void GpuCullingResource::resetResultBuffers(CommandList* commandList) {
 	u32 clearValues[4] = {};
-	GpuDescriptorHandle gpuDescriptor = _cullingResultUavHandle._gpuHandle;
-	CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUavHandle._cpuHandle;
-	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _cullingResultBuffer.getResource(), clearValues, 0, nullptr);
+	{
+		GpuDescriptorHandle gpuDescriptor = _gpuCullingResultUavHandle._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _gpuCullingResultCpuUavHandle._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _gpuCullingResultBuffer.getResource(), clearValues, 0, nullptr);
+	}
+
+	{
+		GpuDescriptorHandle gpuDescriptor = _amplificationCullingResultUavHandle._gpuHandle;
+		CpuDescriptorHandle cpuDescriptor = _amplificationCullingResultCpuUavHandle._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, _amplificationCullingResultBuffer.getResource(), clearValues, 0, nullptr);
+	}
 }
 
 void GpuCullingResource::readbackCullingResultBuffer(CommandList* commandList) {
 	// カリング結果をリードバックバッファへコピー 
 	u64 frameIndex = static_cast<u64>(GraphicsSystemImpl::Get()->getFrameIndex());
-	u32 offset = frameIndex * sizeof(gpu::GpuCullingResult);
-	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
-	commandList->copyBufferRegion(_cullingResultReadbackBuffer.getResource(), offset, _cullingResultBuffer.getResource(), 0, sizeof(gpu::GpuCullingResult));
-	_cullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
-
 	MemoryRange range(frameIndex, frameIndex + 1);
-	gpu::GpuCullingResult* mapPtr = _cullingResultReadbackBuffer.map<gpu::GpuCullingResult>(&range);
-	memcpy(&_currentFrameGpuCullingResult, mapPtr, sizeof(gpu::GpuCullingResult));
-	_cullingResultReadbackBuffer.unmap();
+	{
+		u32 offset = static_cast<u32>(frameIndex) * sizeof(gpu::GpuCullingResult);
+		_gpuCullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
+		commandList->copyBufferRegion(_gpuCullingResultReadbackBuffer.getResource(), offset, _gpuCullingResultBuffer.getResource(), 0, sizeof(gpu::GpuCullingResult));
+		_gpuCullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+
+		gpu::GpuCullingResult* mapPtr = _gpuCullingResultReadbackBuffer.map<gpu::GpuCullingResult>(&range);
+		memcpy(&_currentFrameGpuCullingResult, mapPtr, sizeof(gpu::GpuCullingResult));
+		_gpuCullingResultReadbackBuffer.unmap();
+	}
+
+	{
+		u32 offset = static_cast<u32>(frameIndex) * sizeof(gpu::AmplificationCullingResult);
+		_amplificationCullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
+		commandList->copyBufferRegion(_amplificationCullingResultReadbackBuffer.getResource(), offset, _amplificationCullingResultBuffer.getResource(), 0, sizeof(gpu::AmplificationCullingResult));
+		_amplificationCullingResultBuffer.transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+
+		gpu::AmplificationCullingResult* mapPtr = _amplificationCullingResultReadbackBuffer.map<gpu::AmplificationCullingResult>(&range);
+		memcpy(&_currentFrameAmplificationCullingResult, mapPtr, sizeof(gpu::AmplificationCullingResult));
+		_amplificationCullingResultReadbackBuffer.unmap();
+	}
 }
 
 void GpuCullingResource::setDrawResultDescriptorTable(CommandList* commandList) {
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_RESULT, _cullingResultUavHandle._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_RESULT, _amplificationCullingResultUavHandle._gpuHandle);
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::HIZ, _hizDepthTextureSrv._gpuHandle);
 }
 
@@ -838,8 +859,12 @@ void GpuCullingResource::initialize() {
 		desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
 		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		desc._device = device;
-		_cullingResultBuffer.initialize(desc);
-		_cullingResultBuffer.setDebugName("Culling Result");
+		_gpuCullingResultBuffer.initialize(desc);
+		_gpuCullingResultBuffer.setDebugName("Gpu Culling Result");
+
+		desc._sizeInByte = sizeof(gpu::AmplificationCullingResult);
+		_amplificationCullingResultBuffer.initialize(desc);
+		_amplificationCullingResultBuffer.setDebugName("Amplification Culling Result");
 	}
 
 	// current lod level buffers
@@ -856,18 +881,24 @@ void GpuCullingResource::initialize() {
 	// culling result readback buffers
 	{
 		GpuBufferDesc desc = {};
+		desc._device = device;
 		desc._sizeInByte = sizeof(gpu::GpuCullingResult) * BACK_BUFFER_COUNT;
 		desc._initialState = RESOURCE_STATE_COPY_DEST;
 		desc._heapType = HEAP_TYPE_READBACK;
-		desc._device = device;
-		_cullingResultReadbackBuffer.initialize(desc);
-		_cullingResultReadbackBuffer.setDebugName("Culling Result Readback");
+		_gpuCullingResultReadbackBuffer.initialize(desc);
+		_gpuCullingResultReadbackBuffer.setDebugName("Culling Result Readback");
+
+		desc._sizeInByte = sizeof(gpu::AmplificationCullingResult) * BACK_BUFFER_COUNT;
+		_amplificationCullingResultReadbackBuffer.initialize(desc);
+		_amplificationCullingResultReadbackBuffer.setDebugName("Amplification Culling Result Readback");
 	}
 
 	// culling result uav
 	{
-		_cullingResultUavHandle = allocator->allocateDescriptors(1);
-		_cullingResultCpuUavHandle = cpuAllocator->allocateDescriptors(1);
+		_gpuCullingResultUavHandle = allocator->allocateDescriptors(1);
+		_gpuCullingResultCpuUavHandle = cpuAllocator->allocateDescriptors(1);
+		_amplificationCullingResultUavHandle = allocator->allocateDescriptors(1);
+		_amplificationCullingResultCpuUavHandle = cpuAllocator->allocateDescriptors(1);
 
 		UnorderedAccessViewDesc desc = {};
 		desc._format = FORMAT_R32_TYPELESS;
@@ -875,8 +906,12 @@ void GpuCullingResource::initialize() {
 		desc._buffer._firstElement = 0;
 		desc._buffer._numElements = sizeof(gpu::GpuCullingResult) / sizeof(u32);
 		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		device->createUnorderedAccessView(_cullingResultBuffer.getResource(), nullptr, &desc, _cullingResultUavHandle._cpuHandle);
-		device->createUnorderedAccessView(_cullingResultBuffer.getResource(), nullptr, &desc, _cullingResultCpuUavHandle._cpuHandle);
+		device->createUnorderedAccessView(_gpuCullingResultBuffer.getResource(), nullptr, &desc, _gpuCullingResultUavHandle._cpuHandle);
+		device->createUnorderedAccessView(_gpuCullingResultBuffer.getResource(), nullptr, &desc, _gpuCullingResultCpuUavHandle._cpuHandle);
+
+		desc._buffer._numElements = sizeof(gpu::AmplificationCullingResult) / sizeof(u32);
+		device->createUnorderedAccessView(_amplificationCullingResultBuffer.getResource(), nullptr, &desc, _amplificationCullingResultUavHandle._cpuHandle);
+		device->createUnorderedAccessView(_amplificationCullingResultBuffer.getResource(), nullptr, &desc, _amplificationCullingResultCpuUavHandle._cpuHandle);
 	}
 
 	// current lod level uav
@@ -977,9 +1012,11 @@ void GpuCullingResource::initialize() {
 }
 
 void GpuCullingResource::terminate() {
-	_cullingResultBuffer.terminate();
+	_gpuCullingResultBuffer.terminate();
 	_currentLodLevelBuffer.terminate();
-	_cullingResultReadbackBuffer.terminate();
+	_gpuCullingResultReadbackBuffer.terminate();
+	_amplificationCullingResultBuffer.terminate();
+	_amplificationCullingResultReadbackBuffer.terminate();
 
 	for (u32 i = 0; i < LTN_COUNTOF(_hizInfoConstantBuffer); ++i) {
 		_hizInfoConstantBuffer[i].terminate();
@@ -990,7 +1027,8 @@ void GpuCullingResource::terminate() {
 	}
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_cullingResultUavHandle);
+	allocator->discardDescriptor(_gpuCullingResultUavHandle);
+	allocator->discardDescriptor(_amplificationCullingResultUavHandle);
 	allocator->discardDescriptor(_currentLodLevelUav);
 	allocator->discardDescriptor(_currentLodLevelSrv);
 	allocator->discardDescriptor(_hizDepthTextureUav);
@@ -1000,7 +1038,8 @@ void GpuCullingResource::terminate() {
 	}
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
-	cpuAllocator->discardDescriptor(_cullingResultCpuUavHandle);
+	cpuAllocator->discardDescriptor(_gpuCullingResultCpuUavHandle);
+	cpuAllocator->discardDescriptor(_amplificationCullingResultCpuUavHandle);
 }
 
 void GpuCullingResource::update(const ViewInfo* viewInfo) {
@@ -1111,7 +1150,7 @@ void BuildIndirectArgumentResource::initialize() {
 	desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 	_constantBuffer.initialize(desc);
 	_constantBuffer.setDebugName("Build Indirect Argument Constant");
-	
+
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	_constantCbv = allocator->allocateDescriptors(1);
 	device->createConstantBufferView(_constantBuffer.getConstantBufferViewDesc(), _constantCbv._cpuHandle);

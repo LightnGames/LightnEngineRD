@@ -208,8 +208,10 @@ public:
 
 private:
 	GpuBuffer _currentLodLevelBuffer;
-	GpuBuffer _cullingResultBuffer;
-	GpuBuffer _cullingResultReadbackBuffer;
+	GpuBuffer _gpuCullingResultBuffer;
+	GpuBuffer _gpuCullingResultReadbackBuffer;
+	GpuBuffer _amplificationCullingResultBuffer;
+	GpuBuffer _amplificationCullingResultReadbackBuffer;
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
 
@@ -218,8 +220,10 @@ private:
 	DescriptorHandle _hizDepthTextureSrv;
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];
-	DescriptorHandle _cullingResultUavHandle;
-	DescriptorHandle _cullingResultCpuUavHandle;
+	DescriptorHandle _gpuCullingResultUavHandle;
+	DescriptorHandle _gpuCullingResultCpuUavHandle;
+	DescriptorHandle _amplificationCullingResultUavHandle;
+	DescriptorHandle _amplificationCullingResultCpuUavHandle;
 	DescriptorHandle _currentLodLevelUav;
 	DescriptorHandle _currentLodLevelSrv;
 };
