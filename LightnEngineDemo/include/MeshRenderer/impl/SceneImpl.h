@@ -36,70 +36,69 @@ struct HizInfoConstant {
 	u32 _inputBitDepth = 0;
 };
 
-struct CullingResult :public gpu::CullingResult {
-	f32 getPersentage(u32 passCount, u32 testCount) const {
+namespace CullingResult {
+	static f32 getPersentage(u32 passCount, u32 testCount) {
 		if (passCount == 0 || testCount == 0) {
 			return 0.0f;
 		}
 		return (passCount / static_cast<f32>(testCount)) * 100.0f;
 	}
 
-	f32 getPassFrustumCullingMeshInstancePersentage() const {
-		return getPersentage(_passFrustumCullingMeshInstanceCount, _testFrustumCullingMeshInstanceCount);
+	static f32 getPassFrustumCullingMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passFrustumCullingMeshInstanceCount, gpuCullingResult->_testFrustumCullingMeshInstanceCount);
 	}
 
-	f32 getPassOcclusionCullingMeshInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingMeshInstanceCount, _testOcclusionCullingMeshInstanceCount);
+	static f32 getPassOcclusionCullingMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingMeshInstanceCount, gpuCullingResult->_testOcclusionCullingMeshInstanceCount);
 	}
 
-	f32 getPassSummaryCullingMeshInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingMeshInstanceCount, _testFrustumCullingMeshInstanceCount);
+	static f32 getPassSummaryCullingMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingMeshInstanceCount, gpuCullingResult->_testFrustumCullingMeshInstanceCount);
 	}
 
-	f32 getPassFrustumCullingSubMeshInstancePersentage() const {
-		return getPersentage(_passFrustumCullingSubMeshInstanceCount, _testFrustumCullingSubMeshInstanceCount);
+	static f32 getPassFrustumCullingSubMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passFrustumCullingSubMeshInstanceCount, gpuCullingResult->_testFrustumCullingSubMeshInstanceCount);
 	}
 
-	f32 getPassOcclusionCullingSubMeshInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingSubMeshInstanceCount, _testOcclusionCullingSubMeshInstanceCount);
+	static f32 getPassOcclusionCullingSubMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingSubMeshInstanceCount, gpuCullingResult->_testOcclusionCullingSubMeshInstanceCount);
 	}
 
-	f32 getPassSummaryCullingSubMeshInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingSubMeshInstanceCount, _testFrustumCullingSubMeshInstanceCount);
+	static f32 getPassSummaryCullingSubMeshInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingSubMeshInstanceCount, gpuCullingResult->_testFrustumCullingSubMeshInstanceCount);
 	}
 
-	f32 getPassFrustumCullingMeshletInstancePersentage() const {
-		return getPersentage(_passFrustumCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
+	static f32 getPassFrustumCullingMeshletInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passFrustumCullingMeshletInstanceCount, gpuCullingResult->_testFrustumCullingMeshletInstanceCount);
 	}
 
-	f32 getPassBackfaceCullingMeshletInstancePersentage() const {
-		return getPersentage(_passBackfaceCullingMeshletInstanceCount, _testBackfaceCullingMeshletInstanceCount);
+	static f32 getPassBackfaceCullingMeshletInstancePersentage(const gpu::AmplificationCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passBackfaceCullingMeshletInstanceCount, gpuCullingResult->_testBackfaceCullingMeshletInstanceCount);
 	}
 
-	f32 getPassOcclusionCullingMeshletInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testOcclusionCullingMeshletInstanceCount);
+	static f32 getPassOcclusionCullingMeshletInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingMeshletInstanceCount, gpuCullingResult->_testOcclusionCullingMeshletInstanceCount);
 	}
 
-	f32 getPassSummaryCullingMeshletInstancePersentage() const {
-		return getPersentage(_passOcclusionCullingMeshletInstanceCount, _testFrustumCullingMeshletInstanceCount);
+	static f32 getPassSummaryCullingMeshletInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingMeshletInstanceCount, gpuCullingResult->_testFrustumCullingMeshletInstanceCount);
 	}
 
-	f32 getPassFrustumCullingTrianglePersentage() const {
-		return getPersentage(_passFrustumCullingTriangleCount, _testFrustumCullingTriangleCount);
+	static f32 getPassFrustumCullingTrianglePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passFrustumCullingTriangleCount, gpuCullingResult->_testFrustumCullingTriangleCount);
 	}
 
-	f32 getPassBackfaceCullingTrianglePersentage() const {
-		return getPersentage(_passBackfaceCullingTriangleCount, _testBackfaceCullingTriangleCount);
+	static f32 getPassBackfaceCullingTrianglePersentage(const gpu::AmplificationCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passBackfaceCullingTriangleCount, gpuCullingResult->_testBackfaceCullingTriangleCount);
 	}
 
-	f32 getPassOcclusionCullingTrianglePersentage() const {
-		return getPersentage(_passOcclusionCullingTriangleCount, _testOcclusionCullingTriangleCount);
+	static f32 getPassOcclusionCullingTrianglePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingTriangleCount, gpuCullingResult->_testOcclusionCullingTriangleCount);
 	}
 
-	f32 getPassSummaryCullingTrianglePersentage() const {
-		return getPersentage(_passOcclusionCullingTriangleCount, _testFrustumCullingTriangleCount);
+	static f32 getPassSummaryCullingTrianglePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passOcclusionCullingTriangleCount, gpuCullingResult->_testFrustumCullingTriangleCount);
 	}
-
 };
 
 class IndirectArgumentResource {
@@ -189,7 +188,8 @@ public:
 
 	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
-	const CullingResult* getCullingResult() const;
+	const gpu::GpuCullingResult* getGpuCullingResult() const;
+	const gpu::AmplificationCullingResult* getAmplificationCullingResult() const;
 
 	void setComputeLodResource(CommandList* commandList);
 	void setGpuCullingResources(CommandList* commandList);
@@ -213,7 +213,8 @@ private:
 	GpuBuffer _hizInfoConstantBuffer[2];
 	GpuTexture _hizDepthTextures[gpu::HIERACHICAL_DEPTH_COUNT] = {};
 
-	gpu::CullingResult _currentFrameCullingResultMapPtr;
+	gpu::GpuCullingResult _currentFrameGpuCullingResult;
+	gpu::AmplificationCullingResult _currentFrameAmplificationCullingResult;
 	DescriptorHandle _hizDepthTextureSrv;
 	DescriptorHandle _hizDepthTextureUav;
 	DescriptorHandle _hizInfoConstantCbv[2];

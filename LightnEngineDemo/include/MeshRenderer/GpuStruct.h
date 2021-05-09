@@ -98,7 +98,7 @@ namespace gpu {
 		u32 _startInstanceLocation;
 	};
 
-	struct CullingResult {
+	struct GpuCullingResult {
 		u32 _testFrustumCullingSubMeshInstanceCount = 0;
 		u32 _passFrustumCullingSubMeshInstanceCount = 0;
 		u32 _testOcclusionCullingSubMeshInstanceCount = 0;
@@ -109,15 +109,18 @@ namespace gpu {
 		u32 _passFrustumCullingMeshInstanceCount = 0;
 		u32 _testFrustumCullingMeshletInstanceCount = 0;
 		u32 _passFrustumCullingMeshletInstanceCount = 0;
-		u32 _testBackfaceCullingMeshletInstanceCount = 0;
-		u32 _passBackfaceCullingMeshletInstanceCount = 0;
 		u32 _testOcclusionCullingMeshletInstanceCount = 0;
 		u32 _passOcclusionCullingMeshletInstanceCount = 0;
 		u32 _testFrustumCullingTriangleCount = 0;
 		u32 _passFrustumCullingTriangleCount = 0;
-		u32 _testBackfaceCullingTriangleCount = 0;
-		u32 _passBackfaceCullingTriangleCount = 0;
 		u32 _testOcclusionCullingTriangleCount = 0;
 		u32 _passOcclusionCullingTriangleCount = 0;
+	};
+
+	struct AmplificationCullingResult :public GpuCullingResult {
+		u32 _testBackfaceCullingMeshletInstanceCount = 0;
+		u32 _passBackfaceCullingMeshletInstanceCount = 0;
+		u32 _testBackfaceCullingTriangleCount = 0;
+		u32 _passBackfaceCullingTriangleCount = 0;
 	};
 }
