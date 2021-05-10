@@ -134,13 +134,15 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
 #if UBER_OCCLUSION
     if (passFrustum) {
+        float2 screenCoordsMin;
+        float2 screenCoordsMax;
+        computeScreenRect(boundsMin, boundsMax, viewInfo, screenCoordsMin, screenCoordsMax);
+    
         uint hizLevel;
         uint2 coords;
         uint2 sampleSize;
         uint2 hizSize;
-        testOcclusion = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, coords, sampleSize, hizSize);
-    
-        uint currentCount = 0;
+        testOcclusion = computeHizLevelAndCoords(screenCoordsMin, screenCoordsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
         if (testOcclusion) {
             float hizDepthValue = sampleHiz(hizSize, sampleSize, coords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
             passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
