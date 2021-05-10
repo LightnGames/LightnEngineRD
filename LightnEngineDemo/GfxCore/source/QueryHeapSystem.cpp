@@ -153,7 +153,7 @@ f32 QueryHeapSystem::getCurrentCpuFrameTime() const {
 		return 0.0f;
 	}
 	const PerfInfo::TickInfo& tickInfo = _cpuPerf._tickInfos[0];
-	u64 delta = _cpuPerf._ticks[tickInfo._endMarkerIndex] - _cpuPerf._ticks[tickInfo._beginMarkerIndex];
+	u64 delta = _cpuPerf._ticks[tickInfo._endTickIndex] - _cpuPerf._ticks[tickInfo._beginTickrIndex];
 	return delta * _cpuPerf._msFrequency;
 }
 
@@ -162,7 +162,7 @@ f32 QueryHeapSystem::getCurrentGpuFrameTime() const {
 		return 0.0f;
 	}
 	const PerfInfo::TickInfo& tickInfo = _gpuPerf._tickInfos[0];
-	u64 delta = _gpuPerf._ticks[tickInfo._endMarkerIndex] - _gpuPerf._ticks[tickInfo._beginMarkerIndex];
+	u64 delta = _gpuPerf._ticks[tickInfo._endTickIndex] - _gpuPerf._ticks[tickInfo._beginTickrIndex];
 	return delta * _gpuPerf._msFrequency;
 }
 
@@ -178,7 +178,7 @@ u32 PerfInfo::pushMarker(u32 tickIndex) {
 	_currentNestMarkerIndices[currentNestLevel] = currentMarkerIndex;
 
 	PerfInfo::TickInfo& info = _tickInfos[tickIndex];
-	info._beginMarkerIndex = currentMarkerIndex;
+	info._beginTickrIndex = currentMarkerIndex;
 
 	return currentMarkerIndex;
 }
@@ -195,7 +195,7 @@ u32 PerfInfo::popMarker(u32 tickIndex) {
 	u32 currentMarkerIndex = _currentFrameMarkerCount++;
 
 	PerfInfo::TickInfo& info = _tickInfos[tickIndex];
-	info._endMarkerIndex = currentMarkerIndex;
+	info._endTickIndex = currentMarkerIndex;
 
 	_markerNestLevelIndices[tickIndex] = currentNestLevel;
 	_markerParentIndices[tickIndex] = currentNestLevel > 0 ? _currentNestMarkerIndices[currentNestLevel - 1] : 0;
@@ -223,8 +223,8 @@ void PerfInfo::debugDrawTree(u32 tickIndex) {
 	}
 
 	const TickInfo& tickInfo = _tickInfos[tickIndex];
-	u64 startDelta = _ticks[tickInfo._beginMarkerIndex] - _ticks[0];
-	u64 endDelta = _ticks[tickInfo._endMarkerIndex] - _ticks[0];
+	u64 startDelta = _ticks[tickInfo._beginTickrIndex] - _ticks[0];
+	u64 endDelta = _ticks[tickInfo._endTickIndex] - _ticks[0];
 	f32 startTime = startDelta * _msFrequency;
 	f32 endTime = endDelta * _msFrequency;
 	f32 frameTime = (endDelta - startDelta) * _msFrequency;
@@ -269,10 +269,12 @@ void PerfInfo::debugDrawTree(u32 tickIndex) {
 }
 
 void PerfInfo::debugDrawFlat() {
-	for (u32 tickIndex = 1; tickIndex < _currentTickCount; ++tickIndex) {
-		u32 prevTickIndex = tickIndex - 1;
-		u64 startDelta = _ticks[prevTickIndex] - _ticks[0];
-		u64 endDelta = _ticks[tickIndex] - _ticks[0];
+	for (u32 tickInfoIndex = 1; tickInfoIndex < _currentTickCount; ++tickInfoIndex) {
+		u32 prevTickIndex = tickInfoIndex - 1;
+		const TickInfo& prevTickInfo = _tickInfos[prevTickIndex];
+		const TickInfo& tickInfo = _tickInfos[tickInfoIndex];
+		u64 startDelta = _ticks[prevTickInfo._beginTickrIndex] - _ticks[0];
+		u64 endDelta = _ticks[tickInfo._beginTickrIndex] - _ticks[0];
 		f32 startTime = startDelta * _msFrequency;
 		f32 frameTime = (endDelta - startDelta) * _msFrequency;
 		Vector2 currenCursortScreenPos = Vector2(DebugGui::GetColumnWidth(), DebugGui::GetCursorScreenPos()._y);
@@ -282,7 +284,7 @@ void PerfInfo::debugDrawFlat() {
 		Vector2 startOrigin = currenCursortScreenPos + _perfBarOffset;
 		Vector2 endOrigin = startOrigin + Vector2(startSize._x, 0);
 
-		DebugGui::Text("%-24s %-4.2f ms", _markerNames[tickIndex], frameTime);
+		DebugGui::Text("%-24s %-4.2f ms", _markerNames[tickInfoIndex], frameTime);
 		DebugGui::NextColumn();
 		DebugGui::AddRectFilled(startOrigin, startOrigin + startSize, Color4::DEEP_GREEN, DebugGui::DrawCornerFlags_None);
 		DebugGui::AddRectFilled(endOrigin, endOrigin + endSize, Color4::DEEP_RED, DebugGui::DrawCornerFlags_None);
