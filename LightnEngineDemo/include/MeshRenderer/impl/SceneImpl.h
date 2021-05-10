@@ -76,6 +76,10 @@ namespace CullingResult {
 		return getPersentage(gpuCullingResult->_passBackfaceCullingMeshletInstanceCount, gpuCullingResult->_testBackfaceCullingMeshletInstanceCount);
 	}
 
+	static f32 getPassNdcCullingMeshletInstancePersentage(const gpu::AmplificationCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passNdcCullingMeshletInstanceCount, gpuCullingResult->_testNdcCullingMeshletInstanceCount);
+	}
+
 	static f32 getPassOcclusionCullingMeshletInstancePersentage(const gpu::GpuCullingResult* gpuCullingResult) {
 		return getPersentage(gpuCullingResult->_passOcclusionCullingMeshletInstanceCount, gpuCullingResult->_testOcclusionCullingMeshletInstanceCount);
 	}
@@ -90,6 +94,10 @@ namespace CullingResult {
 
 	static f32 getPassBackfaceCullingTrianglePersentage(const gpu::AmplificationCullingResult* gpuCullingResult) {
 		return getPersentage(gpuCullingResult->_passBackfaceCullingTriangleCount, gpuCullingResult->_testBackfaceCullingTriangleCount);
+	}
+
+	static f32 getPassNdcCullingTrianglePersentage(const gpu::AmplificationCullingResult* gpuCullingResult) {
+		return getPersentage(gpuCullingResult->_passNdcCullingTriangleCount, gpuCullingResult->_testNdcCullingTriangleCount);
 	}
 
 	static f32 getPassOcclusionCullingTrianglePersentage(const gpu::GpuCullingResult* gpuCullingResult) {

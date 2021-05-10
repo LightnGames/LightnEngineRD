@@ -52,10 +52,12 @@ void writePayloadStruct(uint visibleIndex, uint meshInstanceIndex, MeshletPrimit
 [numthreads(THREAD_NUM, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
     bool passFrustum = false;
+    bool passNdc = false;
     bool passBackface = false;
     bool passOcclusion = false;
     bool visible = false;
     bool isTestedFrustumCulling = false;
+    bool isTestedNdcCulling = false;
     bool isTestedBackfaceCulling = false;
     bool isTestedOcclusionCulling = false;
     uint testFrustumPrimitiveCount = 0;
@@ -86,6 +88,12 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         float3 boundsMax = meshletBounds._boundsMax;
         visible = true;
 
+#if UBER_NDC || UBER_OCCLUSION
+        float2 screenCoordsMin;
+        float2 screenCoordsMax;
+        computeScreenRect(boundsMin, boundsMax, viewInfo, screenCoordsMin, screenCoordsMax);
+#endif
+        
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
         isTestedFrustumCulling = true;
@@ -93,8 +101,16 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         visible = passFrustum;
 #endif
         
+#if UBER_NDC
+        if (visible) {
+            isTestedNdcCulling = true;
+            passNdc = doNdcCulling(screenCoordsMin, screenCoordsMax, viewInfo);
+            visible = passNdc;
+        }
+#endif
+        
 #if UBER_BACKFACE
-        if (passFrustum) {
+        if (visible) {
             passBackface = doBackFaceCulling(meshletBounds);
             isTestedBackfaceCulling = true;
             visible = passBackface;
@@ -102,12 +118,12 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #endif
     
 #if UBER_OCCLUSION
-        if (passBackface) {
+        if (visible) {
             uint hizLevel;
             uint2 leftTopCoords;
             uint2 sampleCount;
             uint2 hizSize;
-            isTestedOcclusionCulling = computeHizLevelAndCoords(boundsMin, boundsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
+            isTestedOcclusionCulling = computeHizLevelAndCoords(screenCoordsMin, screenCoordsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
             if (isTestedOcclusionCulling) {
                 float hizDepthValue = sampleHiz(hizSize, sampleCount, leftTopCoords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
                 passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);
@@ -155,6 +171,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
+        if (isTestedNdcCulling){
+            _cullingResult.InterlockedAdd(TEST_NDC_CULLING_TRIANGLE_COUNT_OFFSET, testFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_NDC_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        }
+    
         if (isTestedBackfaceCulling) {
             _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, testBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
@@ -168,6 +189,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         if (passFrustum) {
             _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, passFrustumPrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
+        }
+    
+        if (passNdc) {
+            _cullingResult.InterlockedAdd(PASSED_NDC_CULLING_TRIANGLE_COUNT_OFFSET, passFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_NDC_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
         if (passBackface) {

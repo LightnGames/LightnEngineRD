@@ -28,7 +28,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint shaderSetIndex = dtid / INSTANCING_PER_SHADER_COUNT_MAX;
     SubMesh subMesh = _subMeshes[subMeshIndex];
     uint meshletCount = subMesh._meshletCount;
-    
 
     MeshShaderIndirectArgument constant;
     constant._meshletInstanceInfoOffset = _infoOffsets.Load(dtid * UINT32_SIZE_IN_BYTE);

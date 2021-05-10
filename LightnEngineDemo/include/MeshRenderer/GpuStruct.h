@@ -122,5 +122,9 @@ namespace gpu {
 		u32 _passBackfaceCullingMeshletInstanceCount = 0;
 		u32 _testBackfaceCullingTriangleCount = 0;
 		u32 _passBackfaceCullingTriangleCount = 0;
+		u32 _testNdcCullingMeshletInstanceCount = 0;
+		u32 _passNdcCullingMeshletInstanceCount = 0;
+		u32 _testNdcCullingTriangleCount = 0;
+		u32 _passNdcCullingTriangleCount = 0;
 	};
 }

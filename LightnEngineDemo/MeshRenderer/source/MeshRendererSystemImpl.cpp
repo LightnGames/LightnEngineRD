@@ -709,6 +709,32 @@ void MeshRendererSystemImpl::debugDrawAmplificationCullingResult() {
 
 			DebugGui::EndTabItem();
 		}
+		if (DebugGui::BeginTabItem("Ndc")) {
+			{
+				ThreeDigiets testCullingCount(cullingResult->_testNdcCullingMeshletInstanceCount);
+				ThreeDigiets passeCullingCount(cullingResult->_passNdcCullingMeshletInstanceCount);
+				f32 passeCullingPersentage = CullingResult::getPassNdcCullingMeshletInstancePersentage(cullingResult);
+
+				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passeCullingPersentage, passeCullingCount.get(), testCullingCount.get());
+				DebugGui::ProgressBar(passeCullingPersentage / 100.0f, Vector2(0, 0), t);
+				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+				DebugGui::Text(FORMAT2, "Meshlet Instance");
+			}
+
+			{
+				ThreeDigiets testCullingCount(cullingResult->_testNdcCullingTriangleCount);
+				ThreeDigiets passCullingCount(cullingResult->_passNdcCullingTriangleCount);
+				f32 passCullingPersentage = CullingResult::getPassNdcCullingTrianglePersentage(cullingResult);
+
+				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passCullingPersentage, passCullingCount.get(), testCullingCount.get());
+				DebugGui::ProgressBar(passCullingPersentage / 100.0f, Vector2(0, 0), t);
+				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+				DebugGui::Text(FORMAT2, "Triangle");
+			}
+
+			DebugGui::EndTabItem();
+		}
+
 		if (DebugGui::BeginTabItem("Occlusion")) {
 			{
 				ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingMeshletInstanceCount);

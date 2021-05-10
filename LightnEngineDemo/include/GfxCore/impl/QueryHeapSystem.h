@@ -14,8 +14,8 @@ public:
 	const f32 _perfBarRectScale = 0.2f;
 
 	struct TickInfo {
-		u16 _beginMarkerIndex = 0;
-		u16 _endMarkerIndex = 0;
+		u16 _beginTickrIndex = 0;
+		u16 _endTickIndex = 0;
 	};
 
 	u32 pushTick(const char* markerName);
