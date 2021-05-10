@@ -2,5 +2,5 @@
 #define UBER_NDC 1
 #define UBER_BACKFACE 1
 #define UBER_OCCLUSION 1
-#define UBER_CULLING_RESULT 1
+#define UBER_CULLING_RESULT 0
 #include "meshlet_amplification_uber.sfh"

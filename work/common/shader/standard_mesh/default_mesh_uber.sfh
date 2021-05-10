@@ -1,6 +1,7 @@
 #include "../constant_buffer.sfh"
 #include "../shaderInput.sfh"
 #include "../gpu_driven.sfh"
+#include "../util.sfh"
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 #if UBER_PRIMITIVE_INSTANCING
@@ -91,7 +92,7 @@ void main(
         vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
         vertexOut._positionNdc = worldPos;
         vertexOut._texcoord = unpackTexCoords(_vertexTexcoords[vertexOffset]);
-        vertexOut._meshletIndex = gid;
+        vertexOut._meshletIndex = vertexIndexOffset;
         vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         verts[gtid] = vertexOut;

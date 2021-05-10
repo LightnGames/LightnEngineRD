@@ -142,7 +142,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         uint2 coords;
         uint2 sampleSize;
         uint2 hizSize;
-        testOcclusion = computeHizLevelAndCoords(screenCoordsMin, screenCoordsMax, viewInfo, hizLevel, leftTopCoords, sampleCount, hizSize);
+        testOcclusion = computeHizLevelAndCoords(screenCoordsMin, screenCoordsMax, viewInfo, hizLevel, coords, sampleSize, hizSize);
         if (testOcclusion) {
             float hizDepthValue = sampleHiz(hizSize, sampleSize, coords, _hizTextures[NonUniformResourceIndex(hizLevel)]);
             passOcclusion = isOcclusion(hizDepthValue, boundsMin, boundsMax, viewInfo);

@@ -205,10 +205,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			break;
 		}
 
-		if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
-			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugCullingPassPipelineStateGroups;
-		}
+		//if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
+		//	pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
+		//	msPipelineStates = primPipelineStateSet->_debugCullingPassPipelineStateGroups;
+		//}
 
 		LTN_ASSERT(pipelineStates != nullptr);
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
