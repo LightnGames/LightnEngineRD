@@ -26,14 +26,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Mesh Shader Pass");
 
 	_gpuCullingResource.resetResultBuffers(commandList);
-
-	bool isFixedCullingView = _cullingDebugFlags & CULLING_DEBUG_TYPE_FIXED_VIEW;
-	if (!isFixedCullingView) {
-		setFixedDebugView(commandList, viewInfo);
-	}
+	setFixedDebugView(commandList, viewInfo);
 
 	// Lod level 計算
-	if (!isFixedCullingView) {
+	{
 		ComputeLodContext context = {};
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
@@ -67,7 +63,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	// デプスプリパス用　GPUカリング
-	if (!isFixedCullingView) {
+	{
 		GpuCullingContext context = {};
 		context._commandList = commandList;
 		context._instancingResource = &_primitiveInstancingResource;
@@ -126,7 +122,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	// build hiz
-	if (!isFixedCullingView) {
+	{
 		BuildHizContext context = {};
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
@@ -135,7 +131,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	// GPUカリング
-	if (!isFixedCullingView) {
+	{
 		GpuCullingContext context = {};
 		context._commandList = commandList;
 		context._instancingResource = &_primitiveInstancingResource;
@@ -274,13 +270,10 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
-	bool isFixedCullingView = _cullingDebugFlags & CULLING_DEBUG_TYPE_FIXED_VIEW;
-	if (!isFixedCullingView) {
-		setFixedDebugView(commandList, viewInfo);
-	}
+	setFixedDebugView(commandList, viewInfo);
 
 	// Lod level 計算
-	if (!isFixedCullingView) {
+	{
 		ComputeLodContext context = {};
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
@@ -293,7 +286,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	}
 
 	// デプスプリパス用　GPUカリング
-	if (!isFixedCullingView) {
+	{
 		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
@@ -334,7 +327,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	}
 
 	// build hiz
-	if (!isFixedCullingView) {
+	{
 		BuildHizContext context = {};
 		context._commandList = commandList;
 		context._gpuCullingResource = &_gpuCullingResource;
@@ -343,7 +336,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	}
 
 	// GPUカリング
-	if (!isFixedCullingView) {
+	{
 		MultiDrawGpuCullingContext context = {};
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
