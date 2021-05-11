@@ -895,6 +895,7 @@ void MeshRendererSystemImpl::update() {
 			bool _passMeshInstanceCulling = false;
 			bool _passMeshletInstanceCulling = false;
 			bool _fixedCullingView = false;
+			bool _forceOnlyMeshShader = false;
 			GeometoryType _geometoryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
 			s32 _packedMeshletCount = 0;
@@ -913,6 +914,7 @@ void MeshRendererSystemImpl::update() {
 
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
+		DebugWindow::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 		DebugWindow::End();
 
@@ -921,6 +923,10 @@ void MeshRendererSystemImpl::update() {
 		}
 
 		_packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);
+		if (debug._forceOnlyMeshShader) {
+			_packedMeshletCount = 0xffff;
+		}
+
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_visible = debug._visible;
 		_debugPrimitiveType = debug._primitiveType;

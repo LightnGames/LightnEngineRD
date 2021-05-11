@@ -60,12 +60,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     bool isTestedNdcCulling = false;
     bool isTestedBackfaceCulling = false;
     bool isTestedOcclusionCulling = false;
-    uint testFrustumPrimitiveCount = 0;
-    uint testBackfacePrimitiveCount = 0;
-    uint testOcclusionPrimitiveCount = 0;
-    uint passFrustumPrimitiveCount = 0;
-    uint passBackfacePrimitiveCount = 0;
-    uint passOcclusionPrimitiveCount = 0;
     uint unpackedOffset = 0xffff;
     bool isPacked = false;
     
@@ -97,7 +91,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #if UBER_FRUSTUM
         passFrustum = doFrustumCulling(boundsMin, boundsMax, viewInfo);
         isTestedFrustumCulling = true;
-        testFrustumPrimitiveCount = meshletPrimitive._primitiveCount;
         visible = passFrustum;
 #endif
         
@@ -148,51 +141,37 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     
 #if UBER_CULLING_RESULT
     if (instanceOffset < _indirectArgumentConstant._instanceCount) {
-        MeshletInstancePrimitiveInfo meshletInfo = _meshletInstanceInfos[meshletInfoOffset];
         uint meshletIndex = _indirectArgumentConstant._meshletOffset + meshletOffset;
         MeshletPrimitiveInfo meshletPrimitive = _meshletPrimitiveInfos[meshletIndex];
-        if (passFrustum) {
-            passFrustumPrimitiveCount = meshletPrimitive._primitiveCount;
-            testBackfacePrimitiveCount = meshletPrimitive._primitiveCount;
-        }
-    
-        if (passBackface) {
-            testOcclusionPrimitiveCount = meshletPrimitive._primitiveCount;
-            passBackfacePrimitiveCount = meshletPrimitive._primitiveCount;
-        }
-    
-        if (passOcclusion) {
-            passOcclusionPrimitiveCount = meshletPrimitive._primitiveCount;
-        }
-    
+        uint passBackfacePrimitiveCount = meshletPrimitive._primitiveCount;
         uint currentCount = 0;
         if (isTestedFrustumCulling) {
-            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, testFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(TEST_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
         if (isTestedNdcCulling){
-            _cullingResult.InterlockedAdd(TEST_NDC_CULLING_TRIANGLE_COUNT_OFFSET, testFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_NDC_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(TEST_NDC_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
         if (isTestedBackfaceCulling) {
-            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, testBackfacePrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(TEST_BACKFACE_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
         if (isTestedOcclusionCulling) {
-            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, testOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(TEST_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
 
         if (passFrustum) {
-            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, passFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(PASSED_FRUSTUM_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
         if (passNdc) {
-            _cullingResult.InterlockedAdd(PASSED_NDC_CULLING_TRIANGLE_COUNT_OFFSET, passFrustumPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_NDC_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(PASSED_NDC_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     
@@ -202,7 +181,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         }
         
         if (passOcclusion) {
-            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, passOcclusionPrimitiveCount, currentCount);
+            _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_TRIANGLE_COUNT_OFFSET, passBackfacePrimitiveCount, currentCount);
             _cullingResult.InterlockedAdd(PASSED_OCCLUSION_CULLING_MESHLET_INSTANCE_COUNT_OFFSET, 1, currentCount);
         }
     }

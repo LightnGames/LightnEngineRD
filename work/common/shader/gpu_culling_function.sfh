@@ -80,7 +80,7 @@ bool doNdcCulling(float2 screenCoordsMin, float2 screenCoordsMax, ViewInfo viewI
 {
     float2 screenSize = float2(viewInfo._viewPortSize);
     float2 roundScreenMin = round(screenCoordsMin * screenSize);
-    float2 roundScreenMax = round(screenCoordsMax = screenSize);
+    float2 roundScreenMax = round(screenCoordsMax * screenSize);
     if (roundScreenMin.x == roundScreenMax.x)
     {
         return false;

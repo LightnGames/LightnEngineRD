@@ -44,9 +44,6 @@ void main(
     out vertices VertexOut verts[64]
 )
 {
-    if (gtid >= 126) {
-        return;
-    }
 #if UBER_DEFAULT
     uint vertexCount = meshPayload._meshletVertexCounts[gid];
     uint primitiveCount = meshPayload._meshletPrimitiveCounts[gid];
