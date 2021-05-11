@@ -894,7 +894,6 @@ void MeshRendererSystemImpl::update() {
 			bool _drawMeshletBounds = false;
 			bool _passMeshInstanceCulling = false;
 			bool _passMeshletInstanceCulling = false;
-			bool _fixedCullingView = false;
 			bool _forceOnlyMeshShader = false;
 			GeometoryType _geometoryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
@@ -907,7 +906,7 @@ void MeshRendererSystemImpl::update() {
 		DebugWindow::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
 		DebugWindow::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
 		DebugWindow::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
-		DebugWindow::Checkbox("fixed culling view", &debug._fixedCullingView);
+		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 
 		const char* geometoryTypes[] = { "Mesh Shader", "Multi Indirect", "Vertex Shader" };
 		DebugGui::Combo("Geometory Type", reinterpret_cast<s32*>(&debug._geometoryMode), geometoryTypes, LTN_COUNTOF(geometoryTypes));
@@ -915,7 +914,6 @@ void MeshRendererSystemImpl::update() {
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 		DebugWindow::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
-		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 		DebugWindow::End();
 
 		if (debug._drawMeshInstanceBounds) {
@@ -935,11 +933,12 @@ void MeshRendererSystemImpl::update() {
 			isUpdatedGeometryType = true;
 		}
 		_geometoryType = debug._geometoryMode;
-		setDebugCullingFlag(CULLING_DEBUG_TYPE_FIXED_VIEW, debug._fixedCullingView);
+		bool fixedCullingView = false;
+		setDebugCullingFlag(CULLING_DEBUG_TYPE_FIXED_VIEW, fixedCullingView);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESH_CULLING, debug._passMeshInstanceCulling);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING, debug._passMeshletInstanceCulling);
 
-		if (debug._fixedCullingView) {
+		if (fixedCullingView) {
 			DebugRendererSystem::Get()->drawFrustum(_debugFixedViewMatrix, _debugFixedProjectionMatrix, Color4::YELLOW);
 		}
 	}

@@ -115,14 +115,25 @@ void ViewSystemImpl::terminate() {
 }
 
 void ViewSystemImpl::update() {
+	enum CameraMode : s32 {
+		CAMERA_MODE_DEFAULT = 0,
+		CAMERA_MODE_MAIN,
+		CAMERA_MODE_CULL
+	};
+
 	struct CameraInfo {
 		Vector3 position;
 		Vector3 cameraAngle;
 		f32 fov;
 		f32 depthPrePassDistance = 0.0f;
+		s32 _cameraMode = 0;
 	};
 	auto debug = DebugWindow::StartWindow<CameraInfo>("CameraInfo");
 	DebugGui::DragFloat("depth pre pass distance", &debug.depthPrePassDistance);
+
+	const char* cameraModes[] = { "Default", "Main", "Cull" };
+	DebugGui::Combo("Camera Mode", reinterpret_cast<s32*>(&debug._cameraMode), cameraModes, LTN_COUNTOF(cameraModes));
+
 	DebugWindow::DragFloat3("position", &debug.position._x, 0.1f);
 	DebugWindow::SliderAngle("rotation", &debug.cameraAngle._y);
 	DebugWindow::SliderAngle("fov", &debug.fov, 0.1f);
