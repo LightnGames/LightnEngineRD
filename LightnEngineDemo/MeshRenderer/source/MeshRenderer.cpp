@@ -109,6 +109,17 @@ void MeshRenderer::initialize() {
 			}
 
 #if ENABLE_MULTI_INDIRECT_DRAW
+			_multiDrawCullingPassPipelineState = allocator->allocatePipelineState();
+			{
+				ShaderBlob* computeShader = allocator->allocateShaderBlob();
+				computeShader->initialize("L:/LightnEngine/resource/common/shader/standard_gpu_driven/mesh_culling_pass.cso");
+				pipelineStateDesc._cs = computeShader->getShaderByteCode();
+				_multiDrawCullingPassPipelineState->iniaitlize(pipelineStateDesc);
+				_multiDrawCullingPassPipelineState->setDebugName("standard_gpu_driven/mesh_culling_pass.cso");
+
+				computeShader->terminate();
+			}
+
 			_multiDrawOcclusionCullingPipelineState = allocator->allocatePipelineState();
 			{
 				ShaderBlob* computeShader = allocator->allocateShaderBlob();
@@ -303,6 +314,7 @@ void MeshRenderer::terminate() {
 	_buildIndirectArgumentRootSignature->terminate();
 
 #if ENABLE_MULTI_INDIRECT_DRAW
+	_multiDrawCullingPassPipelineState->terminate();
 	_multiDrawCullingPipelineState->terminate();
 	_multiDrawOcclusionCullingPipelineState->terminate();
 #endif
@@ -330,11 +342,13 @@ void MeshRenderer::render(const RenderContext& context) const {
 		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		u32 indirectArgumentOffset = pipelineStateIndex * InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
+		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 
 		// メッシュシェーダー + 増幅シェーダー
 		{
 			PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+			commandList->setPipelineState(pipelineState->getPipelineState());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
@@ -351,9 +365,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 				context._gpuCullingResource->setDrawResultDescriptorTable(commandList);
 			}
 
-			commandList->setPipelineState(pipelineState->getPipelineState());
 			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
@@ -361,6 +373,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 		{
 			PipelineStateGroup* pipelineState = context._primInstancingPipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
+			commandList->setPipelineState(pipelineState->getPipelineState());
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VIEW_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
 			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
@@ -375,9 +388,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 
 			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
 
-			commandList->setPipelineState(pipelineState->getPipelineState());
 			CommandSignature* commandSignature = context._primCommandSignatures[pipelineStateIndex];
-			u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
 			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 	}
@@ -405,7 +416,8 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 }
 
 void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) const {
-	gpuCulling(context, _gpuCullingPipelineState);
+	PipelineState* pipelineState = context._passCulling ? _gpuCullingPassPipelineState : _gpuCullingPipelineState;
+	gpuCulling(context, pipelineState);
 }
 
 void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& context) const {
@@ -435,7 +447,8 @@ void MeshRenderer::buildIndirectArgument(const BuildIndirectArgumentContext& con
 }
 
 void MeshRenderer::mainCulling(const GpuCullingContext& context) const {
-	gpuCulling(context, _gpuOcclusionCullingPipelineState);
+	PipelineState* pipelineState = context._passCulling ? _gpuCullingPassPipelineState : _gpuOcclusionCullingPipelineState;
+	gpuCulling(context, pipelineState);
 }
 
 void MeshRenderer::buildHiz(const BuildHizContext& context) const {
@@ -529,11 +542,13 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) co
 }
 
 void MeshRenderer::multiDrawDepthPrePassCulling(const MultiDrawGpuCullingContext& context) const {
-	gpuCulling(context, _multiDrawCullingPipelineState);
+	PipelineState* pipelineState = context._passCulling ? _multiDrawCullingPassPipelineState : _multiDrawCullingPipelineState;
+	gpuCulling(context, pipelineState);
 }
 
 void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& context) const {
-	gpuCulling(context, _multiDrawOcclusionCullingPipelineState);
+	PipelineState* pipelineState = context._passCulling ? _multiDrawCullingPassPipelineState : _multiDrawOcclusionCullingPipelineState;
+	gpuCulling(context, pipelineState);
 }
 
 void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) const {

@@ -129,8 +129,8 @@ public:
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {
 public:
 	enum Type {
-		TYPE_MESH_SHADER = 0,
-		TYPE_MESH_SHADER_PRIM_INSTANCING,
+		TYPE_AS_MESH_SHADER = 0,
+		TYPE_MESH_SHADER,
 		TYPE_CLASSIC,
 		TYPE_COUNT
 	};

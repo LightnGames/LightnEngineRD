@@ -84,14 +84,14 @@ private:
 	};
 
 	void setDebugCullingFlag(u8 type, bool flag) {
-		_cullingDebugType = flag ? _cullingDebugType | type : _cullingDebugType & ~type;
+		_cullingDebugFlags = flag ? _cullingDebugFlags | type : _cullingDebugFlags & ~type;
 	}
 
 	u32 _packedMeshletCount = 0;
 	bool _debugDrawMeshletBounds = false;
 	GeometoryType _geometoryType;
 	DebugPrimitiveType _debugPrimitiveType;
-	u8 _cullingDebugType = CULLING_DEBUG_TYPE_NONE;
+	u8 _cullingDebugFlags = CULLING_DEBUG_TYPE_NONE;
 	Matrix4 _debugFixedViewMatrix;
 	Matrix4 _debugFixedProjectionMatrix;
 };

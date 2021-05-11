@@ -51,8 +51,8 @@ void MaterialSystemImpl::processDeletion() {
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_NONE;
 			_shaderSets[shaderSetIndex].terminate();
+			_pipelineStateSets[TYPE_AS_MESH_SHADER].requestDelete(shaderSetIndex);
 			_pipelineStateSets[TYPE_MESH_SHADER].requestDelete(shaderSetIndex);
-			_pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING].requestDelete(shaderSetIndex);
 			_pipelineStateSets[TYPE_CLASSIC].requestDelete(shaderSetIndex);
 
 			_shaderSetFileHashes[shaderSetIndex] = 0;
@@ -102,8 +102,8 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 	if (findIndex == gpu::INVALID_INDEX) {
 		findIndex = _shaderSets.request();
 
-		PipelineStateSet& meshShaderPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER];
-		PipelineStateSet& primInstancingPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER_PRIM_INSTANCING];
+		PipelineStateSet& meshShaderPipelineStateSet = _pipelineStateSets[TYPE_AS_MESH_SHADER];
+		PipelineStateSet& primInstancingPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER];
 		PipelineStateSet& classicPipelineStateSet = _pipelineStateSets[TYPE_CLASSIC];
 
 		ShaderSetImplDesc implDesc = {};

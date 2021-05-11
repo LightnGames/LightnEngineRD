@@ -27,7 +27,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
-	bool isFixedCullingView = _cullingDebugType & CULLING_DEBUG_TYPE_FIXED_VIEW;
+	bool isFixedCullingView = _cullingDebugFlags & CULLING_DEBUG_TYPE_FIXED_VIEW;
 	if (!isFixedCullingView) {
 		setFixedDebugView(commandList, viewInfo);
 	}
@@ -80,6 +80,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.depthPrePassCulling(context);
 	}
@@ -103,8 +104,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING);
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
+		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
 		RenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
@@ -147,6 +148,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
 		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
 		context._scopeName = "Main Culling";
 		_meshRenderer.mainCulling(context);
 	}
@@ -170,8 +172,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		commandList->setViewports(1, &viewInfo->_viewPort);
 		commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER_PRIM_INSTANCING);
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
+		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
 		PipelineStateGroup** pipelineStates = nullptr;
 		PipelineStateGroup** msPipelineStates = nullptr;
 		switch (_debugPrimitiveType) {
@@ -205,10 +207,9 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 			break;
 		}
 
-		//if (_cullingDebugType & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
-		//	pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
-		//	msPipelineStates = primPipelineStateSet->_debugCullingPassPipelineStateGroups;
-		//}
+		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
+			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
+		}
 
 		LTN_ASSERT(pipelineStates != nullptr);
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
@@ -273,7 +274,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
-	bool isFixedCullingView = _cullingDebugType & CULLING_DEBUG_TYPE_FIXED_VIEW;
+	bool isFixedCullingView = _cullingDebugFlags & CULLING_DEBUG_TYPE_FIXED_VIEW;
 	if (!isFixedCullingView) {
 		setFixedDebugView(commandList, viewInfo);
 	}
@@ -305,6 +306,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
 		context._scopeName = "Depth Pre Pass Culling";
 		_meshRenderer.multiDrawDepthPrePassCulling(context);
 	}
@@ -354,6 +356,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
 		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrv();
 		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
 		context._scopeName = "Main Culling";
 		_meshRenderer.multiDrawMainCulling(context);
 	}

@@ -52,6 +52,7 @@ struct GpuCullingContext {
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
 	u32 _meshInstanceCountMax = 0;
+	bool _passCulling = false;
 	const char* _scopeName = nullptr;
 };
 
@@ -84,6 +85,7 @@ struct MultiDrawGpuCullingContext {
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
 	u32 _meshInstanceCountMax = 0;
+	bool _passCulling = false;
 	const char* _scopeName = nullptr;
 };
 #endif
@@ -143,6 +145,7 @@ private:
 	PipelineState* _buildIndirectArgumentPipelineState = nullptr;
 	RootSignature* _buildIndirectArgumentRootSignature = nullptr;
 #if ENABLE_MULTI_INDIRECT_DRAW
+	PipelineState* _multiDrawCullingPassPipelineState = nullptr;
 	PipelineState* _multiDrawCullingPipelineState = nullptr;
 	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;
 #endif
