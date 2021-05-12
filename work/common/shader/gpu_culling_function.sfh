@@ -2,6 +2,8 @@
 #include "constant_buffer.sfh"
 #include "util.sfh"
 
+#define AABB_CORNER_COUNT 8
+
 struct MeshletBounds {
     float3 _boundsMin;
     float3 _boundsMax;
@@ -14,7 +16,7 @@ bool isEnabledMeshInstance(MeshInstance meshInstance) {
     return meshInstance._stateFlags != 0;
 }
 
-MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, Meshlet meshlet){
+MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, Meshlet meshlet) {
     float3 boundsMin = meshlet._aabbMin;
     float3 boundsMax = meshlet._aabbMax;
     float3 boundsSize = boundsMax - boundsMin;
@@ -24,7 +26,7 @@ MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, M
     float3 worldMatrixCol2 = matrixWorld[2].xyz * boundsSize.z;
     float3 boundsWorldMin = mul(float4(boundsMin, 1.0), matrixWorld);
     
-    const float3 points[8] = {
+    const float3 points[AABB_CORNER_COUNT] = {
         worldMatrixCol0 + worldMatrixCol1 + worldMatrixCol2,
         worldMatrixCol0 + worldMatrixCol1,
         worldMatrixCol0,
@@ -37,7 +39,9 @@ MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, M
     
     float3 resultBoundsMin = float3(FLT_MAX, FLT_MAX, FLT_MAX);
     float3 resultBoundsMax = float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (uint pointIndex = 0; pointIndex < 8; ++pointIndex) {
+    
+    [unroll]
+    for (uint pointIndex = 0; pointIndex < AABB_CORNER_COUNT; ++pointIndex) {
         resultBoundsMin = min(resultBoundsMin, boundsWorldMin + points[pointIndex]);
         resultBoundsMax = max(resultBoundsMax, boundsWorldMin + points[pointIndex]);
     }
@@ -54,21 +58,18 @@ MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, M
     return bounds;
 }
 
-float3 getCameraDirection(ViewInfo viewInfo)
-{
+float3 getCameraDirection(ViewInfo viewInfo) {
     return viewInfo._frustumPlanes[4].xyz;
 }
 
-bool doFrustumCulling(float3 boundMin, float3 boundsMax, ViewInfo viewInfo)
-{
-    for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i)
-    {
+bool doFrustumCulling(float3 boundMin, float3 boundsMax, ViewInfo viewInfo) {
+    [unroll]
+    for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i) {
         float4 planeNormal = viewInfo._frustumPlanes[i];
         float3 positivePoint = getPositivePoint(boundMin, boundsMax, planeNormal.xyz);
         float length = dot(planeNormal.xyz, positivePoint) - planeNormal.w;
 
-        if (length < 0)
-        {
+        if (length < 0) {
             return false;
         }
     }
@@ -76,18 +77,15 @@ bool doFrustumCulling(float3 boundMin, float3 boundsMax, ViewInfo viewInfo)
     return true;
 }
 
-bool doNdcCulling(float2 screenCoordsMin, float2 screenCoordsMax, ViewInfo viewInfo)
-{
+bool doNdcCulling(float2 screenCoordsMin, float2 screenCoordsMax, ViewInfo viewInfo) {
     float2 screenSize = float2(viewInfo._viewPortSize);
     float2 roundScreenMin = round(screenCoordsMin * screenSize);
     float2 roundScreenMax = round(screenCoordsMax * screenSize);
-    if (roundScreenMin.x == roundScreenMax.x)
-    {
+    if (roundScreenMin.x == roundScreenMax.x) {
         return false;
     }
     
-    if (roundScreenMin.y == roundScreenMax.y)
-    {
+    if (roundScreenMin.y == roundScreenMax.y) {
         return false;
     }
     
@@ -95,28 +93,23 @@ bool doNdcCulling(float2 screenCoordsMin, float2 screenCoordsMax, ViewInfo viewI
 }
 
 // バウンディングボックスの最もカメラに近い距離を取得します。
-float getNearBoundsDepth(float3 boundMin, float3 boundsMax, ViewInfo viewInfo)
-{
+float getNearBoundsDepth(float3 boundMin, float3 boundsMax, ViewInfo viewInfo) {
     float3 viewNormalAndDistance = getCameraDirection(viewInfo);
     float3 worldPositivePoint = getPositivePoint(boundMin, boundsMax, -viewNormalAndDistance);
     float3 viewPositivePoint = worldPositivePoint - viewInfo._position;
     return dot(viewNormalAndDistance, viewPositivePoint);
 }
 
-float getViewSpacePositivePosition(float3 boundMin, float3 boundsMax, float3 direction, ViewInfo viewInfo)
-{
+float getViewSpacePositivePosition(float3 boundMin, float3 boundsMax, float3 direction, ViewInfo viewInfo) {
     float3 worldPositivePoint = getPositivePoint(boundMin, boundsMax, direction);
     float3 viewPositivePoint = worldPositivePoint - viewInfo._position;
     return dot(direction, viewPositivePoint);
 }
 
-float sampleHiz(uint2 hizSize, uint2 sampleCount, uint2 textureCoords, Texture2D<float> hizTexture)
-{
+float sampleHiz(uint2 hizSize, uint2 sampleCount, uint2 textureCoords, Texture2D<float> hizTexture) {
     float hizDepthValue = 0.0;
-    for (uint x = 0; x < sampleCount.x; ++x)
-    {
-        for (uint y = 0; y < sampleCount.y; ++y)
-        {
+    for (uint x = 0; x < sampleCount.x; ++x) {
+        for (uint y = 0; y < sampleCount.y; ++y) {
             uint2 coords = min(textureCoords + uint2(x, y), hizSize);
             float depth = hizTexture[coords];
             hizDepthValue = max(hizDepthValue, depth);
@@ -126,8 +119,7 @@ float sampleHiz(uint2 hizSize, uint2 sampleCount, uint2 textureCoords, Texture2D
     return hizDepthValue;
 }
 
-bool isOcclusion(float depth, float3 boundsMin, float3 boundsMax, ViewInfo viewInfo)
-{
+bool isOcclusion(float depth, float3 boundsMin, float3 boundsMax, ViewInfo viewInfo) {
     float viewDepthRange = viewInfo._nearAndFarClip.y - viewInfo._nearAndFarClip.x;
     float linerDepth = computeLinerDepth(depth, viewInfo._nearAndFarClip.x, viewInfo._nearAndFarClip.y);
     float viewDepth = viewInfo._nearAndFarClip.x + linerDepth * viewDepthRange;
@@ -139,9 +131,7 @@ void computeScreenRect(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo, ou
 {
     float3 boundsSize = boundsMax - boundsMin;
     float3 viewSpaceBoundsMin = boundsMin - viewInfo._position;
-#define POINT_COUNT 8
-    const float3 points[] =
-    {
+    const float3 points[AABB_CORNER_COUNT] = {
         float3(0, 0, 0),
         float3(boundsSize.x, 0, 0),
         float3(0, boundsSize.y, 0),
@@ -159,8 +149,9 @@ void computeScreenRect(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo, ou
     // 投影時のbounds rectを計算
     float2 screenCoordsMin = float2(FLT_MAX, FLT_MAX);
     float2 screenCoordsMax = float2(-FLT_MAX, -FLT_MAX);
-    for (uint i = 0; i < POINT_COUNT; ++i)
-    {
+    
+    [unroll]
+    for (uint i = 0; i < AABB_CORNER_COUNT; ++i) {
         float3 p = viewSpaceBoundsMin + points[i];
         float2 viewSpacePosition = float2(dot(viewRight, p), dot(viewUp, p));
         float viewDepth = max(dot(cameraDirection, p), 0.001);
@@ -185,16 +176,15 @@ bool computeHizLevelAndCoords(float2 screenCoordsMin, float2 screenCoordsMax, Vi
     outCoords = uint2(0, 0);
     outSampleCount = uint2(0, 0);
     
-    uint hizLevelMax = 8;
+    #define HIZ_LEVEL_COUNT 8
     float powScale = 1.0;
     float2 screenSize = screenCoordsMax - screenCoordsMin;
-    for (uint level = 0; level < hizLevelMax; ++level)
-    {
+    [unroll]
+    for (uint level = 0; level < HIZ_LEVEL_COUNT; ++level) {
         powScale *= 2.0;
         float2 hizSize = float2(viewInfo._viewPortSize) / powScale;
         float2 hizLevelPixelSize = 1.0 / hizSize;
-        if (screenSize.x < hizLevelPixelSize.x && screenSize.y < hizLevelPixelSize.y)
-        {
+        if (screenSize.x < hizLevelPixelSize.x && screenSize.y < hizLevelPixelSize.y) {
             uint2 coordsMin = uint2(screenCoordsMin * hizSize);
             uint2 coordsMax = uint2(screenCoordsMax * hizSize);
             uint2 hizSizeU = viewInfo._viewPortSize / powScale;
@@ -208,22 +198,4 @@ bool computeHizLevelAndCoords(float2 screenCoordsMin, float2 screenCoordsMax, Vi
     }
     
     return false;
-}
-
-bool frustumCullingBoundingBox(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo)
-{
-    for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i)
-    {
-        float4 planeNormal = viewInfo._frustumPlanes[i];
-        float3 positivePoint = getPositivePoint(boundsMin, boundsMax, planeNormal.xyz);
-        float planeDistance = planeNormal.w;
-        float length = dot(planeNormal.xyz, positivePoint) - planeDistance;
-
-        if (length < 0)
-        {
-            return false;
-        }
-    }
-    
-    return true;
 }

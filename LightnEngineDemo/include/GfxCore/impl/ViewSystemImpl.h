@@ -7,6 +7,9 @@
 
 struct ViewInfo {
 	static constexpr u32 FRUSTUM_PLANE_COUNT = 6;
+	void initialize();
+	void terminate();
+
 	ViewPort _viewPort;
 	Rect _scissorRect;
 	DescriptorHandle _viewInfoCbv;
@@ -54,8 +57,12 @@ public:
 	void processDeletion();
 
 	ViewInfo* getView() { return &_mainView; }
+	ViewInfo* getDebugFixedView() { return &_debugFixedView; }
+	bool isEnabledDebugFixedView() const { return _isEnabledDebugFixedView; }
 	
 	static ViewSystemImpl* Get();
 private:
+	bool _isEnabledDebugFixedView = false;
 	ViewInfo _mainView;
+	ViewInfo _debugFixedView;
 };

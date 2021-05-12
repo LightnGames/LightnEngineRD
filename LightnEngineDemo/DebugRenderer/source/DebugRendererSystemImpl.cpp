@@ -239,8 +239,8 @@ void DebugRendererSystemImpl::drawFrustum(Matrix4 view, Matrix4 projection, Colo
 	f32 farClip = (nearClip * projection.m[2][2] / (projection.m[2][2] - 1.0f)) * VISUALIZE_OFFSET;
 	Vector3 nearProj = viewForward * nearClip;
 	Vector3 farProj = viewForward * farClip;
-	Vector3 upProj = viewUp * projection.m[1][1];
-	Vector3 rightProj = viewRight * (1.0f / projection.m[0][0]);
+	Vector3 upProj = viewUp * projection.m[0][0];
+	Vector3 rightProj = viewRight * (1.0f * projection.m[1][1]);
 
 	Vector3 farCornerRightTop = farProj + rightProj * farClip + upProj * farClip + viewTranslate;
 	Vector3 farCornerLeftTop = farProj - rightProj * farClip + upProj * farClip + viewTranslate;

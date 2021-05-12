@@ -167,6 +167,7 @@ public:
 	virtual void terminate() = 0;
 	virtual void processDeletion() = 0;
 	virtual void render(CommandList* commandList, ViewInfo* viewInfo) = 0;
+	virtual void renderDebugFixed(CommandList* commandList, ViewInfo* viewInfo) = 0;
 	virtual Mesh* allocateMesh(const MeshDesc& desc) = 0;
 	virtual Mesh* createMesh(const MeshDesc& desc) = 0;
 	virtual void createMeshInstance(MeshInstance** outMeshInstances, const MeshInstanceDesc& desc) = 0;

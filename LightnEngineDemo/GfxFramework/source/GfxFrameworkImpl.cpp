@@ -19,7 +19,13 @@ void GfxFrameworkImpl::initialize() {
 	GraphicsSystemImpl::Get()->setRenderPass([](CommandList* commandList) {
 		ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
 		DebugRendererSystemImpl::Get()->resetGpuCounter(commandList);
-		MeshRendererSystem::Get()->render(commandList, viewInfo);
+		if (ViewSystemImpl::Get()->isEnabledDebugFixedView()) {
+			MeshRendererSystem::Get()->render(commandList, ViewSystemImpl::Get()->getDebugFixedView());
+			MeshRendererSystem::Get()->renderDebugFixed(commandList, viewInfo);
+		} else {
+			MeshRendererSystem::Get()->render(commandList, viewInfo);
+		}
+
 		DebugRendererSystemImpl::Get()->render(commandList, viewInfo);
 	});
 }

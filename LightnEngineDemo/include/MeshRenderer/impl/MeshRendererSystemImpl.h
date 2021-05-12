@@ -16,6 +16,7 @@ public:
 	virtual void terminate() override;
 	virtual void update() override;
 	virtual void render(CommandList* commandList, ViewInfo* viewInfo) override;
+	virtual void renderDebugFixed(CommandList* commandList, ViewInfo* viewInfo) override;
 	virtual void processDeletion() override;
 
 	virtual Mesh* allocateMesh(const MeshDesc& desc) override;
@@ -35,6 +36,7 @@ private:
 	void renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 private:
+	void setupDraw(CommandList* commandList, ViewInfo* viewInfo);
 	void debugDrawGpuCullingResult();
 	void debugDrawAmplificationCullingResult();
 

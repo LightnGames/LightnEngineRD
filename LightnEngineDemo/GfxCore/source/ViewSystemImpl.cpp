@@ -5,122 +5,13 @@
 ViewSystemImpl _viewSystem;
 
 void ViewSystemImpl::initialize() {
-	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
-	Device* device = graphicsSystem->getDevice();
-	DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
-	Application* app = ApplicationSystem::Get()->getApplication();
-	u32 screenWidth = app->getScreenWidth();
-	u32 screenHeight = app->getScreenHeight();
-
-	// view ports
-	{
-		_mainView._viewPort._width = static_cast<f32>(screenWidth);
-		_mainView._viewPort._height = static_cast<f32>(screenHeight);
-		_mainView._viewPort._maxDepth = 1.0f;
-		_mainView._scissorRect._right = static_cast<l32>(screenWidth);
-		_mainView._scissorRect._bottom = static_cast<l32>(screenHeight);
-	}
-
-	// cbv
-	{
-		GpuBufferDesc desc = {};
-		desc._sizeInByte = GetConstantBufferAligned(sizeof(ViewConstant));
-		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		desc._device = device;
-		_mainView._viewInfoBuffer.initialize(desc);
-		_mainView._viewInfoBuffer.setDebugName("Main View Info");
-
-		_mainView._cullingViewInfoBuffer.initialize(desc);
-		_mainView._cullingViewInfoBuffer.setDebugName("Culling View Info");
-
-		_mainView._depthPrePassViewInfoBuffer.initialize(desc);
-		_mainView._depthPrePassViewInfoBuffer.setDebugName("Depth Pre Pass View Info");
-
-		DescriptorHeapAllocator* allocater = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
-		_mainView._viewInfoCbv = allocater->allocateDescriptors(1);
-		_mainView._cullingViewInfoCbv = allocater->allocateDescriptors(1);
-		_mainView._depthPrePassViewInfoCbv = allocater->allocateDescriptors(1);
-		device->createConstantBufferView(_mainView._viewInfoBuffer.getConstantBufferViewDesc(), _mainView._viewInfoCbv._cpuHandle);
-		device->createConstantBufferView(_mainView._cullingViewInfoBuffer.getConstantBufferViewDesc(), _mainView._cullingViewInfoCbv._cpuHandle);
-		device->createConstantBufferView(_mainView._depthPrePassViewInfoBuffer.getConstantBufferViewDesc(), _mainView._depthPrePassViewInfoCbv._cpuHandle); 
-	}
-
-	// depth stencil texture
-	{
-
-		ClearValue depthOptimizedClearValue = {};
-		depthOptimizedClearValue._format = FORMAT_D32_FLOAT;
-		depthOptimizedClearValue._depthStencil._depth = 1.0f;
-		depthOptimizedClearValue._depthStencil._stencil = 0;
-
-		GpuTextureDesc desc = {};
-		desc._device = device;
-		desc._format = FORMAT_D32_FLOAT;
-		desc._optimizedClearValue = &depthOptimizedClearValue;
-		desc._width = screenWidth;
-		desc._height = screenHeight;
-		desc._flags = RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-		desc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		_mainView._depthTexture.initialize(desc);
-		_mainView._depthTexture.setDebugName("Main View Depth");
-
-		ShaderResourceViewDesc srvDesc = {};
-		srvDesc._format = FORMAT_R32_FLOAT;
-		srvDesc._viewDimension = SRV_DIMENSION_TEXTURE2D;
-		srvDesc._texture2D._mipLevels = 1;
-		_mainView._depthSrv = allocator->allocateDescriptors(1);
-		device->createShaderResourceView(_mainView._depthTexture.getResource(), &srvDesc, _mainView._depthSrv._cpuHandle);
-	}
-
-	// hdr texture
-	{
-		ClearValue depthOptimizedClearValue = {};
-		depthOptimizedClearValue._format = BACK_BUFFER_FORMAT;
-
-		GpuTextureDesc desc = {};
-		desc._device = device;
-		desc._format = BACK_BUFFER_FORMAT;
-		desc._optimizedClearValue = &depthOptimizedClearValue;
-		desc._width = screenWidth;
-		desc._height = screenHeight;
-		desc._flags = RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		desc._initialState = RESOURCE_STATE_RENDER_TARGET;
-		_mainView._hdrTexture.initialize(desc);
-		_mainView._hdrTexture.setDebugName("Main View HDR");
-	}
-
-	// descriptors
-	{
-		_mainView._depthDsv = graphicsSystem->getDsvGpuDescriptorAllocator()->allocateDescriptors(1);
-		device->createDepthStencilView(_mainView._depthTexture.getResource(), _mainView._depthDsv._cpuHandle);
-
-		_mainView._hdrRtv = graphicsSystem->getRtvGpuDescriptorAllocator()->allocateDescriptors(1);
-		device->createRenderTargetView(_mainView._hdrTexture.getResource(), _mainView._hdrRtv._cpuHandle);
-	}
+	_mainView.initialize();
+	_debugFixedView.initialize();
 }
 
 void ViewSystemImpl::terminate() {
-	_mainView._viewInfoBuffer.terminate();
-	_mainView._cullingViewInfoBuffer.terminate();
-	_mainView._depthPrePassViewInfoBuffer.terminate();
-	_mainView._depthTexture.terminate();
-	_mainView._hdrTexture.terminate();
-
-	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
-	// srv cbv uav
-	{
-		DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
-		allocator->discardDescriptor(_mainView._viewInfoCbv);
-		allocator->discardDescriptor(_mainView._cullingViewInfoCbv);
-		allocator->discardDescriptor(_mainView._depthPrePassViewInfoCbv);
-		allocator->discardDescriptor(_mainView._depthSrv); 
-	}
-
-	// dsv rtv
-	{
-		graphicsSystem->getDsvGpuDescriptorAllocator()->discardDescriptor(_mainView._depthDsv);
-		graphicsSystem->getRtvGpuDescriptorAllocator()->discardDescriptor(_mainView._hdrRtv);
-	}
+	_mainView.terminate();
+	_debugFixedView.terminate();
 }
 
 void ViewSystemImpl::update() {
@@ -162,7 +53,7 @@ void ViewSystemImpl::update() {
 
 	// W/A/S/D キーボードによる移動
 	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
-	Vector3 rightDirection= cameraRotate.mv[0].toVector3();
+	Vector3 rightDirection = cameraRotate.mv[0].toVector3();
 	Vector3 upDirection = cameraRotate.mv[1].toVector3();
 	Vector3 forwardDirection = cameraRotate.mv[2].toVector3();
 	Vector3 rotate = Vector3::Zero;
@@ -191,9 +82,11 @@ void ViewSystemImpl::update() {
 		moveDirection -= upDirection;
 	}
 
-	constexpr f32 DEBUG_CAMERA_MOVE_SPEED = 0.2f;
+	constexpr f32 DEBUG_CAMERA_MOVE_SPEED = 0.15f;
 	moveDirection = Vector3::normalize(moveDirection) * DEBUG_CAMERA_MOVE_SPEED;
 	debug.position += moveDirection;
+
+	_isEnabledDebugFixedView = debug._cameraMode != CAMERA_MODE_DEFAULT;
 
 	// メインビュー用定数バッファ
 	f32 farClip = 300;
@@ -202,19 +95,18 @@ void ViewSystemImpl::update() {
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
 	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(debug.position);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	ViewConstant* viewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._viewInfoBuffer, 0);
-	viewConstant->_matrixView = viewMatrix.inverse().transpose();
-	viewConstant->_matrixProj = projectionMatrix.transpose();
-	viewConstant->_matrixViewProj = viewConstant->_matrixProj * viewConstant->_matrixView;
-	viewConstant->_position = debug.position.getFloat3();
-	viewConstant->_nearAndFarClip._x = nearClip;
-	viewConstant->_nearAndFarClip._y = farClip;
-	viewConstant->_halfFovTanX = fovHalfTan * aspectRate;
-	viewConstant->_halfFovTanY = fovHalfTan;
-	viewConstant->_viewPortSizeX = static_cast<u32>(_mainView._viewPort._width);
-	viewConstant->_viewPortSizeY = static_cast<u32>(_mainView._viewPort._height);
-	viewConstant->_upDirection = Matrix4::transformNormal(Vector3::Up, cameraRotate).getFloat3();
+	ViewConstant viewConstant;
+	viewConstant._matrixView = viewMatrix.inverse().transpose();
+	viewConstant._matrixProj = projectionMatrix.transpose();
+	viewConstant._matrixViewProj = viewConstant._matrixProj * viewConstant._matrixView;
+	viewConstant._position = debug.position.getFloat3();
+	viewConstant._nearAndFarClip._x = nearClip;
+	viewConstant._nearAndFarClip._y = farClip;
+	viewConstant._halfFovTanX = fovHalfTan * aspectRate;
+	viewConstant._halfFovTanY = fovHalfTan;
+	viewConstant._viewPortSizeX = static_cast<u32>(_mainView._viewPort._width);
+	viewConstant._viewPortSizeY = static_cast<u32>(_mainView._viewPort._height);
+	viewConstant._upDirection = Matrix4::transformNormal(Vector3::Up, cameraRotate).getFloat3();
 
 	// メインビュー用　フラスタム平面
 	Vector3 sideForward = Vector3::Forward * fovHalfTan * aspectRate;
@@ -225,33 +117,57 @@ void ViewSystemImpl::update() {
 	Vector3 topNormal = Matrix4::transformNormal(-Vector3::Up + forward, cameraRotate).getNormalize();
 	Vector3 nearNormal = Matrix4::transformNormal(Vector3::Forward, cameraRotate).getNormalize();
 	Vector3 farNormal = Matrix4::transformNormal(-Vector3::Forward, cameraRotate).getNormalize();
-	viewConstant->_frustumPlanes[0] = Float4(rightNormal._x, rightNormal._y, rightNormal._z, Vector3::dot(rightNormal, debug.position));
-	viewConstant->_frustumPlanes[1] = Float4(leftNormal._x, leftNormal._y, leftNormal._z, Vector3::dot(leftNormal, debug.position));
-	viewConstant->_frustumPlanes[2] = Float4(buttomNormal._x, buttomNormal._y, buttomNormal._z, Vector3::dot(buttomNormal, debug.position));
-	viewConstant->_frustumPlanes[3] = Float4(topNormal._x, topNormal._y, topNormal._z, Vector3::dot(topNormal, debug.position));
-	viewConstant->_frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, debug.position) + nearClip);
-	viewConstant->_frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - farClip);
+	viewConstant._frustumPlanes[0] = Float4(rightNormal._x, rightNormal._y, rightNormal._z, Vector3::dot(rightNormal, debug.position));
+	viewConstant._frustumPlanes[1] = Float4(leftNormal._x, leftNormal._y, leftNormal._z, Vector3::dot(leftNormal, debug.position));
+	viewConstant._frustumPlanes[2] = Float4(buttomNormal._x, buttomNormal._y, buttomNormal._z, Vector3::dot(buttomNormal, debug.position));
+	viewConstant._frustumPlanes[3] = Float4(topNormal._x, topNormal._y, topNormal._z, Vector3::dot(topNormal, debug.position));
+	viewConstant._frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, debug.position) + nearClip);
+	viewConstant._frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - farClip);
 
-	ViewConstant* cullingViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._cullingViewInfoBuffer, 0);
-	memcpy(cullingViewConstant, viewConstant, sizeof(ViewConstant));
-	_mainView._cullingViewMatrix = viewMatrix;
-	_mainView._cullingProjectionMatrix = projectionMatrix;
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	if (debug._cameraMode == CAMERA_MODE_CULL || debug._cameraMode == CAMERA_MODE_DEFAULT) {
+		ViewConstant* debugFixedViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_debugFixedView._viewInfoBuffer, 0);
+		memcpy(debugFixedViewConstant, &viewConstant, sizeof(ViewConstant));
 
-	//if (debug._cameraMode != 0) {
-	//	DebugRendererSystem::Get()->drawFrustum(viewMatrix, projectionMatrix, Color4::YELLOW);
-	//}
+		ViewConstant* debugFixedViewCullingViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_debugFixedView._cullingViewInfoBuffer, 0);
+		memcpy(debugFixedViewCullingViewConstant, &viewConstant, sizeof(ViewConstant));
+
+		ViewConstant* cullingViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._cullingViewInfoBuffer, 0);
+		memcpy(cullingViewConstant, &viewConstant, sizeof(ViewConstant));
+
+		_debugFixedView._nearClip = nearClip;
+		_debugFixedView._farClip = farClip;
+		_debugFixedView._viewMatrix = viewMatrix;
+		_debugFixedView._projectionMatrix = projectionMatrix;
+		_debugFixedView._cullingViewMatrix = viewMatrix;
+		_debugFixedView._cullingProjectionMatrix = projectionMatrix;
+
+		_mainView._cullingViewMatrix = viewMatrix;
+		_mainView._cullingProjectionMatrix = projectionMatrix;
+	}
+
+	if (debug._cameraMode == CAMERA_MODE_MAIN || debug._cameraMode == CAMERA_MODE_DEFAULT) {
+		ViewConstant* mainViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._viewInfoBuffer, 0);
+		memcpy(mainViewConstant, &viewConstant, sizeof(ViewConstant));
+
+		_mainView._nearClip = nearClip;
+		_mainView._farClip = farClip;
+		_mainView._viewMatrix = viewMatrix;
+		_mainView._projectionMatrix = projectionMatrix;
+	}
 
 	// デプスプリパス用ビュー定数バッファ更新
-	f32 depthPrePassFarClip = debug.depthPrePassDistance;
-	ViewConstant* depthPrePassViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._depthPrePassViewInfoBuffer, 0);
-	*depthPrePassViewConstant = *viewConstant;
-	depthPrePassViewConstant->_frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - depthPrePassFarClip);
-	depthPrePassViewConstant->_nearAndFarClip._y = depthPrePassFarClip;
+	if (debug._cameraMode == CAMERA_MODE_MAIN || debug._cameraMode == CAMERA_MODE_DEFAULT) {
+		f32 depthPrePassFarClip = debug.depthPrePassDistance;
+		ViewConstant* depthPrePassViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._depthPrePassViewInfoBuffer, 0);
+		memcpy(depthPrePassViewConstant, &viewConstant, sizeof(ViewConstant));
+		depthPrePassViewConstant->_frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - depthPrePassFarClip);
+		depthPrePassViewConstant->_nearAndFarClip._y = depthPrePassFarClip;
+	}
 
-	_mainView._nearClip = nearClip;
-	_mainView._farClip = farClip;
-	_mainView._viewMatrix = viewMatrix;
-	_mainView._projectionMatrix = projectionMatrix;
+	DebugGui::Start("CameraInfo");
+	DebugGui::Image(_debugFixedView._hdrSrv._gpuHandle, Vector2(200 * aspectRate, 200));
+	DebugWindow::End();
 
 	DebugWindow::StartWindow("Depth Texture");
 	DebugGui::Columns(1, nullptr, true);
@@ -269,4 +185,127 @@ void ViewSystemImpl::processDeletion() {
 
 ViewSystemImpl* ViewSystemImpl::Get() {
 	return &_viewSystem;
+}
+
+void ViewInfo::initialize() {
+	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
+	Device* device = graphicsSystem->getDevice();
+	DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
+	Application* app = ApplicationSystem::Get()->getApplication();
+	u32 screenWidth = app->getScreenWidth();
+	u32 screenHeight = app->getScreenHeight();
+
+	// view ports
+	{
+		_viewPort._width = static_cast<f32>(screenWidth);
+		_viewPort._height = static_cast<f32>(screenHeight);
+		_viewPort._maxDepth = 1.0f;
+		_scissorRect._right = static_cast<l32>(screenWidth);
+		_scissorRect._bottom = static_cast<l32>(screenHeight);
+	}
+
+	// cbv
+	{
+		GpuBufferDesc desc = {};
+		desc._sizeInByte = GetConstantBufferAligned(sizeof(ViewConstant));
+		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		desc._device = device;
+		_viewInfoBuffer.initialize(desc);
+		_viewInfoBuffer.setDebugName("Main View Info");
+
+		_cullingViewInfoBuffer.initialize(desc);
+		_cullingViewInfoBuffer.setDebugName("Culling View Info");
+
+		_depthPrePassViewInfoBuffer.initialize(desc);
+		_depthPrePassViewInfoBuffer.setDebugName("Depth Pre Pass View Info");
+
+		DescriptorHeapAllocator* allocater = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
+		_viewInfoCbv = allocater->allocateDescriptors(1);
+		_cullingViewInfoCbv = allocater->allocateDescriptors(1);
+		_depthPrePassViewInfoCbv = allocater->allocateDescriptors(1);
+		device->createConstantBufferView(_viewInfoBuffer.getConstantBufferViewDesc(), _viewInfoCbv._cpuHandle);
+		device->createConstantBufferView(_cullingViewInfoBuffer.getConstantBufferViewDesc(), _cullingViewInfoCbv._cpuHandle);
+		device->createConstantBufferView(_depthPrePassViewInfoBuffer.getConstantBufferViewDesc(), _depthPrePassViewInfoCbv._cpuHandle);
+	}
+
+	// depth stencil texture
+	{
+
+		ClearValue depthOptimizedClearValue = {};
+		depthOptimizedClearValue._format = FORMAT_D32_FLOAT;
+		depthOptimizedClearValue._depthStencil._depth = 1.0f;
+		depthOptimizedClearValue._depthStencil._stencil = 0;
+
+		GpuTextureDesc desc = {};
+		desc._device = device;
+		desc._format = FORMAT_D32_FLOAT;
+		desc._optimizedClearValue = &depthOptimizedClearValue;
+		desc._width = screenWidth;
+		desc._height = screenHeight;
+		desc._flags = RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		desc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		_depthTexture.initialize(desc);
+		_depthTexture.setDebugName("Main View Depth");
+
+		ShaderResourceViewDesc srvDesc = {};
+		srvDesc._format = FORMAT_R32_FLOAT;
+		srvDesc._viewDimension = SRV_DIMENSION_TEXTURE2D;
+		srvDesc._texture2D._mipLevels = 1;
+		_depthSrv = allocator->allocateDescriptors(1);
+		device->createShaderResourceView(_depthTexture.getResource(), &srvDesc, _depthSrv._cpuHandle);
+	}
+
+	// hdr texture
+	{
+		ClearValue depthOptimizedClearValue = {};
+		depthOptimizedClearValue._format = BACK_BUFFER_FORMAT;
+
+		GpuTextureDesc desc = {};
+		desc._device = device;
+		desc._format = BACK_BUFFER_FORMAT;
+		desc._optimizedClearValue = &depthOptimizedClearValue;
+		desc._width = screenWidth;
+		desc._height = screenHeight;
+		desc._flags = RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		desc._initialState = RESOURCE_STATE_RENDER_TARGET;
+		_hdrTexture.initialize(desc);
+		_hdrTexture.setDebugName("Main View HDR");
+	}
+
+	// descriptors
+	{
+		_depthDsv = graphicsSystem->getDsvGpuDescriptorAllocator()->allocateDescriptors(1);
+		device->createDepthStencilView(_depthTexture.getResource(), _depthDsv._cpuHandle);
+
+		_hdrRtv = graphicsSystem->getRtvGpuDescriptorAllocator()->allocateDescriptors(1);
+		device->createRenderTargetView(_hdrTexture.getResource(), _hdrRtv._cpuHandle);
+
+		_hdrSrv = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator()->allocateDescriptors(1);
+		device->createShaderResourceView(_hdrTexture.getResource(), nullptr, _hdrSrv._cpuHandle);
+	}
+}
+
+void ViewInfo::terminate() {
+	_viewInfoBuffer.terminate();
+	_cullingViewInfoBuffer.terminate();
+	_depthPrePassViewInfoBuffer.terminate();
+	_depthTexture.terminate();
+	_hdrTexture.terminate();
+
+	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
+	// srv cbv uav
+	{
+		DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
+		allocator->discardDescriptor(_viewInfoCbv);
+		allocator->discardDescriptor(_cullingViewInfoCbv);
+		allocator->discardDescriptor(_depthPrePassViewInfoCbv);
+		allocator->discardDescriptor(_depthSrv);
+	}
+
+	// dsv rtv
+	{
+		graphicsSystem->getDsvGpuDescriptorAllocator()->discardDescriptor(_depthDsv);
+		graphicsSystem->getRtvGpuDescriptorAllocator()->discardDescriptor(_hdrRtv);
+		graphicsSystem->getSrvCbvUavGpuDescriptorAllocator()->discardDescriptor(_hdrSrv);
+	}
 }
