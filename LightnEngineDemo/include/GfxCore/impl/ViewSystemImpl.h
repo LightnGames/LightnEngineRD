@@ -9,13 +9,15 @@ struct ViewInfo {
 	static constexpr u32 FRUSTUM_PLANE_COUNT = 6;
 	ViewPort _viewPort;
 	Rect _scissorRect;
-	DescriptorHandle _cbvHandle;
-	DescriptorHandle _depthPrePassCbvHandle;
+	DescriptorHandle _viewInfoCbv;
+	DescriptorHandle _cullingViewInfoCbv;
+	DescriptorHandle _depthPrePassViewInfoCbv;
 	DescriptorHandle _depthSrv;
 	DescriptorHandle _depthDsv;
 	DescriptorHandle _hdrRtv;
 	DescriptorHandle _hdrSrv;
 	GpuBuffer _viewInfoBuffer;
+	GpuBuffer _cullingViewInfoBuffer;
 	GpuBuffer _depthPrePassViewInfoBuffer;
 	GpuTexture _hdrTexture;
 	GpuTexture _depthTexture;
@@ -23,6 +25,8 @@ struct ViewInfo {
 	f32 _farClip;
 	Matrix4 _viewMatrix;
 	Matrix4 _projectionMatrix;
+	Matrix4 _cullingViewMatrix;
+	Matrix4 _cullingProjectionMatrix;
 };
 
 struct ViewConstant {

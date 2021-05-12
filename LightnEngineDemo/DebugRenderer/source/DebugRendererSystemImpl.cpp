@@ -177,7 +177,7 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 		commandList->setGraphicsRootSignature(_rootSignature);
 		commandList->setPipelineState(_pipelineState);
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
-		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_cbvHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(1, _lineInstanceHandle._gpuHandle);
 		commandList->drawInstanced(2, instanceCount, 0, 0);
 
@@ -192,7 +192,7 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 		commandList->setGraphicsRootSignature(_rootSignature);
 		commandList->setPipelineState(_pipelineState);
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
-		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_cbvHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(1, _lineInstanceGpuSrv._gpuHandle);
 		commandList->executeIndirect(_commandSignature, 1, _lineInstanceIndirectArgumentBuffer.getResource(), 0, nullptr, 0);
 	}

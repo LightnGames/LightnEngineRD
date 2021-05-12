@@ -5,8 +5,9 @@
 ViewSystemImpl _viewSystem;
 
 void ViewSystemImpl::initialize() {
-	Device* device = GraphicsSystemImpl::Get()->getDevice();
-	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
+	Device* device = graphicsSystem->getDevice();
+	DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
 	Application* app = ApplicationSystem::Get()->getApplication();
 	u32 screenWidth = app->getScreenWidth();
 	u32 screenHeight = app->getScreenHeight();
@@ -29,14 +30,19 @@ void ViewSystemImpl::initialize() {
 		_mainView._viewInfoBuffer.initialize(desc);
 		_mainView._viewInfoBuffer.setDebugName("Main View Info");
 
-		_mainView._depthPrePassViewInfoBuffer.initialize(desc);
-		_mainView._depthPrePassViewInfoBuffer.setDebugName("Depth Prepass View Info");
+		_mainView._cullingViewInfoBuffer.initialize(desc);
+		_mainView._cullingViewInfoBuffer.setDebugName("Culling View Info");
 
-		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_mainView._cbvHandle = allocater->allocateDescriptors(1);
-		_mainView._depthPrePassCbvHandle = allocater->allocateDescriptors(1);
-		device->createConstantBufferView(_mainView._viewInfoBuffer.getConstantBufferViewDesc(), _mainView._cbvHandle._cpuHandle);
-		device->createConstantBufferView(_mainView._depthPrePassViewInfoBuffer.getConstantBufferViewDesc(), _mainView._depthPrePassCbvHandle._cpuHandle); 
+		_mainView._depthPrePassViewInfoBuffer.initialize(desc);
+		_mainView._depthPrePassViewInfoBuffer.setDebugName("Depth Pre Pass View Info");
+
+		DescriptorHeapAllocator* allocater = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
+		_mainView._viewInfoCbv = allocater->allocateDescriptors(1);
+		_mainView._cullingViewInfoCbv = allocater->allocateDescriptors(1);
+		_mainView._depthPrePassViewInfoCbv = allocater->allocateDescriptors(1);
+		device->createConstantBufferView(_mainView._viewInfoBuffer.getConstantBufferViewDesc(), _mainView._viewInfoCbv._cpuHandle);
+		device->createConstantBufferView(_mainView._cullingViewInfoBuffer.getConstantBufferViewDesc(), _mainView._cullingViewInfoCbv._cpuHandle);
+		device->createConstantBufferView(_mainView._depthPrePassViewInfoBuffer.getConstantBufferViewDesc(), _mainView._depthPrePassViewInfoCbv._cpuHandle); 
 	}
 
 	// depth stencil texture
@@ -85,32 +91,35 @@ void ViewSystemImpl::initialize() {
 
 	// descriptors
 	{
-		_mainView._depthDsv = GraphicsSystemImpl::Get()->getDsvGpuDescriptorAllocator()->allocateDescriptors(1);
+		_mainView._depthDsv = graphicsSystem->getDsvGpuDescriptorAllocator()->allocateDescriptors(1);
 		device->createDepthStencilView(_mainView._depthTexture.getResource(), _mainView._depthDsv._cpuHandle);
 
-		_mainView._hdrRtv = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->allocateDescriptors(1);
+		_mainView._hdrRtv = graphicsSystem->getRtvGpuDescriptorAllocator()->allocateDescriptors(1);
 		device->createRenderTargetView(_mainView._hdrTexture.getResource(), _mainView._hdrRtv._cpuHandle);
 	}
 }
 
 void ViewSystemImpl::terminate() {
 	_mainView._viewInfoBuffer.terminate();
+	_mainView._cullingViewInfoBuffer.terminate();
 	_mainView._depthPrePassViewInfoBuffer.terminate();
 	_mainView._depthTexture.terminate();
 	_mainView._hdrTexture.terminate();
 
+	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
 	// srv cbv uav
 	{
-		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		allocator->discardDescriptor(_mainView._cbvHandle);
-		allocator->discardDescriptor(_mainView._depthPrePassCbvHandle);
+		DescriptorHeapAllocator* allocator = graphicsSystem->getSrvCbvUavGpuDescriptorAllocator();
+		allocator->discardDescriptor(_mainView._viewInfoCbv);
+		allocator->discardDescriptor(_mainView._cullingViewInfoCbv);
+		allocator->discardDescriptor(_mainView._depthPrePassViewInfoCbv);
 		allocator->discardDescriptor(_mainView._depthSrv); 
 	}
 
 	// dsv rtv
 	{
-		GraphicsSystemImpl::Get()->getDsvGpuDescriptorAllocator()->discardDescriptor(_mainView._depthDsv);
-		GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->discardDescriptor(_mainView._hdrRtv);
+		graphicsSystem->getDsvGpuDescriptorAllocator()->discardDescriptor(_mainView._depthDsv);
+		graphicsSystem->getRtvGpuDescriptorAllocator()->discardDescriptor(_mainView._hdrRtv);
 	}
 }
 
@@ -222,6 +231,15 @@ void ViewSystemImpl::update() {
 	viewConstant->_frustumPlanes[3] = Float4(topNormal._x, topNormal._y, topNormal._z, Vector3::dot(topNormal, debug.position));
 	viewConstant->_frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, debug.position) + nearClip);
 	viewConstant->_frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - farClip);
+
+	ViewConstant* cullingViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._cullingViewInfoBuffer, 0);
+	memcpy(cullingViewConstant, viewConstant, sizeof(ViewConstant));
+	_mainView._cullingViewMatrix = viewMatrix;
+	_mainView._cullingProjectionMatrix = projectionMatrix;
+
+	//if (debug._cameraMode != 0) {
+	//	DebugRendererSystem::Get()->drawFrustum(viewMatrix, projectionMatrix, Color4::YELLOW);
+	//}
 
 	// デプスプリパス用ビュー定数バッファ更新
 	f32 depthPrePassFarClip = debug.depthPrePassDistance;

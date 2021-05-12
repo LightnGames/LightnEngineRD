@@ -26,7 +26,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Mesh Shader Pass");
 
 	_gpuCullingResource.resetResultBuffers(commandList);
-	setFixedDebugView(commandList, viewInfo);
 
 	// Lod level 計算
 	{
@@ -68,7 +67,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
-		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
+		context._cullingViewCbv = viewInfo->_depthPrePassViewInfoCbv._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
@@ -107,7 +106,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._viewInfo = viewInfo;
 		context._indirectArgumentResource = &_indirectArgumentResource;
 		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
-		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
+		context._debugFixedViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
@@ -136,7 +135,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandList = commandList;
 		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
-		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
+		context._cullingViewCbv = viewInfo->_viewInfoCbv._gpuHandle;
 		context._meshHandle = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
@@ -217,7 +216,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
 		context._instancingResource = &_primitiveInstancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
-		context._debugFixedViewCbv = _debugFixedViewConstantHandle._gpuHandle;
+		context._debugFixedViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
@@ -270,8 +269,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
-	setFixedDebugView(commandList, viewInfo);
-
 	// Lod level 計算
 	{
 		ComputeLodContext context = {};
@@ -291,7 +288,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
-		context._cullingViewCbv = viewInfo->_depthPrePassCbvHandle._gpuHandle;
+		context._cullingViewCbv = viewInfo->_depthPrePassViewInfoCbv._gpuHandle;
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
@@ -341,7 +338,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._commandList = commandList;
 		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
 		context._gpuCullingResource = &_gpuCullingResource;
-		context._cullingViewCbv = viewInfo->_cbvHandle._gpuHandle;
+		context._cullingViewCbv = viewInfo->_viewInfoCbv._gpuHandle;
 		context._meshSrv = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
@@ -464,7 +461,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 			commandList->setIndexBuffer(&indexBufferView);
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_cbvHandle._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
 
@@ -487,21 +484,6 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
 }
 
-void MeshRendererSystemImpl::setFixedDebugView(CommandList* commandList, ViewInfo* viewInfo) {
-	ResourceTransitionBarrier constantToCopy[2] = {};
-	constantToCopy[0] = _debugFixedViewConstantBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_DEST);
-	constantToCopy[1] = viewInfo->_viewInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
-	commandList->transitionBarriers(constantToCopy, LTN_COUNTOF(constantToCopy));
-	commandList->copyResource(_debugFixedViewConstantBuffer.getResource(), viewInfo->_viewInfoBuffer.getResource());
-
-	ResourceTransitionBarrier copyToConstant[2] = {};
-	copyToConstant[0] = _debugFixedViewConstantBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	copyToConstant[1] = viewInfo->_viewInfoBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	commandList->transitionBarriers(copyToConstant, LTN_COUNTOF(copyToConstant));
-
-	_debugFixedViewMatrix = viewInfo->_viewMatrix;
-	_debugFixedProjectionMatrix = viewInfo->_projectionMatrix;
-}
 void MeshRendererSystemImpl::debugDrawGpuCullingResult() {
 	constexpr char FORMAT1[] = "%7.3f%% ( %-6s/ %-6s)";
 	constexpr char FORMAT2[] = "%-12s";
@@ -824,23 +806,6 @@ void MeshRendererSystemImpl::initialize() {
 #endif
 	_gpuCullingResource.initialize();
 	_buildIndirectArgumentResource.initialize();
-
-	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-
-	// デバッグビュー固定用定数バッファ
-	{
-		GpuBufferDesc desc = {};
-		desc._sizeInByte = GetConstantBufferAligned(sizeof(ViewConstant));
-		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		desc._device = device;
-		_debugFixedViewConstantBuffer.initialize(desc);
-		_debugFixedViewConstantBuffer.setDebugName("Debug Fixed View Info");
-	}
-
-	{
-		_debugFixedViewConstantHandle = descriptorHeapAllocater->allocateDescriptors(1);
-		device->createConstantBufferView(_debugFixedViewConstantBuffer.getConstantBufferViewDesc(), _debugFixedViewConstantHandle._cpuHandle);
-	}
 }
 
 void MeshRendererSystemImpl::terminate() {
@@ -863,11 +828,6 @@ void MeshRendererSystemImpl::terminate() {
 	_multiDrawIndirectArgumentResource.terminate();
 	_multiDrawInstancingResource.terminate();
 #endif
-
-	_debugFixedViewConstantBuffer.terminate();
-
-	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_debugFixedViewConstantHandle);
 }
 
 void MeshRendererSystemImpl::update() {
@@ -933,10 +893,6 @@ void MeshRendererSystemImpl::update() {
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_FIXED_VIEW, fixedCullingView);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESH_CULLING, debug._passMeshInstanceCulling);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING, debug._passMeshletInstanceCulling);
-
-		if (fixedCullingView) {
-			DebugRendererSystem::Get()->drawFrustum(_debugFixedViewMatrix, _debugFixedProjectionMatrix, Color4::YELLOW);
-		}
 	}
 
 	{

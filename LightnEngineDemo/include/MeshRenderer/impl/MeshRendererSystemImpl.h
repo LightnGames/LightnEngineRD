@@ -35,7 +35,6 @@ private:
 	void renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 private:
-	void setFixedDebugView(CommandList * commandList, ViewInfo* viewInfo);
 	void debugDrawGpuCullingResult();
 	void debugDrawAmplificationCullingResult();
 
@@ -46,10 +45,6 @@ private:
 	MeshRenderer _meshRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
 	InstancingResource _primitiveInstancingResource;
-
-	s32 _initializedFixedView = BACK_BUFFER_COUNT;
-	GpuBuffer _debugFixedViewConstantBuffer;
-	DescriptorHandle _debugFixedViewConstantHandle;
 	IndirectArgumentResource _indirectArgumentResource;
 	IndirectArgumentResource _primIndirectArgumentResource;
 	GpuCullingResource _gpuCullingResource;
@@ -92,6 +87,4 @@ private:
 	GeometoryType _geometoryType;
 	DebugPrimitiveType _debugPrimitiveType;
 	u8 _cullingDebugFlags = CULLING_DEBUG_TYPE_NONE;
-	Matrix4 _debugFixedViewMatrix;
-	Matrix4 _debugFixedProjectionMatrix;
 };
