@@ -982,8 +982,6 @@ void MeshRendererSystemImpl::update() {
 			isUpdatedGeometryType = true;
 		}
 		_geometoryType = debug._geometoryMode;
-		bool fixedCullingView = false;
-		setDebugCullingFlag(CULLING_DEBUG_TYPE_FIXED_VIEW, fixedCullingView);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESH_CULLING, debug._passMeshInstanceCulling);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING, debug._passMeshletInstanceCulling);
 	}
@@ -1015,10 +1013,6 @@ void MeshRendererSystemImpl::update() {
 			}
 			if (DebugGui::BeginTabItem("Mesh Instances")) {
 				_scene.debugDrawGui();
-			}
-			if (DebugGui::BeginTabItem("Option")) {
-				DebugGui::Text("This is the Cucumber tab!\nblah blah blah blah blah");
-				DebugGui::EndTabItem();
 			}
 			DebugGui::EndTabBar();
 		}
