@@ -6,6 +6,8 @@
 #include <MeshRenderer/impl/MeshRenderer.h>
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 
+class PipelineStateGroup;
+class PipelineStateSet;
 struct MeshRenderDesc {
 	CommandList* _commandList = nullptr;
 };
@@ -28,14 +30,17 @@ public:
 private:
 #if ENABLE_MESH_SHADER
 	void renderMeshShader(CommandList* commandList, ViewInfo* viewInfo);
+	void renderMeshShaderDebugFixed(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 #if ENABLE_MULTI_INDIRECT_DRAW
 	void renderMultiIndirect(CommandList* commandList, ViewInfo* viewInfo);
+	void renderMultiIndirectDebugFixed(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 #if ENABLE_CLASSIC_VERTEX
 	void renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 private:
+	PipelineStateGroup** getPipelineStateGroup(PipelineStateSet* pipelineStateSet);
 	void setupDraw(CommandList* commandList, ViewInfo* viewInfo);
 	void debugDrawGpuCullingResult();
 	void debugDrawAmplificationCullingResult();
@@ -55,6 +60,8 @@ private:
 #if ENABLE_MULTI_INDIRECT_DRAW
 	MultiDrawInstancingResource _multiDrawInstancingResource;
 	IndirectArgumentResource _multiDrawIndirectArgumentResource;
+	VertexBufferView _vertexBufferViews[2] = {};
+	IndexBufferView _indexBufferView = {};
 #endif
 
 	enum GeometoryType {

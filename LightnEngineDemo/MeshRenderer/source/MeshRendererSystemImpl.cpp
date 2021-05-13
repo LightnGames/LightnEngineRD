@@ -166,38 +166,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
 		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateGroup** pipelineStates = nullptr;
-		PipelineStateGroup** msPipelineStates = nullptr;
-		switch (_debugPrimitiveType) {
-		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = pipelineStateSet->_pipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_pipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_MESHLET:
-			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugMeshletPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugLodLevelPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugOcclusionPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_DEPTH:
-			pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugDepthPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugTexcoordsPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
-			pipelineStates = pipelineStateSet->_debugWireFramePipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugWireFramePipelineStateGroups;
-			break;
-		}
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet);
 
 		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
 			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
@@ -229,41 +199,91 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	}
 
 	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Readback Culling Result");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Read back Culling Result");
 		_gpuCullingResource.readbackCullingResultBuffer(commandList);
+	}
+}
+void MeshRendererSystemImpl::renderMeshShaderDebugFixed(CommandList* commandList, ViewInfo* viewInfo) {
+	// GPUカリング
+	{
+		GpuCullingContext context = {};
+		context._commandList = commandList;
+		context._instancingResource = &_primitiveInstancingResource;
+		context._gpuCullingResource = &_gpuCullingResource;
+		context._cullingViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
+		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv();
+		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
+		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
+		context._scopeName = "Main Culling";
+		_meshRenderer.mainCulling(context);
+	}
+
+	// Build indirect argument
+	{
+		BuildIndirectArgumentContext context = {};
+		context._commandList = commandList;
+		context._indirectArgumentResource = &_indirectArgumentResource;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
+		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
+		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
+		context._subMeshSrv = _resourceManager.getSubMeshSrv();
+		context._buildResource = &_buildIndirectArgumentResource;
+		_meshRenderer.buildIndirectArgument(context);
+	}
+
+	// 描画
+	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
+		commandList->setViewports(1, &viewInfo->_viewPort);
+		commandList->setScissorRects(1, &viewInfo->_scissorRect);
+
+		MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
+		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet);
+
+		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
+			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
+		}
+
+		LTN_ASSERT(pipelineStates != nullptr);
+		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
+
+		RenderContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._indirectArgumentResource = &_indirectArgumentResource;
+		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
+		context._instancingResource = &_primitiveInstancingResource;
+		context._gpuCullingResource = &_gpuCullingResource;
+		context._debugFixedViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
+		context._pipelineStates = pipelineStates;
+		context._primInstancingPipelineStates = msPipelineStates;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
+		context._scene = &_scene;
+		context._collectResult = false;
+		_meshRenderer.render(context);
+
+		_gpuCullingResource.resourceBarriersHizSrvToTexture(commandList);
 	}
 }
 #endif
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewInfo* viewInfo) {
-	GpuDescriptorHandle meshInstanceHandle = _scene.getMeshInstanceSrv();
-	GpuDescriptorHandle meshHandle = _resourceManager.getMeshSrv();
-	u32 meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
-	u32 pipelineStateResourceCount = materialSystem->getShaderSetCount();
-
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
 
-	GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
-	GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
-	GpuBuffer* indexBuffer = _resourceManager.getClassicIndexBuffer();
-
-	VertexBufferView vertexBufferViews[2] = {};
-	vertexBufferViews[0]._bufferLocation = vertexPositionBuffer->getGpuVirtualAddress();
-	vertexBufferViews[0]._sizeInBytes = vertexPositionBuffer->getSizeInByte();
-	vertexBufferViews[0]._strideInBytes = sizeof(Vector3);
-
-	vertexBufferViews[1]._bufferLocation = vertexTexcoordBuffer->getGpuVirtualAddress();
-	vertexBufferViews[1]._sizeInBytes = vertexTexcoordBuffer->getSizeInByte();
-	vertexBufferViews[1]._strideInBytes = sizeof(u32);
-
-	IndexBufferView indexBufferView = {};
-	indexBufferView._bufferLocation = indexBuffer->getGpuVirtualAddress();
-	indexBufferView._sizeInBytes = indexBuffer->getSizeInByte();
-	indexBufferView._format = FORMAT_R32_UINT;
-
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	_gpuCullingResource.resetResultBuffers(commandList);
 
 	// Lod level 計算
@@ -300,7 +320,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	// デプスプリパス
 	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Prepass");
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Depth Pre Pass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		MultiIndirectRenderContext context = {};
@@ -314,9 +334,9 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._vertexBufferViews = vertexBufferViews;
-		context._indexBufferView = &indexBufferView;
-		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
+		context._vertexBufferViews = _vertexBufferViews;
+		context._indexBufferView = &_indexBufferView;
+		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
 		_meshRenderer.multiDrawRender(context);
 	}
 
@@ -353,27 +373,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
-		PipelineStateGroup** pipelineStates = nullptr;
-		switch (_debugPrimitiveType) {
-		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = pipelineStateSet->_pipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_MESHLET:
-			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_DEPTH:
-			pipelineStates = pipelineStateSet->_debugDepthPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
-			break;
-		}
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
 
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
@@ -386,13 +386,60 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStateSet->_pipelineStateGroups;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._vertexBufferViews = vertexBufferViews;
-		context._indexBufferView = &indexBufferView;
-		context._numVertexBufferView = LTN_COUNTOF(vertexBufferViews);
+		context._vertexBufferViews = _vertexBufferViews;
+		context._indexBufferView = &_indexBufferView;
+		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
 		_meshRenderer.multiDrawRender(context);
 	}
 
 	_gpuCullingResource.readbackCullingResultBuffer(commandList);
+}
+void MeshRendererSystemImpl::renderMultiIndirectDebugFixed(CommandList* commandList, ViewInfo* viewInfo) {
+	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::RED, "Multi Draw Pass");
+
+	// GPUカリング
+	{
+		MultiDrawGpuCullingContext context = {};
+		context._commandList = commandList;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
+		context._gpuCullingResource = &_gpuCullingResource;
+		context._cullingViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv();
+		context._indirectArgumentOffsetSrv = _multiDrawInstancingResource.getIndirectArgumentOffsetSrv();
+		context._subMeshDrawInfoHandle = _resourceManager.getSubMeshDrawInfoSrv();
+		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
+		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
+		context._scopeName = "Main Culling";
+		_meshRenderer.multiDrawMainCulling(context);
+	}
+
+	// 描画
+	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
+
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+
+		MultiIndirectRenderContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._indirectArgumentResource = &_multiDrawIndirectArgumentResource;
+		context._gpuCullingResource = &_gpuCullingResource;
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
+		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._pipelineStates = pipelineStateSet->_pipelineStateGroups;
+		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._vertexBufferViews = _vertexBufferViews;
+		context._indexBufferView = &_indexBufferView;
+		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
+		_meshRenderer.multiDrawRender(context);
+	}
 }
 #endif
 
@@ -479,6 +526,24 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 	toNonPixelShaderResourceBarriers[2] = indexBuffer->getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	toNonPixelShaderResourceBarriers[3] = viewInfo->_depthTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
+}
+
+PipelineStateGroup** MeshRendererSystemImpl::getPipelineStateGroup(PipelineStateSet* pipelineStateSet) {
+	switch (_debugPrimitiveType) {
+	case DEBUG_PRIMITIVE_TYPE_DEFAULT:
+		return pipelineStateSet->_pipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_MESHLET:
+		return pipelineStateSet->_debugMeshletPipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
+		return pipelineStateSet->_debugLodLevelPipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
+		return pipelineStateSet->_debugOcclusionPipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_DEPTH:
+		return pipelineStateSet->_debugDepthPipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
+		return pipelineStateSet->_debugTexcoordsPipelineStateGroups;
+	}
+	return nullptr;
 }
 
 void MeshRendererSystemImpl::setupDraw(CommandList* commandList, ViewInfo* viewInfo) {
@@ -815,6 +880,25 @@ void MeshRendererSystemImpl::initialize() {
 #endif
 	_gpuCullingResource.initialize();
 	_buildIndirectArgumentResource.initialize();
+
+	// 頂点バッファ・インデックスバッファ初期化
+	{
+		GpuBuffer* vertexPositionBuffer = _resourceManager.getPositionVertexBuffer();
+		GpuBuffer* vertexTexcoordBuffer = _resourceManager.getTexcoordVertexBuffer();
+		GpuBuffer* indexBuffer = _resourceManager.getClassicIndexBuffer();
+
+		_vertexBufferViews[0]._bufferLocation = vertexPositionBuffer->getGpuVirtualAddress();
+		_vertexBufferViews[0]._sizeInBytes = vertexPositionBuffer->getSizeInByte();
+		_vertexBufferViews[0]._strideInBytes = sizeof(Vector3);
+
+		_vertexBufferViews[1]._bufferLocation = vertexTexcoordBuffer->getGpuVirtualAddress();
+		_vertexBufferViews[1]._sizeInBytes = vertexTexcoordBuffer->getSizeInByte();
+		_vertexBufferViews[1]._strideInBytes = sizeof(u32);
+
+		_indexBufferView._bufferLocation = indexBuffer->getGpuVirtualAddress();
+		_indexBufferView._sizeInBytes = indexBuffer->getSizeInByte();
+		_indexBufferView._format = FORMAT_R32_UINT;
+	}
 }
 
 void MeshRendererSystemImpl::terminate() {
@@ -1006,109 +1090,23 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 }
 
 void MeshRendererSystemImpl::renderDebugFixed(CommandList* commandList, ViewInfo* viewInfo) {
+	if (!_visible) {
+		return;
+	}
+
 	setupDraw(commandList, viewInfo);
 
-	// GPUカリング
-	{
-		GpuCullingContext context = {};
-		context._commandList = commandList;
-		context._instancingResource = &_primitiveInstancingResource;
-		context._gpuCullingResource = &_gpuCullingResource;
-		context._cullingViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshSrv();
-		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
-		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
-		context._sceneConstantCbv = _scene.getSceneCbv();
-		context._indirectArgumentOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._subMeshDrawInfoSrv = _resourceManager.getSubMeshDrawInfoSrv();
-		context._materialInstanceIndexSrv = _vramShaderSetSystem.getMaterialInstanceIndexSrv()._gpuHandle;
-		context._passCulling = _cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESH_CULLING;
-		context._scopeName = "Main Culling";
-		_meshRenderer.mainCulling(context);
-	}
-
-	// Build indirect argument
-	{
-		BuildIndirectArgumentContext context = {};
-		context._commandList = commandList;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
-		context._meshletInstanceCountSrv = _primitiveInstancingResource.getInfoCountSrv();
-		context._meshletInstanceOffsetSrv = _primitiveInstancingResource.getInfoOffsetSrv();
-		context._subMeshSrv = _resourceManager.getSubMeshSrv();
-		context._buildResource = &_buildIndirectArgumentResource;
-		_meshRenderer.buildIndirectArgument(context);
-	}
-
-	// 描画
-	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
-		commandList->setViewports(1, &viewInfo->_viewPort);
-		commandList->setScissorRects(1, &viewInfo->_scissorRect);
-
-		MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
-		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateGroup** pipelineStates = nullptr;
-		PipelineStateGroup** msPipelineStates = nullptr;
-		switch (_debugPrimitiveType) {
-		case DEBUG_PRIMITIVE_TYPE_DEFAULT:
-			pipelineStates = pipelineStateSet->_pipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_pipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_MESHLET:
-			pipelineStates = pipelineStateSet->_debugMeshletPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugMeshletPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-			pipelineStates = pipelineStateSet->_debugLodLevelPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugLodLevelPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-			pipelineStates = pipelineStateSet->_debugOcclusionPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugOcclusionPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_DEPTH:
-			pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugDepthPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-			pipelineStates = pipelineStateSet->_debugTexcoordsPipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugTexcoordsPipelineStateGroups;
-			break;
-		case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
-			pipelineStates = pipelineStateSet->_debugWireFramePipelineStateGroups;
-			msPipelineStates = primPipelineStateSet->_debugWireFramePipelineStateGroups;
-			break;
-		}
-
-		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
-			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
-		}
-
-		LTN_ASSERT(pipelineStates != nullptr);
-		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
-
-		RenderContext context = {};
-		context._commandList = commandList;
-		context._viewInfo = viewInfo;
-		context._indirectArgumentResource = &_indirectArgumentResource;
-		context._primIndirectArgumentResource = &_primIndirectArgumentResource;
-		context._instancingResource = &_primitiveInstancingResource;
-		context._gpuCullingResource = &_gpuCullingResource;
-		context._debugFixedViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
-		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
-		context._meshSrv = _resourceManager.getMeshSrv();
-		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
-		context._pipelineStates = pipelineStates;
-		context._primInstancingPipelineStates = msPipelineStates;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
-		context._scene = &_scene;
-		context._collectResult = false;
-		_meshRenderer.render(context);
-
-		_gpuCullingResource.resourceBarriersHizSrvToTexture(commandList);
+	switch (_geometoryType) {
+#if ENABLE_MESH_SHADER
+	case GEOMETORY_MODE_MESH_SHADER:
+		renderMeshShaderDebugFixed(commandList, viewInfo);
+		break;
+#endif
+#if ENABLE_MULTI_INDIRECT_DRAW
+	case GEOMETORY_MODE_MULTI_INDIRECT:
+		renderMultiIndirectDebugFixed(commandList, viewInfo);
+		break;
+#endif
 	}
 }
 
