@@ -556,7 +556,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		CommandSignatureDesc desc = {};
 		desc._device = device;
-		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgumentMS);
+		desc._byteStride = sizeof(gpu::DispatchMeshIndirectArgument);
 
 		desc._argumentDescs = argumentDescs;
 		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);

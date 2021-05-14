@@ -1,5 +1,6 @@
 #include <MeshRenderer/impl/MeshResourceManager.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 #include <DebugRenderer/DebugRendererSystem.h>
 
 void MeshResourceManager::initialize() {
@@ -141,6 +142,7 @@ void MeshResourceManager::initialize() {
 }
 
 void MeshResourceManager::update() {
+	DEBUG_MARKER_CPU_SCOPED_EVENT("MeshResourceUpdate");
 	u32 meshCount = _meshes.getArrayCountMax();
 	for (u32 meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
 		if (_assetStateFlags[meshIndex] == ASSET_STATE_REQUEST_LOAD) {

@@ -4,6 +4,7 @@
 #include <MaterialSystem/MaterialSystem.h>
 #include <MaterialSystem/impl/PipelineStateSystem.h>
 #include <GfxCore/impl/ViewSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 #include <Core/Application.h>
 #include <MaterialSystem/impl/MaterialSystemImpl.h>
 
@@ -101,6 +102,7 @@ void Scene::initialize() {
 }
 
 void Scene::update() {
+	DEBUG_MARKER_CPU_SCOPED_EVENT("SceneUpdate");
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
@@ -798,7 +800,8 @@ void InstancingResource::update(const UpdateDesc& desc) {
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 offsetUpdateStart = 0;
 	u32 countMax = desc._countMax;
-	u32 infoCounts[INDIRECT_ARGUMENT_COUNTER_COUNT_MAX] = {};
+	bool* packMeshletFilterFlgas = new bool[INSTANCING_PER_SHADER_COUNT_MAX];
+	u16* infoCounts = new u16[INDIRECT_ARGUMENT_COUNTER_COUNT_MAX]();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
@@ -812,16 +815,38 @@ void InstancingResource::update(const UpdateDesc& desc) {
 			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 			u32 shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
 			++infoCounts[shaderSetOffset + subMeshGlobalIndex];
+			packMeshletFilterFlgas[subMeshGlobalIndex] = subMesh->_meshletCount < desc._meshletThresholdUseAmplificationShader;
 		}
+	}
+
+	for (u32 shaderSetIndex = 0; shaderSetIndex < gpu::SHADER_SET_COUNT_MAX; ++shaderSetIndex) {
+		u32 shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
+		u16 asMsIndirectArgumentCount = 0;
+		u16 msIndirectArgumentCount = 0;
+		for (u32 i = 0; i < INSTANCING_PER_SHADER_COUNT_MAX; ++i) {
+			if (packMeshletFilterFlgas[i]) {
+				msIndirectArgumentCount += infoCounts[shaderSetOffset + i] > 0 ? 1 : 0;
+				continue;
+			}
+			asMsIndirectArgumentCount += infoCounts[shaderSetOffset + i] > 0 ? 1 : 0;
+		}
+		_msIndirectArgumentCounts[shaderSetIndex] = msIndirectArgumentCount;
+		_asMsIndirectArgumentCounts[shaderSetIndex] = asMsIndirectArgumentCount;
+	}
+
+	u32* infoOffsets = new u32[INDIRECT_ARGUMENT_COUNTER_COUNT_MAX]();
+	for (u32 i = 1; i < INDIRECT_ARGUMENT_COUNTER_COUNT_MAX; ++i) {
+		u32 prevIndex = i - 1;
+		infoOffsets[i] = infoOffsets[prevIndex] + infoCounts[prevIndex];
 	}
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	u32* mapOffsets = vramUpdater->enqueueUpdate<u32>(&_infoOffsetBuffer, 0, INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
-	memset(mapOffsets, 0, sizeof(u32) * INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
-	for (u32 i = 1; i < INDIRECT_ARGUMENT_COUNTER_COUNT_MAX; ++i) {
-		u32 prevIndex = i - 1;
-		mapOffsets[i] = mapOffsets[prevIndex] + infoCounts[prevIndex];
-	}
+	memcpy(mapOffsets, infoOffsets, sizeof(u32)*INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
+
+	delete[] infoCounts;
+	delete[] infoOffsets;
+	delete[] packMeshletFilterFlgas;
 }
 
 void InstancingResource::resetInfoCountBuffers(CommandList* commandList) {
@@ -1061,14 +1086,15 @@ void GpuCullingResource::update(const ViewInfo* viewInfo) {
 	DebugGui::Columns(1);
 	DebugWindow::End();
 
+	const ViewConstantInfo& viewConstantInfo = viewInfo->_mainViewConstantInfo;
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	Application* app = ApplicationSystem::Get()->getApplication();
 	{
 		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&_hizInfoConstantBuffer[0], 0);
 		mapConstant->_inputDepthWidth = app->getScreenWidth();
 		mapConstant->_inputDepthHeight = app->getScreenHeight();
-		mapConstant->_nearClip = viewInfo->_nearClip;
-		mapConstant->_farClip = viewInfo->_farClip;
+		mapConstant->_nearClip = viewConstantInfo._nearClip;
+		mapConstant->_farClip = viewConstantInfo._farClip;
 		mapConstant->_inputBitDepth = UINT32_MAX;
 	}
 
@@ -1077,8 +1103,8 @@ void GpuCullingResource::update(const ViewInfo* viewInfo) {
 		HizInfoConstant* mapConstant = vramUpdater->enqueueUpdate<HizInfoConstant>(&_hizInfoConstantBuffer[1], 0);
 		mapConstant->_inputDepthWidth = static_cast<u32>(hizLevel3Desc._width);
 		mapConstant->_inputDepthHeight = static_cast<u32>(hizLevel3Desc._height);
-		mapConstant->_nearClip = viewInfo->_nearClip;
-		mapConstant->_farClip = viewInfo->_farClip;
+		mapConstant->_nearClip = viewConstantInfo._nearClip;
+		mapConstant->_farClip = viewConstantInfo._farClip;
 		mapConstant->_inputBitDepth = UINT16_MAX;
 	}
 }

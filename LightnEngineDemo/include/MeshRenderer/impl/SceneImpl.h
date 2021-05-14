@@ -244,6 +244,7 @@ public:
 
 	struct UpdateDesc {
 		MeshInstanceImpl* _meshInstances = nullptr;
+		u32 _meshletThresholdUseAmplificationShader = 0;
 		u32 _countMax = 0;
 	};
 
@@ -255,6 +256,8 @@ public:
 	void resourceBarriersGpuCullingToUAV(CommandList* commandList);
 	void resetResourceGpuCullingBarriers(CommandList* commandList);
 
+	const u16* getMsIndirectArgumentCounts() const { return _msIndirectArgumentCounts; }
+	const u16* getAsMsIndirectArgumentCounts() const { return _asMsIndirectArgumentCounts; }
 	GpuDescriptorHandle getInfoOffsetSrv() const { return _infoOffsetSrv._gpuHandle; }
 	GpuDescriptorHandle getInfoCountUav() const { return _infoCountUav._gpuHandle; }
 	GpuDescriptorHandle getInfoCountSrv() const { return _infoCountSrv._gpuHandle; }
@@ -276,6 +279,8 @@ private:
 	DescriptorHandle _primitiveInfoSrv;
 	DescriptorHandle _primitiveInfoMeshInstanceIndexUav;
 	DescriptorHandle _primitiveInfoMeshInstanceIndexSrv;
+	u16 _msIndirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
+	u16 _asMsIndirectArgumentCounts[gpu::SHADER_SET_COUNT_MAX] = {};
 };
 
 #if ENABLE_MULTI_INDIRECT_DRAW

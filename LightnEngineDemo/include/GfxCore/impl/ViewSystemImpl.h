@@ -5,8 +5,16 @@
 #include <GfxCore/impl/DescriptorHeap.h>
 #include <GfxCore/impl/GpuResourceImpl.h>
 
+constexpr u32 FRUSTUM_PLANE_COUNT = 6;
+struct ViewConstantInfo {
+	Matrix4 _viewMatrix;
+	Matrix4 _projectionMatrix;
+	Vector4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
+	f32 _nearClip;
+	f32 _farClip;
+};
+
 struct ViewInfo {
-	static constexpr u32 FRUSTUM_PLANE_COUNT = 6;
 	void initialize();
 	void terminate();
 
@@ -24,12 +32,8 @@ struct ViewInfo {
 	GpuBuffer _depthPrePassViewInfoBuffer;
 	GpuTexture _hdrTexture;
 	GpuTexture _depthTexture;
-	f32 _nearClip;
-	f32 _farClip;
-	Matrix4 _viewMatrix;
-	Matrix4 _projectionMatrix;
-	Matrix4 _cullingViewMatrix;
-	Matrix4 _cullingProjectionMatrix;
+	ViewConstantInfo _mainViewConstantInfo;
+	ViewConstantInfo _cullingViewConstantInfo;
 };
 
 struct ViewConstant {
@@ -46,7 +50,7 @@ struct ViewConstant {
 	u32 _padding2[2];
 	Float3 _upDirection;
 	u32 _padding4;
-	Float4 _frustumPlanes[ViewInfo::FRUSTUM_PLANE_COUNT];
+	Float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
 };
 
 class LTN_GFX_CORE_API ViewSystemImpl {

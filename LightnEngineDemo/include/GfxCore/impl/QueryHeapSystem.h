@@ -97,6 +97,26 @@ private:
 	char _name[DebugMarker::SET_NAME_LENGTH_COUNT_MAX] = {};
 };
 
+class LTN_GFX_CORE_API CpuScopedEvent {
+public:
+	CpuScopedEvent(const char* name, ...) {
+		va_list va;
+		va_start(va, name);
+		vsprintf_s(_name, name, va);
+		va_end(va);
+
+		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
+	}
+	~CpuScopedEvent() {
+		QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		queryHeapSystem->popCpuMarker(_cpuTickIndex);
+	}
+private:
+	u32 _cpuTickIndex = 0;
+	char _name[DebugMarker::SET_NAME_LENGTH_COUNT_MAX] = {};
+};
+
 class LTN_GFX_CORE_API CpuGpuScopedEvent {
 public:
 	CpuGpuScopedEvent(CommandList* commandList, const Color4& color, const char* name, ...) {
@@ -124,5 +144,6 @@ private:
 	char _name[DebugMarker::SET_NAME_LENGTH_COUNT_MAX] = {};
 };
 
+#define DEBUG_MARKER_CPU_SCOPED_EVENT(...) CpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
 #define DEBUG_MARKER_GPU_SCOPED_EVENT(...) GpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
 #define DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(...) CpuGpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)

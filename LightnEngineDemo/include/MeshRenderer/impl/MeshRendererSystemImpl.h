@@ -51,7 +51,7 @@ private:
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
-	InstancingResource _primitiveInstancingResource;
+	InstancingResource _instancingResource;
 	IndirectArgumentResource _indirectArgumentResource;
 	IndirectArgumentResource _primIndirectArgumentResource;
 	GpuCullingResource _gpuCullingResource;
@@ -92,7 +92,7 @@ private:
 
 	u32 _packedMeshletCount = 0;
 	bool _debugDrawMeshletBounds = false;
-	GeometoryType _geometoryType;
+	GeometoryType _geometryType;
 	DebugPrimitiveType _debugPrimitiveType;
 	u8 _cullingDebugFlags = CULLING_DEBUG_TYPE_NONE;
 };

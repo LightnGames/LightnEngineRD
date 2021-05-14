@@ -124,6 +124,13 @@ void ViewSystemImpl::update() {
 	viewConstant._frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, debug.position) + nearClip);
 	viewConstant._frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - farClip);
 
+	// CPU 側で参照する用の定数バッファ情報
+	ViewConstantInfo viewConstantInfo;
+	viewConstantInfo._nearClip = nearClip;
+	viewConstantInfo._farClip = farClip;
+	viewConstantInfo._viewMatrix = viewMatrix;
+	viewConstantInfo._projectionMatrix = projectionMatrix;
+
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	if (debug._cameraMode == CAMERA_MODE_CULL || debug._cameraMode == CAMERA_MODE_DEFAULT) {
 		ViewConstant* debugFixedViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_debugFixedView._viewInfoBuffer, 0);
@@ -135,25 +142,16 @@ void ViewSystemImpl::update() {
 		ViewConstant* cullingViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._cullingViewInfoBuffer, 0);
 		memcpy(cullingViewConstant, &viewConstant, sizeof(ViewConstant));
 
-		_debugFixedView._nearClip = nearClip;
-		_debugFixedView._farClip = farClip;
-		_debugFixedView._viewMatrix = viewMatrix;
-		_debugFixedView._projectionMatrix = projectionMatrix;
-		_debugFixedView._cullingViewMatrix = viewMatrix;
-		_debugFixedView._cullingProjectionMatrix = projectionMatrix;
-
-		_mainView._cullingViewMatrix = viewMatrix;
-		_mainView._cullingProjectionMatrix = projectionMatrix;
+		_debugFixedView._mainViewConstantInfo = viewConstantInfo;
+		_debugFixedView._cullingViewConstantInfo = viewConstantInfo;
+		_mainView._cullingViewConstantInfo = viewConstantInfo;
 	}
 
 	if (debug._cameraMode == CAMERA_MODE_MAIN || debug._cameraMode == CAMERA_MODE_DEFAULT) {
 		ViewConstant* mainViewConstant = vramUpdater->enqueueUpdate<ViewConstant>(&_mainView._viewInfoBuffer, 0);
 		memcpy(mainViewConstant, &viewConstant, sizeof(ViewConstant));
 
-		_mainView._nearClip = nearClip;
-		_mainView._farClip = farClip;
-		_mainView._viewMatrix = viewMatrix;
-		_mainView._projectionMatrix = projectionMatrix;
+		_mainView._mainViewConstantInfo = viewConstantInfo;
 	}
 
 	// デプスプリパス用ビュー定数バッファ更新

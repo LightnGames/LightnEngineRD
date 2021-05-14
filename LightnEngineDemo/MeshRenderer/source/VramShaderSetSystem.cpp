@@ -1,5 +1,6 @@
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
+#include <GfxCore/impl/QueryHeapSystem.h>
 #include <MeshRenderer/GpuStruct.h>
 #include <MaterialSystem/impl/PipelineStateSystem.h>
 #include <MaterialSystem/impl/MaterialSystemImpl.h>
@@ -30,6 +31,7 @@ void VramShaderSetSystem::initialize() {
 }
 
 void VramShaderSetSystem::update() {
+	DEBUG_MARKER_CPU_SCOPED_EVENT("VramUpdate");
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	MaterialImpl* materials = materialSystem->getMaterial();

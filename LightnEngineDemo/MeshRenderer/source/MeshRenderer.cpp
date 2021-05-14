@@ -330,6 +330,8 @@ void MeshRenderer::render(const RenderContext& context) const {
 	QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
+	const u16* msIndirectArgumentCounts = context._instancingResource->getMsIndirectArgumentCounts();
+	const u16* asMsIndirectArgumentCounts = context._instancingResource->getAsMsIndirectArgumentCounts();
 	u32 shaderSetCount = materialSystem->getShaderSetCount();
 	for (u32 pipelineStateIndex = 0; pipelineStateIndex < shaderSetCount; ++pipelineStateIndex) {
 		if (context._pipelineStates[pipelineStateIndex] == nullptr) {
@@ -337,15 +339,19 @@ void MeshRenderer::render(const RenderContext& context) const {
 		}
 
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shader %d", pipelineStateIndex);
+		u32 asMsCommandCountMax = static_cast<u16>(asMsIndirectArgumentCounts[pipelineStateIndex]);
+		u32 msCommandCountMax = static_cast<u16>(msIndirectArgumentCounts[pipelineStateIndex]);
+		if (asMsCommandCountMax + msCommandCountMax == 0) {
+			continue;
+		}
 
 		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
-		u32 commandCountMax = InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		u32 indirectArgumentOffset = pipelineStateIndex * InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
-		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgumentMS);
+		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::DispatchMeshIndirectArgument);
 
 		// メッシュシェーダー + 増幅シェーダー
-		{
+		if (asMsCommandCountMax > 0) {
 			PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
@@ -366,11 +372,11 @@ void MeshRenderer::render(const RenderContext& context) const {
 			}
 
 			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
-			indirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+			indirectArgumentResource->executeIndirect(commandList, commandSignature, asMsCommandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
 		// メッシュシェーダー
-		{
+		if (msCommandCountMax > 0) {
 			PipelineStateGroup* pipelineState = context._primInstancingPipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
@@ -389,7 +395,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
 
 			CommandSignature* commandSignature = context._primCommandSignatures[pipelineStateIndex];
-			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, commandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
+			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, msCommandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 	}
 }
