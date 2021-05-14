@@ -35,7 +35,6 @@ void ViewSystemImpl::update() {
 	DebugGui::Combo("Camera Mode", reinterpret_cast<s32*>(&debug._cameraMode), cameraModes, LTN_COUNTOF(cameraModes));
 
 	DebugWindow::DragFloat3("position", &debug.position._x, 0.1f);
-	DebugWindow::SliderAngle("rotation", &debug.cameraAngle._y);
 	DebugWindow::SliderAngle("fov", &debug.fov, 0.1f);
 	DebugWindow::End();
 

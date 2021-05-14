@@ -138,6 +138,7 @@
       <PreprocessorDefinitions>LTN_MATERIAL_SYSTEM_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)GfxCore\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

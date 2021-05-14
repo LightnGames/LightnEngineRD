@@ -31,7 +31,6 @@ void VramShaderSetSystem::initialize() {
 }
 
 void VramShaderSetSystem::update() {
-	DEBUG_MARKER_CPU_SCOPED_EVENT("VramUpdate");
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	MaterialImpl* materials = materialSystem->getMaterial();

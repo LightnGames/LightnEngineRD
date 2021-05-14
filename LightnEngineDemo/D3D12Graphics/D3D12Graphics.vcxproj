@@ -145,6 +145,7 @@ copy /Y $(SolutionDir)D3D12Graphics\third_party\pix\WinPixEventRuntime.lib $(Sol
       <PreprocessorDefinitions>LTN_GFX_API_EXPORT;USE_PIX;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)GfxCore\include;$(SolutionDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

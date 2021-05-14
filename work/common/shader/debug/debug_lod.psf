@@ -23,6 +23,6 @@ float4 main(VertexOut input) : SV_TARGET {
         lodPersentage = currentLodLevel / (float) (mesh._lodMeshCount - 1);
     }
     
-   float3 diffuseColor = heatMap(lodPersentage) * 0.5f; 
+    float3 diffuseColor = lerp(heatMap(lodPersentage), float3(1, 1, 1), 0.2);
     return float4(diffuseColor, 1.0);
 }

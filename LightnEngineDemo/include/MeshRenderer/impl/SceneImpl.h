@@ -194,7 +194,7 @@ public:
 	void terminate();
 	void update(const ViewInfo* viewInfo);
 
-	DescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv; }
+	GpuDescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv._gpuHandle; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
 	const gpu::GpuCullingResult* getGpuCullingResult() const;
 	const gpu::AmplificationCullingResult* getAmplificationCullingResult() const;

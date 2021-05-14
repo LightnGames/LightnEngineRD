@@ -2,9 +2,9 @@
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/ViewSystemImpl.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
-#include <DebugRenderer/impl/DebugRendererSystemImpl.h>
 #include <MaterialSystem/impl/MaterialSystemImpl.h>
 #include <TextureSystem/impl/TextureSystemImpl.h>
+#include <DebugRenderer/impl/DebugRendererSystemImpl.h>
 
 MeshRendererSystemImpl _meshRendererSystem;
 
@@ -37,27 +37,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_meshRenderer.computeLod(context);
 	}
 
-	// メッシュレットバウンディング　デバッグ表示
-	if (_debugDrawMeshletBounds) {
-		//DEBUG_MARKER_SCOPED_EVENT(commandList, Color4::YELLOW, "Debug Meshlet Bounds");
-
-		//DebugRendererSystemImpl* debugSystem = DebugRendererSystemImpl::Get();
-		//commandList->setComputeRootSignature(_debugMeshletBoundsRootSignature);
-		//commandList->setPipelineState(_debugMeshletBoundsPipelineState);
-
-		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_SCENE_INFO, _cullingSceneConstantHandle._gpuHandle);
-		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH, meshHandle);
-		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_MESH_INSTANCE, meshInstanceHandle);
-		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_LOD_LEVEL, _view.getCurrentLodLevelSrv()._gpuHandle);
-		//commandList->setComputeRootDescriptorTable(ROOT_PARAM_DEBUG_MESHLET_INDIRECT_ARGUMENT, debugSystem->getLineGpuUavHandle()._gpuHandle);
-
-		//u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
-		//commandList->dispatch(dispatchCount, 1, 1);
-
-		//queryHeapSystem->setCurrentMarkerName("Debug Meshlet Bounds");
-		//queryHeapSystem->setMarker(commandList);
-	}
-
 	// デプスプリパス用　GPUカリング
 	{
 		GpuCullingContext context = {};
@@ -65,7 +44,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._instancingResource = &_instancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_depthPrePassViewInfoCbv._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshSrv = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv();
@@ -133,7 +112,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._instancingResource = &_instancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshSrv = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv();
@@ -211,7 +190,7 @@ void MeshRendererSystemImpl::renderMeshShaderDebugFixed(CommandList* commandList
 		context._instancingResource = &_instancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._cullingViewCbv = viewInfo->_cullingViewInfoCbv._gpuHandle;
-		context._meshHandle = _resourceManager.getMeshSrv();
+		context._meshSrv = _resourceManager.getMeshSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv();
@@ -458,20 +437,6 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 	toVertexBarriers[3] = viewInfo->_depthTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_WRITE);
 	commandList->transitionBarriers(toVertexBarriers, LTN_COUNTOF(toVertexBarriers));
 
-	VertexBufferView vertexBufferViews[2] = {};
-	vertexBufferViews[0]._bufferLocation = vertexPositionBuffer->getGpuVirtualAddress();
-	vertexBufferViews[0]._sizeInBytes = vertexPositionBuffer->getSizeInByte();
-	vertexBufferViews[0]._strideInBytes = sizeof(Vector3);
-
-	vertexBufferViews[1]._bufferLocation = vertexTexcoordBuffer->getGpuVirtualAddress();
-	vertexBufferViews[1]._sizeInBytes = vertexTexcoordBuffer->getSizeInByte();
-	vertexBufferViews[1]._strideInBytes = sizeof(u32);
-
-	IndexBufferView indexBufferView = {};
-	indexBufferView._bufferLocation = indexBuffer->getGpuVirtualAddress();
-	indexBufferView._sizeInBytes = indexBuffer->getSizeInByte();
-	indexBufferView._format = FORMAT_R32_UINT;
-
 	commandList->setViewports(1, &viewInfo->_viewPort);
 	commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
@@ -501,8 +466,8 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 			VramShaderSet* vramShaderSet = _vramShaderSetSystem.getShaderSet(shaderSetIndex);
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
-			commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
-			commandList->setIndexBuffer(&indexBufferView);
+			commandList->setVertexBuffers(0, LTN_COUNTOF(_vertexBufferViews), _vertexBufferViews);
+			commandList->setIndexBuffer(&_indexBufferView);
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
@@ -542,6 +507,8 @@ PipelineStateGroup** MeshRendererSystemImpl::getPipelineStateGroup(PipelineState
 		return pipelineStateSet->_debugDepthPipelineStateGroups;
 	case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
 		return pipelineStateSet->_debugTexcoordsPipelineStateGroups;
+	case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
+		return pipelineStateSet->_debugWireFramePipelineStateGroups;
 	}
 	return nullptr;
 }
@@ -944,6 +911,7 @@ void MeshRendererSystemImpl::update() {
 			bool _passMeshInstanceCulling = false;
 			bool _passMeshletInstanceCulling = false;
 			bool _forceOnlyMeshShader = false;
+			bool _visibleHighPolygonMeshes = false;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
 			s32 _packedMeshletCount = 0;
@@ -951,6 +919,7 @@ void MeshRendererSystemImpl::update() {
 
 		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("MeshInstanceDebug");
 		DebugWindow::Checkbox("visible", &debug._visible);
+		DebugWindow::Checkbox("visible high polygon meshes", &debug._visibleHighPolygonMeshes);
 		DebugWindow::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
 		DebugWindow::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
 		DebugWindow::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
@@ -1031,7 +1000,6 @@ void MeshRendererSystemImpl::update() {
 #if ENABLE_MESH_SHADER
 		case GEOMETORY_MODE_MESH_SHADER:
 		{
-			DEBUG_MARKER_CPU_SCOPED_EVENT("Instancing Resource Update");
 			InstancingResource::UpdateDesc desc;
 			desc._meshInstances = _scene.getMeshInstance(0);
 			desc._countMax = _scene.getMeshInstanceArrayCountMax();
@@ -1043,7 +1011,6 @@ void MeshRendererSystemImpl::update() {
 #if ENABLE_MULTI_INDIRECT_DRAW
 		case GEOMETORY_MODE_MULTI_INDIRECT:
 		{
-			DEBUG_MARKER_CPU_SCOPED_EVENT("Instancing Resource Update");
 			MultiDrawInstancingResource::UpdateDesc desc;
 			desc._subMeshInstances = _scene.getSubMeshInstances();
 			desc._countMax = _scene.getSubMeshInstanceArrayCountMax();
@@ -1083,6 +1050,19 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 		renderClassicVertex(commandList, viewInfo);
 		break;
 #endif
+	}
+
+	// メッシュレットバウンディング　デバッグ表示
+	if (_debugDrawMeshletBounds) {
+		BuildDebugDrawMeshletBoundsContext context;
+		context._commandList = commandList;
+		context._meshSrv = _resourceManager.getMeshSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
+		context._sceneConstantCbv = _scene.getSceneCbv();
+		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+		_meshRenderer.buildDebugDrawBounds(context);
 	}
 }
 

@@ -102,7 +102,6 @@ void Scene::initialize() {
 }
 
 void Scene::update() {
-	DEBUG_MARKER_CPU_SCOPED_EVENT("SceneUpdate");
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();

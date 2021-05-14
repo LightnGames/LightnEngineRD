@@ -9,6 +9,7 @@
 #include <MeshRenderer/impl/SceneImpl.h>
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
+#include <DebugRenderer/impl/DebugRendererSystemImpl.h>
 
 void MeshRenderer::initialize() {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
@@ -355,16 +356,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			PipelineStateGroup* pipelineState = context._pipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VIEW_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH, context._meshSrv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getPrimitiveInfoSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE, scene->getMeshInstanceSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VERTEX_RESOURCES, context._vertexResourceDescriptors);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX, instancingResource->getMeshInstanceIndexSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, scene->getMeshInstanceWorldMatrixSrv());
+			setMeshShaderResources(context, vramShaderSet);
 
 			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
 			if (context._collectResult) {
@@ -380,19 +372,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			PipelineStateGroup* pipelineState = context._primInstancingPipelineStates[pipelineStateIndex];
 			commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 			commandList->setPipelineState(pipelineState->getPipelineState());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VIEW_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH, context._meshSrv);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getPrimitiveInfoSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE, scene->getMeshInstanceSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VERTEX_RESOURCES, context._vertexResourceDescriptors);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_PRIMITIVE_INFO, instancingResource->getPrimitiveInfoSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX, instancingResource->getMeshInstanceIndexSrv());
-			commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, scene->getMeshInstanceWorldMatrixSrv());
-
-			context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
+			setMeshShaderResources(context, vramShaderSet);
 
 			CommandSignature* commandSignature = context._primCommandSignatures[pipelineStateIndex];
 			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, msCommandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
@@ -497,6 +477,24 @@ void MeshRenderer::buildHiz(const BuildHizContext& context) const {
 	gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);
 }
 
+void MeshRenderer::buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext& context) const {
+	CommandList* commandList = context._commandList;
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Build Debug Meshlet Bounds");
+
+	DebugRendererSystemImpl* debugSystem = DebugRendererSystemImpl::Get();
+	commandList->setComputeRootSignature(_debugMeshletBoundsRootSignature);
+	commandList->setPipelineState(_debugMeshletBoundsPipelineState);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::SCENE_INFO, context._sceneConstantCbv);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::MESH, context._meshSrv);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::MESH_INSTANCE, context._meshInstanceSrv);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::MESH_INSTANCE_WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::LOD_LEVEL, context._currentLodLevelSrv);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::INDIRECT_ARGUMENT, debugSystem->getLineGpuUavHandle()._gpuHandle);
+
+	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
+}
+
 void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
@@ -557,6 +555,28 @@ void MeshRenderer::multiDrawMainCulling(const MultiDrawGpuCullingContext& contex
 	gpuCulling(context, pipelineState);
 }
 
+void MeshRenderer::setMeshShaderResources(const RenderContext& context, VramShaderSet* vramShaderSet) const {
+	CommandList* commandList = context._commandList;
+	ViewInfo* viewInfo = context._viewInfo;
+	const Scene* scene = context._scene;
+	InstancingResource* instancingResource = context._instancingResource;
+	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
+
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VIEW_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::CULLING_VIEW_CONSTANT, context._debugFixedViewCbv);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH, context._meshSrv);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_INFO, instancingResource->getPrimitiveInfoSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE, scene->getMeshInstanceSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::VERTEX_RESOURCES, context._vertexResourceDescriptors);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_PRIMITIVE_INFO, instancingResource->getPrimitiveInfoSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX, instancingResource->getMeshInstanceIndexSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, scene->getMeshInstanceWorldMatrixSrv());
+
+	context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
+}
+
 void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) const {
 	u32 meshInstanceCountMax = context._meshInstanceCountMax;
 	CommandList* commandList = context._commandList;
@@ -573,7 +593,7 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::SCENE_INFO, context._sceneConstantCbv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::VIEW_INFO, context._cullingViewCbv);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH, context._meshHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH, context._meshSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE, context._meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::SUB_MESH_DRAW_INFO, context._subMeshDrawInfoSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSETS, context._indirectArgumentOffsetSrv);

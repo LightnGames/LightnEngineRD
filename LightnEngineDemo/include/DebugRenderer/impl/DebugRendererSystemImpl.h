@@ -12,9 +12,9 @@ struct LineInstance{
 	Color4 _color;
 };
 
-class LTN_DEBUG_RENDERER_API  DebugRendererSystemImpl : public DebugRendererSystem {
+class LTN_DEBUG_RENDERER_API DebugRendererSystemImpl : public DebugRendererSystem {
 public:
-	static const u32 LINE_INSTANCE_COUNT_MAX = 1024 * 1024;
+	static const u32 LINE_INSTANCE_COUNT_MAX = 1024 * 1024 * 8;
 	void initialize();
 	void update();
 	void processDeletion();
