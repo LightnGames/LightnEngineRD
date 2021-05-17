@@ -7,20 +7,12 @@
 DebugRendererSystemImpl _debugSystem;
 
 void DebugRendererSystemImpl::initialize() {
-	_lineInstances.initialize(LINE_INSTANCE_COUNT_MAX);
+	_lineInstances.initialize(LINE_INSTANCE_CPU_COUNT_MAX);
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
+	GraphicsApiInstanceAllocator* apiAllocator = GraphicsApiInstanceAllocator::Get();
 
-	// ms
+	// root signature
 	{
-		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-		ShaderBlob* vertexShader = allocator->allocateShaderBlob();
-		ShaderBlob* pixelShader = allocator->allocateShaderBlob();
-		vertexShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.vso");
-		pixelShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.pso");
-
-		_pipelineState = allocator->allocatePipelineState();
-		_rootSignature = allocator->allocateRootSignature();
-
 		DescriptorRange cbvDescriptorRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 		DescriptorRange srvDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
@@ -32,21 +24,50 @@ void DebugRendererSystemImpl::initialize() {
 		rootSignatureDesc._device = device;
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
+		_rootSignature = apiAllocator->allocateRootSignature();
 		_rootSignature->iniaitlize(rootSignatureDesc);
+	}
 
-		GraphicsPipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._vs = vertexShader->getShaderByteCode();
-		pipelineStateDesc._ps = pixelShader->getShaderByteCode();
-		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
-		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_LINE;
-		pipelineStateDesc._rootSignature = _rootSignature;
-		pipelineStateDesc._depthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		pipelineStateDesc._sampleDesc._count = 1;
-		_pipelineState->iniaitlize(pipelineStateDesc);
+	// ms
+	{
+		ShaderBlob* pixelShader = apiAllocator->allocateShaderBlob();
+		pixelShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.pso");
 
-		vertexShader->terminate();
+
+		GraphicsPipelineStateDesc defaultPipelineStateDesc = {};
+		defaultPipelineStateDesc._device = device;
+		defaultPipelineStateDesc._ps = pixelShader->getShaderByteCode();
+		defaultPipelineStateDesc._numRenderTarget = 1;
+		defaultPipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
+		defaultPipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		defaultPipelineStateDesc._rootSignature = _rootSignature;
+		defaultPipelineStateDesc._depthWriteMask = DEPTH_WRITE_MASK_ZERO;
+		defaultPipelineStateDesc._sampleDesc._count = 1;
+
+		// debug line
+		{
+			_debugLinePipelineState = apiAllocator->allocatePipelineState();
+			ShaderBlob* vertexShader = apiAllocator->allocateShaderBlob();
+			vertexShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dLine.vso");
+
+			GraphicsPipelineStateDesc pipelineStateDesc = defaultPipelineStateDesc;
+			pipelineStateDesc._vs = vertexShader->getShaderByteCode();
+			_debugLinePipelineState->iniaitlize(pipelineStateDesc);
+			vertexShader->terminate();
+		}
+
+		// debug box
+		{
+			_debugBoxPipelineState = apiAllocator->allocatePipelineState();
+			ShaderBlob* vertexShader = apiAllocator->allocateShaderBlob();
+			vertexShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug3dBox.vso");
+
+			GraphicsPipelineStateDesc pipelineStateDesc = defaultPipelineStateDesc;
+			pipelineStateDesc._vs = vertexShader->getShaderByteCode();
+			_debugBoxPipelineState->iniaitlize(pipelineStateDesc);
+			vertexShader->terminate();
+		}
+
 		pixelShader->terminate();
 	}
 
@@ -65,33 +86,46 @@ void DebugRendererSystemImpl::initialize() {
 		_commandSignature->initialize(desc);
 	}
 
-	// constant buffer
+	// buffer
 	{
-		GpuBufferDesc desc = {};
-		desc._device = device;
-		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		desc._sizeInByte = sizeof(LineInstance) * LINE_INSTANCE_COUNT_MAX;
-		_lineInstanceBuffer.initialize(desc);
+		GpuBufferDesc defaultDesc = {};
+		defaultDesc._device = device;
+		defaultDesc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		{
+			GpuBufferDesc desc = defaultDesc;
+			desc._sizeInByte = sizeof(LineInstance) * LINE_INSTANCE_GPU_COUNT_MAX;
+			_lineInstanceCpuBuffer.initialize(desc);
 
-		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		_lineInstanceGpuBuffer.initialize(desc);
+			desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			_lineInstanceGpuBuffer.initialize(desc);
+		}
+
+		{
+			GpuBufferDesc desc = defaultDesc;
+			desc._sizeInByte = sizeof(BoxInstance) * BOX_INSTANCE_GPU_COUNT_MAX;
+			_boxInstanceCpuBuffer.initialize(desc);
+
+			desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			_boxInstanceGpuBuffer.initialize(desc);
+		}
 	}
 
 	// indirect argument buffer
 	{
-		GpuBufferDesc desc = {};
-		desc._device = device;
-		desc._initialState = RESOURCE_STATE_INDIRECT_ARGUMENT;
-		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		desc._sizeInByte = sizeof(DrawArguments);
-		_lineInstanceIndirectArgumentBuffer.initialize(desc);
+		GpuBufferDesc defaultDesc = {};
+		defaultDesc._device = device;
+		defaultDesc._initialState = RESOURCE_STATE_INDIRECT_ARGUMENT;
+		defaultDesc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		defaultDesc._sizeInByte = sizeof(DrawArguments);
+		_lineInstanceIndirectArgumentBuffer.initialize(defaultDesc);
+		_boxInstanceIndirectArgumentBuffer.initialize(defaultDesc);
 	}
 
-	// line instance descriptor
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	// line instance descriptor
 	{
-		_lineInstanceHandle = allocator->allocateDescriptors(1);
+		_lineInstanceCpuSrv = allocator->allocateDescriptors(1);
 		_lineInstanceGpuSrv = allocator->allocateDescriptors(1);
 
 		ShaderResourceViewDesc desc = {};
@@ -99,38 +133,70 @@ void DebugRendererSystemImpl::initialize() {
 		desc._viewDimension = SRV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
 		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
-		desc._buffer._numElements = LINE_INSTANCE_COUNT_MAX;
+		desc._buffer._numElements = LINE_INSTANCE_GPU_COUNT_MAX;
 		desc._buffer._structureByteStride = sizeof(LineInstance);
-		device->createShaderResourceView(_lineInstanceBuffer.getResource(), &desc, _lineInstanceHandle._cpuHandle);
+		device->createShaderResourceView(_lineInstanceCpuBuffer.getResource(), &desc, _lineInstanceCpuSrv._cpuHandle);
 		device->createShaderResourceView(_lineInstanceGpuBuffer.getResource(), &desc, _lineInstanceGpuSrv._cpuHandle);
 	}
 
+	// box instance descriptor
 	{
-		u64 incrimentSize = u64(allocator->getIncrimentSize());
-		_lineInstanceGpuUav = allocator->allocateDescriptors(2);
-		CpuDescriptorHandle lineInstanceUav = _lineInstanceGpuUav._cpuHandle;
-		CpuDescriptorHandle countUav = _lineInstanceGpuUav._cpuHandle + incrimentSize;
+		_boxInstanceCpuSrv = allocator->allocateDescriptors(1);
+		_boxInstanceGpuSrv = allocator->allocateDescriptors(1);
 
-		UnorderedAccessViewDesc desc = {};
+		ShaderResourceViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
-		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._viewDimension = SRV_DIMENSION_BUFFER;
 		desc._buffer._firstElement = 0;
-		desc._buffer._numElements = LINE_INSTANCE_COUNT_MAX;
-		desc._buffer._structureByteStride = sizeof(LineInstance);
-		device->createUnorderedAccessView(_lineInstanceGpuBuffer.getResource(), nullptr, &desc, lineInstanceUav);
+		desc._buffer._flags = BUFFER_SRV_FLAG_NONE;
+		desc._buffer._numElements = BOX_INSTANCE_GPU_COUNT_MAX;
+		desc._buffer._structureByteStride = sizeof(BoxInstance);
+		device->createShaderResourceView(_boxInstanceCpuBuffer.getResource(), &desc, _boxInstanceCpuSrv._cpuHandle);
+		device->createShaderResourceView(_boxInstanceGpuBuffer.getResource(), &desc, _boxInstanceGpuSrv._cpuHandle);
+	}
 
-		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
-		desc._buffer._structureByteStride = 0;
-		desc._buffer._numElements = sizeof(DrawArguments) / sizeof(u32);
-		desc._format = FORMAT_R32_TYPELESS;
-		device->createUnorderedAccessView(_lineInstanceIndirectArgumentBuffer.getResource(), nullptr, &desc, countUav);
+	u64 incrimentSize = u64(allocator->getIncrimentSize());
+	{
+		_lineInstanceGpuUav = allocator->allocateDescriptors(2);
+		_boxInstanceGpuUav = allocator->allocateDescriptors(2);
+		CpuDescriptorHandle lineInstanceUav = _lineInstanceGpuUav._cpuHandle;
+		CpuDescriptorHandle lineInstanceCountUav = _lineInstanceGpuUav._cpuHandle + incrimentSize;
+		CpuDescriptorHandle boxInstanceUav = _lineInstanceGpuUav._cpuHandle;
+		CpuDescriptorHandle boxInstanceCountUav = _lineInstanceGpuUav._cpuHandle + incrimentSize;
+
+		UnorderedAccessViewDesc defaultDesc = {};
+		defaultDesc._format = FORMAT_UNKNOWN;
+		defaultDesc._viewDimension = UAV_DIMENSION_BUFFER;
+		defaultDesc._buffer._firstElement = 0;
+		{
+			UnorderedAccessViewDesc desc = defaultDesc;
+			desc._buffer._numElements = LINE_INSTANCE_GPU_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(LineInstance);
+			device->createUnorderedAccessView(_lineInstanceGpuBuffer.getResource(), nullptr, &desc, lineInstanceUav);
+		}
+
+		{
+			UnorderedAccessViewDesc desc = defaultDesc;
+			desc._buffer._numElements = BOX_INSTANCE_CPU_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(BoxInstance);
+			device->createUnorderedAccessView(_boxInstanceGpuBuffer.getResource(), nullptr, &desc, boxInstanceUav);
+		}
+
+		{
+			UnorderedAccessViewDesc desc = defaultDesc;
+			desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+			desc._buffer._numElements = sizeof(DrawArguments) / sizeof(u32);
+			desc._format = FORMAT_R32_TYPELESS;
+			device->createUnorderedAccessView(_lineInstanceIndirectArgumentBuffer.getResource(), nullptr, &desc, lineInstanceCountUav);
+			device->createUnorderedAccessView(_boxInstanceIndirectArgumentBuffer.getResource(), nullptr, &desc, boxInstanceCountUav);
+		}
 	}
 }
 
 void DebugRendererSystemImpl::update() {
 	u32 lineCount = _lineInstances.getCount();
 	if (lineCount > 0) {
-		LineInstance* lineInstances = GraphicsSystemImpl::Get()->getVramUpdater()->enqueueUpdate<LineInstance>(&_lineInstanceBuffer, 0, lineCount);
+		LineInstance* lineInstances = GraphicsSystemImpl::Get()->getVramUpdater()->enqueueUpdate<LineInstance>(&_lineInstanceCpuBuffer, 0, lineCount);
 		memcpy(lineInstances, _lineInstances.get(), sizeof(LineInstance) * lineCount);
 	}
 }
@@ -141,26 +207,46 @@ void DebugRendererSystemImpl::processDeletion() {
 void DebugRendererSystemImpl::terminate() {
 	processDeletion();
 	_lineInstances.terminate();
-	_lineInstanceBuffer.terminate();
+	_lineInstanceCpuBuffer.terminate();
 	_lineInstanceGpuBuffer.terminate();
 	_lineInstanceIndirectArgumentBuffer.terminate();
-	_pipelineState->terminate();
+	_boxInstances.terminate();
+	_boxInstanceCpuBuffer.terminate();
+	_boxInstanceGpuBuffer.terminate();
+	_boxInstanceIndirectArgumentBuffer.terminate();
+	_debugLinePipelineState->terminate();
+	_debugBoxPipelineState->terminate();
 	_rootSignature->terminate();
 	_commandSignature->terminate();
 
 	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocater->discardDescriptor(_lineInstanceHandle);
+	allocater->discardDescriptor(_lineInstanceCpuSrv);
 	allocater->discardDescriptor(_lineInstanceGpuUav);
 	allocater->discardDescriptor(_lineInstanceGpuSrv);
+	allocater->discardDescriptor(_boxInstanceCpuSrv);
+	allocater->discardDescriptor(_boxInstanceGpuUav);
+	allocater->discardDescriptor(_boxInstanceGpuSrv);
 }
 
 void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_lineInstanceIndirectArgumentBuffer, 0);
-	arguments->_instanceCount = 0;
-	arguments->_startInstanceLocation = 0;
-	arguments->_startVertexLocation = 0;
-	arguments->_vertexCountPerInstance = 2;
+	// debug line
+	{
+		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_lineInstanceIndirectArgumentBuffer, 0);
+		arguments->_instanceCount = 0;
+		arguments->_startInstanceLocation = 0;
+		arguments->_startVertexLocation = 0;
+		arguments->_vertexCountPerInstance = 2;
+	}
+
+	// debug box
+	{
+		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_boxInstanceIndirectArgumentBuffer, 0);
+		arguments->_instanceCount = 0;
+		arguments->_startInstanceLocation = 0;
+		arguments->_startVertexLocation = 0;
+		arguments->_vertexCountPerInstance = 24;
+	}
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
@@ -168,34 +254,59 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 
 	DescriptorHandle currentRenderTargetHandle = viewInfo->_hdrRtv;
 	commandList->setRenderTargets(1, &currentRenderTargetHandle, nullptr);
+	commandList->setViewports(1, &viewInfo->_viewPort);
+	commandList->setScissorRects(1, &viewInfo->_scissorRect);
 
-	u32 instanceCount = _lineInstances.getCount();
-	if (instanceCount > 0) {
-		commandList->setViewports(1, &viewInfo->_viewPort);
-		commandList->setScissorRects(1, &viewInfo->_scissorRect);
+	// cpu line
+	{
+		u32 instanceCount = _lineInstances.getCount();
+		if (instanceCount > 0) {
+			commandList->setGraphicsRootSignature(_rootSignature);
+			commandList->setPipelineState(_debugLinePipelineState);
+			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
+			commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(1, _lineInstanceCpuSrv._gpuHandle);
+			commandList->drawInstanced(2, instanceCount, 0, 0);
 
-		commandList->setGraphicsRootSignature(_rootSignature);
-		commandList->setPipelineState(_pipelineState);
-		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
-		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(1, _lineInstanceHandle._gpuHandle);
-		commandList->drawInstanced(2, instanceCount, 0, 0);
+		}
+	}
 
-		_lineInstances.reset();
+	// cpu box
+	{
+		u32 instanceCount = _boxInstances.getCount();
+		if (instanceCount > 0) {
+			commandList->setGraphicsRootSignature(_rootSignature);
+			commandList->setPipelineState(_debugBoxPipelineState);
+			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
+			commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
+			commandList->setGraphicsRootDescriptorTable(1, _boxInstanceCpuSrv._gpuHandle);
+			commandList->drawInstanced(24, instanceCount, 0, 0);
+
+		}
 	}
 
 	// gpu debug line
 	{
-		commandList->setViewports(1, &viewInfo->_viewPort);
-		commandList->setScissorRects(1, &viewInfo->_scissorRect);
-
 		commandList->setGraphicsRootSignature(_rootSignature);
-		commandList->setPipelineState(_pipelineState);
+		commandList->setPipelineState(_debugLinePipelineState);
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
 		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(1, _lineInstanceGpuSrv._gpuHandle);
 		commandList->executeIndirect(_commandSignature, 1, _lineInstanceIndirectArgumentBuffer.getResource(), 0, nullptr, 0);
 	}
+
+	// gpu debug box
+	{
+		commandList->setGraphicsRootSignature(_rootSignature);
+		commandList->setPipelineState(_debugBoxPipelineState);
+		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_LINELIST);
+		commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(1, _boxInstanceGpuSrv._gpuHandle);
+		commandList->executeIndirect(_commandSignature, 1, _boxInstanceIndirectArgumentBuffer.getResource(), 0, nullptr, 0);
+	}
+
+	_lineInstances.reset();
+	_boxInstances.reset();
 }
 
 void DebugRendererSystemImpl::drawLine(Vector3 startPosition, Vector3 endPosition, Color4 color) {

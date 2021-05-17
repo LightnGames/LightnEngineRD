@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{588C73D4-636C-4EFF-8D16-B215F84627C9}</ProjectGuid>
     <RootNamespace>GfxCore</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,13 +41,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -174,6 +174,7 @@
     <None Include="..\..\work\common\shader\build_indirect_argument.csf" />
     <None Include="..\..\work\common\shader\compute_lod.csf" />
     <None Include="..\..\work\common\shader\constant_buffer.sfh" />
+    <None Include="..\..\work\common\shader\debug\debug3dBox.vsf" />
     <None Include="..\..\work\common\shader\debug\debug3dLine.psf" />
     <None Include="..\..\work\common\shader\debug\debug3dLine.vsf" />
     <None Include="..\..\work\common\shader\debug\debug_draw_meshlet_bounds.csf" />

@@ -6,15 +6,24 @@ struct PipelineState;
 struct RootSignature;
 struct ViewInfo;
 
-struct LineInstance{
+struct LineInstance {
 	Float3 _startPosition;
 	Float3 _endPosition;
 	Color4 _color;
 };
 
+struct BoxInstance {
+	Matrix43 _matrixWorld;
+	Color4 _color;
+};
+
 class LTN_DEBUG_RENDERER_API  DebugRendererSystemImpl : public DebugRendererSystem {
 public:
-	static const u32 LINE_INSTANCE_COUNT_MAX = 1024 * 1024;
+	static const u32 LINE_INSTANCE_CPU_COUNT_MAX = 1024 * 16;
+	static const u32 BOX_INSTANCE_CPU_COUNT_MAX = 1024 * 8;
+	static const u32 LINE_INSTANCE_GPU_COUNT_MAX = 1024 * 256;
+	static const u32 BOX_INSTANCE_GPU_COUNT_MAX = 1024 * 256;
+
 	void initialize();
 	void update();
 	void processDeletion();
@@ -31,13 +40,21 @@ public:
 
 private:
 	LinerAllocater<LineInstance> _lineInstances;
-	PipelineState* _pipelineState = nullptr;
+	LinerAllocater<BoxInstance> _boxInstances;
 	RootSignature* _rootSignature = nullptr;
-	GpuBuffer _lineInstanceBuffer;
+	PipelineState* _debugLinePipelineState = nullptr;
+	PipelineState* _debugBoxPipelineState = nullptr;
+	GpuBuffer _lineInstanceCpuBuffer;
 	GpuBuffer _lineInstanceGpuBuffer;
+	GpuBuffer _boxInstanceCpuBuffer;
+	GpuBuffer _boxInstanceGpuBuffer;
 	GpuBuffer _lineInstanceIndirectArgumentBuffer;
-	DescriptorHandle _lineInstanceHandle;
+	GpuBuffer _boxInstanceIndirectArgumentBuffer;
+	DescriptorHandle _lineInstanceCpuSrv;
 	DescriptorHandle _lineInstanceGpuUav;
 	DescriptorHandle _lineInstanceGpuSrv;
+	DescriptorHandle _boxInstanceCpuSrv;
+	DescriptorHandle _boxInstanceGpuUav;
+	DescriptorHandle _boxInstanceGpuSrv;
 	CommandSignature* _commandSignature = nullptr;
 };
