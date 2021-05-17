@@ -215,9 +215,8 @@ void SetDebugName(T* resource, const char* name, ...) {
 }
 
 void HardwareFactoryD3D12::initialize(const HardwareFactoryDesc& desc) {
-	u32 dxgiFactoryFlags = 0;
-
 #define ENABLE_GBV 0
+	u32 dxgiFactoryFlags = 0;
 
 	// debug Layer
 	if (desc._flags & HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG) {

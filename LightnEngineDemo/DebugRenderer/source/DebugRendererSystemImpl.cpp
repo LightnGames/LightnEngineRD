@@ -284,7 +284,6 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 			commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(1, _lineInstanceCpuSrv._gpuHandle);
 			commandList->drawInstanced(2, instanceCount, 0, 0);
-
 		}
 	}
 
