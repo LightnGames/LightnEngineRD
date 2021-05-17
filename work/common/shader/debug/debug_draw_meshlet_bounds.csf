@@ -1,10 +1,10 @@
 #include "../gpu_culling_function.sfh"
 
-struct LineInstance {
-	float3 _startPosition;
-	float3 _endPosition;
-	float4 _color;
+struct BoxInstanceInfo {
+    float4x3 _matrixWorld;
+    float4 _color;
 };
+
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
 StructuredBuffer<Mesh> _meshes : register(t0);
@@ -15,23 +15,14 @@ StructuredBuffer<MeshInstance> _meshInstances : register(t4);
 ByteAddressBuffer _currentLodLevels : register(t5);
 StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t6);
 
-RWStructuredBuffer <LineInstance> _lineInstances : register(u0);
+RWStructuredBuffer<BoxInstanceInfo> _boxInstances : register(u0);
 RWByteAddressBuffer _drawArguments : register(u1);
 
-void storeDebugLine(uint index, float3 start, float3 end){
-    LineInstance lineInstance;
-    lineInstance._startPosition = start;
-    lineInstance._endPosition = end;
-    lineInstance._color = float4(0.5, 0.5, 0, 1.0);
-    _lineInstances[index] = lineInstance;
-}
-
-#define NUM_POINTS 12
 #define THREAD_NUM 128
 [numthreads(THREAD_NUM, 1, 1)] 
 void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
     uint meshInstanceIndex = groupID.x * THREAD_NUM + groupThreadID.x;
-    if (meshInstanceIndex > (_sceneCullingInfo._meshInstanceCount - 1)) {
+    if (meshInstanceIndex >= _sceneCullingInfo._meshInstanceCount) {
         return;
     }
 	
@@ -41,7 +32,7 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     }
     
     Mesh mesh = _meshes[meshInstance._meshIndex];
-    if(mesh._stateFlags == MESH_STATE_ALLOCATED){
+    if(mesh._stateFlags == MESH_STATE_ALLOCATED) {
         mesh = _meshes[0];
     }
     
@@ -50,41 +41,36 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     
     uint currentMeshletDebugIndex = 0;
     uint debugLineCount = 0;
-    for (uint subMeshIndex = 0; subMeshIndex < lodMesh._subMeshCount; ++subMeshIndex){
+    for (uint subMeshIndex = 0; subMeshIndex < lodMesh._subMeshCount; ++subMeshIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshIndex];
-        debugLineCount += subMesh._meshletCount * NUM_POINTS;
+        debugLineCount += subMesh._meshletCount;
     }
     _drawArguments.InterlockedAdd(UINT32_SIZE_IN_BYTE, debugLineCount, currentMeshletDebugIndex);
 	
     float worldScale = meshInstance._worldScale;
     float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
     uint meshletCounter = 0;
-    for (subMeshIndex = 0; subMeshIndex < lodMesh._subMeshCount; ++subMeshIndex){
+    for (subMeshIndex = 0; subMeshIndex < lodMesh._subMeshCount; ++subMeshIndex) {
         SubMesh subMesh = _subMeshes[lodMesh._subMeshOffset + subMeshIndex];
-        for(uint meshletIndex = 0; meshletIndex < subMesh._meshletCount; ++meshletIndex){
+        for(uint meshletIndex = 0; meshletIndex < subMesh._meshletCount; ++meshletIndex) {
             MeshletBounds meshletBounds = computeTransformedBounds(matrixWorld, worldScale, _meshlets[subMesh._meshletOffset + meshletIndex]);
 	        float3 boundsMin = meshletBounds._boundsMin;
 	        float3 boundsMax = meshletBounds._boundsMax;
+            float3 center = (boundsMin + boundsMax) / 2.0;
             float3 size = boundsMax - boundsMin;
 	        float3 right = float3(1, 0, 0) * size.x;
 	        float3 up = float3(0, 1, 0) * size.y;
 	        float3 forward = float3(0, 0, 1) * size.z;
             
-            uint storeOffset = currentMeshletDebugIndex + meshletCounter * NUM_POINTS;
-            storeDebugLine(storeOffset + 0, boundsMin, boundsMin + right);
-            storeDebugLine(storeOffset + 1, boundsMin, boundsMin + forward);
-            storeDebugLine(storeOffset + 2, boundsMin + forward, boundsMin + forward + right);
-            storeDebugLine(storeOffset + 3, boundsMin + right, boundsMin + forward + right);
+            uint storeOffset = currentMeshletDebugIndex + meshletCounter;
+            BoxInstanceInfo info;
+            info._matrixWorld[0] = right;
+            info._matrixWorld[1] = up;
+            info._matrixWorld[2] = forward;
+            info._matrixWorld[3] = center;
+            info._color = float4(0.7, 0.2, 0.4, 1.0);
+            _boxInstances[storeOffset] = info;
             
-            storeDebugLine(storeOffset + 4, boundsMin, boundsMin + up);
-            storeDebugLine(storeOffset + 5, boundsMax, boundsMax - up);
-            storeDebugLine(storeOffset + 6, boundsMin + forward, boundsMin + forward + up);
-            storeDebugLine(storeOffset + 7, boundsMax - forward, boundsMax - forward - up);
-            
-            storeDebugLine(storeOffset + 8, boundsMax, boundsMax - right);
-            storeDebugLine(storeOffset + 9, boundsMax, boundsMax - forward);
-            storeDebugLine(storeOffset +10, boundsMax - forward, boundsMax - forward - right);
-            storeDebugLine(storeOffset +11, boundsMax - right, boundsMax - forward - right);
             meshletCounter++;
         }
     }

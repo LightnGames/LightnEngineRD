@@ -202,5 +202,8 @@
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh_primitive_instancing.msf">
       <Filter>shader\standard_mesh</Filter>
     </None>
+    <None Include="..\..\work\common\shader\debug\debug3dBox.vsf">
+      <Filter>shader\debug</Filter>
+    </None>
   </ItemGroup>
 </Project>

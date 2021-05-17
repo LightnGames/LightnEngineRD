@@ -489,7 +489,7 @@ void MeshRenderer::buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext
 	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::MESH_INSTANCE, context._meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::MESH_INSTANCE_WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
 	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::LOD_LEVEL, context._currentLodLevelSrv);
-	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::INDIRECT_ARGUMENT, debugSystem->getLineGpuUavHandle()._gpuHandle);
+	commandList->setComputeRootDescriptorTable(DebugMeshletBoundsRootParam::INDIRECT_ARGUMENT, debugSystem->getBoxGpuUavHandle());
 
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);

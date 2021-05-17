@@ -8,6 +8,7 @@ DebugRendererSystemImpl _debugSystem;
 
 void DebugRendererSystemImpl::initialize() {
 	_lineInstances.initialize(LINE_INSTANCE_CPU_COUNT_MAX);
+	_boxInstances.initialize(BOX_INSTANCE_CPU_COUNT_MAX);
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	GraphicsApiInstanceAllocator* apiAllocator = GraphicsApiInstanceAllocator::Get();
 
@@ -95,18 +96,24 @@ void DebugRendererSystemImpl::initialize() {
 			GpuBufferDesc desc = defaultDesc;
 			desc._sizeInByte = sizeof(LineInstance) * LINE_INSTANCE_GPU_COUNT_MAX;
 			_lineInstanceCpuBuffer.initialize(desc);
+			_lineInstanceCpuBuffer.setDebugName("Debug Cpu Line");
 
 			desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
 			_lineInstanceGpuBuffer.initialize(desc);
+			_lineInstanceGpuBuffer.setDebugName("Debug Gpu Line");
 		}
 
 		{
 			GpuBufferDesc desc = defaultDesc;
 			desc._sizeInByte = sizeof(BoxInstance) * BOX_INSTANCE_GPU_COUNT_MAX;
 			_boxInstanceCpuBuffer.initialize(desc);
+			_boxInstanceCpuBuffer.setDebugName("Debug Cpu Box");
 
 			desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
 			_boxInstanceGpuBuffer.initialize(desc);
+			_boxInstanceGpuBuffer.setDebugName("Debug Gpu Box");
 		}
 	}
 
@@ -114,11 +121,13 @@ void DebugRendererSystemImpl::initialize() {
 	{
 		GpuBufferDesc defaultDesc = {};
 		defaultDesc._device = device;
-		defaultDesc._initialState = RESOURCE_STATE_INDIRECT_ARGUMENT;
+		defaultDesc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
 		defaultDesc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		defaultDesc._sizeInByte = sizeof(DrawArguments);
 		_lineInstanceIndirectArgumentBuffer.initialize(defaultDesc);
 		_boxInstanceIndirectArgumentBuffer.initialize(defaultDesc);
+		_lineInstanceIndirectArgumentBuffer.setDebugName("Debug Draw Argument Line");
+		_boxInstanceIndirectArgumentBuffer.setDebugName("Debug Draw Argument Box");
 	}
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
@@ -161,8 +170,8 @@ void DebugRendererSystemImpl::initialize() {
 		_boxInstanceGpuUav = allocator->allocateDescriptors(2);
 		CpuDescriptorHandle lineInstanceUav = _lineInstanceGpuUav._cpuHandle;
 		CpuDescriptorHandle lineInstanceCountUav = _lineInstanceGpuUav._cpuHandle + incrimentSize;
-		CpuDescriptorHandle boxInstanceUav = _lineInstanceGpuUav._cpuHandle;
-		CpuDescriptorHandle boxInstanceCountUav = _lineInstanceGpuUav._cpuHandle + incrimentSize;
+		CpuDescriptorHandle boxInstanceUav = _boxInstanceGpuUav._cpuHandle;
+		CpuDescriptorHandle boxInstanceCountUav = _boxInstanceGpuUav._cpuHandle + incrimentSize;
 
 		UnorderedAccessViewDesc defaultDesc = {};
 		defaultDesc._format = FORMAT_UNKNOWN;
@@ -177,7 +186,7 @@ void DebugRendererSystemImpl::initialize() {
 
 		{
 			UnorderedAccessViewDesc desc = defaultDesc;
-			desc._buffer._numElements = BOX_INSTANCE_CPU_COUNT_MAX;
+			desc._buffer._numElements = BOX_INSTANCE_GPU_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(BoxInstance);
 			device->createUnorderedAccessView(_boxInstanceGpuBuffer.getResource(), nullptr, &desc, boxInstanceUav);
 		}
@@ -194,10 +203,35 @@ void DebugRendererSystemImpl::initialize() {
 }
 
 void DebugRendererSystemImpl::update() {
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	u32 lineCount = _lineInstances.getCount();
 	if (lineCount > 0) {
-		LineInstance* lineInstances = GraphicsSystemImpl::Get()->getVramUpdater()->enqueueUpdate<LineInstance>(&_lineInstanceCpuBuffer, 0, lineCount);
+		LineInstance* lineInstances = vramUpdater->enqueueUpdate<LineInstance>(&_lineInstanceCpuBuffer, 0, lineCount);
 		memcpy(lineInstances, _lineInstances.get(), sizeof(LineInstance) * lineCount);
+	}
+
+	u32 boxCount = _boxInstances.getCount();
+	if (boxCount > 0) {
+		BoxInstance* boxInstances = vramUpdater->enqueueUpdate<BoxInstance>(&_boxInstanceCpuBuffer, 0, boxCount);
+		memcpy(boxInstances, _boxInstances.get(), sizeof(BoxInstance) * boxCount);
+	}
+
+	// debug line
+	{
+		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_lineInstanceIndirectArgumentBuffer, 0);
+		arguments->_instanceCount = 0;
+		arguments->_startInstanceLocation = 0;
+		arguments->_startVertexLocation = 0;
+		arguments->_vertexCountPerInstance = 2;
+	}
+
+	// debug box
+	{
+		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_boxInstanceIndirectArgumentBuffer, 0);
+		arguments->_instanceCount = 0;
+		arguments->_startInstanceLocation = 0;
+		arguments->_startVertexLocation = 0;
+		arguments->_vertexCountPerInstance = 24;
 	}
 }
 
@@ -230,23 +264,6 @@ void DebugRendererSystemImpl::terminate() {
 
 void DebugRendererSystemImpl::resetGpuCounter(CommandList* commandList) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	// debug line
-	{
-		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_lineInstanceIndirectArgumentBuffer, 0);
-		arguments->_instanceCount = 0;
-		arguments->_startInstanceLocation = 0;
-		arguments->_startVertexLocation = 0;
-		arguments->_vertexCountPerInstance = 2;
-	}
-
-	// debug box
-	{
-		DrawArguments* arguments = vramUpdater->enqueueUpdate<DrawArguments>(&_boxInstanceIndirectArgumentBuffer, 0);
-		arguments->_instanceCount = 0;
-		arguments->_startInstanceLocation = 0;
-		arguments->_startVertexLocation = 0;
-		arguments->_vertexCountPerInstance = 24;
-	}
 }
 
 void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* viewInfo) {
@@ -281,8 +298,16 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 			commandList->setGraphicsRootDescriptorTable(0, viewInfo->_viewInfoCbv._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(1, _boxInstanceCpuSrv._gpuHandle);
 			commandList->drawInstanced(24, instanceCount, 0, 0);
-
 		}
+	}
+
+	{
+		ResourceTransitionBarrier barriers[4] = {};
+		barriers[0] = _lineInstanceIndirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+		barriers[1] = _boxInstanceIndirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+		barriers[2] = _lineInstanceGpuBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		barriers[3] = _boxInstanceGpuBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 	}
 
 	// gpu debug line
@@ -305,6 +330,15 @@ void DebugRendererSystemImpl::render(CommandList* commandList, const ViewInfo* v
 		commandList->executeIndirect(_commandSignature, 1, _boxInstanceIndirectArgumentBuffer.getResource(), 0, nullptr, 0);
 	}
 
+	{
+		ResourceTransitionBarrier barriers[4] = {};
+		barriers[0] = _lineInstanceIndirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+		barriers[1] = _boxInstanceIndirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+		barriers[2] = _lineInstanceGpuBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+		barriers[3] = _boxInstanceGpuBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
+	}
+
 	_lineInstances.reset();
 	_boxInstances.reset();
 }
@@ -316,27 +350,17 @@ void DebugRendererSystemImpl::drawLine(Vector3 startPosition, Vector3 endPositio
 	line->_color = color;
 }
 
+void DebugRendererSystemImpl::drawBox(Matrix4 matrix, Color4 color) {
+	BoxInstance* box = _boxInstances.allocate();
+	box->_matrixWorld = matrix.transpose().getMatrix43();
+	box->_color = color;
+}
+
 void DebugRendererSystemImpl::drawAabb(Vector3 boundsMin, Vector3 boundsMax, Color4 color) {
+	Vector3 center = (boundsMin + boundsMax) / 2.0f;
 	Vector3 size = boundsMax - boundsMin;
-	Vector3 min = boundsMin;
-	Vector3 max = boundsMax;
-	Vector3 right = Vector3::Right * size._x;
-	Vector3 up = Vector3::Up * size._y;
-	Vector3 forward = Vector3::Forward * size._z;
-	drawLine(min, min + right, color);
-	drawLine(min, min + forward, color);
-	drawLine(min + forward, min + forward + right, color);
-	drawLine(min + right, min + forward + right, color);
-
-	drawLine(min, min + up, color);
-	drawLine(max, max - up, color);
-	drawLine(min + forward, min + forward + up, color);
-	drawLine(max - forward, max - forward - up, color);
-
-	drawLine(max, max - right, color);
-	drawLine(max, max - forward, color);
-	drawLine(max - forward, max - right - forward, color);
-	drawLine(max - right, max - right - forward, color);
+	Matrix4 matrixWorld = Matrix4::scale(size) * Matrix4::translate(center);
+	drawBox(matrixWorld, color);
 }
 
 void DebugRendererSystemImpl::drawFrustum(Matrix4 view, Matrix4 projection, Color4 color) {
