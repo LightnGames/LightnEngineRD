@@ -47,7 +47,7 @@ struct GpuCullingContext {
 	GpuDescriptorHandle _indirectArgumentOffsetSrv;
 	GpuDescriptorHandle _sceneConstantCbv;
 	GpuDescriptorHandle _meshInstanceSrv;
-	GpuDescriptorHandle _meshHandle;
+	GpuDescriptorHandle _meshSrv;
 	GpuDescriptorHandle _subMeshDrawInfoSrv;
 	GpuDescriptorHandle _cullingViewCbv;
 	GpuDescriptorHandle _materialInstanceIndexSrv;
@@ -106,6 +106,16 @@ struct BuildHizContext {
 	GpuCullingResource* _gpuCullingResource = nullptr;
 };
 
+struct BuildDebugDrawMeshletBoundsContext {
+	CommandList* _commandList = nullptr;
+	GpuDescriptorHandle _sceneConstantCbv;
+	GpuDescriptorHandle _meshInstanceSrv;
+	GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
+	GpuDescriptorHandle _meshSrv;
+	GpuDescriptorHandle _currentLodLevelSrv;
+	u32 _meshInstanceCountMax = 0;
+};
+
 class MeshRenderer {
 public:
 	void initialize();
@@ -117,6 +127,7 @@ public:
 	void mainCulling(const GpuCullingContext& context) const;
 	void buildIndirectArgument(const BuildIndirectArgumentContext& context) const;
 	void buildHiz(const BuildHizContext& context) const;
+	void buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext& context) const;
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	void multiDrawRender(const MultiIndirectRenderContext& context) const;
@@ -125,6 +136,7 @@ public:
 #endif
 
 private:
+	void setMeshShaderResources(const RenderContext& context, VramShaderSet* vramShaderSet) const;
 	void gpuCulling(const GpuCullingContext& context, PipelineState* pipelineState) const;
 #if ENABLE_MULTI_INDIRECT_DRAW
 	void gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) const;

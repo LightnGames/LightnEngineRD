@@ -137,6 +137,7 @@
       <PreprocessorDefinitions>LTN_MESH_RENDERER_EXPORT</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)GfxCore\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
