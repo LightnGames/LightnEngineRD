@@ -12,9 +12,9 @@ StructuredBuffer<SubMesh> _subMeshes : register(t2);
 StructuredBuffer<Meshlet> _meshlets : register(t3);
 StructuredBuffer<MeshletPrimitiveInfo> _meshletPrimitiveInfos : register(t4);
 
-RWStructuredBuffer<DispatchMeshIndirectArgumentMS> _indirectArguments : register(u0);
+RWStructuredBuffer<DispatchMeshIndirectArgument> _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
-RWStructuredBuffer<DispatchMeshIndirectArgumentMS> _primIndirectArguments : register(u2);
+RWStructuredBuffer<DispatchMeshIndirectArgument> _primIndirectArguments : register(u2);
 RWByteAddressBuffer _primCountBuffer : register(u3);
 
 [numthreads(128, 1, 1)]
@@ -46,7 +46,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         uint packInstanceCount = (instanceCount / instanceCountPerThreadGroup) + 1;
         uint dispatchCount = baseInstanceCount + packInstanceCount;
         
-        DispatchMeshIndirectArgumentMS arguments;
+        DispatchMeshIndirectArgument arguments;
         arguments._constant = constant;
         arguments._dispatchX = dispatchCount;
         arguments._dispatchY = 1;
@@ -56,7 +56,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         _primIndirectArguments[shaderSetOffset + currentCount] = arguments;
     } else {
         uint dispatchCount = (instanceCount * meshletCount / 32) + 1;
-        DispatchMeshIndirectArgumentMS arguments;
+        DispatchMeshIndirectArgument arguments;
         arguments._constant = constant;
         arguments._dispatchX = dispatchCount;
         arguments._dispatchY = 1;

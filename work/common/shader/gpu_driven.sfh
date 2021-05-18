@@ -40,7 +40,7 @@ struct MeshShaderIndirectArgument {
     uint _meshletOffset;
 };
 
-struct DispatchMeshIndirectArgumentMS {
+struct DispatchMeshIndirectArgument {
     MeshShaderIndirectArgument _constant;
     uint _dispatchX;
     uint _dispatchY;

@@ -822,7 +822,7 @@ void MeshRendererSystemImpl::initialize() {
 
 	{
 		IndirectArgumentResource::InitializeDesc desc;
-		desc._indirectArgumentCount = 1024 * 256;
+		desc._indirectArgumentCount = 1024 * 128;
 		desc._indirectArgumentCounterCount = gpu::SHADER_SET_COUNT_MAX;
 		desc._strideInByte = sizeof(gpu::DispatchMeshIndirectArgument);
 		_indirectArgumentResource.initialize(desc);
@@ -902,6 +902,7 @@ void MeshRendererSystemImpl::update() {
 	_vramShaderSetSystem.update();
 
 	bool isUpdatedGeometryType = false;
+	bool isUpdatedPackMeshletCount = false;
 
 	// メッシュレンダラーデバッグオプション
 	{
@@ -938,11 +939,15 @@ void MeshRendererSystemImpl::update() {
 			_scene.debugDrawMeshInstanceBounds();
 		}
 
-		_packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);
+		u32 packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);
 		if (debug._forceOnlyMeshShader) {
-			_packedMeshletCount = 0xffff;
+			packedMeshletCount = 0xffff;
+		}
+		if (_packedMeshletCount != packedMeshletCount) {
+			isUpdatedPackMeshletCount = true;
 		}
 
+		_packedMeshletCount = packedMeshletCount;
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_visible = debug._visible;
 		_debugPrimitiveType = debug._primitiveType;
@@ -997,7 +1002,7 @@ void MeshRendererSystemImpl::update() {
 		_buildIndirectArgumentResource.update(desc);
 	}
 
-	if (_scene.isUpdatedInstancingOffset() || isUpdatedGeometryType) {
+	if (_scene.isUpdatedInstancingOffset() || isUpdatedGeometryType || isUpdatedPackMeshletCount) {
 		switch (_geometryType) {
 #if ENABLE_MESH_SHADER
 		case GEOMETORY_MODE_MESH_SHADER:

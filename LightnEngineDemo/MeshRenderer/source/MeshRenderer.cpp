@@ -524,8 +524,6 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) co
 
 		u32 indirectArgumentOffset = context._indirectArgmentOffsets[pipelineStateIndex];
 		u32 indirectArgumentOffsetSizeInByte = indirectArgumentOffset * sizeof(gpu::StarndardMeshIndirectArguments);
-		LTN_ASSERT(indirectArgumentOffset + commandCountMax <= IndirectArgumentResource::INDIRECT_ARGUMENT_COUNTER_COUNT_MAX);
-
 		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 		commandList->setPipelineState(pipelineState->getPipelineState());
 		commandList->setVertexBuffers(0, context._numVertexBufferView, context._vertexBufferViews);

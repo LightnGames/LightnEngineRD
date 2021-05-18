@@ -508,7 +508,8 @@ void IndirectArgumentResource::initialize(const InitializeDesc& initializeDesc) 
 		_countCpuUav = cpuAllocator->allocateDescriptors(1);
 		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUav._cpuHandle);
 	}
-
+	_indirectArgumentCountMax = initializeDesc._indirectArgumentCount;
+	_indirectArgumentCounterCountMax = initializeDesc._indirectArgumentCounterCount;
 }
 
 void IndirectArgumentResource::terminate() {
@@ -784,7 +785,7 @@ void InstancingResource::update(const UpdateDesc& desc) {
 	const MeshInstanceImpl* meshInstances = desc._meshInstances;
 	u32 offsetUpdateStart = 0;
 	u32 countMax = desc._countMax;
-	bool* packMeshletFilterFlgas = new bool[INSTANCING_PER_SHADER_COUNT_MAX];
+	bool* packMeshletFilterFlgas = new bool[INSTANCING_PER_SHADER_COUNT_MAX]();
 	u16* infoCounts = new u16[INDIRECT_ARGUMENT_COUNTER_COUNT_MAX]();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < countMax; ++meshInstanceIndex) {
 		const Mesh* mesh = meshInstances[meshInstanceIndex].getMesh();
@@ -799,7 +800,7 @@ void InstancingResource::update(const UpdateDesc& desc) {
 			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 			u32 shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
 			++infoCounts[shaderSetOffset + subMeshGlobalIndex];
-			packMeshletFilterFlgas[subMeshGlobalIndex] = subMesh->_meshletCount < desc._meshletThresholdUseAmplificationShader;
+			packMeshletFilterFlgas[subMeshGlobalIndex] = subMesh->_meshletCount <= desc._meshletThresholdUseAmplificationShader;
 		}
 	}
 
@@ -808,11 +809,12 @@ void InstancingResource::update(const UpdateDesc& desc) {
 		u16 asMsIndirectArgumentCount = 0;
 		u16 msIndirectArgumentCount = 0;
 		for (u32 i = 0; i < INSTANCING_PER_SHADER_COUNT_MAX; ++i) {
+			u16 infoCount = infoCounts[shaderSetOffset + i] > 0 ? 1 : 0;
 			if (packMeshletFilterFlgas[i]) {
-				msIndirectArgumentCount += infoCounts[shaderSetOffset + i] > 0 ? 1 : 0;
+				msIndirectArgumentCount += infoCount;
 				continue;
 			}
-			asMsIndirectArgumentCount += infoCounts[shaderSetOffset + i] > 0 ? 1 : 0;
+			asMsIndirectArgumentCount += infoCount;
 		}
 		_msIndirectArgumentCounts[shaderSetIndex] = msIndirectArgumentCount;
 		_asMsIndirectArgumentCounts[shaderSetIndex] = asMsIndirectArgumentCount;

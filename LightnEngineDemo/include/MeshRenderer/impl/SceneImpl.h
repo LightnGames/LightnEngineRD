@@ -111,10 +111,6 @@ namespace CullingResult {
 
 class IndirectArgumentResource {
 public:
-	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT = gpu::SHADER_SET_COUNT_MAX * 2;
-	static constexpr u32 INDIRECT_ARGUMENT_COUNTER_COUNT_MAX = 1024 * 256;
-	static constexpr u32 MESHLET_INSTANCE_COUNT_MAX = 1024 * 256;
-
 	struct InitializeDesc {
 		u32 _indirectArgumentCount = 0;
 		u32 _indirectArgumentCounterCount = 0;
@@ -134,6 +130,8 @@ public:
 	GpuDescriptorHandle getIndirectArgumentUav() const { return _indirectArgumentUavHandle._gpuHandle; }
 
 private:
+	u32 _indirectArgumentCountMax = 0;
+	u32 _indirectArgumentCounterCountMax = 0;
 	GpuBuffer _indirectArgumentBuffer;
 	GpuBuffer _countBuffer;
 
