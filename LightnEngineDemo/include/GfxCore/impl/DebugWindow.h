@@ -78,25 +78,6 @@ public:
 		StartWindow(windowName);
 		return DebugWindowStructure<U>(windowName);
 	}
-
-	static void Text(const char* text, ...);
-
-	static bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-	static bool DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-	static bool DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-	static bool DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-
-	static bool SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-	static bool SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-	static bool SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-	static bool SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-	static bool SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg");
-
-	static bool ColorEdit3(const char* label, float col[3], ColorEditFlags flags = 0);
-	static bool ColorEdit4(const char* label, float col[4], ColorEditFlags flags = 0);
-
-	static bool Checkbox(const char* label, bool* v);
-	static bool Combo(const char* label, s32* current_item, const char* const items[], s32 items_count, s32 popup_max_height_in_items = -1);
 	static void End();
 
 private:

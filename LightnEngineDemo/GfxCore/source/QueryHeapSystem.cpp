@@ -82,7 +82,7 @@ void QueryHeapSystem::debugDrawCpuPerf() {
 	}
 
 	static bool flat = false;
-	DebugWindow::Checkbox("flat", &flat);
+	DebugGui::Checkbox("flat", &flat);
 
 	DebugGui::Columns(2, "tree", true);
 	if (flat) {
@@ -99,7 +99,7 @@ void QueryHeapSystem::debugDrawGpuPerf() {
 	}
 
 	static bool flat = false;
-	DebugWindow::Checkbox("flat", &flat);
+	DebugGui::Checkbox("flat", &flat);
 	QueryVideoMemoryInfo videoMemoryInfo = GraphicsSystemImpl::Get()->getHardWareAdaptor()->queryVideoMemoryInfo();
 	u32 currentUsageSizeInByte = static_cast<u32>(videoMemoryInfo._currentUsage / 1000);
 	u32 currentBudgetSizeInByte = static_cast<u32>(videoMemoryInfo._budget / 1000);

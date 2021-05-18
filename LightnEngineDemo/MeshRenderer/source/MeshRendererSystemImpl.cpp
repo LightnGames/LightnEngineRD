@@ -920,12 +920,12 @@ void MeshRendererSystemImpl::update() {
 		};
 
 		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("Mesh Renderer");
-		DebugWindow::Checkbox("visible", &debug._visible);
-		DebugWindow::Checkbox("visible high polygon meshes", &debug._visibleHighPolygonMeshes);
-		DebugWindow::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
-		DebugWindow::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
-		DebugWindow::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
-		DebugWindow::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
+		DebugGui::Checkbox("visible", &debug._visible);
+		DebugGui::Checkbox("visible high polygon meshes", &debug._visibleHighPolygonMeshes);
+		DebugGui::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
+		DebugGui::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
+		DebugGui::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
+		DebugGui::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 
 		const char* geometryTypes[] = { "Mesh Shader", "Multi Indirect", "Vertex Shader" };
@@ -933,7 +933,7 @@ void MeshRendererSystemImpl::update() {
 
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
-		DebugWindow::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
+		DebugGui::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
 
 		if (debug._drawMeshInstanceBounds) {
 			_scene.debugDrawMeshInstanceBounds();
