@@ -187,13 +187,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
 #endif
     
-    if (WaveIsFirstLane()) {
-        _passMeshlets._unpackedCount = 0;
-        _passMeshlets._unpackedOffset = 0;
-        if (WaveActiveCountBits(isPacked) > 0) {
-            _passMeshlets._unpackedCount = WaveActiveCountBits(isPacked);
-            _passMeshlets._unpackedOffset = WaveActiveMin(unpackedOffset);
-        }
+    _passMeshlets._unpackedCount = 0;
+    _passMeshlets._unpackedOffset = 0;
+    if (WaveActiveCountBits(isPacked) > 0) {
+        _passMeshlets._unpackedCount = WaveActiveCountBits(isPacked);
+        _passMeshlets._unpackedOffset = WaveActiveMin(unpackedOffset);
     }
     
     uint visibleCount = WaveActiveCountBits(visible);
