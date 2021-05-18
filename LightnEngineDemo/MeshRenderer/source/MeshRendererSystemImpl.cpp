@@ -754,31 +754,6 @@ void MeshRendererSystemImpl::debugDrawAmplificationCullingResult() {
 			DebugGui::EndTabItem();
 		}
 
-		if (DebugGui::BeginTabItem("Occlusion")) {
-			{
-				ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingMeshletInstanceCount);
-				ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingMeshletInstanceCount);
-				f32 passOcclusionCullingPersentage = CullingResult::getPassOcclusionCullingMeshletInstancePersentage(cullingResult);
-
-				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
-				DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-				DebugGui::Text(FORMAT2, "Meshlet Instance");
-			}
-
-			{
-				ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingTriangleCount);
-				ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingTriangleCount);
-				f32 passOcclusionCullingPersentage = CullingResult::getPassOcclusionCullingTrianglePersentage(cullingResult);
-
-				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
-				DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
-				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
-				DebugGui::Text(FORMAT2, "Triangle");
-			}
-
-			DebugGui::EndTabItem();
-		}
 		if (DebugGui::BeginTabItem("Back face")) {
 			{
 				ThreeDigiets testBackfaceCullingCount(cullingResult->_testBackfaceCullingMeshletInstanceCount);
@@ -798,6 +773,32 @@ void MeshRendererSystemImpl::debugDrawAmplificationCullingResult() {
 
 				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passBackfaceCullingPersentage, passBackfaceCullingCount.get(), testBackfaceCullingCount.get());
 				DebugGui::ProgressBar(passBackfaceCullingPersentage / 100.0f, Vector2(0, 0), t);
+				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+				DebugGui::Text(FORMAT2, "Triangle");
+			}
+
+			DebugGui::EndTabItem();
+		}
+
+		if (DebugGui::BeginTabItem("Occlusion")) {
+			{
+				ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingMeshletInstanceCount);
+				ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingMeshletInstanceCount);
+				f32 passOcclusionCullingPersentage = CullingResult::getPassOcclusionCullingMeshletInstancePersentage(cullingResult);
+
+				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+				DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
+				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
+				DebugGui::Text(FORMAT2, "Meshlet Instance");
+			}
+
+			{
+				ThreeDigiets testOcclusionCullingCount(cullingResult->_testOcclusionCullingTriangleCount);
+				ThreeDigiets passOcclusionCullingCount(cullingResult->_passOcclusionCullingTriangleCount);
+				f32 passOcclusionCullingPersentage = CullingResult::getPassOcclusionCullingTrianglePersentage(cullingResult);
+
+				sprintf_s(t, LTN_COUNTOF(t), FORMAT1, passOcclusionCullingPersentage, passOcclusionCullingCount.get(), testOcclusionCullingCount.get());
+				DebugGui::ProgressBar(passOcclusionCullingPersentage / 100.0f, Vector2(0, 0), t);
 				DebugGui::SameLine(0.0f, DebugGui::GetItemInnerSpacing()._x);
 				DebugGui::Text(FORMAT2, "Triangle");
 			}
@@ -902,7 +903,7 @@ void MeshRendererSystemImpl::update() {
 
 	bool isUpdatedGeometryType = false;
 
-	// メッシュインスタンスデバッグオプション
+	// メッシュレンダラーデバッグオプション
 	{
 		struct MeshInstanceDebug {
 			bool _visible = true;
@@ -917,7 +918,7 @@ void MeshRendererSystemImpl::update() {
 			s32 _packedMeshletCount = 0;
 		};
 
-		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("MeshInstanceDebug");
+		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("Mesh Renderer");
 		DebugWindow::Checkbox("visible", &debug._visible);
 		DebugWindow::Checkbox("visible high polygon meshes", &debug._visibleHighPolygonMeshes);
 		DebugWindow::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
@@ -932,7 +933,6 @@ void MeshRendererSystemImpl::update() {
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 		DebugWindow::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
-		DebugWindow::End();
 
 		if (debug._drawMeshInstanceBounds) {
 			_scene.debugDrawMeshInstanceBounds();
@@ -953,10 +953,6 @@ void MeshRendererSystemImpl::update() {
 		_geometryType = debug._geometryMode;
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESH_CULLING, debug._passMeshInstanceCulling);
 		setDebugCullingFlag(CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING, debug._passMeshletInstanceCulling);
-	}
-
-	{
-		DebugWindow::StartWindow("Culling Results");
 
 		if (DebugGui::BeginTabBar("CullingResultTabBar")) {
 			if (DebugGui::BeginTabItem("Gpu Culling")) {
@@ -971,11 +967,6 @@ void MeshRendererSystemImpl::update() {
 			DebugGui::EndTabItem();
 		}
 
-		DebugWindow::End();
-	}
-
-	{
-		DebugWindow::StartWindow("Scene Instances");
 		if (DebugGui::BeginTabBar("SceneMeshsTabBar")) {
 			if (DebugGui::BeginTabItem("Meshes")) {
 				_resourceManager.drawDebugGui();
@@ -983,9 +974,20 @@ void MeshRendererSystemImpl::update() {
 			if (DebugGui::BeginTabItem("Mesh Instances")) {
 				_scene.debugDrawGui();
 			}
+			if (DebugGui::BeginTabItem("Depth")) {
+				ViewInfo* viewInfo = ViewSystemImpl::Get()->getView();
+				f32 aspectRate = viewInfo->_viewPort._width / viewInfo->_viewPort._height;
+				ResourceDesc desc = viewInfo->_depthTexture.getResourceDesc();
+				DebugGui::Image(viewInfo->_depthSrv._gpuHandle, Vector2(200 * aspectRate, 200),
+					Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.95f, 1));
+				DebugGui::EndTabItem();
+			}
+			if (DebugGui::BeginTabItem("Hiz")) {
+				_gpuCullingResource.debugDrawHiz();
+				DebugGui::EndTabItem();
+			}
 			DebugGui::EndTabBar();
 		}
-
 		DebugWindow::End();
 	}
 

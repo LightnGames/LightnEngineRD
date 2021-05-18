@@ -109,16 +109,16 @@ bool InputSystemImpl::getKey(KeyCode keyCode) const {
 }
 
 bool InputSystemImpl::getKeyDown(KeyCode keyCode) const {
-	return isKeyDown(_keyDowns[keyCode]);
+	return _keyDowns[keyCode] == 1;
 }
 
 bool InputSystemImpl::getKeyUp(KeyCode keyCode) const {
-	return isKeyDown(_keyUps[keyCode]);
+	return _keyUps[keyCode] == 1;
 }
 
 void InputSystemImpl::update() {
 	u8 prevKeyState[256];
-	memcpy(prevKeyState, _keyStates, sizeof(prevKeyState));
+	memcpy(prevKeyState, _keyStates, LTN_COUNTOF(prevKeyState));
 
 	GetKeyboardState(_keyStates);
 

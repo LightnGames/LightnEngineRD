@@ -17,6 +17,7 @@ struct ViewConstantInfo {
 struct ViewInfo {
 	void initialize();
 	void terminate();
+	void debugDrawDepth();
 
 	ViewPort _viewPort;
 	Rect _scissorRect;

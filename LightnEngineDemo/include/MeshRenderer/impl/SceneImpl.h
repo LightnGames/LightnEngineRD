@@ -193,6 +193,7 @@ public:
 	void initialize();
 	void terminate();
 	void update(const ViewInfo* viewInfo);
+	void debugDrawHiz();
 
 	GpuDescriptorHandle getCurrentLodLevelSrv() const { return _currentLodLevelSrv._gpuHandle; }
 	ResourceDesc getHizTextureResourceDesc(u32 level) const;
@@ -343,7 +344,6 @@ public:
 	void terminateDefaultResources();
 	void updateMeshInstanceBounds(u32 meshInstanceIndex);
 	void deleteMeshInstance(u32 meshInstanceIndex);
-	void debugDrawMeshletBounds();
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();
 

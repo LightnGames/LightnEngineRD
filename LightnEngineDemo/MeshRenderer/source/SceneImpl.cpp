@@ -221,21 +221,6 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	_gpuMeshInstances.discard(&_gpuMeshInstances[meshInstanceIndex], 1);
 }
 
-void Scene::debugDrawMeshletBounds() {
-	//for (u32 meshletIndex = 0; meshletIndex < MESHLET_INSTANCE_COUNT_MAX; ++meshletIndex) {
-	//	const gpu::MeshletInstance& meshlet = _gpuMeshletInstances[meshletIndex];
-	//	if (abs(meshlet._normal._x + meshlet._normal._y + meshlet._normal._z) < 0.5f) {
-	//		continue;
-	//	}
-
-	//	Vector3 boundsMin = Vector3(meshlet._aabbMin);
-	//	Vector3 boundsMax = Vector3(meshlet._aabbMax);
-	//	Vector3 boundsCenter = (boundsMin + boundsMax) / 2.0f;
-	//	DebugRendererSystem::Get()->drawAabb(boundsMin, boundsMax);
-	//	DebugRendererSystem::Get()->drawLine(boundsCenter, boundsCenter + Vector3(meshlet._normal), Color4::GREEN);
-	//}
-}
-
 void Scene::debugDrawMeshInstanceBounds() {
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < MESH_INSTANCE_COUNT_MAX; ++meshInstanceIndex) {
 		if (_meshInstanceStateFlags[meshInstanceIndex] == MESH_INSTANCE_FLAG_NONE) {
@@ -1067,24 +1052,6 @@ void GpuCullingResource::terminate() {
 }
 
 void GpuCullingResource::update(const ViewInfo* viewInfo) {
-	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	u32 incrimentSize = descriptorHeapAllocater->getIncrimentSize();
-
-	ResourceDesc firstDesc = _hizDepthTextures[0].getResourceDesc();
-	f32 aspectRate = firstDesc._width / static_cast<f32>(firstDesc._height);
-
-	DebugWindow::StartWindow("Depth Texture");
-	DebugGui::Columns(1, nullptr, true);
-	for (u32 i = 0; i < gpu::HIERACHICAL_DEPTH_COUNT; ++i) {
-		ResourceDesc desc = _hizDepthTextures[i].getResourceDesc();
-		DebugGui::Text("[%d] width:%-4d height:%-4d", i, desc._width, desc._height);
-		DebugGui::Image(_hizDepthTextureSrv._gpuHandle + incrimentSize * i, Vector2(200 * aspectRate, 200),
-			Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.0f, 1), DebugGui::TEXTURE_SAMPLE_TYPE_POINT);
-		DebugGui::NextColumn();
-	}
-	DebugGui::Columns(1);
-	DebugWindow::End();
-
 	const ViewConstantInfo& viewConstantInfo = viewInfo->_mainViewConstantInfo;
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	Application* app = ApplicationSystem::Get()->getApplication();
@@ -1105,6 +1072,21 @@ void GpuCullingResource::update(const ViewInfo* viewInfo) {
 		mapConstant->_nearClip = viewConstantInfo._nearClip;
 		mapConstant->_farClip = viewConstantInfo._farClip;
 		mapConstant->_inputBitDepth = UINT16_MAX;
+	}
+}
+
+void GpuCullingResource::debugDrawHiz() {
+	DescriptorHeapAllocator* descriptorHeapAllocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	u32 incrimentSize = descriptorHeapAllocater->getIncrimentSize();
+
+	ResourceDesc firstDesc = _hizDepthTextures[0].getResourceDesc();
+	f32 aspectRate = firstDesc._width / static_cast<f32>(firstDesc._height);
+
+	for (u32 i = 0; i < gpu::HIERACHICAL_DEPTH_COUNT; ++i) {
+		ResourceDesc desc = _hizDepthTextures[i].getResourceDesc();
+		DebugGui::Text("[%d] width:%-4d height:%-4d", i, desc._width, desc._height);
+		DebugGui::Image(_hizDepthTextureSrv._gpuHandle + incrimentSize * i, Vector2(200 * aspectRate, 200),
+			Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.95f, 1), DebugGui::TEXTURE_SAMPLE_TYPE_POINT);
 	}
 }
 

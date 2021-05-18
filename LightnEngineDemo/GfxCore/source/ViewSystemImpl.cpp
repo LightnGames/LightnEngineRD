@@ -34,8 +34,18 @@ void ViewSystemImpl::update() {
 	const char* cameraModes[] = { "Default", "Main", "Cull" };
 	DebugGui::Combo("Camera Mode", reinterpret_cast<s32*>(&debug._cameraMode), cameraModes, LTN_COUNTOF(cameraModes));
 
-	DebugWindow::DragFloat3("position", &debug.position._x, 0.1f);
-	DebugWindow::SliderAngle("fov", &debug.fov, 0.1f);
+	DebugGui::DragFloat3("position", &debug.position._x, 0.1f);
+	DebugGui::SliderAngle("fov", &debug.fov, 0.1f);
+
+	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
+	if (DebugGui::BeginTabBar("ViewSystemTabBar")) {
+		if (DebugGui::BeginTabItem("Fixed View")) {
+			DebugGui::Image(_debugFixedView._hdrSrv._gpuHandle, Vector2(200 * aspectRate, 200));
+			DebugGui::EndTabItem();
+		}
+		DebugGui::EndTabBar();
+	}
+
 	DebugWindow::End();
 
 	// マウス右クリックでの画面回転
@@ -91,7 +101,6 @@ void ViewSystemImpl::update() {
 	f32 farClip = 300;
 	f32 nearClip = 0.1f;
 	f32 fovHalfTan = tanf(debug.fov / 2.0f);
-	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
 	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(debug.position);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
 	ViewConstant viewConstant;
@@ -161,20 +170,6 @@ void ViewSystemImpl::update() {
 		depthPrePassViewConstant->_frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - depthPrePassFarClip);
 		depthPrePassViewConstant->_nearAndFarClip._y = depthPrePassFarClip;
 	}
-
-	DebugGui::Start("CameraInfo");
-	DebugGui::Image(_debugFixedView._hdrSrv._gpuHandle, Vector2(200 * aspectRate, 200));
-	DebugWindow::End();
-
-	DebugWindow::StartWindow("Depth Texture");
-	DebugGui::Columns(1, nullptr, true);
-	ResourceDesc desc = _mainView._depthTexture.getResourceDesc();
-	DebugGui::Text("[0] width:%-4d height:%-4d", desc._width, desc._height);
-	DebugGui::Image(_mainView._depthSrv._gpuHandle, Vector2(200 * aspectRate, 200),
-		Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.95f, 1));
-	DebugGui::NextColumn();
-	DebugGui::Columns(1);
-	DebugWindow::End();
 }
 
 void ViewSystemImpl::processDeletion() {
@@ -305,4 +300,11 @@ void ViewInfo::terminate() {
 		graphicsSystem->getRtvGpuDescriptorAllocator()->discardDescriptor(_hdrRtv);
 		graphicsSystem->getSrvCbvUavGpuDescriptorAllocator()->discardDescriptor(_hdrSrv);
 	}
+}
+
+void ViewInfo::debugDrawDepth() {
+	f32 aspectRate = _viewPort._width / _viewPort._height;
+	ResourceDesc desc = _depthTexture.getResourceDesc();
+	DebugGui::Image(_depthSrv._gpuHandle, Vector2(200 * aspectRate, 200),
+		Vector2(0, 0), Vector2(1, 1), Color4::WHITE, Color4::BLACK, DebugGui::COLOR_CHANNEL_FILTER_R, Vector2(0.95f, 1));
 }

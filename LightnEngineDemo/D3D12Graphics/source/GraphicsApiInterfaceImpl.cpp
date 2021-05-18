@@ -1372,8 +1372,11 @@ namespace DebugGui {
 		ImGui::NewFrame();
 	}
 
-	void RenderDebugWindowGui(CommandList* commandList) {
+	void RenderDebugWindowImgui() {
 		ImGui::Render();
+	}
+
+	void RenderDebugWindowGui(CommandList* commandList) {
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), toD3d12(commandList));
 	}
 

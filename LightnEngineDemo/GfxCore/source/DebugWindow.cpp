@@ -32,7 +32,7 @@ void DebugWindow::initialize() {
 	desc._rtvFormat = BACK_BUFFER_FORMAT;
 	DebugGui::InitializeDebugWindowGui(desc);
 
-	if(_mkdir(DEBUG_WINDOW_STRUCTURE_FOLDER_PATH)) {
+	if (_mkdir(DEBUG_WINDOW_STRUCTURE_FOLDER_PATH)) {
 		LTN_INFO("create debug window folder %s", DEBUG_WINDOW_STRUCTURE_FOLDER_PATH);
 	}
 
@@ -62,8 +62,18 @@ void DebugWindow::beginFrame() {
 
 void DebugWindow::renderFrame(CommandList* commandList) {
 #if DEBUG_WINDOW_ENABLE
-	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "ImGui");
-	DebugGui::RenderDebugWindowGui(commandList);
+	InputSystem* inputSystem = InputSystem::Get();
+	static bool visible = true;
+	if (inputSystem->getKeyDown(InputSystem::KEY_CODE_G)) {
+		visible = !visible;
+	}
+
+	DebugGui::RenderDebugWindowImgui();
+	if (visible) {
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "ImGui");
+		DebugGui::RenderDebugWindowGui(commandList);
+	}
+
 #endif
 }
 

@@ -1339,6 +1339,7 @@ namespace DebugGui {
 
 	void LTN_GFX_API InitializeDebugWindowGui(const DebugWindowDesc& desc);
 	void LTN_GFX_API BeginDebugWindowGui();
+	void LTN_GFX_API RenderDebugWindowImgui();
 	void LTN_GFX_API RenderDebugWindowGui(CommandList* commandList);
 	bool LTN_GFX_API TranslateWindowProc(s32* hWnd, u32 message, u64 wParam, s64 lParam);
 	void LTN_GFX_API Start(const char* windowName);
