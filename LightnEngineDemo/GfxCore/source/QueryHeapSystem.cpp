@@ -39,7 +39,7 @@ void QueryHeapSystem::requestTimeStamp(CommandList* commandList, u32 frameIndex)
 	u32 queryFrameOffset = frameIndex * TICK_COUNT_MAX;
 	commandList->resolveQueryData(_queryHeap, QUERY_TYPE_TIMESTAMP, queryFrameOffset, _gpuPerf._currentFrameMarkerCount, _timeStampBuffer.getResource(), queryFrameOffset * sizeof(u64));
 
-	MemoryRange range = { queryFrameOffset , TICK_COUNT_MAX };
+	MemoryRange range(queryFrameOffset, TICK_COUNT_MAX);
 	u64* mapPtr = _timeStampBuffer.map<u64>(&range);
 	memcpy(_gpuPerf._ticks, mapPtr, sizeof(u64) * TICK_COUNT_MAX);
 	_timeStampBuffer.unmap();
@@ -183,7 +183,7 @@ u32 PerfInfo::pushMarker(u32 tickIndex) {
 	return currentMarkerIndex;
 }
 
-u32 PerfInfo::pushTick(const char * markerName) {
+u32 PerfInfo::pushTick(const char* markerName) {
 	u32 currentTickIndex = _currentTickCount++;
 	LTN_ASSERT(currentTickIndex < TIME_STAMP_COUNT_MAX);
 	sprintf_s(_markerNames[currentTickIndex], "%s", markerName);
