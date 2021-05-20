@@ -13,6 +13,7 @@ enum MeshInstanceStateFlag {
 enum MeshInstanceUpdateFlag {
 	MESH_INSTANCE_UPDATE_NONE = 0,
 	MESH_INSTANCE_UPDATE_WORLD_MATRIX = 1 << 0,
+	MESH_INSTANCE_UPDATE_VISIBLE = 1 << 1,
 };
 
 enum SubMeshInstanceUpdateFlag {
@@ -340,7 +341,7 @@ public:
 	void processDeletion();
 	void terminate();
 	void terminateDefaultResources();
-	void updateMeshInstanceBounds(u32 meshInstanceIndex);
+	void uploadMeshInstance(u32 meshInstanceIndex);
 	void deleteMeshInstance(u32 meshInstanceIndex);
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();

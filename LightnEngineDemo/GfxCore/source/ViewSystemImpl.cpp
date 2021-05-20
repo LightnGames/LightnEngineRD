@@ -28,6 +28,11 @@ void ViewSystemImpl::update() {
 		f32 depthPrePassDistance = 0.0f;
 		s32 _cameraMode = 0;
 	};
+
+	static bool autoTranslate = false;
+	static bool autoRotate = false;
+	static f32 autoTranslateTime = 0.0f;
+	static f32 autoRotateTime = 0.0f;
 	auto debug = DebugWindow::StartWindow<CameraInfo>("CameraInfo");
 	DebugGui::DragFloat("depth pre pass distance", &debug.depthPrePassDistance);
 
@@ -46,6 +51,22 @@ void ViewSystemImpl::update() {
 		DebugGui::EndTabBar();
 	}
 
+	const char* autoRotateLabels[] = { "Auto Rotate", "Stop Auto Rotate" };
+	if(DebugGui::Button(autoRotateLabels[autoRotate])) {
+		if (autoRotate) {
+			autoRotateTime = 0.0f;
+		}
+		autoRotate = !autoRotate;
+	}
+
+	const char* autoTranslateLabels[] = { "Auto Translate", "Stop Auto Translate" };
+	if (DebugGui::Button(autoTranslateLabels[autoTranslate])) {
+		if (autoTranslate) {
+			autoTranslateTime = 0.0f;
+		}
+		autoTranslate = !autoTranslate;
+	}
+
 	DebugWindow::End();
 
 	// マウス右クリックでの画面回転
@@ -60,12 +81,17 @@ void ViewSystemImpl::update() {
 	}
 	prevMousePosition = currentMousePosition;
 
-	// W/A/S/D キーボードによる移動
 	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
+	if (autoRotateTime) {
+		autoRotateTime += 0.01f;
+		cameraRotate = cameraRotate * Matrix4::rotateY(autoRotateTime);
+	}
+
 	Vector3 rightDirection = cameraRotate.mv[0].toVector3();
 	Vector3 upDirection = cameraRotate.mv[1].toVector3();
 	Vector3 forwardDirection = cameraRotate.mv[2].toVector3();
-	Vector3 rotate = Vector3::Zero;
+
+	// W/A/S/D キーボードによる移動
 	Vector3 moveDirection = Vector3::Zero;
 	if (inputSystem->getKey(InputSystem::KEY_CODE_W)) {
 		moveDirection += forwardDirection;
@@ -95,13 +121,19 @@ void ViewSystemImpl::update() {
 	moveDirection = Vector3::normalize(moveDirection) * DEBUG_CAMERA_MOVE_SPEED;
 	debug.position += moveDirection;
 
+	Vector3 position = debug.position;
+	if (autoTranslate) {
+		autoTranslateTime += 0.01f;
+		position += Vector3::Up * std::sin(autoTranslateTime);
+	}
+
 	_isEnabledDebugFixedView = debug._cameraMode != CAMERA_MODE_DEFAULT;
 
 	// メインビュー用定数バッファ
 	f32 farClip = 300;
 	f32 nearClip = 0.1f;
 	f32 fovHalfTan = tanf(debug.fov / 2.0f);
-	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(debug.position);
+	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(position);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
 	ViewConstant viewConstant;
 	viewConstant._matrixView = viewMatrix.inverse().transpose();

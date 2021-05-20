@@ -1467,6 +1467,11 @@ namespace DebugGui {
 		return ImGui::ColorEdit4(label, col, flags);
 	}
 
+	bool Button(const char* label, const Vector2& size) {
+		ImVec2 sizei(size._x, size._y);
+		return ImGui::Button(label, sizei);
+	}
+
 	bool Combo(const char* label, s32* current_item, const char* const items[], s32 items_count, s32 popup_max_height_in_items) {
 		return ImGui::Combo(label, current_item, items, items_count, popup_max_height_in_items);
 	}

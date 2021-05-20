@@ -10,21 +10,34 @@ StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 
 RWByteAddressBuffer _resultLodLevels : register(u0);
 
+bool isRangeMeshInstance(uint meshInstanceIndex) {
+    return meshInstanceIndex < _sceneCullingInfo._meshInstanceCount;
+}
+
+bool isTestedMeshInstance(uint meshInstanceIndex) {
+    if (!isRangeMeshInstance(meshInstanceIndex)) {
+        return false;
+    }
+    
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    if (!isEnabledMeshInstance(meshInstance)) {
+        return false;
+    }
+    
+    return true;
+}
+
 #define THREAD_NUM 128
 [numthreads(THREAD_NUM, 1, 1)] 
 void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThreadID) {
     uint meshInstanceIndex = groupID.x * THREAD_NUM + groupThreadID.x;
-    if (meshInstanceIndex >= _sceneCullingInfo._meshInstanceCount) {
-        return;
-    }
-	
-    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
-    if (meshInstance._stateFlags == 0) {
+    if (!isTestedMeshInstance(meshInstanceIndex)) {
         return;
     }
     
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Mesh mesh = _meshes[meshInstance._meshIndex];
-    if(mesh._stateFlags == MESH_STATE_ALLOCATED){
+    if(mesh._stateFlags == MESH_STATE_ALLOCATED) {
         mesh = _meshes[0];
         return;
     }

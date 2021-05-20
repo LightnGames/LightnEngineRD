@@ -106,8 +106,11 @@ void Scene::update() {
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
-		if (_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX) {
-			updateMeshInstanceBounds(meshInstanceIndex);
+		bool isUpdated = false;
+		isUpdated |= !!(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX);
+		isUpdated |= !!(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_VISIBLE);
+		if (isUpdated) {
+			uploadMeshInstance(meshInstanceIndex);
 		}
 	}
 
@@ -148,6 +151,10 @@ void Scene::processDeletion() {
 		if (_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX) {
 			_meshInstanceUpdateFlags[meshInstanceIndex] &= ~MESH_INSTANCE_UPDATE_WORLD_MATRIX;
 		}
+
+		if (_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_VISIBLE) {
+			_meshInstanceUpdateFlags[meshInstanceIndex] &= ~MESH_INSTANCE_UPDATE_VISIBLE;
+		}
 	}
 
 	u32 subMeshInstanceCount = _gpuSubMeshInstances.getArrayCountMax();
@@ -184,7 +191,7 @@ void Scene::terminateDefaultResources() {
 	_defaultMaterial->requestToDelete();
 }
 
-void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
+void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 	MeshInstanceImpl& meshInstance = _meshInstances[meshInstanceIndex];
 	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
@@ -192,13 +199,22 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 	Matrix4 transposedMatrixWorld = matrixWorld.transpose();
 	Vector3 worldScale = matrixWorld.getScale();
 
+	u32 stateFlags = 0;
+	if (meshInstance.isEnabled()) {
+		stateFlags |= gpu::MESH_INSTANCE_STATE_FLAGS_ENABLE;
+	}
+
+	if(meshInstance.isVisible()) {
+		stateFlags |= gpu::MESH_INSTANCE_STATE_FLAGS_VISIBLE;
+	}
+
 	AABB meshInstanceLocalBounds(meshInfo->_boundsMin, meshInfo->_boundsMax);
 	AABB meshInstanceBounds = meshInstanceLocalBounds.getTransformedAabb(matrixWorld);
 	Vector3 boundsCenter = (meshInstanceBounds._min + meshInstanceBounds._max) / 2.0f;
 	f32 boundsRadius = Vector3::length(meshInstanceBounds._max - boundsCenter);
 	gpuMeshInstance._aabbMin = meshInstanceBounds._min.getFloat3();
 	gpuMeshInstance._aabbMax = meshInstanceBounds._max.getFloat3();
-	gpuMeshInstance._stateFlags = 1;
+	gpuMeshInstance._stateFlags = stateFlags;
 	gpuMeshInstance._boundsRadius = boundsRadius;
 	gpuMeshInstance._worldScale = Max(worldScale._x, Max(worldScale._y, worldScale._z));
 
@@ -213,12 +229,21 @@ void Scene::updateMeshInstanceBounds(u32 meshInstanceIndex) {
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	const MeshInstanceImpl& meshInstanceInfo = _meshInstances[meshInstanceIndex];
 	const MeshInfo* meshInfo = meshInstanceInfo.getMesh()->getMeshInfo();
+
+	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
+	u32 subMeshCount = meshInfo->_totalSubMeshCount;
 	const gpu::MeshInstance& meshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset];
 	const gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset];
-	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], meshInfo->_totalSubMeshCount);
-	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], meshInfo->_totalLodMeshCount);
+	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], lodMeshCount);
+	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], subMeshCount);
 	_gpuMeshInstances.discard(&_gpuMeshInstances[meshInstanceIndex], 1);
+
+	_meshInstances[meshInstanceIndex] = MeshInstanceImpl();
+
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, sizeof(gpu::MeshInstance) * meshInstanceIndex);
+	*mapMeshInstance = gpu::MeshInstance();
 }
 
 void Scene::debugDrawMeshInstanceBounds() {
@@ -293,7 +318,7 @@ void Scene::debugDrawGui() {
 				for (u32 w = 0; w < meshletCount; w++) {
 					DebugGui::Text("Meshlet %2d", w);
 				}
-				//メッシュレット情報
+				// メッシュレット情報
 				DebugGui::TreePop();
 			}
 			subMeshIndex += subMeshCount;
@@ -348,6 +373,7 @@ void Scene::allocateMeshInstance(MeshInstance** outMeshInstances, const Mesh** m
 		meshInstance->setUpdateFlags(&_meshInstanceUpdateFlags[globalMeshInstanceIndex]);
 		meshInstance->setStateFlags(&_meshInstanceStateFlags[globalMeshInstanceIndex]);
 		meshInstance->setWorldMatrix(Matrix4::Identity);
+		meshInstance->setVisiblity(true);
 		meshInstance->setEnabled();
 
 		totalLodMeshCounter += meshInfo->_totalLodMeshCount;
@@ -437,6 +463,11 @@ void MeshInstance::setMaterial(Material* material, u64 slotNameHash) {
 	setMaterialSlotIndex(material, slotIndex);
 }
 
+void MeshInstance::setVisiblity(bool visible) {
+	_visiblity = visible;
+	*_updateFlags |= MESH_INSTANCE_UPDATE_VISIBLE;
+}
+
 u32 MeshInstance::getMaterialSlotIndex(u64 slotNameHash) const {
 	const u32 materialSlotCount = getMesh()->getMeshInfo()->_materialSlotCount;
 	const u64* materialSlotNameHashes = getMesh()->getMeshInfo()->_materialSlotNameHashes;
@@ -504,7 +535,7 @@ void IndirectArgumentResource::initialize(const InitializeDesc& initializeDesc) 
 		desc._format = FORMAT_R32_TYPELESS;
 		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, countHandle);
 
-		// カウントバッファをAPIの機能でクリアするためにCPU Only Descriptorを作成
+		// カウントバッファを API の機能でクリアするために CPU Only Descriptor を作成
 		_countCpuUav = cpuAllocator->allocateDescriptors(1);
 		device->createUnorderedAccessView(_countBuffer.getResource(), nullptr, &desc, _countCpuUav._cpuHandle);
 	}

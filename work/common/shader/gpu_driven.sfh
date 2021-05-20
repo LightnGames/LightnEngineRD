@@ -29,6 +29,15 @@
 #define TEST_NDC_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 22
 #define PASSED_NDC_CULLING_TRIANGLE_COUNT_OFFSET UINT32_SIZE_IN_BYTE * 23
 
+#define MESH_STATE_NONE 0
+#define MESH_STATE_ALLOCATED 1
+#define MESH_STATE_LOADED 2
+
+#define MESH_INSTANCE_STATE_FLAGS_NONE 0,
+#define MESH_INSTANCE_STATE_FLAGS_ENABLE 1
+#define MESH_INSTANCE_STATE_FLAGS_VISIBLE (1 << 1)
+#define MESH_INSTANCE_STATE_FLAGS_CAST_SHADOW (1 << 2)
+
 #define MESHLET_INSTANCE_MESHLET_COUNT_MAX 64
 #define PRIMITIVE_INSTANCING_PRIMITIVE_COUNT_MAX 22
 #define INSTANCING_PER_SHADER_COUNT_MAX 4096
@@ -59,9 +68,6 @@ struct PayloadStruct {
     uint _unpackedCount;
 }; 
 
-#define MESH_STATE_NONE 0
-#define MESH_STATE_ALLOCATED 1
-#define MESH_STATE_LOADED 2
 struct Mesh {
 	uint _stateFlags;
 	uint _lodMeshOffset;
@@ -138,3 +144,6 @@ struct SubMeshDrawInfo {
     uint _indexOffset;
 };
 
+bool isEnabledMeshInstance(MeshInstance meshInstance) {
+    return meshInstance._stateFlags & MESH_INSTANCE_STATE_FLAGS_ENABLE;
+}

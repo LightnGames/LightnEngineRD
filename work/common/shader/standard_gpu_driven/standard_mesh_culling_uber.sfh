@@ -39,7 +39,7 @@ bool isRangeMeshInstance(uint meshInstanceIndex) {
     return meshInstanceIndex < _sceneCullingInfo._meshInstanceCount;
 }
 
-bool isTested(uint meshInstanceIndex) {
+bool isTestedMeshInstance(uint meshInstanceIndex) {
     if (!isRangeMeshInstance(meshInstanceIndex)) {
         return false;
     }
@@ -114,7 +114,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
 [numthreads(THREAD_NUM, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
     uint meshInstanceIndex = dtid;
-    if (!isTested(meshInstanceIndex)) {
+    if (!isTestedMeshInstance(meshInstanceIndex)) {
         return;
     }
     

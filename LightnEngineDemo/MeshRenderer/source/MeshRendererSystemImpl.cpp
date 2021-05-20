@@ -447,7 +447,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 	u32 meshInstanceCount = _scene.getMeshInstanceCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		MeshInstanceImpl* meshInstance = _scene.getMeshInstance(meshInstanceIndex);
-		if (!meshInstance->isEnable()) {
+		if (!meshInstance->isEnabled()) {
 			continue;
 		}
 

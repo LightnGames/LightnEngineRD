@@ -6,6 +6,13 @@ namespace gpu {
 	constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 	constexpr u32 SHADER_SET_COUNT_MAX = 32;
 
+	enum MeshInstanceStateFlgas {
+		MESH_INSTANCE_STATE_FLAGS_NONE = 0,
+		MESH_INSTANCE_STATE_FLAGS_ENABLE = 1,
+		MESH_INSTANCE_STATE_FLAGS_VISIBLE = 1 << 1,
+		MESH_INSTANCE_STATE_FLAGS_CAST_SHADOW = 1 << 1,
+	};
+
 	enum MeshState {
 		MESH_STATE_NONE = 0,
 		MESH_STATE_ALLOCATED,
@@ -40,26 +47,26 @@ namespace gpu {
 	struct Meshlet {
 		Float3 _aabbMin;
 		Float3 _aabbMax;
-		u32 _normalAndCutoff;
+		u32 _normalAndCutoff = 0;
 		f32 _apexOffset = 0;
 	};
 
 	struct MeshletPrimitiveInfo {
-		u32 _vertexOffset;
-		u32 _vertexCount;
-		u32 _primitiveOffset;
-		u32 _primitiveCount;
+		u32 _vertexOffset = 0;
+		u32 _vertexCount = 0;
+		u32 _primitiveOffset = 0;
+		u32 _primitiveCount = 0;
 	};
 
 	struct MeshletInstancePrimitiveInfo {
-		u32 _materialIndex;
-		u32 _vertexOffset;
-		u32 _vertexIndexOffset;
-		u32 _primitiveOffset;
+		u32 _materialIndex = 0;
+		u32 _vertexOffset = 0;
+		u32 _vertexIndexOffset = 0;
+		u32 _primitiveOffset = 0;
 	};
 
 	struct MeshInstance {
-		u32 _stateFlags;
+		u32 _stateFlags = MESH_INSTANCE_STATE_FLAGS_NONE;
 		u32 _meshIndex = 0;
 		u32 _lodMeshInstanceOffset = 0;
 		f32 _boundsRadius;
@@ -91,11 +98,11 @@ namespace gpu {
 	struct StarndardMeshIndirectArguments {
 		u32 _meshInstanceIndex = 0;
 		u32 _materialIndex = 0;
-		u32 _indexCountPerInstance;
-		u32 _instanceCount;
-		u32 _startIndexLocation;
-		s32 _baseVertexLocation;
-		u32 _startInstanceLocation;
+		u32 _indexCountPerInstance = 0;
+		u32 _instanceCount = 0;
+		u32 _startIndexLocation = 0;
+		s32 _baseVertexLocation = 0;
+		u32 _startInstanceLocation = 0;
 	};
 
 	struct GpuCullingResult {

@@ -1366,6 +1366,7 @@ namespace DebugGui {
 	bool LTN_GFX_API ColorEdit3(const char* label, float col[3], ColorEditFlags flags = 0);
 	bool LTN_GFX_API ColorEdit4(const char* label, float col[4], ColorEditFlags flags = 0);
 
+	bool LTN_GFX_API Button(const char* label, const Vector2& size = Vector2(0,0));
 	bool LTN_GFX_API Combo(const char* label, s32* current_item, const char* const items[], s32 items_count, s32 popup_max_height_in_items = -1);
 	bool LTN_GFX_API Checkbox(const char* label, bool* v);
 	bool LTN_GFX_API BeginTabBar(const char* str_id, s32 flags = 0);

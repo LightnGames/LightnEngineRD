@@ -12,10 +12,6 @@ struct MeshletBounds {
     float _cutoff;
 };
 
-bool isEnabledMeshInstance(MeshInstance meshInstance) {
-    return meshInstance._stateFlags != 0;
-}
-
 MeshletBounds computeTransformedBounds(float4x3 matrixWorld, float worldScale, Meshlet meshlet) {
     float3 boundsMin = meshlet._aabbMin;
     float3 boundsMax = meshlet._aabbMax;

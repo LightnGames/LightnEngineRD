@@ -123,8 +123,10 @@ public:
 	void setWorldMatrix(const Matrix4& matrixWorld);
 	void setMaterialSlotIndex(Material* material, u32 slotIndex);
 	void setMaterial(Material* material, u64 slotNameHash);
+	void setVisiblity(bool visible);
 	u32 getMaterialSlotIndex(u64 slotNameHash) const;
 
+	bool isVisible() const { return _visiblity; }
 	const Mesh* getMesh() const { return _mesh; }
 	SubMeshInstance* getSubMeshInstance(u32 index) { return &_subMeshInstances[index]; }
 	Matrix4 getWorldMatrix() const { return _matrixWorld; }
@@ -137,10 +139,11 @@ public:
 	const gpu::LodMeshInstance* getGpuLodMeshInstance(u32 lodLevel) const { return &_gpuLodMeshinstances[lodLevel]; }
 	const gpu::SubMeshInstance* getGpuSubMeshInstance(u32 subMeshIndex) const { return &_gpuSubMeshInstances[subMeshIndex]; }
 
-	bool isEnable() const { return _stateFlags != nullptr; }
+	bool isEnabled() const { return _stateFlags != nullptr; }
 
 protected:
 	Matrix4 _matrixWorld;
+	bool _visiblity = false;
 	u8* _stateFlags = nullptr;
 	u8* _updateFlags = nullptr;
 
