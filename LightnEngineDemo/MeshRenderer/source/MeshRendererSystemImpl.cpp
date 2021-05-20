@@ -1002,7 +1002,11 @@ void MeshRendererSystemImpl::update() {
 		_buildIndirectArgumentResource.update(desc);
 	}
 
-	if (_scene.isUpdatedInstancingOffset() || isUpdatedGeometryType || isUpdatedPackMeshletCount) {
+	bool updateInstancingOffset = false;
+	updateInstancingOffset |= _scene.isUpdatedInstancingOffset();
+	updateInstancingOffset |= isUpdatedGeometryType;
+	updateInstancingOffset |= isUpdatedPackMeshletCount;
+	if (updateInstancingOffset) {
 		switch (_geometryType) {
 #if ENABLE_MESH_SHADER
 		case GEOMETORY_MODE_MESH_SHADER:
