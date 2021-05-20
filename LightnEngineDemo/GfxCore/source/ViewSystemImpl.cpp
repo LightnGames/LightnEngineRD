@@ -82,7 +82,7 @@ void ViewSystemImpl::update() {
 	prevMousePosition = currentMousePosition;
 
 	Matrix4 cameraRotate = Matrix4::rotate(debug.cameraAngle);
-	if (autoRotateTime) {
+	if (autoRotate) {
 		autoRotateTime += 0.01f;
 		cameraRotate = cameraRotate * Matrix4::rotateY(autoRotateTime);
 	}
@@ -121,10 +121,10 @@ void ViewSystemImpl::update() {
 	moveDirection = Vector3::normalize(moveDirection) * DEBUG_CAMERA_MOVE_SPEED;
 	debug.position += moveDirection;
 
-	Vector3 position = debug.position;
+	Vector3 cameraPosition = debug.position;
 	if (autoTranslate) {
 		autoTranslateTime += 0.01f;
-		position += Vector3::Up * std::sin(autoTranslateTime);
+		cameraPosition += Vector3::Up * std::sin(autoTranslateTime) * 3;
 	}
 
 	_isEnabledDebugFixedView = debug._cameraMode != CAMERA_MODE_DEFAULT;
@@ -133,13 +133,13 @@ void ViewSystemImpl::update() {
 	f32 farClip = 300;
 	f32 nearClip = 0.1f;
 	f32 fovHalfTan = tanf(debug.fov / 2.0f);
-	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(position);
+	Matrix4 viewMatrix = cameraRotate * Matrix4::translate(cameraPosition);
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(debug.fov, aspectRate, nearClip, farClip);
 	ViewConstant viewConstant;
 	viewConstant._matrixView = viewMatrix.inverse().transpose();
 	viewConstant._matrixProj = projectionMatrix.transpose();
 	viewConstant._matrixViewProj = viewConstant._matrixProj * viewConstant._matrixView;
-	viewConstant._position = debug.position.getFloat3();
+	viewConstant._position = cameraPosition.getFloat3();
 	viewConstant._nearAndFarClip._x = nearClip;
 	viewConstant._nearAndFarClip._y = farClip;
 	viewConstant._halfFovTanX = fovHalfTan * aspectRate;
@@ -157,12 +157,12 @@ void ViewSystemImpl::update() {
 	Vector3 topNormal = Matrix4::transformNormal(-Vector3::Up + forward, cameraRotate).getNormalize();
 	Vector3 nearNormal = Matrix4::transformNormal(Vector3::Forward, cameraRotate).getNormalize();
 	Vector3 farNormal = Matrix4::transformNormal(-Vector3::Forward, cameraRotate).getNormalize();
-	viewConstant._frustumPlanes[0] = Float4(rightNormal._x, rightNormal._y, rightNormal._z, Vector3::dot(rightNormal, debug.position));
-	viewConstant._frustumPlanes[1] = Float4(leftNormal._x, leftNormal._y, leftNormal._z, Vector3::dot(leftNormal, debug.position));
-	viewConstant._frustumPlanes[2] = Float4(buttomNormal._x, buttomNormal._y, buttomNormal._z, Vector3::dot(buttomNormal, debug.position));
-	viewConstant._frustumPlanes[3] = Float4(topNormal._x, topNormal._y, topNormal._z, Vector3::dot(topNormal, debug.position));
-	viewConstant._frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, debug.position) + nearClip);
-	viewConstant._frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, debug.position) - farClip);
+	viewConstant._frustumPlanes[0] = Float4(rightNormal._x, rightNormal._y, rightNormal._z, Vector3::dot(rightNormal, cameraPosition));
+	viewConstant._frustumPlanes[1] = Float4(leftNormal._x, leftNormal._y, leftNormal._z, Vector3::dot(leftNormal, cameraPosition));
+	viewConstant._frustumPlanes[2] = Float4(buttomNormal._x, buttomNormal._y, buttomNormal._z, Vector3::dot(buttomNormal, cameraPosition));
+	viewConstant._frustumPlanes[3] = Float4(topNormal._x, topNormal._y, topNormal._z, Vector3::dot(topNormal, cameraPosition));
+	viewConstant._frustumPlanes[4] = Float4(nearNormal._x, nearNormal._y, nearNormal._z, Vector3::dot(nearNormal, cameraPosition) + nearClip);
+	viewConstant._frustumPlanes[5] = Float4(farNormal._x, farNormal._y, farNormal._z, Vector3::dot(farNormal, cameraPosition) - farClip);
 
 	// CPU 側で参照する用の定数バッファ情報
 	ViewConstantInfo viewConstantInfo;
