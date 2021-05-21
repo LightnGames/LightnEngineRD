@@ -123,8 +123,8 @@ void ViewSystemImpl::update() {
 
 	Vector3 cameraPosition = debug.position;
 	if (autoTranslate) {
-		autoTranslateTime += 0.01f;
-		cameraPosition += Vector3::Up * std::sin(autoTranslateTime) * 3;
+		autoTranslateTime += 0.015f;
+		cameraPosition += Vector3::Right * std::sin(autoTranslateTime) * 5;
 	}
 
 	_isEnabledDebugFixedView = debug._cameraMode != CAMERA_MODE_DEFAULT;

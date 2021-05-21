@@ -1113,7 +1113,7 @@ Mesh* MeshRendererSystemImpl::createMesh(const MeshDesc& desc) {
 }
 
 void MeshRendererSystemImpl::createMeshInstance(MeshInstance** outMeshInstances, const MeshInstanceDesc& desc) {
-	return _scene.allocateMeshInstance(outMeshInstances, desc._meshes, desc._instanceCount);
+	return _scene.createMeshInstances(outMeshInstances, desc._meshes, desc._instanceCount);
 }
 
 Mesh* MeshRendererSystemImpl::findMesh(u64 filePathHash) {

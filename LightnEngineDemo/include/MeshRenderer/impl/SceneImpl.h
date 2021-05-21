@@ -348,7 +348,7 @@ public:
 
 	bool isUpdatedInstancingOffset() const { return _isUpdatedInstancingOffset; }
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
-	void allocateMeshInstance(MeshInstance** outMeshInstances, const Mesh** meshes, u32 instanceCount);
+	void createMeshInstances(MeshInstance** outMeshInstances, const Mesh** meshes, u32 instanceCount);
 	GpuDescriptorHandle getMeshInstanceSrv() const { return _meshInstanceSrv._gpuHandle; }
 	GpuDescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
@@ -381,4 +381,7 @@ private:
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
 	bool _isUpdatedInstancingOffset = false;
+	u32 _meshletInstanceCount = 0;
+	u32 _vertexCount = 0;
+	u32 _triangleCount = 0;
 };
