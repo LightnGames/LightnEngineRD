@@ -896,11 +896,6 @@ void MeshRendererSystemImpl::update() {
 		return;
 	}
 
-	_scene.update();
-	_resourceManager.update();
-	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
-	_vramShaderSetSystem.update();
-
 	bool isUpdatedGeometryType = false;
 	bool isUpdatedPackMeshletCount = false;
 
@@ -945,6 +940,33 @@ void MeshRendererSystemImpl::update() {
 		}
 		if (_packedMeshletCount != packedMeshletCount) {
 			isUpdatedPackMeshletCount = true;
+		}
+
+		static bool visibleHighMeshes = false;
+		if (visibleHighMeshes != debug._visibleHighPolygonMeshes) {
+			u32 meshInstanceResarveCount = _scene.getMeshInstanceArrayCountMax();
+			const u64 bunnyHash = StrHash("victorian\\high\\happy_buddha.mesh");
+			const u64 buddhaHash = StrHash("victorian\\high\\bunny.mesh");
+			const u64 eratoHash = StrHash("victorian\\high\\erato.mesh");
+			const u64 teapotHash = StrHash("victorian\\high\\teapot.mesh");
+			const u64 dragonHash = StrHash("victorian\\high\\dragon.mesh");
+			MeshInstanceImpl* meshInstances = _scene.getMeshInstance(0);
+			const u8* meshInstanceStateFlags = _scene.getMeshInstanceStateFlags();
+			for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceResarveCount; ++meshInstanceIndex) {
+				if (meshInstanceStateFlags[meshInstanceIndex] != MESH_INSTANCE_FLAG_SCENE_ENABLED) {
+					continue;
+				}
+				MeshInstanceImpl& meshInstance = meshInstances[meshInstanceIndex];
+				const DebugMeshInfo* info = meshInstance.getMesh()->getDebugMeshInfo();
+				if ((info->_filePathHash == bunnyHash) ||
+					(info->_filePathHash == buddhaHash) ||
+					(info->_filePathHash == eratoHash) ||
+					(info->_filePathHash == teapotHash) ||
+					(info->_filePathHash == dragonHash)) {
+					meshInstance.setVisiblity(!visibleHighMeshes);
+				}
+			}
+			visibleHighMeshes = debug._visibleHighPolygonMeshes;
 		}
 
 		_packedMeshletCount = packedMeshletCount;
@@ -995,6 +1017,11 @@ void MeshRendererSystemImpl::update() {
 		}
 		DebugWindow::End();
 	}
+
+	_scene.update();
+	_resourceManager.update();
+	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
+	_vramShaderSetSystem.update();
 
 	{
 		BuildIndirectArgumentResource::UpdateDesc desc;

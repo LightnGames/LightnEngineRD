@@ -357,6 +357,7 @@ public:
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
 	u32 getSubMeshInstanceArrayCountMax() const { return _gpuSubMeshInstances.getArrayCountMax(); }
 	const gpu::SubMeshInstance* getSubMeshInstances() const { return &_gpuSubMeshInstances[0]; }
+	const u8* getMeshInstanceStateFlags() const { return _meshInstanceStateFlags; }
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};

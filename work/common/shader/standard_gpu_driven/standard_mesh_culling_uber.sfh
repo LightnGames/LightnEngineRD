@@ -119,6 +119,10 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
     
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    if (!(meshInstance._stateFlags & MESH_INSTANCE_STATE_FLAGS_VISIBLE)) {
+        return;
+    }
+    
     Mesh mesh = getMesh(meshInstance);
     uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
 	

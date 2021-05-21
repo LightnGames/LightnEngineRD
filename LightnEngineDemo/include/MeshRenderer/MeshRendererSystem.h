@@ -46,6 +46,7 @@ struct SubMeshInfo {
 
 struct DebugMeshInfo {
 	char _filePath[FILE_PATH_COUNT_MAX] = {};
+	u64 _filePathHash = 0;
 };
 
 class LTN_MESH_RENDERER_API Mesh {

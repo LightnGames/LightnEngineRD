@@ -414,6 +414,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	memcpy(debugMeshInfo._filePath, desc._filePath, StrLength(desc._filePath));
 
 	u64 fileHash = StrHash(desc._filePath);
+	debugMeshInfo._filePathHash = fileHash;
 	_fileHashes[meshIndex] = fileHash;
 
 	// アセット実パスに変換

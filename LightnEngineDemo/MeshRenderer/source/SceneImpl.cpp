@@ -106,10 +106,8 @@ void Scene::update() {
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
-		bool isUpdated = false;
-		isUpdated |= !!(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX);
-		isUpdated |= !!(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_VISIBLE);
-		if (isUpdated) {
+		if ((_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX)||
+			(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_VISIBLE)) {
 			uploadMeshInstance(meshInstanceIndex);
 		}
 	}
@@ -405,9 +403,6 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 		gpu::MeshInstance* gpuMeshInstance = meshInstance->getGpuMeshInstance();
 		gpuMeshInstance->_lodMeshInstanceOffset = lodMeshInstanceOffset;
 		gpuMeshInstance->_meshIndex = meshInfo->_meshIndex;
-		gpuMeshInstance->_aabbMin = meshInfo->_boundsMin.getFloat3();
-		gpuMeshInstance->_aabbMax = meshInfo->_boundsMax.getFloat3();
-
 		for (u32 lodMeshIndex = 0; lodMeshIndex < lodMeshCount; ++lodMeshIndex) {
 			f32 threshhold = 1.0f - ((lodMeshIndex + 1) / static_cast<f32>(lodMeshCount));
 			gpu::LodMeshInstance* lodMeshInstance = meshInstance->getGpuLodMeshInstance(lodMeshIndex);
