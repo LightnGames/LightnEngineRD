@@ -105,7 +105,8 @@ Texture* TextureSystemImpl::allocateTexture(const TextureDesc& desc) {
         TextureImpl& texture = _textures[textureIndex];
         Asset* textureAsset = &_textureAssets[textureIndex];
         textureAsset->setAssetStateFlags(&_assetStateFlags[textureIndex]);
-        textureAsset->setFilePath(textureFilePath);
+        textureAsset->openFile(textureFilePath);
+        textureAsset->closeFile();
 
         texture.setGpuTexture(&_gpuTextures[textureIndex]);
         texture.setAsset(&_textureAssets[textureIndex]);
@@ -446,7 +447,6 @@ HRESULT GetSurfaceInfo(
 }
 
 void TextureImpl::initialize(const TextureDesc& desc) {
-
 }
 
 void TextureSystemImpl::loadTexture(u32 textureIndex) {
@@ -458,7 +458,9 @@ void TextureSystemImpl::loadTexture(u32 textureIndex) {
     Device* device = GraphicsSystemImpl::Get()->getDevice();
     GpuTexture& gpuTexture = _gpuTextures[textureIndex];
 
-    FILE* fin = _textures[textureIndex].getAsset()->getFile();
+    Asset* asset = _textures[textureIndex].getAsset();
+    asset->openFile(asset->getFilePath());
+    FILE* fin = asset->getFile();
 
     struct DdsPixelFormat {
         u32    _size;
@@ -590,7 +592,7 @@ void TextureSystemImpl::loadTexture(u32 textureIndex) {
         }
     }
 
-    _textureAssets[textureIndex].freeFile();
+    _textureAssets[textureIndex].closeFile();
     _assetStateFlags[textureIndex] = ASSET_STATE_ENABLE;
 
     CpuDescriptorHandle descriptor = _descriptors._cpuHandle + incrimentSize * textureIndex;

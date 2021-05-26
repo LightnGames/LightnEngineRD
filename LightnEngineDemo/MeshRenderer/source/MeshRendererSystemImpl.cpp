@@ -908,7 +908,7 @@ void MeshRendererSystemImpl::update() {
 			bool _passMeshInstanceCulling = false;
 			bool _passMeshletInstanceCulling = false;
 			bool _forceOnlyMeshShader = false;
-			bool _visibleHighPolygonMeshes = false;
+			s32 _visibleHighPolygonMeshes = 0;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
 			s32 _packedMeshletCount = 0;
@@ -916,15 +916,17 @@ void MeshRendererSystemImpl::update() {
 
 		auto debug = DebugWindow::StartWindow<MeshInstanceDebug>("Mesh Renderer");
 		DebugGui::Checkbox("visible", &debug._visible);
-		DebugGui::Checkbox("visible high polygon meshes", &debug._visibleHighPolygonMeshes);
 		DebugGui::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
 		DebugGui::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
 		DebugGui::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
 		DebugGui::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 
+		const char* visibleTypes[] = { "None", "Middle", "High" };
+		DebugGui::Combo("Visible High Meshes", &debug._visibleHighPolygonMeshes, visibleTypes, LTN_COUNTOF(visibleTypes));
+
 		const char* geometryTypes[] = { "Mesh Shader", "Multi Indirect", "Vertex Shader" };
-		DebugGui::Combo("Geometry Type", reinterpret_cast<s32*>(&debug._geometryMode), geometryTypes, LTN_COUNTOF(geometryTypes));
+		DebugGui::Combo("Geometry Type", reinterpret_cast<s32*>(&debug._geometryMode), geometryTypes, LTN_COUNTOF(visibleTypes));
 
 		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
 		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
@@ -942,8 +944,21 @@ void MeshRendererSystemImpl::update() {
 			isUpdatedPackMeshletCount = true;
 		}
 
-		static bool visibleHighMeshes = false;
+		static s32 visibleHighMeshes = 0;
 		if (visibleHighMeshes != debug._visibleHighPolygonMeshes) {
+			u32 meshInstanceStepRate = 0;
+			switch (debug._visibleHighPolygonMeshes) {
+			case 0:
+				meshInstanceStepRate = 0xffffffff; // None
+				break;
+			case 1:
+				meshInstanceStepRate = 10; // 1/10
+				break;
+			case 2:
+				meshInstanceStepRate = 1; // All
+				break;
+			}
+
 			u32 meshInstanceResarveCount = _scene.getMeshInstanceArrayCountMax();
 			const u64 bunnyHash = StrHash("victorian\\high\\happy_buddha.mesh");
 			const u64 buddhaHash = StrHash("victorian\\high\\bunny.mesh");
@@ -952,10 +967,12 @@ void MeshRendererSystemImpl::update() {
 			const u64 dragonHash = StrHash("victorian\\high\\dragon.mesh");
 			MeshInstanceImpl* meshInstances = _scene.getMeshInstance(0);
 			const u8* meshInstanceStateFlags = _scene.getMeshInstanceStateFlags();
+			u32 counter = 0;
 			for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceResarveCount; ++meshInstanceIndex) {
 				if (meshInstanceStateFlags[meshInstanceIndex] != MESH_INSTANCE_FLAG_SCENE_ENABLED) {
 					continue;
 				}
+
 				MeshInstanceImpl& meshInstance = meshInstances[meshInstanceIndex];
 				const DebugMeshInfo* info = meshInstance.getMesh()->getDebugMeshInfo();
 				if ((info->_filePathHash == bunnyHash) ||
@@ -963,11 +980,13 @@ void MeshRendererSystemImpl::update() {
 					(info->_filePathHash == eratoHash) ||
 					(info->_filePathHash == teapotHash) ||
 					(info->_filePathHash == dragonHash)) {
-					meshInstance.setVisiblity(!visibleHighMeshes);
+					u32 cnt = counter++;
+					bool visible = cnt % meshInstanceStepRate == 0;
+					meshInstance.setVisiblity(visible);
 				}
 			}
-			visibleHighMeshes = debug._visibleHighPolygonMeshes;
 		}
+		visibleHighMeshes = debug._visibleHighPolygonMeshes;
 
 		_packedMeshletCount = packedMeshletCount;
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;

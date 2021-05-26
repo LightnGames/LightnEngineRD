@@ -288,8 +288,11 @@ void MeshResourceManager::drawDebugGui() {
 void MeshResourceManager::loadMesh(u32 meshIndex) {
 	LTN_ASSERT(_assetStateFlags[meshIndex] == ASSET_STATE_REQUEST_LOAD);
 
-	// ファイルポイントが頂点バイナリの位置まで移動していないバグります。
-	FILE* fin = _meshAssets[meshIndex].getFile();
+	Asset& asset = _meshAssets[meshIndex];
+	asset.openFile(asset.getFilePath());
+	FILE* fin = asset.getFile();
+	fseek(fin, asset.getFileOffsetInByte(), SEEK_SET);
+
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 
@@ -402,7 +405,7 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	}
 
 	// 読み込み完了
-	_meshAssets[meshIndex].freeFile();
+	_meshAssets[meshIndex].closeFile();
 	_assetStateFlags[meshIndex] = ASSET_STATE_ENABLE;
 }
 
@@ -420,8 +423,10 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	// アセット実パスに変換
 	char meshFilePath[FILE_PATH_COUNT_MAX] = {};
 	sprintf_s(meshFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
-	_meshAssets[meshIndex].setFilePath(meshFilePath);
-	_meshAssets[meshIndex].setAssetStateFlags(&_assetStateFlags[meshIndex]);
+
+	Asset& asset = _meshAssets[meshIndex];
+	asset.openFile(meshFilePath);
+	asset.setAssetStateFlags(&_assetStateFlags[meshIndex]);
 	_assetStateFlags[meshIndex] = ASSET_STATE_ALLOCATED;
 
 	constexpr u32 LOD_PER_MESH_COUNT_MAX = 8;
@@ -452,7 +457,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	// =========================================
 
 	// IO読み取り初期化
-	FILE* fin = _meshAssets[meshIndex].getFile();
+	FILE* fin = asset.getFile();
 
 	u32 totalLodMeshCount = 0;
 	u32 totalSubMeshCount = 0;
@@ -564,6 +569,9 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
 	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
+
+	asset.updateCurrentSeekPosition();
+	asset.closeFile();
 
 	meshImpl->setAsset(&_meshAssets[meshIndex]);
 	meshImpl->setMesh(&_meshes[meshIndex]);

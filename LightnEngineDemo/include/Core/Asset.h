@@ -18,19 +18,29 @@ public:
 		*_assetStateFlags = ASSET_STATE_REQUEST_LOAD; 
 	}
 	void setAssetStateFlags(u8* flags) { _assetStateFlags = flags; }
-	void setFilePath(const char* filePath) {
-		fopen_s(&_file, filePath, "rb");
+	void openFile(const char* filePath) {
+		s32 error = fopen_s(&_file, filePath, "rb");
 		LTN_ASSERT(_file != nullptr);
+		sprintf_s(_filePath, LTN_COUNTOF(_filePath), "%s", filePath);
 	}
 
-	void freeFile() {
+	void closeFile() {
 		fclose(_file);
 		_file = nullptr;
 	}
 
+	void updateCurrentSeekPosition() {
+		fpos_t size = 0;
+		fgetpos(_file, &size);
+		_fileOffsetInByte = static_cast<u32>(size);
+	}
 	FILE* getFile() { return _file; }
+	u32 getFileOffsetInByte() const { return _fileOffsetInByte; }
+	const char* getFilePath() const { return _filePath; }
 
 protected:
 	FILE* _file = nullptr;
+	char _filePath[256];
+	u32 _fileOffsetInByte = 0;
 	u8* _assetStateFlags = nullptr;
 };

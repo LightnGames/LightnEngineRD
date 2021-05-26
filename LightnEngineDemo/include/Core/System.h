@@ -19,7 +19,7 @@
 #define LTN_ASSERT(x) assert(x)
 #define LTN_INFO( str, ... )			 \
       {									 \
-        char c[256] = {};				 \
+        char c[256];				 \
         sprintf_s(c, str, __VA_ARGS__ ); \
         DEBUG_PRINT(c);			 \
         DEBUG_PRINT("\n");		 \
