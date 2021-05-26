@@ -328,6 +328,15 @@ private:
 	DescriptorHandle _constantCbv;
 };
 
+struct SceneInfo {
+	u32 _meshInstanceCount = 0;
+	u32 _lodMeshInstanceCount = 0;
+	u32 _subMeshInstanceCount = 0;
+	u32 _meshletInstanceCount = 0;
+	u32 _vertexCount = 0;
+	u32 _triangleCount = 0;
+};
+
 class Scene {
 public:
 	static constexpr u32 MESH_INSTANCE_COUNT_MAX = 1024 * 16;
@@ -358,6 +367,7 @@ public:
 	u32 getSubMeshInstanceArrayCountMax() const { return _gpuSubMeshInstances.getArrayCountMax(); }
 	const gpu::SubMeshInstance* getSubMeshInstances() const { return &_gpuSubMeshInstances[0]; }
 	const u8* getMeshInstanceStateFlags() const { return _meshInstanceStateFlags; }
+	SceneInfo getSceneInfo() const { return _sceneInfo; }
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -382,7 +392,6 @@ private:
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
 	bool _isUpdatedInstancingOffset = false;
-	u32 _meshletInstanceCount = 0;
-	u32 _vertexCount = 0;
-	u32 _triangleCount = 0;
+
+	SceneInfo _sceneInfo;
 };

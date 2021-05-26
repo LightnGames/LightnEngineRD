@@ -243,9 +243,12 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, sizeof(gpu::MeshInstance) * meshInstanceIndex);
 	*mapMeshInstance = gpu::MeshInstance();
 
-	_meshletInstanceCount -= meshInfo->_totalMeshletCount;
-	_vertexCount -= meshInfo->_vertexCount;
-	_triangleCount -= meshInfo->_primitiveCount;
+	_sceneInfo._meshInstanceCount--;
+	_sceneInfo._lodMeshInstanceCount -= meshInfo->_totalLodMeshCount;
+	_sceneInfo._subMeshInstanceCount -= meshInfo->_totalSubMeshCount;
+	_sceneInfo._meshletInstanceCount -= meshInfo->_totalMeshletCount;
+	_sceneInfo._vertexCount -= meshInfo->_vertexCount;
+	_sceneInfo._triangleCount -= meshInfo->_primitiveCount;
 }
 
 void Scene::debugDrawMeshInstanceBounds() {
@@ -381,10 +384,16 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 		totalLodMeshCounter += meshInfo->_totalLodMeshCount;
 		totalSubMeshCounter += meshInfo->_totalSubMeshCount;
 		outMeshInstances[instanceIndex] = meshInstance;
+	}
 
-		_meshletInstanceCount += meshInfo->_totalMeshletCount;
-		_vertexCount += meshInfo->_vertexCount;
-		_triangleCount += meshInfo->_primitiveCount;
+	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
+		const MeshInfo* meshInfo = meshes[instanceIndex]->getMeshInfo();
+		_sceneInfo._meshInstanceCount++;
+		_sceneInfo._lodMeshInstanceCount += meshInfo->_totalLodMeshCount;
+		_sceneInfo._subMeshInstanceCount += meshInfo->_totalSubMeshCount;
+		_sceneInfo._meshletInstanceCount += meshInfo->_totalMeshletCount;
+		_sceneInfo._vertexCount += meshInfo->_vertexCount;
+		_sceneInfo._triangleCount += meshInfo->_primitiveCount;
 	}
 
 	// VRAM 用メッシュインスタンスに値を詰める

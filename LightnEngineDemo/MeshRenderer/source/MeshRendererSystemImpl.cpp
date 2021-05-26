@@ -944,7 +944,12 @@ void MeshRendererSystemImpl::update() {
 			isUpdatedPackMeshletCount = true;
 		}
 
-		static s32 visibleHighMeshes = 0;
+		static s32 visibleHighMeshes = -1;
+		if (visibleHighMeshes == -1) {
+			debug._visibleHighPolygonMeshes = 2;
+			visibleHighMeshes = 2;
+		}
+
 		if (visibleHighMeshes != debug._visibleHighPolygonMeshes) {
 			u32 meshInstanceStepRate = 0;
 			switch (debug._visibleHighPolygonMeshes) {
@@ -1014,6 +1019,17 @@ void MeshRendererSystemImpl::update() {
 		}
 
 		if (DebugGui::BeginTabBar("SceneMeshsTabBar")) {
+			if (DebugGui::BeginTabItem("Summary")) {
+				SceneInfo sceneInfo = _scene.getSceneInfo();
+				const char FORMAT[] = "%25s: %12s";
+				DebugGui::Text(FORMAT, "Mesh Instance Count", ThreeDigiets(sceneInfo._meshInstanceCount));
+				DebugGui::Text(FORMAT, "Lod Mesh Instance Count", ThreeDigiets(sceneInfo._lodMeshInstanceCount));
+				DebugGui::Text(FORMAT, "Sub Mesh Instance Count", ThreeDigiets(sceneInfo._subMeshInstanceCount));
+				DebugGui::Text(FORMAT, "Meshlet Instance Count", ThreeDigiets(sceneInfo._meshletInstanceCount));
+				DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(sceneInfo._vertexCount));
+				DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(sceneInfo._triangleCount));
+				DebugGui::EndTabItem();
+			}
 			if (DebugGui::BeginTabItem("Meshes")) {
 				_resourceManager.drawDebugGui();
 			}

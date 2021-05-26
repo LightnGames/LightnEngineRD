@@ -57,6 +57,15 @@ public:
 	}
 };
 
+struct MeshResourceManagerInfo {
+	u32 _meshCount = 0;
+	u32 _lodMeshCount = 0;
+	u32 _subMeshCount = 0;
+	u32 _meshletCount = 0;
+	u32 _vertexCount = 0;
+	u32 _triangleCount = 0;
+};
+
 class MeshResourceManager {
 public:
 	static constexpr u32 MESH_COUNT_MAX = 256;
@@ -91,6 +100,7 @@ public:
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
 	GpuBuffer* getTexcoordVertexBuffer() { return &_texcoordVertexBuffer; }
+	MeshResourceManagerInfo getMeshResourceInfo() const;
 
 #if ENABLE_CLASSIC_VERTEX
 	GpuBuffer* getClassicIndexBuffer() { return &_classicIndexBuffer; }

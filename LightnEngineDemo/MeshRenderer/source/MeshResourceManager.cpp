@@ -628,6 +628,17 @@ GpuDescriptorHandle MeshResourceManager::getSubMeshSrv() const {
 	return _meshSrv._gpuHandle + incrementSize * 2;
 }
 
+MeshResourceManagerInfo MeshResourceManager::getMeshResourceInfo() const {
+	MeshResourceManagerInfo info;
+	info._meshCount = _meshes.getInstanceCount();
+	info._lodMeshCount = _lodMeshes.getInstanceCount();
+	info._subMeshCount = _subMeshes.getInstanceCount();
+	info._meshletCount = _meshlets.getInstanceCount();
+	info._vertexCount = _vertexPositionBinaryHeaders.getInstanceCount();
+	info._triangleCount = _primitiveBinaryHeaders.getInstanceCount();
+	return info;
+}
+
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndex, meshInfo._vertexCount);

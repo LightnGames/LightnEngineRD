@@ -389,6 +389,8 @@ public:
 		return _instanceCount == 0 && _emptyBlockInfo.getInstanceCount() <= 1;
 	}
 
+	u32 getInstanceCount() const { return _instanceCount; }
+
 	u32 request(u32 numElements) {
 		u32 bestBlockIndex = INVILD_BLOCK_INDEX;
 		u32 bestBlockSize = static_cast<u32>(-1);
