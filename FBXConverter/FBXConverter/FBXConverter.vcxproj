@@ -116,7 +116,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -136,10 +136,26 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mesh_optimizer\allocator.cpp" />
+    <ClCompile Include="mesh_optimizer\clusterizer.cpp" />
+    <ClCompile Include="mesh_optimizer\indexcodec.cpp" />
+    <ClCompile Include="mesh_optimizer\indexgenerator.cpp" />
+    <ClCompile Include="mesh_optimizer\overdrawanalyzer.cpp" />
+    <ClCompile Include="mesh_optimizer\overdrawoptimizer.cpp" />
+    <ClCompile Include="mesh_optimizer\simplifier.cpp" />
+    <ClCompile Include="mesh_optimizer\spatialorder.cpp" />
+    <ClCompile Include="mesh_optimizer\stripifier.cpp" />
+    <ClCompile Include="mesh_optimizer\vcacheanalyzer.cpp" />
+    <ClCompile Include="mesh_optimizer\vcacheoptimizer.cpp" />
+    <ClCompile Include="mesh_optimizer\vertexcodec.cpp" />
+    <ClCompile Include="mesh_optimizer\vertexfilter.cpp" />
+    <ClCompile Include="mesh_optimizer\vfetchanalyzer.cpp" />
+    <ClCompile Include="mesh_optimizer\vfetchoptimizer.cpp" />
     <ClCompile Include="xxhash.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math.h" />
+    <ClInclude Include="mesh_optimizer\meshoptimizer.h" />
     <ClInclude Include="xxh3.h" />
     <ClInclude Include="xxhash.h" />
   </ItemGroup>

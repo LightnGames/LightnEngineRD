@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ソース ファイル\mesh_optimizer">
+      <UniqueIdentifier>{d5703e2e-7a6a-4f87-aa27-048ba58a474b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\mesh_optimizer">
+      <UniqueIdentifier>{f57b75eb-efe8-4760-8bca-b1e1f24f8c99}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -20,6 +26,51 @@
     </ClCompile>
     <ClCompile Include="xxhash.c">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\allocator.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\clusterizer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\indexcodec.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\indexgenerator.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\overdrawanalyzer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\overdrawoptimizer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\simplifier.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\spatialorder.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\stripifier.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vcacheanalyzer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vcacheoptimizer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vertexcodec.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vertexfilter.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vfetchanalyzer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh_optimizer\vfetchoptimizer.cpp">
+      <Filter>ソース ファイル\mesh_optimizer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -31,6 +82,9 @@
     </ClInclude>
     <ClInclude Include="xxh3.h">
       <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh_optimizer\meshoptimizer.h">
+      <Filter>ヘッダー ファイル\mesh_optimizer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -12,6 +12,7 @@
 #include <thread>
 #include "Math.h"
 #include "xxhash.h"
+#include "mesh_optimizer/meshoptimizer.h"
 using namespace fbxsdk;
 using namespace DirectX;
 
@@ -1300,6 +1301,7 @@ void exportMesh(const char* fileName) {
 			indexCount += polygonVertexCount;
 		}
 
+
 		//UnorederedMap‚Ì”z—ñ‚©‚çVectorArray‚É•ÏŠ·
 		VectorArray<RawVertex> vertices(optimizedVertices.size());
 		VectorArray<Float3> positions(optimizedVertices.size());
@@ -1307,9 +1309,17 @@ void exportMesh(const char* fileName) {
 		VectorArray<uint32> texcoords(optimizedVertices.size());
 		for (const auto& vertex : optimizedVertices) {
 			vertices[vertex.second] = vertex.first;
-			positions[vertex.second] = vertex.first.position;
-			normalAndTangents[vertex.second] = packNormalAndTangentOctahedron(vertex.first.normal, vertex.first.tangent);
-			texcoords[vertex.second] = packTexCoords(vertex.first.texcoord);
+		}
+
+		// zeux/meshoptimizer https://github.com/zeux/meshoptimizer/blob/master/src/meshoptimizer.h
+		meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), vertices.size());
+		meshopt_optimizeVertexFetch(vertices.data(), indices.data(), indices.size(), vertices.data(), vertices.size(), sizeof(RawVertex));
+
+		for (uint32 v = 0; v < vertices.size(); ++v) {
+			const RawVertex& vertex = vertices[v];
+			positions[v] = vertex.position;
+			normalAndTangents[v] = packNormalAndTangentOctahedron(vertex.normal, vertex.tangent);
+			texcoords[v] = packTexCoords(vertex.texcoord);
 		}
 
 		uint32 totalIndexCount = 0;
