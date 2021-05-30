@@ -141,8 +141,8 @@ public:
 	void terminate();
 
 	u32 findShaderSetIndex(u64 fileHash);
-	u32 getMaterialCount() const { return _materials.getArrayCountMax(); }
-	u32 getShaderSetCount() const { return _shaderSets.getArrayCountMax(); }
+	u32 getMaterialCount() const { return _materials.getResarveCount(); }
+	u32 getShaderSetCount() const { return _shaderSets.getResarveCount(); }
 	MaterialImpl* getMaterial(u32 index = 0) { return &_materials[index]; }
 	ShaderSetImpl* getShaderSet(u32 index = 0) { return &_shaderSets[index]; }
 	const u8* getShaderSetStateFlags(u32 index = 0) const { return &_shaderSetStateFlags[index]; }

@@ -137,7 +137,7 @@ u32 TextureSystemImpl::getTextureIndex(const Texture* texture) const {
 }
 
 Texture* TextureSystemImpl::findTexture(u64 fileHash) {
-    u32 textureCount = _textures.getArrayCountMax();
+    u32 textureCount = _textures.getResarveCount();
     for (u32 textureIndex = 0; textureIndex < textureCount; ++textureIndex) {
         if (_fileHashes[textureIndex] == fileHash) {
             return &_textures[textureIndex];
@@ -155,7 +155,7 @@ TextureSystemImpl* TextureSystemImpl::Get() {
 }
 
 u32 TextureSystemImpl::findTextureFileHash(u64 hash) {
-	u32 textureCount = _textures.getArrayCountMax();
+	u32 textureCount = _textures.getResarveCount();
 	for (u32 textureIndex = 0; textureIndex < textureCount; ++textureIndex) {
 		if (_fileHashes[textureIndex] == hash) {
 			return textureIndex;

@@ -44,6 +44,7 @@ private:
 	void setupDraw(CommandList* commandList, ViewInfo* viewInfo);
 	void debugDrawGpuCullingResult();
 	void debugDrawAmplificationCullingResult();
+	void updateVisiblityHighMeshes(s32 visibleType);
 
 private:
 	bool _visible = true;

@@ -363,11 +363,12 @@ public:
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
-	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getArrayCountMax(); }
-	u32 getSubMeshInstanceArrayCountMax() const { return _gpuSubMeshInstances.getArrayCountMax(); }
+	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getResarveCount(); }
+	u32 getSubMeshInstanceArrayCountMax() const { return _gpuSubMeshInstances.getResarveCount(); }
 	const gpu::SubMeshInstance* getSubMeshInstances() const { return &_gpuSubMeshInstances[0]; }
 	const u8* getMeshInstanceStateFlags() const { return _meshInstanceStateFlags; }
 	SceneInfo getSceneInfo() const { return _sceneInfo; }
+	SceneInfo getVisibleSceneInfo() const { return _visibleSceneInfo; }
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -394,4 +395,5 @@ private:
 	bool _isUpdatedInstancingOffset = false;
 
 	SceneInfo _sceneInfo;
+	SceneInfo _visibleSceneInfo;
 };

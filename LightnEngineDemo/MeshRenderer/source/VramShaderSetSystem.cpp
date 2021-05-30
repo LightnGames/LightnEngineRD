@@ -178,7 +178,7 @@ u32 VramShaderSet::addMaterialInstance(MaterialImpl* material) {
 }
 
 u32 VramShaderSet::findMaterialInstance(Material* material) const {
-	u32 materialInstanceCount = _materialInstances.getArrayCountMax();
+	u32 materialInstanceCount = _materialInstances.getResarveCount();
 	u32 findIndex = gpu::INVALID_INDEX;
 	for (u32 materialInstanceIndex = 0; materialInstanceIndex < materialInstanceCount; ++materialInstanceIndex) {
 		if (_materials[materialInstanceIndex] == material) {

@@ -14,7 +14,7 @@ void PipelineStateSystem::update() {
 }
 
 void PipelineStateSystem::processDeletion() {
-    u32 pipelineStateCount = _pipelineStates.getArrayCountMax();
+    u32 pipelineStateCount = _pipelineStates.getResarveCount();
     for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateCount; ++pipelineStateIndex) {
         if (_stateFlags[pipelineStateIndex] & PIPELINE_STATE_GROUP_FLAG_REQUEST_DESTROY) {
             _pipelineStateHashes[pipelineStateIndex] = 0;
@@ -45,7 +45,7 @@ void PipelineStateSystem::terminate() {
 
 u32 PipelineStateSystem::getGroupIndex(const PipelineStateGroup* pipelineState) const {
     u32 index = static_cast<u32>(pipelineState - &_pipelineStates[0]);
-    LTN_ASSERT(index < _pipelineStates.getArrayCountMax());
+    LTN_ASSERT(index < _pipelineStates.getResarveCount());
     return index;
 }
 
@@ -139,7 +139,7 @@ u64 PipelineStateSystem::createRootSignatureDescHash(const RootSignatureDesc& de
 
 u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
     u32 findIndex = gpu::INVALID_INDEX;
-    u32 pipelineStateCount = _pipelineStates.getArrayCountMax();
+    u32 pipelineStateCount = _pipelineStates.getResarveCount();
     for (u32 pipelineStateIndex = 0; pipelineStateIndex < pipelineStateCount; ++pipelineStateIndex) {
         if (_pipelineStateHashes[pipelineStateIndex] == hash) {
             findIndex = pipelineStateIndex;
@@ -152,7 +152,7 @@ u32 PipelineStateSystem::findPipelineStateGroup(u64 hash) const {
 
 u32 PipelineStateSystem::findSharedRootsignature(u64 hash) const {
 	u32 findIndex = gpu::INVALID_INDEX;
-	u32 sharedRootsignatureCount = _sharedRootsignatures.getArrayCountMax();
+	u32 sharedRootsignatureCount = _sharedRootsignatures.getResarveCount();
 	for (u32 sharedRootsignatureIndex = 0; sharedRootsignatureIndex < sharedRootsignatureCount; ++sharedRootsignatureIndex) {
 		if (_sharedRootSignatureHashes[sharedRootsignatureIndex] == hash) {
 			findIndex = sharedRootsignatureIndex;

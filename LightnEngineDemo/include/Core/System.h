@@ -211,7 +211,7 @@ public:
 
 		u32 currentInstanceCount = _instanceCount;
 		_instanceCount++;
-		_arrayCountMax = Max(_arrayCountMax, _instanceCount);
+		_resarveCount = Max(_resarveCount, _instanceCount);
 
 		return currentInstanceCount;
 	}
@@ -228,13 +228,13 @@ public:
 	}
 
 	u32 getInstanceCount() const { return _instanceCount; }
-	u32 getArrayCountMax() const { return _arrayCountMax; }
+	u32 getResarveCount() const { return _resarveCount; }
 	u32 getSizeCountMax() const { return _sizeCountMax; }
 
 	void cleanUp() {
 		_emptyIndices = nullptr;
 		_instanceCount = 0;
-		_arrayCountMax = 0;
+		_resarveCount = 0;
 		_sizeCountMax = 0;
 		_emptyIndicesCount = 0;
 	}
@@ -247,7 +247,7 @@ public:
 public:
 	u32* _emptyIndices = nullptr;
 	u32 _instanceCount = 0;
-	u32 _arrayCountMax = 0;
+	u32 _resarveCount = 0;
 	u32 _sizeCountMax = 0;
 	u32 _emptyIndicesCount = 0;
 };
@@ -309,7 +309,7 @@ public:
 	u32 getArrayIndex(const T* data) const { return static_cast<u32>(data - _data); }
 
 	u32 getInstanceCount() const { return _controller.getInstanceCount(); }
-	u32 getArrayCountMax() const { return _controller.getArrayCountMax(); }
+	u32 getResarveCount() const { return _controller.getResarveCount(); }
 	u32 getSizeCountMax() const { return _controller.getSizeCountMax(); }
 
 	T& operator [](u32 index) { return _data[index]; }
@@ -346,7 +346,7 @@ public:
 	u32 getArrayIndex(const T* data) const { return static_cast<u32>(data - reinterpret_cast<T*>(_data)); }
 
 	u32 getInstanceCount() const { return _controller.getInstanceCount(); }
-	u32 getArrayCountMax() const { return _controller.getArrayCountMax(); }
+	u32 getResarveCount() const { return _controller.getResarveCount(); }
 	u32 getSizeCountMax() const { return _controller.getSizeCountMax(); }
 
 	template <class T>
@@ -394,7 +394,7 @@ public:
 	u32 request(u32 numElements) {
 		u32 bestBlockIndex = INVILD_BLOCK_INDEX;
 		u32 bestBlockSize = static_cast<u32>(-1);
-		u32 emptyBlockInfoCount = _emptyBlockInfo.getArrayCountMax();
+		u32 emptyBlockInfoCount = _emptyBlockInfo.getResarveCount();
 
 		// もっともサイズが近い空のブロックを検索
 		for (u32 blockIndex = 0; blockIndex < emptyBlockInfoCount; ++blockIndex) {
@@ -450,7 +450,7 @@ private:
 		u32 mergedHeaderIndex = baseBlockIndex;
 		u32 dataCount = baseHeader._size;
 
-		u32 emptyBlockHeaderCount = _emptyBlockInfo.getArrayCountMax();
+		u32 emptyBlockHeaderCount = _emptyBlockInfo.getResarveCount();
 		for (u32 blockIndex = 0; blockIndex < emptyBlockHeaderCount; ++blockIndex) {
 			const EmptyBlockHeader& prevBlockHeader = _emptyBlockInfo[blockIndex];
 			if (prevBlockHeader._size == 0) {
@@ -479,7 +479,7 @@ private:
 	void mergeNext(u32 baseBlockIndex) {
 		const EmptyBlockHeader& baseHeader = _emptyBlockInfo[baseBlockIndex];
 		u32 dataIndex = baseHeader._index + baseHeader._size;
-		u32 emptyBlockHeaderCount = _emptyBlockInfo.getArrayCountMax();
+		u32 emptyBlockHeaderCount = _emptyBlockInfo.getResarveCount();
 		for (u32 nextBlockIndex = 0; nextBlockIndex < emptyBlockHeaderCount; ++nextBlockIndex) {
 			const EmptyBlockHeader& nextBlockHeader = _emptyBlockInfo[nextBlockIndex];
 			if (nextBlockHeader._size == 0) {
@@ -521,7 +521,7 @@ public:
 
 	u32 request(u32 numElements) {
 		_instanceCount += numElements;
-		_arrayCountMax = Max(_instanceCount, _arrayCountMax);
+		_resarveCount = Max(_instanceCount, _resarveCount);
 		u32 index = _blockManager.request(numElements);
 		LTN_ASSERT(index != INVILD_INDEX);
 		return index;
@@ -535,11 +535,12 @@ public:
 		return _instanceCount;
 	}
 
-	u32 getArrayCountMax() const {
-		return _arrayCountMax;
+	u32 getResarveCount() const {
+		return _resarveCount;
 	}
 
 	void discard(T* data, u32 numElements) {
+		LTN_ASSERT(_instanceCount - numElements < _resarveCount);
 		_instanceCount -= numElements;
 		u32 dataIndex = static_cast<u32>(data - _data);
 		_blockManager.discard(dataIndex, numElements);
@@ -551,7 +552,7 @@ public:
 private:
 	T* _data = nullptr;
 	u32 _instanceCount = 0;
-	u32 _arrayCountMax = 0;
+	u32 _resarveCount = 0;
 	MultiDynamicQueueBlockManager _blockManager;
 };
 

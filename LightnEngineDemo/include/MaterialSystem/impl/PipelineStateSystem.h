@@ -94,7 +94,7 @@ public:
 
 	PipelineStateGroup* getGroup(u32 index) { return &_pipelineStates[index]; }
 	u64 getPipelineStateGrpupHash(const PipelineStateGroup* group) const;
-	u32 getGroupArrayCount() const { return _pipelineStates.getArrayCountMax(); }
+	u32 getGroupArrayCount() const { return _pipelineStates.getResarveCount(); }
 	u32 getGroupIndex(const PipelineStateGroup* pipelineState) const;
 	PipelineStateGroup* createPipelineStateGroup(const MeshShaderPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);
 	PipelineStateGroup* createPipelineStateGroup(const ClassicPipelineStateGroupDesc& desc, const RootSignatureDesc& rootSignatureDesc);

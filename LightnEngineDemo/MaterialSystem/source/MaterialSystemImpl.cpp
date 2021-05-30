@@ -18,7 +18,7 @@ void MaterialSystemImpl::update() {
 }
 
 void MaterialSystemImpl::processDeletion() {
-	u32 materialCount = _materials.getArrayCountMax();
+	u32 materialCount = _materials.getResarveCount();
 	for (u32 materialIndex = 0; materialIndex < materialCount; ++materialIndex) {
 		if (_materialStateFlags[materialIndex] & MATERIAL_STATE_FLAG_CREATED) {
 			_materialStateFlags[materialIndex] = MATERIAL_STATE_FLAG_ENABLED;
@@ -42,7 +42,7 @@ void MaterialSystemImpl::processDeletion() {
 		}
 	}
 
-	u32 shaderSetCount = _shaderSets.getArrayCountMax();
+	u32 shaderSetCount = _shaderSets.getResarveCount();
 	for (u32 shaderSetIndex = 0; shaderSetIndex < shaderSetCount; ++shaderSetIndex) {
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_CREATED) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_ENABLED;
@@ -74,7 +74,7 @@ void MaterialSystemImpl::terminate() {
 }
 
 u32 MaterialSystemImpl::findShaderSetIndex(u64 fileHash) {
-	u32 pipelineStateCount = _shaderSets.getArrayCountMax();
+	u32 pipelineStateCount = _shaderSets.getResarveCount();
 	for (u32 shaderSetIndex = 0; shaderSetIndex < pipelineStateCount; ++shaderSetIndex) {
 		if (_shaderSetFileHashes[shaderSetIndex] == fileHash) {
 			return shaderSetIndex;
@@ -190,7 +190,7 @@ Material* MaterialSystemImpl::createMaterial(const MaterialDesc& desc) {
 }
 
 Material* MaterialSystemImpl::findMaterial(u64 filePathHash) {
-	u32 materialCount = _materials.getArrayCountMax();
+	u32 materialCount = _materials.getResarveCount();
 	for (u32 materialIndex = 0; materialIndex < materialCount; ++materialIndex) {
 		if (_materialFileHashes[materialIndex] == filePathHash) {
 			return &_materials[materialIndex];

@@ -528,7 +528,7 @@ struct GraphicsApiArray {
 	}
 
 	u32 getArrayCountMax() const {
-		return _array.getArrayCountMax();
+		return _array.getResarveCount();
 	}
 
 	T& operator [](u32 index) { return _array[index]; }

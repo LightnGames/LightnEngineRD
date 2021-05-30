@@ -31,8 +31,8 @@ struct TextureUpdateHeader {
 class LTN_GFX_CORE_API VramBufferUpdater {
 public:
 	static constexpr u32 STAGING_BUFFER_SIZE_IN_BYTE = 1024 * 1024 * 256;
-	static constexpr u32 BUFFER_HEADER_COUNT_MAX = 1024;
-	static constexpr u32 TEXTURE_HEADER_COUNT_MAX = 256;
+	static constexpr u32 BUFFER_HEADER_COUNT_MAX = 1024 * 16;
+	static constexpr u32 TEXTURE_HEADER_COUNT_MAX = 512;
 
 	void initialize();
 	void terminate();

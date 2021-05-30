@@ -808,6 +808,47 @@ void MeshRendererSystemImpl::debugDrawAmplificationCullingResult() {
 		DebugGui::EndTabBar();
 	}
 }
+void MeshRendererSystemImpl::updateVisiblityHighMeshes(s32 visibleType) {
+	u32 meshInstanceStepRate = 0;
+	switch (visibleType) {
+	case 0:
+		meshInstanceStepRate = 0xffffffff; // None
+		break;
+	case 1:
+		meshInstanceStepRate = 10; // 1/10
+		break;
+	case 2:
+		meshInstanceStepRate = 1; // All
+		break;
+	}
+
+	u32 meshInstanceResarveCount = _scene.getMeshInstanceArrayCountMax();
+	const u64 bunnyHash = StrHash("victorian\\high\\happy_buddha.mesh");
+	const u64 buddhaHash = StrHash("victorian\\high\\bunny.mesh");
+	const u64 eratoHash = StrHash("victorian\\high\\erato.mesh");
+	const u64 teapotHash = StrHash("victorian\\high\\teapot.mesh");
+	const u64 dragonHash = StrHash("victorian\\high\\dragon.mesh");
+	MeshInstanceImpl* meshInstances = _scene.getMeshInstance(0);
+	const u8* meshInstanceStateFlags = _scene.getMeshInstanceStateFlags();
+	u32 counter = 0;
+	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceResarveCount; ++meshInstanceIndex) {
+		if (meshInstanceStateFlags[meshInstanceIndex] != MESH_INSTANCE_FLAG_SCENE_ENABLED) {
+			continue;
+		}
+
+		MeshInstanceImpl& meshInstance = meshInstances[meshInstanceIndex];
+		const DebugMeshInfo* info = meshInstance.getMesh()->getDebugMeshInfo();
+		if ((info->_filePathHash == bunnyHash) ||
+			(info->_filePathHash == buddhaHash) ||
+			(info->_filePathHash == eratoHash) ||
+			(info->_filePathHash == teapotHash) ||
+			(info->_filePathHash == dragonHash)) {
+			u32 cnt = counter++;
+			bool visible = cnt % meshInstanceStepRate == 0;
+			meshInstance.setVisiblity(visible);
+		}
+	}
+}
 #endif
 
 void MeshRendererSystemImpl::initialize() {
@@ -951,45 +992,7 @@ void MeshRendererSystemImpl::update() {
 		}
 
 		if (visibleHighMeshes != debug._visibleHighPolygonMeshes) {
-			u32 meshInstanceStepRate = 0;
-			switch (debug._visibleHighPolygonMeshes) {
-			case 0:
-				meshInstanceStepRate = 0xffffffff; // None
-				break;
-			case 1:
-				meshInstanceStepRate = 10; // 1/10
-				break;
-			case 2:
-				meshInstanceStepRate = 1; // All
-				break;
-			}
-
-			u32 meshInstanceResarveCount = _scene.getMeshInstanceArrayCountMax();
-			const u64 bunnyHash = StrHash("victorian\\high\\happy_buddha.mesh");
-			const u64 buddhaHash = StrHash("victorian\\high\\bunny.mesh");
-			const u64 eratoHash = StrHash("victorian\\high\\erato.mesh");
-			const u64 teapotHash = StrHash("victorian\\high\\teapot.mesh");
-			const u64 dragonHash = StrHash("victorian\\high\\dragon.mesh");
-			MeshInstanceImpl* meshInstances = _scene.getMeshInstance(0);
-			const u8* meshInstanceStateFlags = _scene.getMeshInstanceStateFlags();
-			u32 counter = 0;
-			for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceResarveCount; ++meshInstanceIndex) {
-				if (meshInstanceStateFlags[meshInstanceIndex] != MESH_INSTANCE_FLAG_SCENE_ENABLED) {
-					continue;
-				}
-
-				MeshInstanceImpl& meshInstance = meshInstances[meshInstanceIndex];
-				const DebugMeshInfo* info = meshInstance.getMesh()->getDebugMeshInfo();
-				if ((info->_filePathHash == bunnyHash) ||
-					(info->_filePathHash == buddhaHash) ||
-					(info->_filePathHash == eratoHash) ||
-					(info->_filePathHash == teapotHash) ||
-					(info->_filePathHash == dragonHash)) {
-					u32 cnt = counter++;
-					bool visible = cnt % meshInstanceStepRate == 0;
-					meshInstance.setVisiblity(visible);
-				}
-			}
+			updateVisiblityHighMeshes(debug._visibleHighPolygonMeshes);
 		}
 		visibleHighMeshes = debug._visibleHighPolygonMeshes;
 
@@ -1020,14 +1023,16 @@ void MeshRendererSystemImpl::update() {
 
 		if (DebugGui::BeginTabBar("SceneMeshsTabBar")) {
 			if (DebugGui::BeginTabItem("Summary")) {
+				SceneInfo visibleSceneInfo = _scene.getVisibleSceneInfo();
 				SceneInfo sceneInfo = _scene.getSceneInfo();
-				const char FORMAT[] = "%25s: %12s";
-				DebugGui::Text(FORMAT, "Mesh Instance Count", ThreeDigiets(sceneInfo._meshInstanceCount));
-				DebugGui::Text(FORMAT, "Lod Mesh Instance Count", ThreeDigiets(sceneInfo._lodMeshInstanceCount));
-				DebugGui::Text(FORMAT, "Sub Mesh Instance Count", ThreeDigiets(sceneInfo._subMeshInstanceCount));
-				DebugGui::Text(FORMAT, "Meshlet Instance Count", ThreeDigiets(sceneInfo._meshletInstanceCount));
-				DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(sceneInfo._vertexCount));
-				DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(sceneInfo._triangleCount));
+				const char FORMAT[] = "%25s: %12s/%12s";
+				DebugGui::Text(FORMAT, "Scene Info", "Visible", "Total");
+				DebugGui::Text(FORMAT, "Mesh Instance Count", ThreeDigiets(visibleSceneInfo._meshInstanceCount), ThreeDigiets(sceneInfo._meshInstanceCount));
+				DebugGui::Text(FORMAT, "Lod Mesh Instance Count", ThreeDigiets(visibleSceneInfo._lodMeshInstanceCount), ThreeDigiets(sceneInfo._lodMeshInstanceCount));
+				DebugGui::Text(FORMAT, "Sub Mesh Instance Count", ThreeDigiets(visibleSceneInfo._subMeshInstanceCount), ThreeDigiets(sceneInfo._subMeshInstanceCount));
+				DebugGui::Text(FORMAT, "Meshlet Instance Count", ThreeDigiets(visibleSceneInfo._meshletInstanceCount), ThreeDigiets(sceneInfo._meshletInstanceCount));
+				DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(visibleSceneInfo._vertexCount), ThreeDigiets(sceneInfo._vertexCount));
+				DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(visibleSceneInfo._triangleCount), ThreeDigiets(sceneInfo._triangleCount));
 				DebugGui::EndTabItem();
 			}
 			if (DebugGui::BeginTabItem("Meshes")) {
@@ -1058,12 +1063,14 @@ void MeshRendererSystemImpl::update() {
 	_gpuCullingResource.update(ViewSystemImpl::Get()->getView());
 	_vramShaderSetSystem.update();
 
+	// Indirect Argument ビルダー更新 
 	{
 		BuildIndirectArgumentResource::UpdateDesc desc;
 		desc._packedMeshletCount = _packedMeshletCount;
 		_buildIndirectArgumentResource.update(desc);
 	}
 
+	// シーン内のインスタンス・デバッグオプション変更時にインスタンシング用オフセット再計算
 	bool updateInstancingOffset = false;
 	updateInstancingOffset |= _scene.isUpdatedInstancingOffset();
 	updateInstancingOffset |= isUpdatedGeometryType;
@@ -1094,6 +1101,7 @@ void MeshRendererSystemImpl::update() {
 		}
 	}
 
+	// 仮想ビュー用フラスタム範囲デバッグ描画
 	if (ViewSystemImpl::Get()->isEnabledDebugFixedView()) {
 		const ViewConstantInfo& viewInfo = ViewSystemImpl::Get()->getView()->_cullingViewConstantInfo;
 		DebugRendererSystem::Get()->drawFrustum(viewInfo._viewMatrix, viewInfo._projectionMatrix, Color4::YELLOW);

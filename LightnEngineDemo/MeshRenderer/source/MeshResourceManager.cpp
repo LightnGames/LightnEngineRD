@@ -142,7 +142,7 @@ void MeshResourceManager::initialize() {
 }
 
 void MeshResourceManager::update() {
-	u32 meshCount = _meshes.getArrayCountMax();
+	u32 meshCount = _meshes.getResarveCount();
 	for (u32 meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
 		if (_assetStateFlags[meshIndex] == ASSET_STATE_REQUEST_LOAD) {
 			loadMesh(meshIndex);
@@ -151,7 +151,7 @@ void MeshResourceManager::update() {
 }
 
 void MeshResourceManager::processDeletion() {
-	u32 meshCount = _meshes.getArrayCountMax();
+	u32 meshCount = _meshes.getResarveCount();
 	for (u32 meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
 		if (_meshStateFlags[meshIndex] & MESH_FLAG_STATE_REQUEST_DESTROY) {
 			deleteMesh(meshIndex);
@@ -201,7 +201,7 @@ void MeshResourceManager::terminateDefaultResources() {
 }
 
 void MeshResourceManager::drawDebugGui() {
-	u32 meshCount = _meshes.getArrayCountMax();
+	u32 meshCount = _meshes.getResarveCount();
 	DebugGui::Text("Total:%3d", meshCount);
 	DebugGui::Columns(2, "tree", true);
 	constexpr f32 MESH_NAME_WIDTH = 320;
@@ -606,7 +606,7 @@ MeshImpl* MeshResourceManager::findMesh(u64 fileHash) {
 
 u32 MeshResourceManager::getMeshIndexFromFileHash(ul64 fileHash) const {
 	u32 findMeshIndex = gpu::INVALID_INDEX;
-	u32 meshCount = _meshes.getArrayCountMax();
+	u32 meshCount = _meshes.getResarveCount();
 	for (u32 meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
 		if (_fileHashes[meshIndex] == fileHash) {
 			findMeshIndex = meshIndex;

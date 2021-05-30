@@ -104,16 +104,18 @@ void Scene::initialize() {
 void Scene::update() {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
-	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
+	bool isUpdatedVisible = false;
+	u32 meshInstanceCount = _gpuMeshInstances.getResarveCount();
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
 		if ((_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_WORLD_MATRIX)||
 			(_meshInstanceUpdateFlags[meshInstanceIndex] & MESH_INSTANCE_UPDATE_VISIBLE)) {
 			uploadMeshInstance(meshInstanceIndex);
+			isUpdatedVisible = true;
 		}
 	}
 
 	_isUpdatedInstancingOffset = false;
-	u32 subMeshInstanceCount = _gpuSubMeshInstances.getArrayCountMax();
+	u32 subMeshInstanceCount = _gpuSubMeshInstances.getResarveCount();
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
 			SubMeshInstance& subMeshInstance = _subMeshInstances[subMeshInstanceIndex];
@@ -129,6 +131,23 @@ void Scene::update() {
 			*mapSubMeshInstance = gpuSubMeshInstance;
 
 			_isUpdatedInstancingOffset = true;
+		}
+	}
+
+	if (isUpdatedVisible) {
+		_visibleSceneInfo = SceneInfo();
+		for (u32 meshInstanceIndex = 0; meshInstanceIndex < meshInstanceCount; ++meshInstanceIndex) {
+			const MeshInstanceImpl& meshInstance = _meshInstances[meshInstanceIndex];
+			if (!meshInstance.isVisible()) {
+				continue;
+			}
+			const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
+			++_visibleSceneInfo._meshInstanceCount;
+			_visibleSceneInfo._lodMeshInstanceCount += meshInfo->_totalLodMeshCount;
+			_visibleSceneInfo._subMeshInstanceCount += meshInfo->_totalSubMeshCount;
+			_visibleSceneInfo._meshletInstanceCount += meshInfo->_totalMeshletCount;
+			_visibleSceneInfo._vertexCount += meshInfo->_vertexCount;
+			_visibleSceneInfo._triangleCount += meshInfo->_primitiveCount;
 		}
 	}
 
@@ -155,7 +174,7 @@ void Scene::processDeletion() {
 		}
 	}
 
-	u32 subMeshInstanceCount = _gpuSubMeshInstances.getArrayCountMax();
+	u32 subMeshInstanceCount = _gpuSubMeshInstances.getResarveCount();
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
 			_subMeshInstanceUpdateFlags[subMeshInstanceIndex] &= ~SUB_MESH_INSTANCE_UPDATE_MATERIAL;
@@ -233,8 +252,8 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	const gpu::MeshInstance& meshInstance = _gpuMeshInstances[meshInstanceIndex];
 	const gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset];
 	const gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset];
-	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], lodMeshCount);
-	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], subMeshCount);
+	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], subMeshCount);
+	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], lodMeshCount);
 	_gpuMeshInstances.discard(&_gpuMeshInstances[meshInstanceIndex], 1);
 
 	_meshInstances[meshInstanceIndex] = MeshInstanceImpl();
@@ -265,7 +284,7 @@ void Scene::debugDrawMeshInstanceBounds() {
 }
 
 void Scene::debugDrawGui() {
-	u32 meshInstanceCount = _gpuMeshInstances.getArrayCountMax();
+	u32 meshInstanceCount = _gpuMeshInstances.getResarveCount();
 	DebugGui::Text("Total:%3d", meshInstanceCount);
 	DebugGui::Columns(2, "tree", true);
 	constexpr f32 MESH_NAME_WIDTH = 320;
