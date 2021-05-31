@@ -1023,16 +1023,35 @@ void MeshRendererSystemImpl::update() {
 
 		if (DebugGui::BeginTabBar("SceneMeshsTabBar")) {
 			if (DebugGui::BeginTabItem("Summary")) {
-				SceneInfo visibleSceneInfo = _scene.getVisibleSceneInfo();
-				SceneInfo sceneInfo = _scene.getSceneInfo();
-				const char FORMAT[] = "%25s: %12s/%12s";
-				DebugGui::Text(FORMAT, "Scene Info", "Visible", "Total");
-				DebugGui::Text(FORMAT, "Mesh Instance Count", ThreeDigiets(visibleSceneInfo._meshInstanceCount), ThreeDigiets(sceneInfo._meshInstanceCount));
-				DebugGui::Text(FORMAT, "Lod Mesh Instance Count", ThreeDigiets(visibleSceneInfo._lodMeshInstanceCount), ThreeDigiets(sceneInfo._lodMeshInstanceCount));
-				DebugGui::Text(FORMAT, "Sub Mesh Instance Count", ThreeDigiets(visibleSceneInfo._subMeshInstanceCount), ThreeDigiets(sceneInfo._subMeshInstanceCount));
-				DebugGui::Text(FORMAT, "Meshlet Instance Count", ThreeDigiets(visibleSceneInfo._meshletInstanceCount), ThreeDigiets(sceneInfo._meshletInstanceCount));
-				DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(visibleSceneInfo._vertexCount), ThreeDigiets(sceneInfo._vertexCount));
-				DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(visibleSceneInfo._triangleCount), ThreeDigiets(sceneInfo._triangleCount));
+				// シーン配置メッシュ情報統計
+				{
+					SceneInfo visibleSceneInfo = _scene.getVisibleSceneInfo();
+					SceneInfo sceneInfo = _scene.getSceneInfo();
+
+					const char FORMAT[] = "%25s: %12s/%12s";
+					DebugGui::Text(FORMAT, "Scene Info", "Visible", "Total");
+					DebugGui::Text(FORMAT, "Mesh Instance Count", ThreeDigiets(visibleSceneInfo._meshInstanceCount), ThreeDigiets(sceneInfo._meshInstanceCount));
+					DebugGui::Text(FORMAT, "Lod Mesh Instance Count", ThreeDigiets(visibleSceneInfo._lodMeshInstanceCount), ThreeDigiets(sceneInfo._lodMeshInstanceCount));
+					DebugGui::Text(FORMAT, "Sub Mesh Instance Count", ThreeDigiets(visibleSceneInfo._subMeshInstanceCount), ThreeDigiets(sceneInfo._subMeshInstanceCount));
+					DebugGui::Text(FORMAT, "Meshlet Instance Count", ThreeDigiets(visibleSceneInfo._meshletInstanceCount), ThreeDigiets(sceneInfo._meshletInstanceCount));
+					DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(visibleSceneInfo._vertexCount), ThreeDigiets(sceneInfo._vertexCount));
+					DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(visibleSceneInfo._triangleCount), ThreeDigiets(sceneInfo._triangleCount));
+				}
+				
+				DebugGui::Separator();
+
+				// ユニークリソースメッシュ情報統計
+				{
+					MeshResourceManagerInfo resourceInfo = _resourceManager.getMeshResourceInfo();
+
+					const char FORMAT[] = "%25s: %12s";
+					DebugGui::Text(FORMAT, "Mesh Count", ThreeDigiets(resourceInfo._meshCount));
+					DebugGui::Text(FORMAT, "Lod Mesh Count", ThreeDigiets(resourceInfo._lodMeshCount));
+					DebugGui::Text(FORMAT, "Sub Mesh Count", ThreeDigiets(resourceInfo._subMeshCount));
+					DebugGui::Text(FORMAT, "Meshlet Count", ThreeDigiets(resourceInfo._meshletCount));
+					DebugGui::Text(FORMAT, "Vertex Count", ThreeDigiets(resourceInfo._vertexCount));
+					DebugGui::Text(FORMAT, "Polygon Count", ThreeDigiets(resourceInfo._triangleCount));
+				}
 				DebugGui::EndTabItem();
 			}
 			if (DebugGui::BeginTabItem("Meshes")) {
