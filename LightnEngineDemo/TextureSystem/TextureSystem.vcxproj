@@ -118,7 +118,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LTN_TEXTURE_SYSTEM_EXPORT;LTN_DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LTN_TEXTURE_SYSTEM_EXPORT;LTN_DEBUG;_DEBUG</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)GfxCore\include;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>

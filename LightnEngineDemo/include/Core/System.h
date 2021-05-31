@@ -410,9 +410,7 @@ public:
 		}
 
 		// ƒuƒƒbƒN‚ªŒ©‚Â‚©‚ç‚È‚¢
-		if (bestBlockIndex == INVILD_BLOCK_INDEX) {
-			int y = 0;
-		}
+		LTN_ASSERT(bestBlockIndex != INVILD_BLOCK_INDEX);
 
 		EmptyBlockHeader& bestBlockHeader = _emptyBlockInfo[bestBlockIndex];
 		LTN_ASSERT(bestBlockHeader._size >= numElements);

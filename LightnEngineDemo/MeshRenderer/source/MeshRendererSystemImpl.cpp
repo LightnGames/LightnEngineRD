@@ -844,7 +844,7 @@ void MeshRendererSystemImpl::updateVisiblityHighMeshes(s32 visibleType) {
 			(info->_filePathHash == teapotHash) ||
 			(info->_filePathHash == dragonHash)) {
 			u32 cnt = counter++;
-			bool visible = cnt % meshInstanceStepRate == 0;
+			bool visible = (cnt + 1) % meshInstanceStepRate == 0;
 			meshInstance.setVisiblity(visible);
 		}
 	}
