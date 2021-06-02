@@ -1045,6 +1045,7 @@ void MeshRendererSystemImpl::update() {
 					MeshResourceManagerInfo resourceInfo = _resourceManager.getMeshResourceInfo();
 
 					const char FORMAT[] = "%25s: %12s";
+					DebugGui::Text(FORMAT, "Resource Info", "Total");
 					DebugGui::Text(FORMAT, "Mesh Count", ThreeDigiets(resourceInfo._meshCount));
 					DebugGui::Text(FORMAT, "Lod Mesh Count", ThreeDigiets(resourceInfo._lodMeshCount));
 					DebugGui::Text(FORMAT, "Sub Mesh Count", ThreeDigiets(resourceInfo._subMeshCount));
