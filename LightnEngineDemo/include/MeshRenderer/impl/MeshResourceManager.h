@@ -109,7 +109,9 @@ public:
 	GpuDescriptorHandle getSubMeshDrawInfoSrv() const { return _subMeshDrawInfoSrv._gpuHandle; }
 
 private:
+	void loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel);
 	void deleteMesh(u32 meshIndex);
+	void deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel);
 
 private:
 	Asset _meshAssets[MESH_COUNT_MAX] = {};

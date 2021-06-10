@@ -288,124 +288,15 @@ void MeshResourceManager::drawDebugGui() {
 void MeshResourceManager::loadMesh(u32 meshIndex) {
 	LTN_ASSERT(_assetStateFlags[meshIndex] == ASSET_STATE_REQUEST_LOAD);
 
-	Asset& asset = _meshAssets[meshIndex];
-	asset.openFile(asset.getFilePath());
-	FILE* fin = asset.getFile();
-	fseek(fin, asset.getFileOffsetInByte(), SEEK_SET);
-
-	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	const MeshInfo& meshInfo = _meshInfos[meshIndex];
-
-	// 頂点・インデックスバイナリを格納
-	u32 vertexCount = meshInfo._vertexCount;
-	u32 indexCount = meshInfo._indexCount;
-	u32 primitiveCount = meshInfo._primitiveCount;
-	u32 vertexBinaryIndex = _vertexPositionBinaryHeaders.request(vertexCount);
-	u32 indexBinaryIndex = _indexBinaryHeaders.request(indexCount);
-	u32 primitiveBinaryIndex = _primitiveBinaryHeaders.request(primitiveCount);
-
-	// Meshlet
-	{
-		u32 startIndex = meshInfo._meshletStartIndex;
-		u32 count = meshInfo._totalMeshletCount;
-		gpu::MeshletPrimitiveInfo* meshletPrimitiveInfos = vramUpdater->enqueueUpdate<gpu::MeshletPrimitiveInfo>(&_meshletPrimitiveInfoBuffer, sizeof(gpu::MeshletPrimitiveInfo) * startIndex, count);
-		fread_s(meshletPrimitiveInfos, sizeof(gpu::MeshletPrimitiveInfo) * count, sizeof(gpu::MeshletPrimitiveInfo), count, fin);
-		
-		gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * startIndex, count);
-		fread_s(meshlets, sizeof(gpu::Meshlet) * count, sizeof(gpu::Meshlet), count, fin);
-	}
-
-	// プリミティブ
-	u32* primitivePtr = nullptr;
-	{
-		u32 dstOffset = sizeof(u32) * primitiveBinaryIndex;
-		primitivePtr = vramUpdater->enqueueUpdate<u32>(&_primitiveBuffer, dstOffset, primitiveCount);
-		fread_s(primitivePtr, sizeof(u32) * primitiveCount, sizeof(u32), primitiveCount, fin);
-	}
-
-	// 頂点インデックス
-	u32* indexPtr = nullptr;
-	{
-		u32 dstOffset = sizeof(u32) * indexBinaryIndex;
-		indexPtr = vramUpdater->enqueueUpdate<u32>(&_vertexIndexBuffer, dstOffset, indexCount);
-		fread_s(indexPtr, sizeof(u32) * indexCount, sizeof(u32), indexCount, fin);
-	}
-
-	// 座標
-	{
-		u32 dstOffset = sizeof(VertexPosition) * vertexBinaryIndex;
-		VertexPosition* vertexPtr = vramUpdater->enqueueUpdate<VertexPosition>(&_positionVertexBuffer, dstOffset, vertexCount);
-		fread_s(vertexPtr, sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
-	}
-
-	// 法線 / 接線
-	{
-		u32 dstOffset = sizeof(VertexNormalTangent) * vertexBinaryIndex;
-		VertexNormalTangent* normalPtr = vramUpdater->enqueueUpdate<VertexNormalTangent>(&_normalTangentVertexBuffer, dstOffset, vertexCount);
-		fread_s(normalPtr, sizeof(VertexNormalTangent) * vertexCount, sizeof(VertexNormalTangent), vertexCount, fin);
-	}
-
-	// UV
-	{
-		u32 dstOffset = sizeof(VertexTexcoord) * vertexBinaryIndex;
-		VertexTexcoord* texcoordPtr = vramUpdater->enqueueUpdate<VertexTexcoord>(&_texcoordVertexBuffer, dstOffset, vertexCount);
-		fread_s(texcoordPtr, sizeof(VertexTexcoord) * vertexCount, sizeof(VertexTexcoord), vertexCount, fin);
-	}
-
-#if ENABLE_CLASSIC_VERTEX
-	u32 classicIndexCount = meshInfo._classicIndexCount;
-	u32 classicIndex = _classicIndexBinaryHeaders.request(classicIndexCount);
-	// Classic Index
-	{
-		u32 dstOffset = sizeof(u32) * classicIndex;
-		u32* classicIndexPtr = vramUpdater->enqueueUpdate<u32>(&_classicIndexBuffer, dstOffset, classicIndexCount);
-		fread_s(classicIndexPtr, sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
-	}
-
-	SubMeshInfo* subMeshInfos = &_subMeshInfos[meshInfo._subMeshStartIndex];
-	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
-		SubMeshInfo& info = subMeshInfos[subMeshIndex];
-		info._classiciIndexOffset += classicIndex;
-	}
-#endif
-
-	MeshInfo& updateMeshInfo = _meshInfos[meshIndex];
-	updateMeshInfo._vertexBinaryIndex = vertexBinaryIndex;
-	updateMeshInfo._indexBinaryIndex = indexBinaryIndex;
-	updateMeshInfo._primitiveBinaryIndex = primitiveBinaryIndex;
-#if ENABLE_CLASSIC_VERTEX
-	updateMeshInfo._classicIndexBinaryIndex = classicIndex;
-#endif
-
+	loadLodMeshes(meshIndex, 0, _meshInfos[meshIndex]._totalLodMeshCount);
+	
 	gpu::Mesh& mesh = _meshes[meshIndex];
 	mesh._stateFlags = gpu::MESH_STATE_LOADED;
 
-	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < meshInfo._totalLodMeshCount; ++lodMeshLocalIndex) {
-		u32 lodMeshIndex = meshInfo._lodMeshStartIndex + lodMeshLocalIndex;
-		gpu::LodMesh& lodMesh = _lodMeshes[lodMeshIndex];
-		lodMesh._vertexOffset += vertexBinaryIndex;
-		lodMesh._vertexIndexOffset += indexBinaryIndex;
-		lodMesh._primitiveOffset += primitiveBinaryIndex;
-	}
-
-	// データVramアップロード
-	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, sizeof(gpu::SubMesh) * meshInfo._subMeshStartIndex, meshInfo._totalSubMeshCount);
-	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, sizeof(gpu::LodMesh) * meshInfo._lodMeshStartIndex, meshInfo._totalLodMeshCount);
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
-	memcpy(subMeshes, &_subMeshes[meshInfo._subMeshStartIndex], sizeof(gpu::SubMesh) * meshInfo._totalSubMeshCount);
-	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex], sizeof(gpu::LodMesh) * meshInfo._totalLodMeshCount);
 	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
 
-	gpu::SubMeshDrawInfo* subMeshDrawInfos = vramUpdater->enqueueUpdate<gpu::SubMeshDrawInfo>(&_subMeshDrawInfoBuffer, sizeof(gpu::SubMeshDrawInfo) * meshInfo._subMeshStartIndex, meshInfo._totalSubMeshCount);
-	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
-		const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
-		gpu::SubMeshDrawInfo& info = subMeshDrawInfos[subMeshIndex];
-		info._indexCount = subMeshInfo._classicIndexCount;
-		info._indexOffset = subMeshInfo._classiciIndexOffset;
-	}
-
-	// 読み込み完了
-	_meshAssets[meshIndex].closeFile();
 	_assetStateFlags[meshIndex] = ASSET_STATE_ENABLE;
 }
 
@@ -505,9 +396,6 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
-	meshInfo._vertexBinaryIndex = 0;
-	meshInfo._indexBinaryIndex = 0;
-	meshInfo._classicIndexBinaryIndex = 0;
 	meshInfo._vertexCount = totalVertexCount;
 	meshInfo._indexCount = totalVertexIndexCount;
 	meshInfo._primitiveCount = totalPrimitiveCount;
@@ -524,7 +412,23 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 
 	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < totalLodMeshCount; ++lodMeshLocalIndex) {
 		const LodInfo& info = lodInfos[lodMeshLocalIndex];
+
+		meshInfo._subMeshCounts[lodMeshLocalIndex] = info._subMeshCount;
 		meshInfo._subMeshOffsets[lodMeshLocalIndex] = info._subMeshOffset;
+		meshInfo._vertexCounts[lodMeshLocalIndex] = info._vertexCount;
+		meshInfo._vertexIndexCounts[lodMeshLocalIndex] = info._vertexIndexCount;
+		meshInfo._primitiveCounts[lodMeshLocalIndex] = info._primitiveCount;
+
+		u32 classicIndexCount = 0;
+		u32 meshletCount = 0;
+		for (u32 subMeshIndex = 0; subMeshIndex < info._subMeshCount; ++subMeshIndex) {
+			const SubMeshInfoE& inputInfo = inputSubMeshInfos[info._subMeshOffset + subMeshIndex];
+			classicIndexCount += inputInfo._triangleStripIndexCount;
+			meshletCount += inputInfo._meshletCount;
+		}
+		meshInfo._classicIndexCounts[lodMeshLocalIndex] = classicIndexCount;
+		meshInfo._meshletCounts[lodMeshLocalIndex] = meshletCount;
+		meshInfo._meshletOffsets[lodMeshLocalIndex] = inputSubMeshInfos[info._subMeshOffset]._meshletStartIndex;
 	}
 
 	for (u32 subMeshIndex = 0; subMeshIndex < totalSubMeshCount; ++subMeshIndex) {
@@ -639,9 +543,212 @@ MeshResourceManagerInfo MeshResourceManager::getMeshResourceInfo() const {
 	return info;
 }
 
+void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel) {
+	Asset& asset = _meshAssets[meshIndex];
+	asset.openFile(asset.getFilePath());
+	FILE* fin = asset.getFile();
+	fseek(fin, asset.getFileOffsetInByte(), SEEK_SET);
+
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	const MeshInfo& meshInfo = _meshInfos[meshIndex];
+
+	// 頂点・インデックスバイナリを格納
+	u32 beginSubMeshOffset = meshInfo._subMeshOffsets[beginLodLevel];
+	u32 beginMeshletOffset = 0;
+	u32 beginVertexOffset = 0;
+	u32 beginIndexOffset = 0;
+	u32 beginPrimitiveOffset = 0;
+	u32 beginClassicIndexOffset = 0;
+	for (u32 lodMeshIndex = 0; lodMeshIndex < beginLodLevel; ++lodMeshIndex) {
+		beginMeshletOffset += meshInfo._meshletCounts[lodMeshIndex];
+		beginVertexOffset += meshInfo._vertexCounts[lodMeshIndex];
+		beginIndexOffset += meshInfo._vertexIndexCounts[lodMeshIndex];
+		beginPrimitiveOffset += meshInfo._primitiveCounts[lodMeshIndex];
+		beginClassicIndexOffset += meshInfo._classicIndexCounts[lodMeshIndex];
+	}
+
+	u32 endMeshletOffset = 0;
+	u32 endVertexOffset = 0;
+	u32 endIndexOffset = 0;
+	u32 endPrimitiveOffset = 0;
+	u32 endClassicIndexOffset = 0;
+	for (u32 lodMeshIndex = endLodLevel; lodMeshIndex < meshInfo._totalLodMeshCount; ++lodMeshIndex) {
+		endMeshletOffset += meshInfo._meshletCounts[lodMeshIndex];
+		endVertexOffset += meshInfo._vertexCounts[lodMeshIndex];
+		endIndexOffset += meshInfo._vertexIndexCounts[lodMeshIndex];
+		endPrimitiveOffset += meshInfo._primitiveCounts[lodMeshIndex];
+		endClassicIndexOffset += meshInfo._classicIndexCounts[lodMeshIndex];
+	}
+
+	u32 lodMeshCount = endLodLevel - beginLodLevel;
+	u32 subMeshCount = 0;
+	u32 meshletCount = 0;
+	u32 vertexCount = 0;
+	u32 indexCount = 0;
+	u32 primitiveCount = 0;
+	u32 classicIndexCount = 0;
+	for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+		subMeshCount += meshInfo._subMeshCounts[lodMeshIndex];
+		meshletCount += meshInfo._meshletCounts[lodMeshIndex];
+		vertexCount += meshInfo._vertexCounts[lodMeshIndex];
+		indexCount += meshInfo._vertexIndexCounts[lodMeshIndex];
+		primitiveCount += meshInfo._primitiveCounts[lodMeshIndex];
+		classicIndexCount += meshInfo._classicIndexCounts[lodMeshIndex];
+	}
+
+	u32 vertexOffsets[LOD_MESH_COUNT_MAX] = {};
+	u32 indexOffsets[LOD_MESH_COUNT_MAX] = {};
+	u32 primitiveOffsets[LOD_MESH_COUNT_MAX] = {};
+	u32 classicIndexOffsets[LOD_MESH_COUNT_MAX] = {};
+	for (u32 lodMeshIndex = beginLodLevel + 1; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+		u32 prevLodMeshIndex = lodMeshIndex - 1;
+		vertexOffsets[lodMeshIndex] = vertexOffsets[prevLodMeshIndex] + meshInfo._vertexCounts[prevLodMeshIndex];
+		indexOffsets[lodMeshIndex] = indexOffsets[prevLodMeshIndex] + meshInfo._vertexIndexCounts[prevLodMeshIndex];
+		primitiveOffsets[lodMeshIndex] = primitiveOffsets[prevLodMeshIndex] + meshInfo._primitiveCounts[prevLodMeshIndex];
+		classicIndexOffsets[lodMeshIndex] = classicIndexOffsets[prevLodMeshIndex] + meshInfo._classicIndexCounts[prevLodMeshIndex];
+	}
+
+	u32 vertexBinaryIndex = _vertexPositionBinaryHeaders.request(vertexCount);
+	u32 indexBinaryIndex = _indexBinaryHeaders.request(indexCount);
+	u32 primitiveBinaryIndex = _primitiveBinaryHeaders.request(primitiveCount);
+	// Meshlet
+	{
+		{
+			u32 beginOffset = sizeof(gpu::MeshletPrimitiveInfo) * beginMeshletOffset;
+			u32 endOffset = sizeof(gpu::MeshletPrimitiveInfo) * endMeshletOffset;
+			gpu::MeshletPrimitiveInfo* meshletPrimitiveInfos = vramUpdater->enqueueUpdate<gpu::MeshletPrimitiveInfo>(&_meshletPrimitiveInfoBuffer, sizeof(gpu::MeshletPrimitiveInfo) * (meshInfo._meshletStartIndex + beginMeshletOffset), meshletCount);
+			fseek(fin, beginOffset, SEEK_CUR);
+			fread_s(meshletPrimitiveInfos, sizeof(gpu::MeshletPrimitiveInfo) * meshletCount, sizeof(gpu::MeshletPrimitiveInfo), meshletCount, fin);
+			fseek(fin, endOffset, SEEK_CUR);
+		}
+		
+		{
+			u32 beginOffset = sizeof(gpu::Meshlet) * beginMeshletOffset;
+			u32 endOffset = sizeof(gpu::Meshlet) * endMeshletOffset;
+			gpu::Meshlet* meshlets = vramUpdater->enqueueUpdate<gpu::Meshlet>(&_meshletBuffer, sizeof(gpu::Meshlet) * (meshInfo._meshletStartIndex + beginMeshletOffset), meshletCount);
+			fseek(fin, beginOffset, SEEK_CUR);
+			fread_s(meshlets, sizeof(gpu::Meshlet) * meshletCount, sizeof(gpu::Meshlet), meshletCount, fin);
+			fseek(fin, endOffset, SEEK_CUR);
+		}
+	}
+
+	// プリミティブ
+	u32* primitivePtr = nullptr;
+	{
+		u32 endOffset = sizeof(u32) * endPrimitiveOffset;
+		u32 srcOffset = sizeof(u32) * beginPrimitiveOffset;
+		u32 dstOffset = sizeof(u32) * primitiveBinaryIndex;
+		primitivePtr = vramUpdater->enqueueUpdate<u32>(&_primitiveBuffer, dstOffset, primitiveCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(primitivePtr, sizeof(u32) * primitiveCount, sizeof(u32), primitiveCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+	// 頂点インデックス
+	u32* indexPtr = nullptr;
+	{
+		u32 endOffset = sizeof(u32) * endIndexOffset;
+		u32 srcOffset = sizeof(u32) * beginIndexOffset;
+		u32 dstOffset = sizeof(u32) * indexBinaryIndex;
+		indexPtr = vramUpdater->enqueueUpdate<u32>(&_vertexIndexBuffer, dstOffset, indexCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(indexPtr, sizeof(u32) * indexCount, sizeof(u32), indexCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+	// 座標
+	{
+		u32 endOffset = sizeof(VertexPosition) * endVertexOffset;
+		u32 srcOffset = sizeof(VertexPosition) * beginVertexOffset;
+		u32 dstOffset = sizeof(VertexPosition) * vertexBinaryIndex;
+		VertexPosition* vertexPtr = vramUpdater->enqueueUpdate<VertexPosition>(&_positionVertexBuffer, dstOffset, vertexCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(vertexPtr, sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+	// 法線 / 接線
+	{
+		u32 endOffset = sizeof(VertexNormalTangent) * endVertexOffset;
+		u32 srcOffset = sizeof(VertexNormalTangent) * beginVertexOffset;
+		u32 dstOffset = sizeof(VertexNormalTangent) * vertexBinaryIndex;
+		VertexNormalTangent* normalPtr = vramUpdater->enqueueUpdate<VertexNormalTangent>(&_normalTangentVertexBuffer, dstOffset, vertexCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(normalPtr, sizeof(VertexNormalTangent) * vertexCount, sizeof(VertexNormalTangent), vertexCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+	// UV
+	{
+		u32 endOffset = sizeof(VertexTexcoord) * endVertexOffset;
+		u32 srcOffset = sizeof(VertexTexcoord) * beginVertexOffset;
+		u32 dstOffset = sizeof(VertexTexcoord) * vertexBinaryIndex;
+		VertexTexcoord* texcoordPtr = vramUpdater->enqueueUpdate<VertexTexcoord>(&_texcoordVertexBuffer, dstOffset, vertexCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(texcoordPtr, sizeof(VertexTexcoord) * vertexCount, sizeof(VertexTexcoord), vertexCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+#if ENABLE_CLASSIC_VERTEX
+	u32 classicIndex = _classicIndexBinaryHeaders.request(classicIndexCount);
+	// Classic Index
+	{
+		u32 endOffset = sizeof(u32) * endClassicIndexOffset;
+		u32 srcOffset = sizeof(u32) * beginClassicIndexOffset;
+		u32 dstOffset = sizeof(u32) * classicIndex;
+		u32* classicIndexPtr = vramUpdater->enqueueUpdate<u32>(&_classicIndexBuffer, dstOffset, classicIndexCount);
+		fseek(fin, srcOffset, SEEK_CUR);
+		fread_s(classicIndexPtr, sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
+		fseek(fin, endOffset, SEEK_CUR);
+	}
+
+	SubMeshInfo* subMeshInfos = &_subMeshInfos[meshInfo._subMeshStartIndex + beginSubMeshOffset];
+	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+		SubMeshInfo& info = subMeshInfos[subMeshIndex];
+		info._classiciIndexOffset = classicIndex + beginClassicIndexOffset;
+	}
+#endif
+
+	MeshInfo& updateMeshInfo = _meshInfos[meshIndex];
+	for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+		u32 lodMeshOffset = meshInfo._lodMeshStartIndex + lodMeshIndex;
+		gpu::LodMesh& lodMesh = _lodMeshes[lodMeshOffset];
+		lodMesh._vertexOffset = vertexBinaryIndex + vertexOffsets[lodMeshIndex];
+		lodMesh._vertexIndexOffset = indexBinaryIndex + indexOffsets[lodMeshIndex];
+		lodMesh._primitiveOffset = primitiveBinaryIndex + primitiveOffsets[lodMeshIndex];
+
+		updateMeshInfo._vertexBinaryIndices[lodMeshIndex] = vertexBinaryIndex + vertexOffsets[lodMeshIndex];
+		updateMeshInfo._indexBinaryIndices[lodMeshIndex] = indexBinaryIndex + indexOffsets[lodMeshIndex];
+		updateMeshInfo._primitiveBinaryIndices[lodMeshIndex] = primitiveBinaryIndex + primitiveOffsets[lodMeshIndex];
+#if ENABLE_CLASSIC_VERTEX
+		updateMeshInfo._classicIndexBinaryIndices[lodMeshIndex] = classicIndex + classicIndexOffsets[lodMeshIndex];
+#endif
+	}
+
+	// データVramアップロード
+	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, sizeof(gpu::SubMesh) * (meshInfo._subMeshStartIndex + beginSubMeshOffset), subMeshCount);
+	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, sizeof(gpu::LodMesh) * (meshInfo._lodMeshStartIndex + beginLodLevel), lodMeshCount);
+	memcpy(subMeshes, &_subMeshes[meshInfo._subMeshStartIndex + beginSubMeshOffset], sizeof(gpu::SubMesh) * subMeshCount);
+	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex + beginLodLevel], sizeof(gpu::LodMesh) * lodMeshCount);
+
+	gpu::SubMeshDrawInfo* subMeshDrawInfos = vramUpdater->enqueueUpdate<gpu::SubMeshDrawInfo>(&_subMeshDrawInfoBuffer, sizeof(gpu::SubMeshDrawInfo) * (meshInfo._subMeshStartIndex + beginSubMeshOffset), subMeshCount);
+	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+		const SubMeshInfo& subMeshInfo = subMeshInfos[subMeshIndex];
+		gpu::SubMeshDrawInfo& info = subMeshDrawInfos[subMeshIndex];
+		info._indexCount = subMeshInfo._classicIndexCount;
+		info._indexOffset = subMeshInfo._classiciIndexOffset;
+	}
+
+	// 読み込み完了
+	_meshAssets[meshIndex].closeFile();
+}
+
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
-	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndex, meshInfo._vertexCount);
+	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndices[0], meshInfo._vertexCount);
+	_indexBinaryHeaders.discard(meshInfo._indexBinaryIndices[0], meshInfo._indexCount);
+	_primitiveBinaryHeaders.discard(meshInfo._primitiveBinaryIndices[0], meshInfo._primitiveCount);
+	_classicIndexBinaryHeaders.discard(meshInfo._classicIndexBinaryIndices[0], meshInfo._classicIndexCount);
 	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex], meshInfo._totalMeshletCount);
 	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex], meshInfo._totalSubMeshCount);
 	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex], meshInfo._totalLodMeshCount);
@@ -656,6 +763,40 @@ void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	_meshInfos[meshIndex] = MeshInfo();
 	_meshInstances[meshIndex] = MeshImpl();
 	_debugMeshInfo[meshIndex] = DebugMeshInfo();
+}
+
+void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel) {
+	u32 vertexCount = 0;
+	u32 indexCount = 0;
+	u32 primitiveCount = 0;
+	u32 classicIndexCount = 0;
+	const MeshInfo& meshInfo = _meshInfos[meshIndex];
+	for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+		vertexCount += meshInfo._vertexCounts[lodMeshIndex];
+		indexCount += meshInfo._vertexIndexCounts[lodMeshIndex];
+		primitiveCount += meshInfo._primitiveCounts[lodMeshIndex];
+		classicIndexCount += meshInfo._classicIndexCounts[lodMeshIndex];
+	}
+
+	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndices[beginLodLevel], vertexCount);
+	_indexBinaryHeaders.discard(meshInfo._indexBinaryIndices[beginLodLevel], indexCount);
+	_primitiveBinaryHeaders.discard(meshInfo._primitiveBinaryIndices[beginLodLevel], primitiveCount);
+	_classicIndexBinaryHeaders.discard(meshInfo._classicIndexBinaryIndices[beginLodLevel], classicIndexCount);
+
+	u32 lodMeshCount = endLodLevel - beginLodLevel;
+	u32 subMeshCount = 0;
+	u32 meshletCount = 0;
+	for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+		meshletCount += meshInfo._meshletCounts[lodMeshIndex];
+		subMeshCount += meshInfo._subMeshCounts[lodMeshIndex];
+	}
+	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex + meshInfo._meshletOffsets[beginLodLevel]], meshletCount);
+	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex + meshInfo._subMeshOffsets[beginLodLevel]], subMeshCount);
+	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex + beginLodLevel], lodMeshCount);
+
+	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+		_subMeshInfos[meshInfo._subMeshStartIndex + meshInfo._subMeshOffsets[beginLodLevel] + subMeshIndex] = SubMeshInfo();
+	}
 }
 
 void Mesh::requestToDelete(){
