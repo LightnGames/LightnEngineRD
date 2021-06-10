@@ -72,6 +72,7 @@ struct Mesh {
 	uint _stateFlags;
 	uint _lodMeshOffset;
 	uint _lodMeshCount;
+    uint _streamedLodLevel;
 };
 
 struct LodMesh {

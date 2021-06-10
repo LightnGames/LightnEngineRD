@@ -9,6 +9,7 @@ StructuredBuffer<MeshInstance> _meshInstances : register(t3);
 StructuredBuffer<LodMeshInstance> _lodMeshInstances : register(t4);
 
 RWByteAddressBuffer _resultLodLevels : register(u0);
+RWByteAddressBuffer _requestLodLevels : register(u1);
 
 bool isRangeMeshInstance(uint meshInstanceIndex) {
     return meshInstanceIndex < _sceneCullingInfo._meshInstanceCount;
@@ -60,5 +61,9 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
         }
     }
 	
-    _resultLodLevels.Store(meshInstanceIndex * UINT32_SIZE_IN_BYTE, lodLevel);
+    uint dummyValue = 0;
+    uint currentLodLevel = max(lodLevel, mesh._streamedLodLevel);
+    _resultLodLevels.Store(meshInstanceIndex * UINT32_SIZE_IN_BYTE, currentLodLevel);
+    _requestLodLevels.InterlockedMin(meshInstance._meshIndex * UINT32_SIZE_IN_BYTE, lodLevel, dummyValue);
+
 }

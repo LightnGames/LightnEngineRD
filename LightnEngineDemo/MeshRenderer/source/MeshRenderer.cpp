@@ -197,6 +197,7 @@ void MeshRenderer::initialize() {
 		DescriptorRange meshDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
 		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
 		DescriptorRange resultLodLevelDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+		DescriptorRange lodLevelFeedbackUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
 
 		RootParameter rootParameters[GpuComputeLodRootParam::COUNT] = {};
 		rootParameters[GpuComputeLodRootParam::SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
@@ -204,6 +205,7 @@ void MeshRenderer::initialize() {
 		rootParameters[GpuComputeLodRootParam::LOD_MESH].initializeDescriptorTable(1, &meshDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[GpuComputeLodRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[GpuComputeLodRootParam::RESULT_LEVEL].initializeDescriptorTable(1, &resultLodLevelDescriptorRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::FEEDBACK_LEVEL].initializeDescriptorTable(1, &lodLevelFeedbackUavRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;

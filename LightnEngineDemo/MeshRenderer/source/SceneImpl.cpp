@@ -862,9 +862,6 @@ void InstancingResource::update(const UpdateDesc& desc) {
 			u32 shaderSetIndex = subMeshInstances[subMeshIndex]._shaderSetIndex;
 			u32 shaderSetOffset = shaderSetIndex * INSTANCING_PER_SHADER_COUNT_MAX;
 			++infoCounts[shaderSetOffset + subMeshGlobalIndex];
-			if (subMeshGlobalIndex >= INSTANCING_PER_SHADER_COUNT_MAX) {
-				int y = 0;
-			}
 			packMeshletFilterFlgas[subMeshGlobalIndex] = subMesh->_meshletCount <= desc._meshletThresholdUseAmplificationShader;
 		}
 	}

@@ -61,6 +61,23 @@ void MeshResourceManager::initialize() {
 		_meshletPrimitiveInfoBuffer.setDebugName("Meshlet Primitive Info");
 	}
 
+	// Mesh lod level feedback buffers
+	{
+		GpuBufferDesc desc = {};
+		desc._device = device;
+		desc._sizeInByte = MESH_COUNT_MAX * sizeof(u32);
+		desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
+		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		_meshLodLevelFeedbackBuffer.initialize(desc);
+		_meshLodLevelFeedbackBuffer.setDebugName("Mesh Lod Level Feedback");
+
+		desc._initialState = RESOURCE_STATE_COPY_DEST;
+		desc._heapType = HEAP_TYPE_READBACK;
+		desc._flags = RESOURCE_FLAG_NONE;
+		_meshLodLevelFeedbackReadbackBuffer.initialize(desc);
+		_meshLodLevelFeedbackReadbackBuffer.setDebugName("Mesh Lod Level Feedback Readback");
+	}
+
 	_meshes.initialize(MESH_COUNT_MAX);
 	_lodMeshes.initialize(LOD_MESH_COUNT_MAX);
 	_subMeshes.initialize(SUB_MESH_COUNT_MAX);
@@ -75,11 +92,14 @@ void MeshResourceManager::initialize() {
 
 	// descriptors
 	{
-		DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_meshSrv = allocater->allocateDescriptors(5);
-		_vertexSrv = allocater->allocateDescriptors(5);
-		_subMeshDrawInfoSrv = allocater->allocateDescriptors(1);
-		u64 incrimentSize = static_cast<u64>(allocater->getIncrimentSize());
+		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+		DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+		_meshSrv = allocator->allocateDescriptors(5);
+		_vertexSrv = allocator->allocateDescriptors(5);
+		_subMeshDrawInfoSrv = allocator->allocateDescriptors(1);
+		_meshLodLevelFeedbackUav = allocator->allocateDescriptors(1);
+		_meshLodLevelFeedbackCpuUav = cpuAllocator->allocateDescriptors(1);
+		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
 		ShaderResourceViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
@@ -136,6 +156,17 @@ void MeshResourceManager::initialize() {
 		}
 	}
 
+	{
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_R32_TYPELESS;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = MESH_COUNT_MAX;
+		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+		device->createUnorderedAccessView(_meshLodLevelFeedbackBuffer.getResource(), nullptr, &desc, _meshLodLevelFeedbackUav._cpuHandle);
+		device->createUnorderedAccessView(_meshLodLevelFeedbackBuffer.getResource(), nullptr, &desc, _meshLodLevelFeedbackCpuUav._cpuHandle);
+	}
+
 	MeshDesc desc = {};
 	desc._filePath = "common/box.mesh";
 	_defaultCube = createMesh(desc);
@@ -171,6 +202,8 @@ void MeshResourceManager::terminate() {
 	_meshletBuffer.terminate();
 	_meshletPrimitiveInfoBuffer.terminate();
 	_subMeshDrawInfoBuffer.terminate();
+	_meshLodLevelFeedbackBuffer.terminate();
+	_meshLodLevelFeedbackReadbackBuffer.terminate();
 
 #if ENABLE_CLASSIC_VERTEX
 	_classicIndexBuffer.terminate();
@@ -190,10 +223,14 @@ void MeshResourceManager::terminate() {
 	_indexBinaryHeaders.terminate();
 	_primitiveBinaryHeaders.terminate();
 
-	DescriptorHeapAllocator* allocater = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocater->discardDescriptor(_meshSrv);
-	allocater->discardDescriptor(_vertexSrv);
-	allocater->discardDescriptor(_subMeshDrawInfoSrv);
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_meshSrv);
+	allocator->discardDescriptor(_vertexSrv);
+	allocator->discardDescriptor(_subMeshDrawInfoSrv);
+	allocator->discardDescriptor(_meshLodLevelFeedbackUav);
+
+	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	cpuAllocator->discardDescriptor(_meshLodLevelFeedbackCpuUav);
 }
 
 void MeshResourceManager::terminateDefaultResources() {
@@ -292,6 +329,7 @@ void MeshResourceManager::loadMesh(u32 meshIndex) {
 	
 	gpu::Mesh& mesh = _meshes[meshIndex];
 	mesh._stateFlags = gpu::MESH_STATE_LOADED;
+	mesh._streamedLodLevel = _meshInfos[meshIndex]._totalLodMeshCount - 1;
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);

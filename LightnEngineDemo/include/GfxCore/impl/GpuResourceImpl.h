@@ -51,6 +51,7 @@ namespace GpuComputeLodRootParam {
 		LOD_MESH,
 		MESH_INSTANCE,
 		RESULT_LEVEL,
+		FEEDBACK_LEVEL,
 		COUNT
 	};
 };

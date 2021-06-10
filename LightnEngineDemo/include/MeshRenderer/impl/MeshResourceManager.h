@@ -142,9 +142,13 @@ private:
 	GpuBuffer _subMeshBuffer;
 	GpuBuffer _meshletBuffer;
 	GpuBuffer _meshletPrimitiveInfoBuffer;
+	GpuBuffer _meshLodLevelFeedbackBuffer;
+	GpuBuffer _meshLodLevelFeedbackReadbackBuffer;
 
 	DescriptorHandle _meshSrv;
 	DescriptorHandle _vertexSrv;
+	DescriptorHandle _meshLodLevelFeedbackUav;
+	DescriptorHandle _meshLodLevelFeedbackCpuUav;
 	Mesh* _defaultCube = nullptr;
 
 #if ENABLE_CLASSIC_VERTEX
