@@ -33,11 +33,16 @@ struct RenderContext {
 struct ComputeLodContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
+	GpuBuffer* _meshLodLevelFeedbackBuffer = nullptr;
+	GpuBuffer* _meshLodLevelFeedbackReadbackBuffer = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
+	u32 _meshCount = 0;
 	u32 _meshInstanceCountMax = 0;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;
 	GpuDescriptorHandle _sceneConstantCbv;
+	GpuDescriptorHandle _meshLodLevelFeedbackUav;
+	CpuDescriptorHandle _meshLodLevelFeedbackCpuUav;
 };
 
 struct GpuCullingContext {

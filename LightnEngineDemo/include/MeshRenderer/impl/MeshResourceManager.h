@@ -100,6 +100,8 @@ public:
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
 	GpuBuffer* getTexcoordVertexBuffer() { return &_texcoordVertexBuffer; }
+	GpuBuffer* getMeshLodLevelFeedbackBuffer() { return &_meshLodLevelFeedbackBuffer; }
+	GpuBuffer* getMeshLodLevelFeedbackReadbackBuffer() { return &_meshLodLevelFeedbackReadbackBuffer; }
 	MeshResourceManagerInfo getMeshResourceInfo() const;
 
 #if ENABLE_CLASSIC_VERTEX
@@ -107,6 +109,8 @@ public:
 #endif
 
 	GpuDescriptorHandle getSubMeshDrawInfoSrv() const { return _subMeshDrawInfoSrv._gpuHandle; }
+	GpuDescriptorHandle getMeshLodLevelFeedbackUav() const { return _meshLodLevelFeedbackUav._gpuHandle; }
+	CpuDescriptorHandle getMeshLodLevelFeedbackCpuUav() const { return _meshLodLevelFeedbackCpuUav._cpuHandle; }
 
 private:
 	void loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel);
@@ -150,6 +154,7 @@ private:
 	DescriptorHandle _meshLodLevelFeedbackUav;
 	DescriptorHandle _meshLodLevelFeedbackCpuUav;
 	Mesh* _defaultCube = nullptr;
+	u32 _meshLodLevelFeedbacks[MESH_COUNT_MAX] = {};
 
 #if ENABLE_CLASSIC_VERTEX
 	MultiDynamicQueueBlockManager _classicIndexBinaryHeaders;

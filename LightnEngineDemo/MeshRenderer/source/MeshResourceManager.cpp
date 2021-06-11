@@ -71,6 +71,7 @@ void MeshResourceManager::initialize() {
 		_meshLodLevelFeedbackBuffer.initialize(desc);
 		_meshLodLevelFeedbackBuffer.setDebugName("Mesh Lod Level Feedback");
 
+		desc._sizeInByte = MESH_COUNT_MAX * sizeof(u32) * BACK_BUFFER_COUNT;
 		desc._initialState = RESOURCE_STATE_COPY_DEST;
 		desc._heapType = HEAP_TYPE_READBACK;
 		desc._flags = RESOURCE_FLAG_NONE;
@@ -179,6 +180,52 @@ void MeshResourceManager::update() {
 			loadMesh(meshIndex);
 		}
 	}
+
+	// 要求 Lod Level をリードバック
+	{
+		u32 frameIndex = GraphicsSystemImpl::Get()->getFrameIndex();
+		u64 startOffset = static_cast<u64>(frameIndex) * MESH_COUNT_MAX;
+		MemoryRange range(startOffset, MESH_COUNT_MAX);
+		u32* mapPtr = _meshLodLevelFeedbackReadbackBuffer.map<u32>(&range);
+		memcpy(_meshLodLevelFeedbacks, mapPtr, sizeof(u32) * MESH_COUNT_MAX);
+		_meshLodLevelFeedbackReadbackBuffer.unmap();
+	}
+
+	for (u32 meshIndex = 0; meshIndex < _meshes.getResarveCount(); ++meshIndex) {
+		if (_assetStateFlags[meshIndex] != ASSET_STATE_ENABLE) {
+			continue;
+		}
+
+		u32 feedbackLodLevel = _meshLodLevelFeedbacks[meshIndex];
+		if (feedbackLodLevel == gpu::INVALID_INDEX) {
+			continue;
+		}
+
+		gpu::Mesh& mesh = _meshes[meshIndex];
+		if (feedbackLodLevel == mesh._streamedLodLevel) {
+			continue;
+		}
+
+		if (feedbackLodLevel < mesh._streamedLodLevel) {
+			loadLodMeshes(meshIndex, feedbackLodLevel, mesh._streamedLodLevel);
+		}
+
+		if (feedbackLodLevel > mesh._streamedLodLevel) {
+			deleteLodMeshes(meshIndex, mesh._streamedLodLevel, feedbackLodLevel);
+		}
+
+		mesh._streamedLodLevel = feedbackLodLevel;
+
+		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+		gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
+		memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
+	}
+
+	DebugGui::Start("Mesh Lod Level Feedback");
+	for (u32 i = 0; i < _meshes.getResarveCount(); ++i) {
+		DebugGui::Text("[%2d] %-70s", _meshLodLevelFeedbacks[i], _debugMeshInfo[i]._filePath);
+	}
+	DebugGui::End();
 }
 
 void MeshResourceManager::processDeletion() {
@@ -325,11 +372,11 @@ void MeshResourceManager::drawDebugGui() {
 void MeshResourceManager::loadMesh(u32 meshIndex) {
 	LTN_ASSERT(_assetStateFlags[meshIndex] == ASSET_STATE_REQUEST_LOAD);
 
-	loadLodMeshes(meshIndex, 0, _meshInfos[meshIndex]._totalLodMeshCount);
-	
 	gpu::Mesh& mesh = _meshes[meshIndex];
 	mesh._stateFlags = gpu::MESH_STATE_LOADED;
-	mesh._streamedLodLevel = _meshInfos[meshIndex]._totalLodMeshCount - 1;
+
+	// もっとも粗いLODレベルのみロードする
+	loadLodMeshes(meshIndex, mesh._streamedLodLevel, mesh._streamedLodLevel + 1);
 
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
@@ -488,6 +535,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	mesh._stateFlags = gpu::MESH_STATE_ALLOCATED;
 	mesh._lodMeshCount = totalLodMeshCount;
 	mesh._lodMeshOffset = lodMeshStartIndex;
+	mesh._streamedLodLevel = totalLodMeshCount - 1;
 
 	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < totalLodMeshCount; ++lodMeshLocalIndex) {
 		u32 lodMeshIndex = lodMeshStartIndex + lodMeshLocalIndex;
@@ -740,10 +788,12 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		fseek(fin, endOffset, SEEK_CUR);
 	}
 
+	u32 classicIndexLocalOffset = 0;
 	SubMeshInfo* subMeshInfos = &_subMeshInfos[meshInfo._subMeshStartIndex + beginSubMeshOffset];
 	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 		SubMeshInfo& info = subMeshInfos[subMeshIndex];
-		info._classiciIndexOffset = classicIndex + beginClassicIndexOffset;
+		info._classiciIndexOffset = classicIndex + classicIndexLocalOffset;
+		classicIndexLocalOffset += info._classicIndexCount;
 	}
 #endif
 
@@ -783,24 +833,30 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
-	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndices[0], meshInfo._vertexCount);
-	_indexBinaryHeaders.discard(meshInfo._indexBinaryIndices[0], meshInfo._indexCount);
-	_primitiveBinaryHeaders.discard(meshInfo._primitiveBinaryIndices[0], meshInfo._primitiveCount);
-	_classicIndexBinaryHeaders.discard(meshInfo._classicIndexBinaryIndices[0], meshInfo._classicIndexCount);
+	deleteLodMeshes(meshIndex, 0, meshInfo._totalLodMeshCount);
+
+	//u32 lodMeshCount = endLodLevel - beginLodLevel;
+	//u32 subMeshCount = 0;
+	//u32 meshletCount = 0;
+	//for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
+	//	meshletCount += meshInfo._meshletCounts[lodMeshIndex];
+	//	subMeshCount += meshInfo._subMeshCounts[lodMeshIndex];
+	//}
 	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex], meshInfo._totalMeshletCount);
 	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex], meshInfo._totalSubMeshCount);
 	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex], meshInfo._totalLodMeshCount);
 	_meshes.discard(meshIndex);
 
-	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
-		_subMeshInfos[meshInfo._subMeshStartIndex + subMeshIndex] = SubMeshInfo();
-	}
 	_assetStateFlags[meshIndex] = ASSET_STATE_NONE;
 	_meshStateFlags[meshIndex] = MESH_FLAG_STATE_NONE;
 	_fileHashes[meshIndex] = 0;
 	_meshInfos[meshIndex] = MeshInfo();
 	_meshInstances[meshIndex] = MeshImpl();
 	_debugMeshInfo[meshIndex] = DebugMeshInfo();
+
+	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
+		_subMeshInfos[meshInfo._subMeshStartIndex + subMeshIndex] = SubMeshInfo();
+	}
 }
 
 void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel) {
@@ -820,21 +876,6 @@ void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 
 	_indexBinaryHeaders.discard(meshInfo._indexBinaryIndices[beginLodLevel], indexCount);
 	_primitiveBinaryHeaders.discard(meshInfo._primitiveBinaryIndices[beginLodLevel], primitiveCount);
 	_classicIndexBinaryHeaders.discard(meshInfo._classicIndexBinaryIndices[beginLodLevel], classicIndexCount);
-
-	u32 lodMeshCount = endLodLevel - beginLodLevel;
-	u32 subMeshCount = 0;
-	u32 meshletCount = 0;
-	for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
-		meshletCount += meshInfo._meshletCounts[lodMeshIndex];
-		subMeshCount += meshInfo._subMeshCounts[lodMeshIndex];
-	}
-	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex + meshInfo._meshletOffsets[beginLodLevel]], meshletCount);
-	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex + meshInfo._subMeshOffsets[beginLodLevel]], subMeshCount);
-	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex + beginLodLevel], lodMeshCount);
-
-	for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		_subMeshInfos[meshInfo._subMeshStartIndex + meshInfo._subMeshOffsets[beginLodLevel] + subMeshIndex] = SubMeshInfo();
-	}
 }
 
 void Mesh::requestToDelete(){

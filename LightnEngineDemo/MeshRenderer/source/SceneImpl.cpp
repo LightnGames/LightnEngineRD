@@ -650,17 +650,17 @@ void GpuCullingResource::resourceBarriersHizTextureToSrv(CommandList* commandLis
 }
 
 void IndirectArgumentResource::resourceBarriersToUav(CommandList* commandList) {
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
-	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
-	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
-	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
+	ResourceTransitionBarrier barriers[2] = {};
+	barriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_UNORDERED_ACCESS);
+	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }
 
 void IndirectArgumentResource::resourceBarriersToIndirectArgument(CommandList* commandList) {
-	ResourceTransitionBarrier uavToIndirectArgumentBarriers[2] = {};
-	uavToIndirectArgumentBarriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
-	uavToIndirectArgumentBarriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
-	commandList->transitionBarriers(uavToIndirectArgumentBarriers, LTN_COUNTOF(uavToIndirectArgumentBarriers));
+	ResourceTransitionBarrier barriers[2] = {};
+	barriers[0] = _indirectArgumentBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+	barriers[1] = _countBuffer.getAndUpdateTransitionBarrier(RESOURCE_STATE_INDIRECT_ARGUMENT);
+	commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 }
 
 // カウントバッファクリア

@@ -388,6 +388,14 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
 
+	// Lod level feedback buffer をクリア
+	{
+		u32 clearValues[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+		GpuDescriptorHandle gpuDescriptor = context._meshLodLevelFeedbackUav;
+		CpuDescriptorHandle cpuDescriptor = context._meshLodLevelFeedbackCpuUav;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, context._meshLodLevelFeedbackBuffer->getResource(), clearValues, 0, nullptr);
+	}
+
 	commandList->setComputeRootSignature(_computeLodRootSignature);
 	commandList->setPipelineState(_computeLodPipelineState);
 	gpuCullingResource->setComputeLodResource(commandList);
@@ -397,10 +405,22 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::VIEW_INFO, viewInfo->_viewInfoCbv._gpuHandle);
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::LOD_MESH, context._meshHandle);
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::MESH_INSTANCE, context._meshInstanceHandle);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::FEEDBACK_LEVEL, context._meshLodLevelFeedbackUav);
 
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	gpuCullingResource->resetResourceComputeLodBarriers(commandList);
+
+	// Mesh lod feedback 結果をリードバックバッファにコピー
+	{
+		context._meshLodLevelFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
+
+		u32 meshSizeInByte = sizeof(u32) * context._meshCount;
+		u32 offset = GraphicsSystemImpl::Get()->getFrameIndex() * meshSizeInByte;
+		commandList->copyBufferRegion(context._meshLodLevelFeedbackReadbackBuffer->getResource(), offset, context._meshLodLevelFeedbackBuffer->getResource(), 0, meshSizeInByte);
+
+		context._meshLodLevelFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+	}
 }
 
 void MeshRenderer::depthPrePassCulling(const GpuCullingContext& context) const {

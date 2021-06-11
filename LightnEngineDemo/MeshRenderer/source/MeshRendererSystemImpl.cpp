@@ -34,6 +34,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshInstanceHandle = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv();
+		context._meshLodLevelFeedbackBuffer = _resourceManager.getMeshLodLevelFeedbackBuffer();
+		context._meshLodLevelFeedbackUav = _resourceManager.getMeshLodLevelFeedbackUav();
+		context._meshLodLevelFeedbackCpuUav = _resourceManager.getMeshLodLevelFeedbackCpuUav();
+		context._meshLodLevelFeedbackReadbackBuffer = _resourceManager.getMeshLodLevelFeedbackReadbackBuffer();
+		context._meshCount = MeshResourceManager::MESH_COUNT_MAX;
 		_meshRenderer.computeLod(context);
 	}
 
@@ -275,6 +280,11 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshInstanceHandle = _scene.getMeshInstanceSrv();
 		context._meshInstanceCountMax = _scene.getMeshInstanceCountMax();
 		context._sceneConstantCbv = _scene.getSceneCbv();
+		context._meshLodLevelFeedbackBuffer = _resourceManager.getMeshLodLevelFeedbackBuffer();
+		context._meshLodLevelFeedbackUav = _resourceManager.getMeshLodLevelFeedbackUav();
+		context._meshLodLevelFeedbackCpuUav = _resourceManager.getMeshLodLevelFeedbackCpuUav();
+		context._meshLodLevelFeedbackReadbackBuffer = _resourceManager.getMeshLodLevelFeedbackReadbackBuffer();
+		context._meshCount = MeshResourceManager::MESH_COUNT_MAX;
 		_meshRenderer.computeLod(context);
 	}
 
