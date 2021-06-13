@@ -5,6 +5,7 @@
 #include <GfxCore/impl/DescriptorHeap.h>
 #include <GfxCore/impl/DebugWindow.h>
 #include <GfxCore/impl/VramBufferUpdater.h>
+#include <GfxCore/impl/ReleaseQueue.h>
 #include <functional>
 
 using RenderPass = std::function<void(CommandList*)>;
@@ -23,6 +24,7 @@ public:
 	DescriptorHeapAllocator* getSrvCbvUavCpuDescriptorAllocator() { return  &_srvCbvUavCpuDescriptorAllocator; }
 	DescriptorHeapAllocator* getSrvCbvUavGpuDescriptorAllocator() { return  &_srvCbvUavGpuDescriptorAllocator; }
 	VramBufferUpdater* getVramUpdater() { return &_vramBufferUpdater; }
+	ReleaseQueue* getReleaseQueue() { return &_releaseQueue; }
 	Device* getDevice() { return _device; }
 	HardwareAdapter* getHardWareAdaptor() { return _adapter; }
 	u32 getFrameIndex() const { return _frameIndex; }
@@ -47,6 +49,7 @@ private:
 	DescriptorHeapAllocator _rtvDescriptorAllocator;
 	DescriptorHeapAllocator _dsvDescriptorAllocator;
 	VramBufferUpdater _vramBufferUpdater;
+	ReleaseQueue _releaseQueue;
 	DebugWindow _debugWindow;
 	u64 _fenceValues[BACK_BUFFER_COUNT] = {};
 	GpuTexture _backBuffers[BACK_BUFFER_COUNT] = {};

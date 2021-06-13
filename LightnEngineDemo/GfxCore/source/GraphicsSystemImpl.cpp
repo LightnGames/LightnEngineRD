@@ -140,6 +140,9 @@ void GraphicsSystemImpl::moveToNextFrame() {
 	u64 currentFenceValue = _fenceValues[_frameIndex];
 	_commandQueue->waitForFence(currentFenceValue);
 
+	// リリースキューのリソース開放を実行
+	_releaseQueue.execureRelease();
+
 	_frameIndex = _swapChain->getCurrentBackBufferIndex();
 
 	u64 fenceValue = _commandQueue->incrimentFence();

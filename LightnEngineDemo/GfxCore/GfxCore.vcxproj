@@ -167,6 +167,7 @@
     <ClCompile Include="source\GpuResourceImpl.cpp" />
     <ClCompile Include="source\GraphicsSystemImpl.cpp" />
     <ClCompile Include="source\QueryHeapSystem.cpp" />
+    <ClCompile Include="source\ReleaseQueue.cpp" />
     <ClCompile Include="source\ViewSystemImpl.cpp" />
     <ClCompile Include="source\VramBufferUpdater.cpp" />
   </ItemGroup>
