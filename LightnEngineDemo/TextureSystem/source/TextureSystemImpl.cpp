@@ -41,6 +41,9 @@ void TextureSystemImpl::processDeletion() {
 	u32 textureCount = _textures.getInstanceCount();
 	for (u32 textureIndex = 0; textureIndex < textureCount; ++textureIndex) {
 		if (_stateFlags[textureIndex] & TEXTURE_STATE_REQUEST_DELETE) {
+            u32 sizeInByte = _textures[textureIndex].getReqiredSize();
+            LTN_ASSERT(_textureSizeInByte >= sizeInByte);
+            _textureSizeInByte -= sizeInByte;
 			_textures[textureIndex].terminate();
 			_textures.discard(textureIndex);
 			_stateFlags[textureIndex] = TEXTURE_STATE_NONE;
@@ -60,6 +63,7 @@ void TextureSystemImpl::terminate() {
 
 void TextureSystemImpl::debugDrawGui() {
 	DebugWindow::StartWindow("Textures");
+    DebugGui::Text("VRAM: %12s byte", ThreeDigiets(_textureSizeInByte));
     DebugGui::Columns(1, nullptr, true);
 	u32 incrimentSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
 	u32 textureCount = _textures.getInstanceCount();
@@ -597,6 +601,9 @@ void TextureSystemImpl::loadTexture(u32 textureIndex) {
 
     CpuDescriptorHandle descriptor = _descriptors._cpuHandle + incrimentSize * textureIndex;
     device->createShaderResourceView(gpuTexture.getResource(), nullptr, descriptor);
+
+    _textures[textureIndex].setReqiredSize(static_cast<u32>(requiredSize));
+    _textureSizeInByte += requiredSize;
 }
 
 void TextureImpl::terminate() {

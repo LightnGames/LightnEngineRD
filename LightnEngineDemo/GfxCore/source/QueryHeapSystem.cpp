@@ -101,9 +101,7 @@ void QueryHeapSystem::debugDrawGpuPerf() {
 	static bool flat = false;
 	DebugGui::Checkbox("flat", &flat);
 	QueryVideoMemoryInfo videoMemoryInfo = GraphicsSystemImpl::Get()->getHardWareAdaptor()->queryVideoMemoryInfo();
-	u32 currentUsageSizeInByte = static_cast<u32>(videoMemoryInfo._currentUsage / 1000);
-	u32 currentBudgetSizeInByte = static_cast<u32>(videoMemoryInfo._budget / 1000);
-	DebugGui::Text("[VMEM info] %10s / %10s byte", ThreeDigiets(currentUsageSizeInByte).get(), ThreeDigiets(currentBudgetSizeInByte).get());
+	DebugGui::Text("[VMEM info] %14s / %14s byte", ThreeDigiets(videoMemoryInfo._currentUsage).get(), ThreeDigiets(videoMemoryInfo._budget).get());
 
 	DebugGui::Columns(2, "tree", true);
 	if (flat) {

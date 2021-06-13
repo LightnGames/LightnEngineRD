@@ -63,9 +63,9 @@ T RoundUp(const T& value, const T& divideValue) {
 
 class ThreeDigiets {
 public:
-	ThreeDigiets(u32 value) {
+	ThreeDigiets(u64 value) {
 		char temp[64];
-		sprintf_s(temp, "%d", value);
+		sprintf_s(temp, "%lld", value);
 
 		u32 count = 0;
 		for (u32 i = 0; i < LTN_COUNTOF(temp); ++i) {
@@ -76,7 +76,6 @@ public:
 		}
 
 		u32 currentStrIndex = 0;
-		u32 currentValue = value;
 		for (u32 i = 0; i < count; ++i) {
 			_str[currentStrIndex++] = temp[i];
 			u32 strIndex = count - i - 1;

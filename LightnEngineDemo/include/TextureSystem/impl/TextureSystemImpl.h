@@ -28,12 +28,19 @@ public:
 	void setAsset(Asset* asset) {
 		_asset = asset;
 	}
+	void setReqiredSize(u32 sizeInByte) {
+		_requiredSize = sizeInByte;
+	}
+	u32 getReqiredSize() const {
+		return _requiredSize;
+	}
 	GpuTexture* getGpuTexture() {
 		return _texture;
 	}
 private:
 	u8* _stateFlags = nullptr;
 	GpuTexture* _texture = nullptr;
+	u32 _requiredSize = 0;
 };
 
 class LTN_TEXTURE_SYSTEM_API TextureSystemImpl :public TextureSystem {
@@ -67,4 +74,5 @@ private:
 	u8 _stateFlags[TEXTURE_COUNT_MAX] = {};
 	DescriptorHandle _descriptors;
 	Texture* _commonBlackTexture = nullptr;
+	u64 _textureSizeInByte = 0;
 };
