@@ -51,7 +51,7 @@ public:
 	void processDeletion();
 	void terminate();
 	void debugDrawGui();
-	void loadTexture(u32 textureIndex);
+	void loadTexture(u32 textureIndex, u32 mipmapLevel);
 
 	u32 getTextureIndex(const Texture* texture) const;
 	Texture* findTexture(u64 fileHash);
@@ -72,6 +72,7 @@ private:
 
 	u64 _fileHashes[TEXTURE_COUNT_MAX] = {};
 	u8 _stateFlags[TEXTURE_COUNT_MAX] = {};
+	u32 _requestStreamedLevels[TextureSystemImpl::TEXTURE_COUNT_MAX] = {};
 	DescriptorHandle _descriptors;
 	Texture* _commonBlackTexture = nullptr;
 	u64 _textureSizeInByte = 0;

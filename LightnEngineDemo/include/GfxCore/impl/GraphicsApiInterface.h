@@ -622,7 +622,7 @@ struct ResourceDesc {
 	u64 _alignment = 0;
 	u64 _width = 0;
 	u32 _height = 0;
-	u16 _depthOrArraySize = 0;
+	u16 _depthOrArraySize = 1;
 	u16 _mipLevels = 0;
 	Format _format;
 	SampleDesc _sampleDesc;
