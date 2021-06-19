@@ -92,13 +92,13 @@ bool doNdcCulling(float2 screenCoordsMin, float2 screenCoordsMax, ViewInfo viewI
 float getNearBoundsDepth(float3 boundMin, float3 boundsMax, ViewInfo viewInfo) {
     float3 viewNormalAndDistance = getCameraDirection(viewInfo);
     float3 worldPositivePoint = getPositivePoint(boundMin, boundsMax, -viewNormalAndDistance);
-    float3 viewPositivePoint = worldPositivePoint - viewInfo._position;
+    float3 viewPositivePoint = worldPositivePoint - viewInfo._cameraPosition;
     return dot(viewNormalAndDistance, viewPositivePoint);
 }
 
 float getViewSpacePositivePosition(float3 boundMin, float3 boundsMax, float3 direction, ViewInfo viewInfo) {
     float3 worldPositivePoint = getPositivePoint(boundMin, boundsMax, direction);
-    float3 viewPositivePoint = worldPositivePoint - viewInfo._position;
+    float3 viewPositivePoint = worldPositivePoint - viewInfo._cameraPosition;
     return dot(direction, viewPositivePoint);
 }
 
@@ -126,7 +126,7 @@ bool isOcclusion(float depth, float3 boundsMin, float3 boundsMax, ViewInfo viewI
 void computeScreenRect(float3 boundsMin, float3 boundsMax, ViewInfo viewInfo, out float2 outScreenCoordsMin, out float2 outScreenCoordsMax)
 {
     float3 boundsSize = boundsMax - boundsMin;
-    float3 viewSpaceBoundsMin = boundsMin - viewInfo._position;
+    float3 viewSpaceBoundsMin = boundsMin - viewInfo._cameraPosition;
     const float3 points[AABB_CORNER_COUNT] = {
         float3(0, 0, 0),
         float3(boundsSize.x, 0, 0),

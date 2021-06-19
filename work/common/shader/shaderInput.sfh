@@ -1,4 +1,4 @@
-struct SkyDomeVSInput{
+struct SkyDomeVSInput {
     uint _vertexId : SV_VertexId;
 };
 
@@ -16,7 +16,7 @@ struct VertexOut {
     nointerpolation uint _materialIndex : MATERIAL_INDEX;
 };
 
-struct SkyDomePSInput{
+struct SkyDomePSInput {
     float4 _position : SV_POSITION;
     float3 _directionView : DIRECTION_VIEW;
 };
@@ -24,4 +24,10 @@ struct SkyDomePSInput{
 struct Debug3dPSInput {
     float4 _position : SV_POSITION;
     float3 _color : COLOR;
+};
+
+struct SdfPSInput {
+    float4 _position : SV_POSITION;
+    float3 _localPosition : LOCAL_POSITION;
+    float3 _worldPosition : WORLD_POSITION;
 };

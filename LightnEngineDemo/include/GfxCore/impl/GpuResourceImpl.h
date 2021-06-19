@@ -89,6 +89,14 @@ namespace BuildIndirectArgumentRootParam {
 	};
 };
 
+namespace DebugSdfRootParameters {
+	enum {
+		VIEW_INFO = 0,
+		SDF_TEXTURE,
+		COUNT
+	};
+};
+
 struct GpuBufferDesc {
 	Device* _device = nullptr;
 	ResourceStates _initialState;
@@ -102,9 +110,10 @@ struct GpuTextureDesc {
 	ResourceStates _initialState;
 	ClearValue* _optimizedClearValue = nullptr;
 	Format _format = FORMAT_UNKNOWN;
+	ResourceDimension _dimension = RESOURCE_DIMENSION_TEXTURE2D;
 	u64 _width = 0;
 	u32 _height = 0;
-	u16 _arraySize = 1;
+	u16 _depthOrArraySize = 1;
 	u16 _mipLevels = 1;
 	u32 _sampleCount = 1;
 	u32 _sampleQuality = 0;

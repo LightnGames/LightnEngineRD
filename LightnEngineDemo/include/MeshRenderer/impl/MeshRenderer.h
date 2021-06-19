@@ -121,6 +121,12 @@ struct BuildDebugDrawMeshletBoundsContext {
 	u32 _meshInstanceCountMax = 0;
 };
 
+struct DebugDrawMeshSdfContext {
+	CommandList* _commandList = nullptr;
+	ViewInfo* _viewInfo = nullptr;
+	GpuDescriptorHandle _meshSdfSrv;
+};
+
 class MeshRenderer {
 public:
 	void initialize();
@@ -133,6 +139,7 @@ public:
 	void buildIndirectArgument(const BuildIndirectArgumentContext& context) const;
 	void buildHiz(const BuildHizContext& context) const;
 	void buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext& context) const;
+	void debugDrawMeshSdf(const DebugDrawMeshSdfContext& context) const;
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	void multiDrawRender(const MultiIndirectRenderContext& context) const;
@@ -166,4 +173,6 @@ private:
 	PipelineState* _multiDrawCullingPipelineState = nullptr;
 	PipelineState* _multiDrawOcclusionCullingPipelineState = nullptr;
 #endif
+	PipelineState* _debugMeshSdfPipelineState = nullptr;
+	RootSignature* _debugMeshSdfRootSignature = nullptr;
 };

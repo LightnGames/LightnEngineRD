@@ -1196,7 +1196,7 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 	}
 	{
 		D3D12_STATIC_SAMPLER_DESC& samplerDesc = samplerDescs[1];
-		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;

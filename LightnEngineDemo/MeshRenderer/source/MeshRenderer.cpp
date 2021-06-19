@@ -300,6 +300,45 @@ void MeshRenderer::initialize() {
 
 		computeShader->terminate();
 	}
+
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+		ShaderBlob* vertexShader = allocator->allocateShaderBlob();
+		ShaderBlob* pixelShader = allocator->allocateShaderBlob();
+		vertexShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug_sdf.vso");
+		pixelShader->initialize("L:/LightnEngine/resource/common/shader/debug/debug_sdf.pso");
+
+		_debugMeshSdfPipelineState = allocator->allocatePipelineState();
+		_debugMeshSdfRootSignature = allocator->allocateRootSignature();
+
+		DescriptorRange viewInfoCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 0);
+
+		RootParameter rootParameters[DebugSdfRootParameters::COUNT] = {};
+		rootParameters[DebugSdfRootParameters::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugSdfRootParameters::SDF_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
+
+		RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+		_debugMeshSdfRootSignature->iniaitlize(rootSignatureDesc);
+
+		GraphicsPipelineStateDesc pipelineStateDesc = {};
+		pipelineStateDesc._device = device;
+		pipelineStateDesc._vs = vertexShader->getShaderByteCode();
+		pipelineStateDesc._ps = pixelShader->getShaderByteCode();
+		pipelineStateDesc._numRenderTarget = 1;
+		pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
+		pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
+		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		pipelineStateDesc._rootSignature = _debugMeshSdfRootSignature;
+		pipelineStateDesc._sampleDesc._count = 1;
+		_debugMeshSdfPipelineState->iniaitlize(pipelineStateDesc);
+
+		vertexShader->terminate();
+		pixelShader->terminate();
+	}
 }
 
 void MeshRenderer::terminate() {
@@ -315,6 +354,8 @@ void MeshRenderer::terminate() {
 	_debugMeshletBoundsRootSignature->terminate();
 	_buildIndirectArgumentPipelineState->terminate();
 	_buildIndirectArgumentRootSignature->terminate();
+	_debugMeshSdfPipelineState->terminate();
+	_debugMeshSdfRootSignature->terminate();
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	_multiDrawCullingPassPipelineState->terminate();
@@ -515,6 +556,23 @@ void MeshRenderer::buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext
 
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
+}
+
+void MeshRenderer::debugDrawMeshSdf(const DebugDrawMeshSdfContext& context) const {
+	CommandList* commandList = context._commandList;
+	ViewInfo* viewInfo = context._viewInfo;
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
+	commandList->setViewports(1, &viewInfo->_viewPort);
+	commandList->setScissorRects(1, &viewInfo->_scissorRect);
+	commandList->setGraphicsRootSignature(_debugMeshSdfRootSignature);
+	commandList->setPipelineState(_debugMeshSdfPipelineState);
+	commandList->setVertexBuffers(0, 0, nullptr);
+	commandList->setIndexBuffer(nullptr);
+	commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::VIEW_INFO, viewInfo->_viewInfoCbv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::SDF_TEXTURE, context._meshSdfSrv);
+	commandList->drawInstanced(36, 1, 0, 0);
+	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
 void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) const {

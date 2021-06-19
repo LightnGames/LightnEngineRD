@@ -156,6 +156,14 @@
     <ClInclude Include="..\include\MeshRenderer\impl\SceneImpl.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\VramShaderSetSystem.h" />
     <ClInclude Include="..\include\MeshRenderer\MeshRendererSystem.h" />
+    <ClInclude Include="third_party\sdf_gen\array1.h" />
+    <ClInclude Include="third_party\sdf_gen\array2.h" />
+    <ClInclude Include="third_party\sdf_gen\array3.h" />
+    <ClInclude Include="third_party\sdf_gen\hashgrid.h" />
+    <ClInclude Include="third_party\sdf_gen\hashtable.h" />
+    <ClInclude Include="third_party\sdf_gen\makelevelset3.h" />
+    <ClInclude Include="third_party\sdf_gen\util.h" />
+    <ClInclude Include="third_party\sdf_gen\vec.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\MeshRenderer.cpp" />
@@ -163,6 +171,7 @@
     <ClCompile Include="source\MeshResourceManager.cpp" />
     <ClCompile Include="source\SceneImpl.cpp" />
     <ClCompile Include="source\VramShaderSetSystem.cpp" />
+    <ClCompile Include="third_party\sdf_gen\makelevelset3.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

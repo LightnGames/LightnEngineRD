@@ -16,6 +16,12 @@
     <Filter Include="include">
       <UniqueIdentifier>{a186933a-fbbc-468d-beb8-8c2668d2adfc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="third_party">
+      <UniqueIdentifier>{31672b04-6d9d-482e-bbd0-26fc4f158578}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\sdf_gen">
+      <UniqueIdentifier>{508d4753-a7ea-4ef3-b59c-90d7c8ea97aa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\MeshRenderer\GpuStruct.h">
@@ -39,6 +45,30 @@
     <ClInclude Include="..\include\MeshRenderer\impl\VramShaderSetSystem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\array1.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\array2.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\array3.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\hashgrid.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\hashtable.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\makelevelset3.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\util.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\sdf_gen\vec.h">
+      <Filter>third_party\sdf_gen</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\SceneImpl.cpp">
@@ -55,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="source\VramShaderSetSystem.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\sdf_gen\makelevelset3.cpp">
+      <Filter>third_party\sdf_gen</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

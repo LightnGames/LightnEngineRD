@@ -1,0 +1,40 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+
+Texture3D _sdf[] : register(t0);
+sampler _linerSampler : register(s1);
+
+float sampleSdf(uint textureIndex, float3 localPosition) {
+    return _sdf[textureIndex].SampleLevel(_linerSampler, localPosition + float3(0.5, 0.5, 0.5), 0).x;
+}
+
+float4 main(SdfPSInput input) : SV_TARGET {
+    float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
+    float3 invViewDirection = -viewDirection;
+    float rayEndThreshold = 0.01;
+    bool isHit = false;
+    float rayDistance = 0.0;
+    int SAMPLE_COUNT_MAX = 32;
+    for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
+    {
+        float3 currentRayOrigin = input._localPosition + rayDistance * invViewDirection;
+        float distance = sampleSdf(1, currentRayOrigin);
+        if (distance < rayEndThreshold)
+        {
+            isHit = true;
+            break;
+        }
+        
+        rayDistance += distance * 0.5;
+    }
+    
+    if (!isHit)
+    {
+        clip(-1);
+    }
+    
+    return float4(float3(rayDistance, 0.3, 0.3), 1.0);
+}

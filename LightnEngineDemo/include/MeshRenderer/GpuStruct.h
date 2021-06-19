@@ -5,6 +5,7 @@ namespace gpu {
 	constexpr u32 INVALID_INDEX = 0xffffffff;
 	constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 	constexpr u32 SHADER_SET_COUNT_MAX = 32;
+	constexpr u32 MESH_SDF_COUNT_MAX = 128;
 
 	enum MeshInstanceStateFlgas {
 		MESH_INSTANCE_STATE_FLAGS_NONE = 0,

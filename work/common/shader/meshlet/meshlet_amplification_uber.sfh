@@ -33,7 +33,7 @@ bool doBackFaceCulling(MeshletBounds meshletBounds) {
     float3 boundsCenter = (meshletBounds._boundsMin + meshletBounds._boundsMax) / 2.0;
     float3 apexDirection = meshletBounds._normal * meshletBounds._apexOffset;
     float3 offsetedBoundsCenter = boundsCenter - apexDirection;
-    float3 viewDirection = normalize(_viewInfo._position - offsetedBoundsCenter);
+    float3 viewDirection = normalize(_viewInfo._cameraPosition - offsetedBoundsCenter);
     float3 axis = -meshletBounds._normal;
     float viewAngle = dot(axis, viewDirection);
     return !(viewAngle > meshletBounds._cutoff);

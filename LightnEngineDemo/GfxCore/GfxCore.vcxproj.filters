@@ -208,5 +208,11 @@
     <None Include="..\..\work\common\shader\debug\debug3dBox.vsf">
       <Filter>shader\debug</Filter>
     </None>
+    <None Include="..\..\work\common\shader\debug\debug_sdf.psf">
+      <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\debug\debug_sdf.vsf">
+      <Filter>shader\debug</Filter>
+    </None>
   </ItemGroup>
 </Project>

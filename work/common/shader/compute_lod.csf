@@ -44,7 +44,7 @@ void main(in uint3 groupID : SV_GroupID, in uint3 groupThreadID : SV_GroupThread
     }
 	
     float3 boundsCenter = (meshInstance._aabbMin + meshInstance._aabbMax) / 2.0;
-    float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._position;
+    float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._cameraPosition;
     float boundsDepth = length(viewSpaceBoundsCenter);
     float screenRadius = meshInstance._boundsRadius / (_viewInfo._halfFovTan.y * boundsDepth);
     float screenDimeter = screenRadius * 2;

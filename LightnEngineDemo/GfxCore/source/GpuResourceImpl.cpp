@@ -49,10 +49,10 @@ void GpuTexture::initialize(const GpuTextureDesc& desc) {
 	GpuResource::initialize();
 	ResourceDesc textureDesc = {};
 	textureDesc._format = desc._format;
-	textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE2D;
+	textureDesc._dimension = desc._dimension;
 	textureDesc._width = desc._width;
 	textureDesc._height = desc._height;
-	textureDesc._depthOrArraySize = desc._arraySize;
+	textureDesc._depthOrArraySize = desc._depthOrArraySize;
 	textureDesc._mipLevels = desc._mipLevels;
 	textureDesc._sampleDesc._count = desc._sampleCount;
 	textureDesc._sampleDesc._quality = desc._sampleQuality;

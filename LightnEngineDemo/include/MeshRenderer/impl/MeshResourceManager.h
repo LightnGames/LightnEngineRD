@@ -57,6 +57,10 @@ public:
 	}
 };
 
+struct MeshSdfDimension {
+	u32 _sizes[3] = {};
+};
+
 struct MeshResourceManagerInfo {
 	u32 _meshCount = 0;
 	u32 _lodMeshCount = 0;
@@ -111,6 +115,8 @@ public:
 	GpuDescriptorHandle getSubMeshDrawInfoSrv() const { return _subMeshDrawInfoSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshLodLevelFeedbackUav() const { return _meshLodLevelFeedbackUav._gpuHandle; }
 	CpuDescriptorHandle getMeshLodLevelFeedbackCpuUav() const { return _meshLodLevelFeedbackCpuUav._cpuHandle; }
+	GpuDescriptorHandle getMeshSdfSrv() const { return _meshSdfSrv._gpuHandle; }
+	bool isEnabledDebugDraw() { return _meshSdfs[1].getResource() != nullptr; }
 
 private:
 	void loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel);
@@ -148,11 +154,13 @@ private:
 	GpuBuffer _meshletPrimitiveInfoBuffer;
 	GpuBuffer _meshLodLevelFeedbackBuffer;
 	GpuBuffer _meshLodLevelFeedbackReadbackBuffer;
+	GpuTexture _meshSdfs[MESH_COUNT_MAX] = {};
 
 	DescriptorHandle _meshSrv;
 	DescriptorHandle _vertexSrv;
 	DescriptorHandle _meshLodLevelFeedbackUav;
 	DescriptorHandle _meshLodLevelFeedbackCpuUav;
+	DescriptorHandle _meshSdfSrv;
 	Mesh* _defaultCube = nullptr;
 	u32 _meshLodLevelFeedbacks[MESH_COUNT_MAX] = {};
 

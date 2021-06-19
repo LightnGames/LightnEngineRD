@@ -1163,6 +1163,15 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 #endif
 	}
 
+	// SDF デバッグ表示
+	if(_resourceManager.isEnabledDebugDraw()){
+		DebugDrawMeshSdfContext context;
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
+		_meshRenderer.debugDrawMeshSdf(context);
+	}
+
 	// メッシュレットバウンディング　デバッグ表示
 	if (_debugDrawMeshletBounds) {
 		BuildDebugDrawMeshletBoundsContext context;

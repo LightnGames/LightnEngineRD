@@ -2,6 +2,8 @@
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
 #include <DebugRenderer/DebugRendererSystem.h>
+#include <GfxCore/impl/ViewSystemImpl.h>//TODO: SDF　テストが終わったら消す
+#include "../third_party/sdf_gen/makelevelset3.h"
 
 void MeshResourceManager::initialize() {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
@@ -168,6 +170,11 @@ void MeshResourceManager::initialize() {
 		device->createUnorderedAccessView(_meshLodLevelFeedbackBuffer.getResource(), nullptr, &desc, _meshLodLevelFeedbackCpuUav._cpuHandle);
 	}
 
+	{
+		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+		_meshSdfSrv = allocator->allocateDescriptors(MESH_COUNT_MAX);
+	}
+
 	MeshDesc desc = {};
 	desc._filePath = "common/box.mesh";
 	_defaultCube = createMesh(desc);
@@ -275,6 +282,7 @@ void MeshResourceManager::terminate() {
 	allocator->discardDescriptor(_vertexSrv);
 	allocator->discardDescriptor(_subMeshDrawInfoSrv);
 	allocator->discardDescriptor(_meshLodLevelFeedbackUav);
+	allocator->discardDescriptor(_meshSdfSrv);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_meshLodLevelFeedbackCpuUav);
@@ -694,6 +702,8 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		classicIndexOffsets[lodMeshIndex] = classicIndexOffsets[prevLodMeshIndex] + meshInfo._classicIndexCounts[prevLodMeshIndex];
 	}
 
+	std::vector<Vec3f> vertices(vertexCount);
+	std::vector<Vec3ui> triangles(classicIndexCount / 3);
 	u32 vertexBinaryIndex = _vertexPositionBinaryHeaders.request(vertexCount);
 	u32 indexBinaryIndex = _indexBinaryHeaders.request(indexCount);
 	u32 primitiveBinaryIndex = _primitiveBinaryHeaders.request(primitiveCount);
@@ -749,8 +759,9 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		u32 dstOffset = sizeof(VertexPosition) * vertexBinaryIndex;
 		VertexPosition* vertexPtr = vramUpdater->enqueueUpdate<VertexPosition>(&_positionVertexBuffer, dstOffset, vertexCount);
 		fseek(fin, srcOffset, SEEK_CUR);
-		fread_s(vertexPtr, sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
+		fread_s(vertices.data(), sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
 		fseek(fin, endOffset, SEEK_CUR);
+		memcpy(vertexPtr, vertices.data(), sizeof(VertexPosition) * vertices.size());
 	}
 
 	// 法線 / 接線
@@ -784,8 +795,9 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		u32 dstOffset = sizeof(u32) * classicIndex;
 		u32* classicIndexPtr = vramUpdater->enqueueUpdate<u32>(&_classicIndexBuffer, dstOffset, classicIndexCount);
 		fseek(fin, srcOffset, SEEK_CUR);
-		fread_s(classicIndexPtr, sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
+		fread_s(triangles.data(), sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
 		fseek(fin, endOffset, SEEK_CUR);
+		memcpy(classicIndexPtr, triangles.data(), sizeof(u32)* triangles.size());
 	}
 
 	u32 classicIndexLocalOffset = 0;
@@ -829,19 +841,106 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 
 	// 読み込み完了
 	_meshAssets[meshIndex].closeFile();
+
+	// SDF
+	if (meshIndex == 1) {
+		Vec3f min_box(meshInfo._boundsMin._x, meshInfo._boundsMin._y, meshInfo._boundsMin._z);
+		Vec3f max_box(meshInfo._boundsMax._x, meshInfo._boundsMax._y, meshInfo._boundsMax._z);
+
+		f32 dx = 0.1f;
+		f32 padding = 2.0f;
+		Vec3f unit(1, 1, 1);
+		min_box -= padding * dx * unit;
+		max_box += padding * dx * unit;
+		Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
+
+		Array3f phi_grid;
+		make_level_set3(triangles, vertices, min_box, dx, sizes[0], sizes[1], sizes[2], phi_grid);
+
+		GpuTexture& texture = _meshSdfs[meshIndex];
+		Device* device = GraphicsSystemImpl::Get()->getDevice();
+		GpuTextureDesc textureDesc = {};
+		textureDesc._device = device;
+		textureDesc._format = FORMAT_R32_FLOAT;
+		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
+		textureDesc._width = sizes[0];
+		textureDesc._height = sizes[1];
+		textureDesc._depthOrArraySize = sizes[2];
+		textureDesc._mipLevels = 1;
+		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		texture.initialize(textureDesc);
+		texture.setDebugName("SDF Test");
+
+		u32 subResourceIndex = 0;
+		u32 numberOfPlanes = device->getFormatPlaneCount(textureDesc._format);
+		SubResourceData subResources[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
+		for (u32 planeIndex = 0; planeIndex < numberOfPlanes; ++planeIndex) {
+			u64 srcBits = 0;
+			for (u32 arrayIndex = 0; arrayIndex < textureDesc._depthOrArraySize; arrayIndex++) {
+				u32 w = textureDesc._width;
+				u32 h = textureDesc._height;
+				u32 d = textureDesc._height;
+				for (u32 mipIndex = 0; mipIndex < textureDesc._mipLevels; mipIndex++) {
+					size_t bpp = 32;// 4byte
+					u32 numRow = h;
+					u32 rowBytes = (w * bpp + 7u) / 8u;;
+					u32 numBytes = rowBytes * h;
+
+					SubResourceData& subResource = subResources[subResourceIndex++];
+					subResource._data = reinterpret_cast<void*>(srcBits);
+					subResource._rowPitch = static_cast<s64>(rowBytes);
+					subResource._slicePitch = static_cast<s64>(numBytes);
+
+					// AdjustPlaneResource(ddsHeaderDxt10._dxgiFormat, h, planeIndex, subResource);
+					srcBits += numBytes * d;
+
+					w = Max(w / 2, 1u);
+					h = Max(h / 2, 1u);
+					d = Max(d / 2, 1u);
+				}
+			}
+		}
+
+		u64 requiredSize = 0;
+		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
+		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
+		u64 rowSizesInBytes[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
+		u32 numberOfResources = numberOfPlanes;
+		ResourceDesc textureResourceDesc = texture.getResourceDesc();
+		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
+
+		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+		void* pixelData = vramUpdater->enqueueUpdate(&texture, numberOfResources, subResources, static_cast<u32>(requiredSize));
+
+		u8* sourcePtr = reinterpret_cast<u8*>(&phi_grid.a[0]);
+		for (u32 subResourceIndex = 0; subResourceIndex < numberOfResources; ++subResourceIndex) {
+			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
+			u8* data = reinterpret_cast<u8*>(pixelData) + layout._offset;
+			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];
+			u32 numRow = numRows[subResourceIndex];
+			u32 rowPitch = layout._footprint._rowPitch;
+			u32 slicePitch = layout._footprint._rowPitch * numRow;
+			u32 numSlices = layout._footprint._depth;
+			for (u32 z = 0; z < numSlices; ++z) {
+				u64 slicePitchOffset = static_cast<u64>(slicePitch) * z;
+				u8* destSlice = data + slicePitchOffset;
+				for (u32 y = 0; y < numRow; ++y) {
+					u64 rowPitchOffset = static_cast<u64>(rowPitch) * y;
+					memcpy(destSlice + rowPitchOffset, sourcePtr, sizeof(u8) * rowSizeInBytes);
+					sourcePtr += sizeof(u8) * rowSizeInBytes;
+				}
+			}
+		}
+
+		u32 incSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
+		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * meshIndex);
+	}
 }
 
 void MeshResourceManager::deleteMesh(u32 meshIndex) {
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 	deleteLodMeshes(meshIndex, 0, meshInfo._totalLodMeshCount);
 
-	//u32 lodMeshCount = endLodLevel - beginLodLevel;
-	//u32 subMeshCount = 0;
-	//u32 meshletCount = 0;
-	//for (u32 lodMeshIndex = beginLodLevel; lodMeshIndex < endLodLevel; ++lodMeshIndex) {
-	//	meshletCount += meshInfo._meshletCounts[lodMeshIndex];
-	//	subMeshCount += meshInfo._subMeshCounts[lodMeshIndex];
-	//}
 	_meshlets.discard(&_meshlets[meshInfo._meshletStartIndex], meshInfo._totalMeshletCount);
 	_subMeshes.discard(&_subMeshes[meshInfo._subMeshStartIndex], meshInfo._totalSubMeshCount);
 	_lodMeshes.discard(&_lodMeshes[meshInfo._lodMeshStartIndex], meshInfo._totalLodMeshCount);
@@ -856,6 +955,10 @@ void MeshResourceManager::deleteMesh(u32 meshIndex) {
 
 	for (u32 subMeshIndex = 0; subMeshIndex < meshInfo._totalSubMeshCount; ++subMeshIndex) {
 		_subMeshInfos[meshInfo._subMeshStartIndex + subMeshIndex] = SubMeshInfo();
+	}
+
+	if (meshIndex == 1) {
+		_meshSdfs[meshIndex].terminate();
 	}
 }
 
