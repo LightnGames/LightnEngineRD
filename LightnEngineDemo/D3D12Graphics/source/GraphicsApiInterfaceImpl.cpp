@@ -1070,7 +1070,7 @@ void PipelineStateD3D12::iniaitlize(const GraphicsPipelineStateDesc& desc) {
 	psoDesc.VS = toD3d12(desc._vs);
 	psoDesc.PS = toD3d12(desc._ps);
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(toD3d12(desc._blendDesc));
 	psoDesc.DepthStencilState = depthStencilDesc;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = static_cast<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(desc._topologyType);

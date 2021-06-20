@@ -840,6 +840,7 @@ struct GraphicsPipelineStateDesc {
 	ComparisonFunc _depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 	DepthWriteMask _depthWriteMask = DEPTH_WRITE_MASK_ALL;
 	SampleDesc _sampleDesc;
+	BlendDesc _blendDesc;
 	PrimitiveTopologyType _topologyType;
 };
 

@@ -312,10 +312,18 @@ void MeshRenderer::initialize() {
 		_debugMeshSdfRootSignature = allocator->allocateRootSignature();
 
 		DescriptorRange viewInfoCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 0);
+		DescriptorRange meshInstanceWorldMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange meshInstanceBoundsMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		DescriptorRange meshInstanceSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+		DescriptorRange meshInstanceBoundsInvMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 1);
 
 		RootParameter rootParameters[DebugSdfRootParameters::COUNT] = {};
 		rootParameters[DebugSdfRootParameters::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DebugSdfRootParameters::WORLD_MATRIX].initializeDescriptorTable(1, &meshInstanceWorldMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[DebugSdfRootParameters::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[DebugSdfRootParameters::BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[DebugSdfRootParameters::INV_BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsInvMatrixSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DebugSdfRootParameters::SDF_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
 
 		RootSignatureDesc rootSignatureDesc = {};
@@ -323,6 +331,15 @@ void MeshRenderer::initialize() {
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 		_debugMeshSdfRootSignature->iniaitlize(rootSignatureDesc);
+
+		RenderTargetBlendDesc debugOcclusionBlendDesc = {};
+		debugOcclusionBlendDesc._blendEnable = true;
+		debugOcclusionBlendDesc._srcBlend = BLEND_SRC_ALPHA;
+		debugOcclusionBlendDesc._destBlend = BLEND_INV_SRC_ALPHA;
+		debugOcclusionBlendDesc._blendOp = BLEND_OP_ADD;
+		debugOcclusionBlendDesc._srcBlendAlpha = BLEND_ONE;
+		debugOcclusionBlendDesc._destBlendAlpha = BLEND_ZERO;
+		debugOcclusionBlendDesc._blendOpAlpha = BLEND_OP_ADD;
 
 		GraphicsPipelineStateDesc pipelineStateDesc = {};
 		pipelineStateDesc._device = device;
@@ -334,6 +351,8 @@ void MeshRenderer::initialize() {
 		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineStateDesc._rootSignature = _debugMeshSdfRootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
+		pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
+		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
 		_debugMeshSdfPipelineState->iniaitlize(pipelineStateDesc);
 
 		vertexShader->terminate();
@@ -571,6 +590,10 @@ void MeshRenderer::debugDrawMeshSdf(const DebugDrawMeshSdfContext& context) cons
 	commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::VIEW_INFO, viewInfo->_viewInfoCbv._gpuHandle);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::SDF_TEXTURE, context._meshSdfSrv);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::MESH_INSTANCE, context._meshInstanceSrv);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::BOUNDS_MATRIX, context._meshInstanceBoundsMatrixSrv);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
+	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::INV_BOUNDS_MATRIX, context._meshInstanceBoundsInvMatrixSrv);
 	commandList->drawInstanced(36, 1, 0, 0);
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

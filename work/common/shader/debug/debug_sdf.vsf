@@ -1,13 +1,19 @@
 #include "../shaderInput.sfh"
 #include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
+
+struct MeshBoundsSize {
+    float3 _boundsSize;
+};
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
-//StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t0);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t0);
+StructuredBuffer<MeshBoundsSize> _mesheBoundsSizes : register(t1);
+StructuredBuffer<MeshInstance> _meshInstances : register(t2);
 
-SdfPSInput main(Debug3dVSInput input)
-{
+SdfPSInput main(Debug3dVSInput input) {
     uint instanceId = input._InstanceId;
-    //float4x3 matrixWorld = _meshInstanceWorldMatrics[instanceId];
+    float4x3 matrixWorld = _meshInstanceWorldMatrics[instanceId];
     
     int tri = input._vertexId / 3;
     int idx = input._vertexId % 3;
@@ -31,12 +37,15 @@ SdfPSInput main(Debug3dVSInput input)
     float mirror = -1 + 2 * top;
     float3 localPosition = n + mirror * (1 - 2 * (idx & 1)) * u + mirror * (1 - 2 * (idx >> 1)) * v;
     localPosition *= 0.5;// -1.0 ~ 1.0 -> -0.5 ~ 0.5
-    //float4 worldPos = float4(mul(float4(localPosition, 1), matrixWorld), 1);
-    float4 worldPos = float4(localPosition, 1);
+    MeshInstance meshInstance = _meshInstances[instanceId];
+    float3 meshBoundsSize = _mesheBoundsSizes[meshInstance._meshIndex]._boundsSize;
+    float4 worldPos = float4(mul(float4(localPosition * meshBoundsSize, 1), matrixWorld), 1);
     
     SdfPSInput vertexOut;
     vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
     vertexOut._localPosition = localPosition;
     vertexOut._worldPosition = worldPos.xyz;
+    vertexOut._meshInstanceIndex = instanceId;
+    vertexOut._meshBoundsSize = meshBoundsSize;
     return vertexOut;
 }

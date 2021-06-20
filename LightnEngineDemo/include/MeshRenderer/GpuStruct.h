@@ -27,6 +27,10 @@ namespace gpu {
 		u32 _streamedLodLevel = 0;
 	};
 
+	struct MeshBounds {
+		Float3 _meshBounds;
+	};
+
 	struct LodMesh {
 		u32 _vertexOffset = 0;
 		u32 _vertexIndexOffset = 0;

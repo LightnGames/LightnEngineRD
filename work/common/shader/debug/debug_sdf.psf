@@ -3,8 +3,8 @@
 #include "../gpu_driven.sfh"
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
-
-Texture3D _sdf[] : register(t0);
+StructuredBuffer<float4x3> _meshInstanceInvWorldMatrics : register(t0);
+Texture3D _sdf[] : register(t1);
 sampler _linerSampler : register(s1);
 
 float sampleSdf(uint textureIndex, float3 localPosition) {
@@ -13,17 +13,17 @@ float sampleSdf(uint textureIndex, float3 localPosition) {
 
 float4 main(SdfPSInput input) : SV_TARGET {
     float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
-    float3 invViewDirection = -viewDirection;
+    float3 invViewDirection = -viewDirection / input._meshBoundsSize;
+    float3x3 meshInstanceScaleRotateMatrix = (float3x3)_meshInstanceInvWorldMatrics[input._meshInstanceIndex];
+    float3 rayDirection = mul(meshInstanceScaleRotateMatrix, invViewDirection);
     float rayEndThreshold = 0.01;
     bool isHit = false;
     float rayDistance = 0.0;
-    int SAMPLE_COUNT_MAX = 32;
-    for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
-    {
-        float3 currentRayOrigin = input._localPosition + rayDistance * invViewDirection;
+    int SAMPLE_COUNT_MAX = 64;
+    for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
+        float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
         float distance = sampleSdf(1, currentRayOrigin);
-        if (distance < rayEndThreshold)
-        {
+        if (distance < rayEndThreshold) {
             isHit = true;
             break;
         }
@@ -31,8 +31,8 @@ float4 main(SdfPSInput input) : SV_TARGET {
         rayDistance += distance * 0.5;
     }
     
-    if (!isHit)
-    {
+    //return float4(rayDirection, 1);
+    if (!isHit) {
         clip(-1);
     }
     

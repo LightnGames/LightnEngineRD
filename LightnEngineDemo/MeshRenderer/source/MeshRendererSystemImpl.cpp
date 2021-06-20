@@ -1169,6 +1169,10 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
 		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._meshInstanceBoundsMatrixSrv = _scene.getMeshInstanceBoundsMatrixSrv();
+		context._meshInstanceBoundsInvMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
 		_meshRenderer.debugDrawMeshSdf(context);
 	}
 

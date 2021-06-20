@@ -61,6 +61,10 @@ void MeshResourceManager::initialize() {
 		desc._sizeInByte = MESHLET_COUNT_MAX * sizeof(gpu::MeshletPrimitiveInfo);
 		_meshletPrimitiveInfoBuffer.initialize(desc);
 		_meshletPrimitiveInfoBuffer.setDebugName("Meshlet Primitive Info");
+
+		desc._sizeInByte = MESH_COUNT_MAX * sizeof(gpu::MeshBounds);
+		_meshBoundsSizeBuffer.initialize(desc);
+		_meshBoundsSizeBuffer.setDebugName("Mesh Bounds Size");
 	}
 
 	// Mesh lod level feedback buffers
@@ -102,6 +106,7 @@ void MeshResourceManager::initialize() {
 		_subMeshDrawInfoSrv = allocator->allocateDescriptors(1);
 		_meshLodLevelFeedbackUav = allocator->allocateDescriptors(1);
 		_meshLodLevelFeedbackCpuUav = cpuAllocator->allocateDescriptors(1);
+		_meshBoundsSizeSrv = allocator->allocateDescriptors(1);
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
 		ShaderResourceViewDesc desc = {};
@@ -137,6 +142,10 @@ void MeshResourceManager::initialize() {
 			desc._buffer._numElements = SUB_MESH_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(gpu::SubMeshDrawInfo);
 			device->createShaderResourceView(_subMeshDrawInfoBuffer.getResource(), &desc, _subMeshDrawInfoSrv._cpuHandle);
+
+			desc._buffer._numElements = MESH_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(gpu::MeshBounds);
+			device->createShaderResourceView(_meshBoundsSizeBuffer.getResource(), &desc, _meshBoundsSizeSrv._cpuHandle);
 		}
 
 		// vertex
@@ -258,6 +267,7 @@ void MeshResourceManager::terminate() {
 	_subMeshDrawInfoBuffer.terminate();
 	_meshLodLevelFeedbackBuffer.terminate();
 	_meshLodLevelFeedbackReadbackBuffer.terminate();
+	_meshBoundsSizeBuffer.terminate();
 
 #if ENABLE_CLASSIC_VERTEX
 	_classicIndexBuffer.terminate();
@@ -283,6 +293,7 @@ void MeshResourceManager::terminate() {
 	allocator->discardDescriptor(_subMeshDrawInfoSrv);
 	allocator->discardDescriptor(_meshLodLevelFeedbackUav);
 	allocator->discardDescriptor(_meshSdfSrv);
+	allocator->discardDescriptor(_meshBoundsSizeSrv);
 
 	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
 	cpuAllocator->discardDescriptor(_meshLodLevelFeedbackCpuUav);
@@ -565,8 +576,11 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 		subMesh._materialSlotIndex = info._materialSlotIndex;
 	}
 
-	gpu::Mesh* meshes = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
-	memcpy(meshes, &_meshes[meshIndex], sizeof(gpu::Mesh));
+	// VRAM アップロード
+	{
+		gpu::Mesh* mapMesh = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshBuffer, sizeof(gpu::Mesh) * meshIndex);
+		memcpy(mapMesh, &_meshes[meshIndex], sizeof(gpu::Mesh));
+	}
 
 	asset.updateCurrentSeekPosition();
 	asset.closeFile();
@@ -934,6 +948,13 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 
 		u32 incSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
 		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * meshIndex);
+
+		gpu::MeshBounds meshBounds;
+		meshBounds._meshBounds._x = sizes[0] * dx;
+		meshBounds._meshBounds._y = sizes[1] * dx;
+		meshBounds._meshBounds._z = sizes[2] * dx;
+		gpu::MeshBounds* mapMeshBounds = vramUpdater->enqueueUpdate<gpu::MeshBounds>(&_meshBoundsSizeBuffer, sizeof(gpu::MeshBounds) * meshIndex);
+		*mapMeshBounds = meshBounds;
 	}
 }
 

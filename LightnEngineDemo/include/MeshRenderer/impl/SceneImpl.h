@@ -361,6 +361,8 @@ public:
 	GpuDescriptorHandle getMeshInstanceSrv() const { return _meshInstanceSrv._gpuHandle; }
 	GpuDescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
+	GpuDescriptorHandle getMeshInstanceBoundsMatrixSrv() const { return _meshInstanceBoundsMatrixSrv._gpuHandle; }
+	GpuDescriptorHandle getMeshInstanceBoundsInvMatrixSrv() const { return _meshInstanceBoundsInvMatrixSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getResarveCount(); }
@@ -383,6 +385,8 @@ private:
 
 	GpuBuffer _meshInstanceBuffer;
 	GpuBuffer _meshInstanceWorldMatrixBuffer;
+	GpuBuffer _meshInstanceBoundsMatrixBuffer;// メッシュインスタンスのワールドバウンディング行列
+	GpuBuffer _meshInstanceBoundsInvMatrixBuffer;// メッシュインスタンスの逆ワールドバウンディング行列
 	GpuBuffer _lodMeshInstanceBuffer;
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;
@@ -390,6 +394,8 @@ private:
 	DescriptorHandle _cullingSceneConstantHandle;
 	DescriptorHandle _meshInstanceSrv;
 	DescriptorHandle _meshInstanceWorldMatrixSrv;
+	DescriptorHandle _meshInstanceBoundsMatrixSrv;
+	DescriptorHandle _meshInstanceBoundsInvMatrixSrv;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
 	bool _isUpdatedInstancingOffset = false;

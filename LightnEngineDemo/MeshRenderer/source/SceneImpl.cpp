@@ -27,6 +27,12 @@ void Scene::initialize() {
 		_meshInstanceWorldMatrixBuffer.initialize(desc);
 		_meshInstanceWorldMatrixBuffer.setDebugName("Mesh Instance World Matrix");
 
+		_meshInstanceBoundsMatrixBuffer.initialize(desc);
+		_meshInstanceBoundsMatrixBuffer.setDebugName("Mesh Instance Bounds Matrix");
+
+		_meshInstanceBoundsInvMatrixBuffer.initialize(desc);
+		_meshInstanceBoundsInvMatrixBuffer.setDebugName("Mesh Instance Bounds Inv Matrix");
+
 		desc._sizeInByte = LOD_MESH_INSTANCE_COUNT_MAX * sizeof(gpu::LodMeshInstance);
 		_lodMeshInstanceBuffer.initialize(desc);
 		_lodMeshInstanceBuffer.setDebugName("Lod Mesh Instance");
@@ -46,6 +52,8 @@ void Scene::initialize() {
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshInstanceSrv = allocator->allocateDescriptors(3);
 		_meshInstanceWorldMatrixSrv = allocator->allocateDescriptors(1);
+		_meshInstanceBoundsMatrixSrv = allocator->allocateDescriptors(1);
+		_meshInstanceBoundsInvMatrixSrv = allocator->allocateDescriptors(1);
 
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
@@ -72,10 +80,13 @@ void Scene::initialize() {
 			device->createShaderResourceView(_subMeshInstanceBuffer.getResource(), &desc, handle + incrimentSize * 2);
 		}
 
+		// world matrix
 		{
 			desc._buffer._numElements = MESH_INSTANCE_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(Matrix43);
 			device->createShaderResourceView(_meshInstanceWorldMatrixBuffer.getResource(), &desc, _meshInstanceWorldMatrixSrv._cpuHandle);
+			device->createShaderResourceView(_meshInstanceBoundsMatrixBuffer.getResource(), &desc, _meshInstanceBoundsMatrixSrv._cpuHandle);
+			device->createShaderResourceView(_meshInstanceBoundsInvMatrixBuffer.getResource(), &desc, _meshInstanceBoundsInvMatrixSrv._cpuHandle);
 		}
 
 		// scene constant
@@ -185,6 +196,8 @@ void Scene::processDeletion() {
 void Scene::terminate() {
 	_meshInstanceBuffer.terminate();
 	_meshInstanceWorldMatrixBuffer.terminate();
+	_meshInstanceBoundsMatrixBuffer.terminate();
+	_meshInstanceBoundsInvMatrixBuffer.terminate();
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_sceneCullingConstantBuffer.terminate();
@@ -200,6 +213,8 @@ void Scene::terminate() {
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceSrv);
 	allocator->discardDescriptor(_meshInstanceWorldMatrixSrv);
+	allocator->discardDescriptor(_meshInstanceBoundsMatrixSrv);
+	allocator->discardDescriptor(_meshInstanceBoundsInvMatrixSrv);
 	allocator->discardDescriptor(_cullingSceneConstantHandle);
 }
 
@@ -241,6 +256,38 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 
 	Matrix43* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
 	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix43();
+
+	Vector3 boundsLocalSize = meshInstanceLocalBounds.getSize();
+	Vector3 boundsLocalCenter = meshInstanceLocalBounds.getCenter();
+	Vector3 right(matrixWorld.m[0][0], matrixWorld.m[0][1], matrixWorld.m[0][2]);
+	Vector3 up(matrixWorld.m[1][0], matrixWorld.m[1][1], matrixWorld.m[1][2]);
+	Vector3 forward(matrixWorld.m[2][0], matrixWorld.m[2][1], matrixWorld.m[2][2]);
+	Matrix4 boundsMatrix = matrixWorld;
+	Vector3 meshInstanceBoundsWorldCenter(boundsMatrix.m[3][0], boundsMatrix.m[3][1], boundsMatrix.m[3][2]);
+	meshInstanceBoundsWorldCenter += right * boundsLocalCenter._x;
+	meshInstanceBoundsWorldCenter += up * boundsLocalCenter._y;
+	meshInstanceBoundsWorldCenter += forward * boundsLocalCenter._z;
+
+	boundsMatrix.m[0][0] *= boundsLocalSize._x;
+	boundsMatrix.m[0][1] *= boundsLocalSize._x;
+	boundsMatrix.m[0][2] *= boundsLocalSize._x;
+	boundsMatrix.m[1][0] *= boundsLocalSize._y;
+	boundsMatrix.m[1][1] *= boundsLocalSize._y;
+	boundsMatrix.m[1][2] *= boundsLocalSize._y;
+	boundsMatrix.m[2][0] *= boundsLocalSize._z;
+	boundsMatrix.m[2][1] *= boundsLocalSize._z;
+	boundsMatrix.m[2][2] *= boundsLocalSize._z;
+	boundsMatrix.m[3][0] = meshInstanceBoundsWorldCenter._x;
+	boundsMatrix.m[3][1] = meshInstanceBoundsWorldCenter._y;
+	boundsMatrix.m[3][2] = meshInstanceBoundsWorldCenter._z;
+	Matrix4 transposedBoundsMatrix = boundsMatrix.transpose();
+	Matrix4 transposedBoundsInvMatrix = boundsMatrix.inverse().transpose();
+
+	Matrix43* mapMeshInstanceBoundsMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceBoundsMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
+	*mapMeshInstanceBoundsMatrix = transposedBoundsMatrix.getMatrix43();
+
+	Matrix43* mapMeshInstanceBoundsInvMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceBoundsInvMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
+	*mapMeshInstanceBoundsInvMatrix = transposedBoundsInvMatrix.getMatrix43();
 }
 
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {

@@ -125,6 +125,10 @@ struct DebugDrawMeshSdfContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
 	GpuDescriptorHandle _meshSdfSrv;
+	GpuDescriptorHandle _meshInstanceSrv;
+	GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
+	GpuDescriptorHandle _meshInstanceBoundsMatrixSrv;
+	GpuDescriptorHandle _meshInstanceBoundsInvMatrixSrv;
 };
 
 class MeshRenderer {
