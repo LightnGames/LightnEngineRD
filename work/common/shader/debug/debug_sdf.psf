@@ -15,7 +15,8 @@ float4 main(SdfPSInput input) : SV_TARGET {
     float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
     float3 invViewDirection = -viewDirection;
     float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
-    float3 rayDirection = mul(meshInstanceScaleRotateMatrix, invViewDirection);
+    float3 rayDirection = mul(invViewDirection, meshInstanceScaleRotateMatrix);
+    rayDirection = normalize(rayDirection);
     float rayEndThreshold = 0.01;
     bool isHit = false;
     float rayDistance = 0.0;

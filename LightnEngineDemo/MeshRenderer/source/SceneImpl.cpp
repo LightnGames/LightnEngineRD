@@ -113,13 +113,6 @@ void Scene::initialize() {
 }
 
 void Scene::update() {
-	if (_meshInstanceStateFlags[0] == MESH_INSTANCE_FLAG_SCENE_ENABLED) {
-		static f32 time = 0;
-		time += 0.0166666f;
-		f32 y = std::sin(time)*0.5f;
-		_meshInstances[0].setWorldMatrix(Matrix4::rotateY(y)/** Matrix4::translate(Vector3(0, y, 0))*/);
-	}
-
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	bool isUpdatedVisible = false;

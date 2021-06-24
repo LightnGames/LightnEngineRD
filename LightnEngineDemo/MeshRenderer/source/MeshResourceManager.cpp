@@ -506,9 +506,10 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
-	Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
-	Vec3ui center = Vec3ui((max_box + min_box) / 2.0f / dx);
-	Vector3 halfSize = Vector3(static_cast<f32>(sizes[0]), static_cast<f32>(sizes[1]), static_cast<f32>(sizes[2])) / 2.0f;
+	Vec3ui ceiledSize = Vec3ui((max_box - min_box) / dx);
+	Vec3ui ceiledCenter = Vec3ui((max_box + min_box) / 2.0f / dx);
+	Vector3 center(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
+	Vector3 halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
@@ -524,11 +525,11 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshInfo._meshletStartIndex = meshletStartIndex;
 	meshInfo._boundsMin = boundsMin;
 	meshInfo._boundsMax = boundsMax;
-	meshInfo._sdfBoundsMin = (Vector3(center[0], center[1], center[2])*dx-halfSize*dx);
-	meshInfo._sdfBundsMax = (Vector3(center[0], center[1], center[2])*dx+halfSize*dx);
-	meshInfo._sdfResolution[0] = sizes[0];
-	meshInfo._sdfResolution[1] = sizes[1];
-	meshInfo._sdfResolution[2] = sizes[2];
+	meshInfo._sdfBoundsMin = (center - halfSize) * dx;
+	meshInfo._sdfBundsMax = (center + halfSize) * dx;
+	meshInfo._sdfResolution[0] = ceiledSize[0];
+	meshInfo._sdfResolution[1] = ceiledSize[1];
+	meshInfo._sdfResolution[2] = ceiledSize[2];
 	meshInfo._sdfGridSize = dx;
 	meshInfo._classicIndexCount = classicIndexCount;
 
@@ -858,8 +859,10 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	}
 
 	// データVramアップロード
-	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, sizeof(gpu::SubMesh) * (meshInfo._subMeshStartIndex + beginSubMeshOffset), subMeshCount);
-	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, sizeof(gpu::LodMesh) * (meshInfo._lodMeshStartIndex + beginLodLevel), lodMeshCount);
+	u32 subMeshOffset = sizeof(gpu::SubMesh) * (meshInfo._subMeshStartIndex + beginSubMeshOffset);
+	u32 lodMeshOffset = sizeof(gpu::LodMesh) * (meshInfo._lodMeshStartIndex + beginLodLevel);
+	gpu::SubMesh* subMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshBuffer, subMeshOffset, subMeshCount);
+	gpu::LodMesh* lodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshBuffer, lodMeshOffset, lodMeshCount);
 	memcpy(subMeshes, &_subMeshes[meshInfo._subMeshStartIndex + beginSubMeshOffset], sizeof(gpu::SubMesh) * subMeshCount);
 	memcpy(lodMeshes, &_lodMeshes[meshInfo._lodMeshStartIndex + beginLodLevel], sizeof(gpu::LodMesh) * lodMeshCount);
 
@@ -875,7 +878,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	_meshAssets[meshIndex].closeFile();
 
 	// SDF
-	if (meshIndex == 1) {
+	{
 		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
 		Vec3f min_box(origin._x, origin._y, origin._z);
 
@@ -902,17 +905,17 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		for (u32 planeIndex = 0; planeIndex < numberOfPlanes; ++planeIndex) {
 			u64 srcBits = 0;
 			for (u32 arrayIndex = 0; arrayIndex < textureDesc._depthOrArraySize; arrayIndex++) {
-				u32 w = textureDesc._width;
-				u32 h = textureDesc._height;
-				u32 d = textureDesc._height;
+				u32 w = static_cast<u32>(textureDesc._width);
+				u32 h = static_cast<u32>(textureDesc._height);
+				u32 d = static_cast<u32>(textureDesc._depthOrArraySize);
 				for (u32 mipIndex = 0; mipIndex < textureDesc._mipLevels; mipIndex++) {
-					size_t bpp = 32;// 4byte
+					u32 bpp = 32;// 4byte
 					u32 numRow = h;
 					u32 rowBytes = (w * bpp + 7u) / 8u;;
 					u32 numBytes = rowBytes * h;
 
 					SubResourceData& subResource = subResources[subResourceIndex++];
-					subResource._data = reinterpret_cast<void*>(srcBits);
+					subResource._data = reinterpret_cast<const void*>(srcBits);
 					subResource._rowPitch = static_cast<s64>(rowBytes);
 					subResource._slicePitch = static_cast<s64>(numBytes);
 
@@ -958,7 +961,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		}
 
 		u32 incSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
-		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * meshIndex);
+		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + static_cast<u64>(incSize) * meshIndex);
 
 		Vector3 boundsSize = meshInfo._sdfBundsMax - meshInfo._sdfBoundsMin;
 		gpu::MeshBounds meshBounds;
@@ -989,9 +992,7 @@ void MeshResourceManager::deleteMesh(u32 meshIndex) {
 		_subMeshInfos[meshInfo._subMeshStartIndex + subMeshIndex] = SubMeshInfo();
 	}
 
-	if (meshIndex == 1) {
-		_meshSdfs[meshIndex].terminate();
-	}
+	_meshSdfs[meshIndex].terminate();
 }
 
 void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel) {

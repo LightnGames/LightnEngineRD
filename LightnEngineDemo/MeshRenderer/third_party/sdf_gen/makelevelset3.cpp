@@ -116,10 +116,11 @@ void make_level_set3(const std::vector<Vec3ui>& tri, const std::vector<Vec3f>& x
 	Array3f& phi, const int exact_band) {
 	phi.resize(ni, nj, nk);
 	phi.assign((ni + nj + nk) * dx); // upper bound on distance
+	
 	Array3i closest_tri(ni, nj, nk, -1);
 	Array3i intersection_count(ni, nj, nk, 0); // intersection_count(i,j,k) is # of tri intersections in (i-1,i]x{j}x{k}
+
 	// we begin by initializing distances near the mesh, and figuring out intersection counts
-	Vec3f ijkmin, ijkmax;
 	for (unsigned int t = 0; t < tri.size(); ++t) {
 		unsigned int p, q, r; assign(tri[t], p, q, r);
 		// coordinates in grid to high precision
