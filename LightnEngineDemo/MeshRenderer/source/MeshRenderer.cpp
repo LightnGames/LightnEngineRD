@@ -301,6 +301,7 @@ void MeshRenderer::initialize() {
 		computeShader->terminate();
 	}
 
+	// Debug sdf
 	{
 		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 		ShaderBlob* vertexShader = allocator->allocateShaderBlob();
@@ -312,16 +313,12 @@ void MeshRenderer::initialize() {
 		_debugMeshSdfRootSignature = allocator->allocateRootSignature();
 
 		DescriptorRange viewInfoCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		DescriptorRange meshInstanceWorldMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-		DescriptorRange meshInstanceBoundsMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-		DescriptorRange meshInstanceSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+		DescriptorRange meshInstanceBoundsMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange meshInstanceBoundsInvMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 1);
 
 		RootParameter rootParameters[DebugSdfRootParameters::COUNT] = {};
 		rootParameters[DebugSdfRootParameters::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[DebugSdfRootParameters::WORLD_MATRIX].initializeDescriptorTable(1, &meshInstanceWorldMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
-		rootParameters[DebugSdfRootParameters::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, SHADER_VISIBILITY_VERTEX);
 		rootParameters[DebugSdfRootParameters::BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
 		rootParameters[DebugSdfRootParameters::INV_BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsInvMatrixSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DebugSdfRootParameters::SDF_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
@@ -590,9 +587,7 @@ void MeshRenderer::debugDrawMeshSdf(const DebugDrawMeshSdfContext& context) cons
 	commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::VIEW_INFO, viewInfo->_viewInfoCbv._gpuHandle);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::SDF_TEXTURE, context._meshSdfSrv);
-	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::MESH_INSTANCE, context._meshInstanceSrv);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::BOUNDS_MATRIX, context._meshInstanceBoundsMatrixSrv);
-	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
 	commandList->setGraphicsRootDescriptorTable(DebugSdfRootParameters::INV_BOUNDS_MATRIX, context._meshInstanceBoundsInvMatrixSrv);
 	commandList->drawInstanced(36, 1, 0, 0);
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

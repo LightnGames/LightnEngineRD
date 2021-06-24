@@ -462,8 +462,8 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	u32 totalPrimitiveCount = 0;
 	u32 materialSlotCount = 0;
 	u32 classicIndexCount = 0;
-	Float3 boundsMin;
-	Float3 boundsMax;
+	Vector3 boundsMin;
+	Vector3 boundsMax;
 	SubMeshInfoE inputSubMeshInfos[SUBMESH_PER_MESH_COUNT_MAX] = {};
 	LodInfo lodInfos[LOD_PER_MESH_COUNT_MAX] = {};
 	u64 materialNameHashes[MATERIAL_SLOT_COUNT_MAX] = {};
@@ -477,8 +477,8 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 		fread_s(&totalVertexCount, sizeof(u32), sizeof(u32), 1, fin);
 		fread_s(&totalVertexIndexCount, sizeof(u32), sizeof(u32), 1, fin);
 		fread_s(&totalPrimitiveCount, sizeof(u32), sizeof(u32), 1, fin);
-		fread_s(&boundsMin, sizeof(Float3), sizeof(Float3), 1, fin);
-		fread_s(&boundsMax, sizeof(Float3), sizeof(Float3), 1, fin);
+		fread_s(&boundsMin, sizeof(Vector3), sizeof(Vector3), 1, fin);
+		fread_s(&boundsMax, sizeof(Vector3), sizeof(Vector3), 1, fin);
 		fread_s(&classicIndexCount, sizeof(u32), sizeof(u32), 1, fin);
 	}
 
@@ -498,6 +498,18 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 		fread_s(lodInfos, sizeof(LodInfo) * LOD_PER_MESH_COUNT_MAX, sizeof(LodInfo), totalLodMeshCount, fin);
 	}
 
+	Vec3f min_box(boundsMin._x, boundsMin._y, boundsMin._z);
+	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
+
+	f32 dx = 0.1f;
+	f32 padding = 2.0f;
+	Vec3f unit(1, 1, 1);
+	min_box -= padding * dx * unit;
+	max_box += padding * dx * unit;
+	Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
+	Vec3ui center = Vec3ui((max_box + min_box) / 2.0f / dx);
+	Vector3 halfSize = Vector3(static_cast<f32>(sizes[0]), static_cast<f32>(sizes[1]), static_cast<f32>(sizes[2])) / 2.0f;
+
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
 	meshInfo._vertexCount = totalVertexCount;
@@ -510,8 +522,14 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshInfo._lodMeshStartIndex = lodMeshStartIndex;
 	meshInfo._subMeshStartIndex = subMeshStartIndex;
 	meshInfo._meshletStartIndex = meshletStartIndex;
-	meshInfo._boundsMin = Vector3(boundsMin);
-	meshInfo._boundsMax = Vector3(boundsMax);
+	meshInfo._boundsMin = boundsMin;
+	meshInfo._boundsMax = boundsMax;
+	meshInfo._sdfBoundsMin = (Vector3(center[0], center[1], center[2])*dx-halfSize*dx);
+	meshInfo._sdfBundsMax = (Vector3(center[0], center[1], center[2])*dx+halfSize*dx);
+	meshInfo._sdfResolution[0] = sizes[0];
+	meshInfo._sdfResolution[1] = sizes[1];
+	meshInfo._sdfResolution[2] = sizes[2];
+	meshInfo._sdfGridSize = dx;
 	meshInfo._classicIndexCount = classicIndexCount;
 
 	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < totalLodMeshCount; ++lodMeshLocalIndex) {
@@ -858,18 +876,11 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 
 	// SDF
 	if (meshIndex == 1) {
-		Vec3f min_box(meshInfo._boundsMin._x, meshInfo._boundsMin._y, meshInfo._boundsMin._z);
-		Vec3f max_box(meshInfo._boundsMax._x, meshInfo._boundsMax._y, meshInfo._boundsMax._z);
-
-		f32 dx = 0.1f;
-		f32 padding = 2.0f;
-		Vec3f unit(1, 1, 1);
-		min_box -= padding * dx * unit;
-		max_box += padding * dx * unit;
-		Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
+		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
+		Vec3f min_box(origin._x, origin._y, origin._z);
 
 		Array3f phi_grid;
-		make_level_set3(triangles, vertices, min_box, dx, sizes[0], sizes[1], sizes[2], phi_grid);
+		make_level_set3(triangles, vertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], phi_grid);
 
 		GpuTexture& texture = _meshSdfs[meshIndex];
 		Device* device = GraphicsSystemImpl::Get()->getDevice();
@@ -877,9 +888,9 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		textureDesc._device = device;
 		textureDesc._format = FORMAT_R32_FLOAT;
 		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
-		textureDesc._width = sizes[0];
-		textureDesc._height = sizes[1];
-		textureDesc._depthOrArraySize = sizes[2];
+		textureDesc._width = meshInfo._sdfResolution[0];
+		textureDesc._height = meshInfo._sdfResolution[1];
+		textureDesc._depthOrArraySize = meshInfo._sdfResolution[2];
 		textureDesc._mipLevels = 1;
 		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		texture.initialize(textureDesc);
@@ -949,10 +960,10 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		u32 incSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
 		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * meshIndex);
 
+		Vector3 boundsSize = meshInfo._sdfBundsMax - meshInfo._sdfBoundsMin;
 		gpu::MeshBounds meshBounds;
-		meshBounds._meshBounds._x = sizes[0] * dx;
-		meshBounds._meshBounds._y = sizes[1] * dx;
-		meshBounds._meshBounds._z = sizes[2] * dx;
+		meshBounds._meshBounds = boundsSize.getFloat3();
+
 		gpu::MeshBounds* mapMeshBounds = vramUpdater->enqueueUpdate<gpu::MeshBounds>(&_meshBoundsSizeBuffer, sizeof(gpu::MeshBounds) * meshIndex);
 		*mapMeshBounds = meshBounds;
 	}

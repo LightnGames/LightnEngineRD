@@ -39,6 +39,10 @@ struct MeshInfo {
 	u32 _indexBinaryIndices[LOD_COUNT_MAX] = {};
 	Vector3 _boundsMin;
 	Vector3 _boundsMax;
+	Vector3 _sdfBoundsMin;
+	Vector3 _sdfBundsMax;
+	u32 _sdfResolution[3] = {};
+	f32 _sdfGridSize = 0;
 };
 
 struct LodInfo {

@@ -242,8 +242,7 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 
 	AABB meshInstanceLocalBounds(meshInfo->_boundsMin, meshInfo->_boundsMax);
 	AABB meshInstanceBounds = meshInstanceLocalBounds.getTransformedAabb(matrixWorld);
-	Vector3 boundsCenter = (meshInstanceBounds._min + meshInstanceBounds._max) / 2.0f;
-	f32 boundsRadius = Vector3::length(meshInstanceBounds._max - boundsCenter);
+	f32 boundsRadius = Vector3::length(meshInstanceBounds._max - meshInstanceBounds.getCenter());
 	gpuMeshInstance._aabbMin = meshInstanceBounds._min.getFloat3();
 	gpuMeshInstance._aabbMax = meshInstanceBounds._max.getFloat3();
 	gpuMeshInstance._stateFlags = stateFlags;
@@ -257,17 +256,12 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 	Matrix43* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
 	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix43();
 
-	Vector3 boundsLocalSize = meshInstanceLocalBounds.getSize();
-	Vector3 boundsLocalCenter = meshInstanceLocalBounds.getCenter();
-	Vector3 right(matrixWorld.m[0][0], matrixWorld.m[0][1], matrixWorld.m[0][2]);
-	Vector3 up(matrixWorld.m[1][0], matrixWorld.m[1][1], matrixWorld.m[1][2]);
-	Vector3 forward(matrixWorld.m[2][0], matrixWorld.m[2][1], matrixWorld.m[2][2]);
-	Matrix4 boundsMatrix = matrixWorld;
-	Vector3 meshInstanceBoundsWorldCenter(boundsMatrix.m[3][0], boundsMatrix.m[3][1], boundsMatrix.m[3][2]);
-	meshInstanceBoundsWorldCenter += right * boundsLocalCenter._x;
-	meshInstanceBoundsWorldCenter += up * boundsLocalCenter._y;
-	meshInstanceBoundsWorldCenter += forward * boundsLocalCenter._z;
+	AABB sdfBounds(meshInfo->_sdfBoundsMin, meshInfo->_sdfBundsMax);
+	AABB sdfWorldBounds = sdfBounds.getTransformedAabb(matrixWorld);
+	Vector3 boundsLocalSize = sdfBounds.getSize();
+	Vector3 sdfBoundsCenter = sdfWorldBounds.getCenter();
 
+	Matrix4 boundsMatrix = matrixWorld;
 	boundsMatrix.m[0][0] *= boundsLocalSize._x;
 	boundsMatrix.m[0][1] *= boundsLocalSize._x;
 	boundsMatrix.m[0][2] *= boundsLocalSize._x;
@@ -277,9 +271,9 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 	boundsMatrix.m[2][0] *= boundsLocalSize._z;
 	boundsMatrix.m[2][1] *= boundsLocalSize._z;
 	boundsMatrix.m[2][2] *= boundsLocalSize._z;
-	boundsMatrix.m[3][0] = meshInstanceBoundsWorldCenter._x;
-	boundsMatrix.m[3][1] = meshInstanceBoundsWorldCenter._y;
-	boundsMatrix.m[3][2] = meshInstanceBoundsWorldCenter._z;
+	boundsMatrix.m[3][0] = sdfBoundsCenter._x;
+	boundsMatrix.m[3][1] = sdfBoundsCenter._y;
+	boundsMatrix.m[3][2] = sdfBoundsCenter._z;
 	Matrix4 transposedBoundsMatrix = boundsMatrix.transpose();
 	Matrix4 transposedBoundsInvMatrix = boundsMatrix.inverse().transpose();
 

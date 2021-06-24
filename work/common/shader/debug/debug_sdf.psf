@@ -3,7 +3,7 @@
 #include "../gpu_driven.sfh"
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
-StructuredBuffer<float4x3> _meshInstanceInvWorldMatrics : register(t0);
+StructuredBuffer<float4x3> _sdfBoundsInvWorldMatrics : register(t0);
 Texture3D _sdf[] : register(t1);
 sampler _linerSampler : register(s1);
 
@@ -13,8 +13,8 @@ float sampleSdf(uint textureIndex, float3 localPosition) {
 
 float4 main(SdfPSInput input) : SV_TARGET {
     float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
-    float3 invViewDirection = -viewDirection / input._meshBoundsSize;
-    float3x3 meshInstanceScaleRotateMatrix = (float3x3)_meshInstanceInvWorldMatrics[input._meshInstanceIndex];
+    float3 invViewDirection = -viewDirection;
+    float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
     float3 rayDirection = mul(meshInstanceScaleRotateMatrix, invViewDirection);
     float rayEndThreshold = 0.01;
     bool isHit = false;
@@ -32,9 +32,10 @@ float4 main(SdfPSInput input) : SV_TARGET {
     }
     
     //return float4(rayDirection, 1);
+    //return float4(sampleSdf(1, input._localPosition), 0.2, 0.2, 0.8);
     if (!isHit) {
         clip(-1);
     }
     
-    return float4(float3(rayDistance, 0.3, 0.3), 1.0);
+    return float4(float3(rayDistance, 0.3, 0.3), 0.7);
 }

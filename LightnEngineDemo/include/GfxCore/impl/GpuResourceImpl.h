@@ -92,8 +92,6 @@ namespace BuildIndirectArgumentRootParam {
 namespace DebugSdfRootParameters {
 	enum {
 		VIEW_INFO = 0,
-		WORLD_MATRIX,
-		MESH_INSTANCE,
 		BOUNDS_MATRIX,
 		INV_BOUNDS_MATRIX,
 		SDF_TEXTURE,
