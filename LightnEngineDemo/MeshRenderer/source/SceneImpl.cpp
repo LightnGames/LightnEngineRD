@@ -113,6 +113,13 @@ void Scene::initialize() {
 }
 
 void Scene::update() {
+	if (_meshInstanceStateFlags[0] == MESH_INSTANCE_FLAG_SCENE_ENABLED) {
+		static f32 time = 0;
+		time += 0.0166666f;
+		f32 y = std::sin(time)*0.5f;
+		_meshInstances[0].setWorldMatrix(Matrix4::rotateY(y)/** Matrix4::translate(Vector3(0, y, 0))*/);
+	}
+
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	bool isUpdatedVisible = false;
@@ -257,9 +264,8 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix43();
 
 	AABB sdfBounds(meshInfo->_sdfBoundsMin, meshInfo->_sdfBundsMax);
-	AABB sdfWorldBounds = sdfBounds.getTransformedAabb(matrixWorld);
 	Vector3 boundsLocalSize = sdfBounds.getSize();
-	Vector3 sdfBoundsCenter = sdfWorldBounds.getCenter();
+	Vector3 sdfBoundsCenter = meshInstanceBounds.getCenter();
 
 	Matrix4 boundsMatrix = matrixWorld;
 	boundsMatrix.m[0][0] *= boundsLocalSize._x;
