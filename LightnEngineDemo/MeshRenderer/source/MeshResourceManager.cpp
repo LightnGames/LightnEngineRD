@@ -882,14 +882,14 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
 		Vec3f min_box(origin._x, origin._y, origin._z);
 
-		Array3f phi_grid;
-		make_level_set3(triangles, vertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], phi_grid);
+		Array3c distances;
+		make_level_set3(triangles, vertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], distances);
 
 		GpuTexture& texture = _meshSdfs[meshIndex];
 		Device* device = GraphicsSystemImpl::Get()->getDevice();
 		GpuTextureDesc textureDesc = {};
 		textureDesc._device = device;
-		textureDesc._format = FORMAT_R32_FLOAT;
+		textureDesc._format = FORMAT_R8_SNORM;
 		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
 		textureDesc._width = meshInfo._sdfResolution[0];
 		textureDesc._height = meshInfo._sdfResolution[1];
@@ -911,7 +911,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 				for (u32 mipIndex = 0; mipIndex < textureDesc._mipLevels; mipIndex++) {
 					u32 bpp = 32;// 4byte
 					u32 numRow = h;
-					u32 rowBytes = (w * bpp + 7u) / 8u;;
+					u32 rowBytes = (w * bpp + 7u) / 8u;
 					u32 numBytes = rowBytes * h;
 
 					SubResourceData& subResource = subResources[subResourceIndex++];
@@ -940,7 +940,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 		void* pixelData = vramUpdater->enqueueUpdate(&texture, numberOfResources, subResources, static_cast<u32>(requiredSize));
 
-		u8* sourcePtr = reinterpret_cast<u8*>(&phi_grid.a[0]);
+		u8* sourcePtr = reinterpret_cast<u8*>(&distances.a[0]);
 		for (u32 subResourceIndex = 0; subResourceIndex < numberOfResources; ++subResourceIndex) {
 			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
 			u8* data = reinterpret_cast<u8*>(pixelData) + layout._offset;

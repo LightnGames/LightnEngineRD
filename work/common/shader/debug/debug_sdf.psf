@@ -8,7 +8,7 @@ Texture3D _sdf[] : register(t1);
 sampler _linerSampler : register(s1);
 
 float sampleSdf(uint textureIndex, float3 localPosition) {
-    return _sdf[textureIndex].SampleLevel(_linerSampler, localPosition + float3(0.5, 0.5, 0.5), 0).x;
+    return _sdf[textureIndex].Sample(_linerSampler, localPosition + float3(0.5, 0.5, 0.5)).x;
 }
 
 float4 main(SdfPSInput input) : SV_TARGET {

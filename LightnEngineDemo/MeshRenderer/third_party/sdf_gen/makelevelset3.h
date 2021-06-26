@@ -11,6 +11,6 @@
 // be to the closest triangle - just one nearby.
 void make_level_set3(const std::vector<Vec3ui> &tri, const std::vector<Vec3f> &x,
                      const Vec3f &origin, float dx, int nx, int ny, int nz,
-                     Array3f &phi, const int exact_band=1);
+                     Array3c &phi, const int exact_band=1);
 
 #endif
