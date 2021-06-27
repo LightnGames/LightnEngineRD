@@ -582,7 +582,7 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
 		u32 textureFileSeekSizeInbyte = 0;
 		for (u32 subResourceIndex = 0; subResourceIndex < mipmapLevel; ++subResourceIndex) {
 			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
-			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];
+			u32 rowSizeInBytes = static_cast<u32>(rowSizesInBytes[subResourceIndex]);
 			u32 numRow = numRows[subResourceIndex];
 			u32 numSlices = layout._footprint._depth;
 			textureFileSeekSizeInbyte += sizeof(u8) * rowSizeInBytes * numRow * numSlices;

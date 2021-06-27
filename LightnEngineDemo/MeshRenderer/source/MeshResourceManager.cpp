@@ -679,7 +679,6 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	const MeshInfo& meshInfo = _meshInfos[meshIndex];
 
-	// 頂点・インデックスバイナリを格納
 	u32 beginSubMeshOffset = meshInfo._subMeshOffsets[beginLodLevel];
 	u32 beginMeshletOffset = 0;
 	u32 beginVertexOffset = 0;
@@ -850,11 +849,11 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		lodMesh._vertexIndexOffset = indexBinaryIndex + indexOffsets[lodMeshIndex];
 		lodMesh._primitiveOffset = primitiveBinaryIndex + primitiveOffsets[lodMeshIndex];
 
-		updateMeshInfo._vertexBinaryIndices[lodMeshIndex] = vertexBinaryIndex + vertexOffsets[lodMeshIndex];
-		updateMeshInfo._indexBinaryIndices[lodMeshIndex] = indexBinaryIndex + indexOffsets[lodMeshIndex];
-		updateMeshInfo._primitiveBinaryIndices[lodMeshIndex] = primitiveBinaryIndex + primitiveOffsets[lodMeshIndex];
+		updateMeshInfo._globalVertexOffsets[lodMeshIndex] = vertexBinaryIndex + vertexOffsets[lodMeshIndex];
+		updateMeshInfo._globalIndexOffsets[lodMeshIndex] = indexBinaryIndex + indexOffsets[lodMeshIndex];
+		updateMeshInfo._globalPrimitiveOffsets[lodMeshIndex] = primitiveBinaryIndex + primitiveOffsets[lodMeshIndex];
 #if ENABLE_CLASSIC_VERTEX
-		updateMeshInfo._classicIndexBinaryIndices[lodMeshIndex] = classicIndex + classicIndexOffsets[lodMeshIndex];
+		updateMeshInfo._globalClassicIndexOffsets[lodMeshIndex] = classicIndex + classicIndexOffsets[lodMeshIndex];
 #endif
 	}
 
@@ -878,7 +877,13 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	_meshAssets[meshIndex].closeFile();
 
 	// SDF
-	{
+	// もっとも粗いLODLevelのロード時にSDFを生成します
+	if (endLodLevel == meshInfo._totalLodMeshCount) {
+		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[endLodLevel]);
+		std::vector<Vec3ui> sdfTriangles(meshInfo._classicIndexCounts[endLodLevel] / 3);
+		memcpy(sdfVertices.data(), vertices.data() + vertexOffsets[endLodLevel], sizeof(Vec3f)* sdfVertices.size());
+		memcpy(sdfTriangles.data(), triangles.data() + classicIndexOffsets[endLodLevel], sizeof(Vec3ui)* sdfTriangles.size());
+
 		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
 		Vec3f min_box(origin._x, origin._y, origin._z);
 
@@ -897,7 +902,10 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		textureDesc._mipLevels = 1;
 		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		texture.initialize(textureDesc);
-		texture.setDebugName("SDF Test");
+
+		char debugName[128];
+		sprintf_s(debugName, "SDF %s", _debugMeshInfo[meshIndex]._filePath);
+		texture.setDebugName(debugName);
 
 		u32 subResourceIndex = 0;
 		u32 numberOfPlanes = device->getFormatPlaneCount(textureDesc._format);
@@ -1008,10 +1016,10 @@ void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 
 		classicIndexCount += meshInfo._classicIndexCounts[lodMeshIndex];
 	}
 
-	_vertexPositionBinaryHeaders.discard(meshInfo._vertexBinaryIndices[beginLodLevel], vertexCount);
-	_indexBinaryHeaders.discard(meshInfo._indexBinaryIndices[beginLodLevel], indexCount);
-	_primitiveBinaryHeaders.discard(meshInfo._primitiveBinaryIndices[beginLodLevel], primitiveCount);
-	_classicIndexBinaryHeaders.discard(meshInfo._classicIndexBinaryIndices[beginLodLevel], classicIndexCount);
+	_vertexPositionBinaryHeaders.discard(meshInfo._globalVertexOffsets[beginLodLevel], vertexCount);
+	_indexBinaryHeaders.discard(meshInfo._globalIndexOffsets[beginLodLevel], indexCount);
+	_primitiveBinaryHeaders.discard(meshInfo._globalPrimitiveOffsets[beginLodLevel], primitiveCount);
+	_classicIndexBinaryHeaders.discard(meshInfo._globalClassicIndexOffsets[beginLodLevel], classicIndexCount);
 }
 
 void Mesh::requestToDelete(){

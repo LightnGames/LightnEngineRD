@@ -19,6 +19,7 @@ struct MeshInfo {
 	u32 _lodMeshStartIndex = 0;
 	u32 _subMeshStartIndex = 0;
 	u32 _meshletStartIndex = 0;
+	u32 _vertexStartOffset = 0;
 	u32 _totalLodMeshCount = 0;
 	u32 _totalSubMeshCount = 0;
 	u32 _totalMeshletCount = 0;
@@ -33,10 +34,10 @@ struct MeshInfo {
 	u32 _vertexIndexCounts[LOD_COUNT_MAX] = {};
 	u32 _primitiveCounts[LOD_COUNT_MAX] = {};
 	u32 _classicIndexCounts[LOD_COUNT_MAX] = {};
-	u32 _vertexBinaryIndices[LOD_COUNT_MAX] = {};
-	u32 _primitiveBinaryIndices[LOD_COUNT_MAX] = {};
-	u32 _classicIndexBinaryIndices[LOD_COUNT_MAX] = {};
-	u32 _indexBinaryIndices[LOD_COUNT_MAX] = {};
+	u32 _globalVertexOffsets[LOD_COUNT_MAX] = {};
+	u32 _globalPrimitiveOffsets[LOD_COUNT_MAX] = {};
+	u32 _globalClassicIndexOffsets[LOD_COUNT_MAX] = {};
+	u32 _globalIndexOffsets[LOD_COUNT_MAX] = {};
 	Vector3 _boundsMin;
 	Vector3 _boundsMax;
 	Vector3 _sdfBoundsMin;
