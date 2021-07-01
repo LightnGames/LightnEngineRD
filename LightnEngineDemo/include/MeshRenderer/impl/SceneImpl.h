@@ -359,7 +359,7 @@ public:
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	void createMeshInstances(MeshInstance** outMeshInstances, const Mesh** meshes, u32 instanceCount);
 	GpuDescriptorHandle getMeshInstanceSrv() const { return _meshInstanceSrv._gpuHandle; }
-	GpuDescriptorHandle getSceneCbv() const { return _cullingSceneConstantHandle._gpuHandle; }
+	GpuDescriptorHandle getSceneCbv() const { return _cullingSceneConstantCbv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsMatrixSrv() const { return _meshInstanceBoundsMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsInvMatrixSrv() const { return _meshInstanceBoundsInvMatrixSrv._gpuHandle; }
@@ -391,7 +391,7 @@ private:
 	GpuBuffer _subMeshInstanceBuffer;
 	GpuBuffer _sceneCullingConstantBuffer;
 
-	DescriptorHandle _cullingSceneConstantHandle;
+	DescriptorHandle _cullingSceneConstantCbv;
 	DescriptorHandle _meshInstanceSrv;
 	DescriptorHandle _meshInstanceWorldMatrixSrv;
 	DescriptorHandle _meshInstanceBoundsMatrixSrv;

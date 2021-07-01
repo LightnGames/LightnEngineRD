@@ -124,7 +124,9 @@ struct BuildDebugDrawMeshletBoundsContext {
 struct DebugDrawMeshSdfContext {
 	CommandList* _commandList = nullptr;
 	ViewInfo* _viewInfo = nullptr;
+	u32 _meshInstanceCount = 0;
 	GpuDescriptorHandle _meshSdfSrv;
+	GpuDescriptorHandle _meshInstanceSrv;
 	GpuDescriptorHandle _meshInstanceBoundsMatrixSrv;
 	GpuDescriptorHandle _meshInstanceBoundsInvMatrixSrv;
 };

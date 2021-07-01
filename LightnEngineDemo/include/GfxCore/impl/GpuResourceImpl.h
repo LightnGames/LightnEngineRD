@@ -93,6 +93,7 @@ namespace DebugSdfRootParameters {
 	enum {
 		VIEW_INFO = 0,
 		BOUNDS_MATRIX,
+		MESH_INSTANCE,
 		INV_BOUNDS_MATRIX,
 		SDF_TEXTURE,
 		COUNT

@@ -91,8 +91,8 @@ void Scene::initialize() {
 
 		// scene constant
 		{
-			_cullingSceneConstantHandle = allocator->allocateDescriptors(1);
-			device->createConstantBufferView(_sceneCullingConstantBuffer.getConstantBufferViewDesc(), _cullingSceneConstantHandle._cpuHandle);
+			_cullingSceneConstantCbv = allocator->allocateDescriptors(1);
+			device->createConstantBufferView(_sceneCullingConstantBuffer.getConstantBufferViewDesc(), _cullingSceneConstantCbv._cpuHandle);
 		}
 	}
 
@@ -215,7 +215,7 @@ void Scene::terminate() {
 	allocator->discardDescriptor(_meshInstanceWorldMatrixSrv);
 	allocator->discardDescriptor(_meshInstanceBoundsMatrixSrv);
 	allocator->discardDescriptor(_meshInstanceBoundsInvMatrixSrv);
-	allocator->discardDescriptor(_cullingSceneConstantHandle);
+	allocator->discardDescriptor(_cullingSceneConstantCbv);
 }
 
 void Scene::terminateDefaultResources() {

@@ -959,6 +959,7 @@ void MeshRendererSystemImpl::update() {
 			bool _passMeshInstanceCulling = false;
 			bool _passMeshletInstanceCulling = false;
 			bool _forceOnlyMeshShader = false;
+			bool _debugDrawSdfMeshes = false;
 			s32 _visibleHighPolygonMeshes = 0;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
@@ -969,6 +970,7 @@ void MeshRendererSystemImpl::update() {
 		DebugGui::Checkbox("visible", &debug._visible);
 		DebugGui::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
 		DebugGui::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
+		DebugGui::Checkbox("draw sdf meshes", &debug._debugDrawSdfMeshes);
 		DebugGui::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
 		DebugGui::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
@@ -1008,6 +1010,7 @@ void MeshRendererSystemImpl::update() {
 
 		_packedMeshletCount = packedMeshletCount;
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
+		_debugDrawSdfMeshes = debug._debugDrawSdfMeshes;
 		_visible = debug._visible;
 		_debugPrimitiveType = debug._primitiveType;
 
@@ -1164,11 +1167,13 @@ void MeshRendererSystemImpl::render(CommandList* commandList, ViewInfo* viewInfo
 	}
 
 	// SDF デバッグ表示
-	if(_resourceManager.isEnabledDebugDraw()){
+	if(_debugDrawSdfMeshes){
 		DebugDrawMeshSdfContext context;
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
+		context._meshInstanceCount = _scene.getMeshInstanceArrayCountMax();
 		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshInstanceBoundsMatrixSrv = _scene.getMeshInstanceBoundsMatrixSrv();
 		context._meshInstanceBoundsInvMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
 		_meshRenderer.debugDrawMeshSdf(context);

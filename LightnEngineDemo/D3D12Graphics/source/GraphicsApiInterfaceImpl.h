@@ -545,7 +545,7 @@ public:
 	static constexpr u32 SWAPCHAIN_COUNT_MAX = 4;
 	static constexpr u32 COMMAND_QUEUE_COUNT_MAX = 8;
 	static constexpr u32 COMMAND_LIST_COUNT_MAX = 32;
-	static constexpr u32 RESOURCE_COUNT_MAX = 512;
+	static constexpr u32 RESOURCE_COUNT_MAX = 1024 * 2;
 	static constexpr u32 DESCRIPTOR_HEAP_COUNT_MAX = 8;
 	static constexpr u32 SHADER_BLOB_COUNT_MAX = 128;
 	static constexpr u32 PIPELINE_STATE_COUNT_MAX = 128;

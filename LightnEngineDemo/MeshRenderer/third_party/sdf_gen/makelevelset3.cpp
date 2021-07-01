@@ -125,7 +125,7 @@ void make_level_set3(const std::vector<Vec3ui>& tri, const std::vector<Vec3f>& x
 
 	std::mutex intersectionMutex;
 	int threadCount = 16;
-	int threadTriCount = (static_cast<char>(tri.size()) / threadCount) + 1;
+	int threadTriCount = (static_cast<int>(tri.size()) / threadCount) + 1;
 	std::vector<std::thread> threads;
 
 	// compute distance

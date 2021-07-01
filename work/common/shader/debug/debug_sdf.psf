@@ -20,10 +20,10 @@ float4 main(SdfPSInput input) : SV_TARGET {
     float rayEndThreshold = 0.01;
     bool isHit = false;
     float rayDistance = 0.0;
-    int SAMPLE_COUNT_MAX = 64;
+    int SAMPLE_COUNT_MAX = 32;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
         float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
-        float distance = sampleSdf(1, currentRayOrigin);
+        float distance = sampleSdf(input._meshIndex, currentRayOrigin);
         if (distance < rayEndThreshold) {
             isHit = true;
             break;
@@ -38,5 +38,5 @@ float4 main(SdfPSInput input) : SV_TARGET {
         clip(-1);
     }
     
-    return float4(float3(rayDistance, 0.3, 0.3), 0.7);
+    return float4(float3(rayDistance, 0.3, 0.3), 0.9);
 }

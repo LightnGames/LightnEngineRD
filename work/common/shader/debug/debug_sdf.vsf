@@ -4,6 +4,7 @@
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<float4x3> _sdfBoundsWorldMatrics : register(t0);
+StructuredBuffer<MeshInstance> _meshInstances : register(t1);
 
 SdfPSInput main(Debug3dVSInput input) {
     uint instanceId = input._InstanceId;
@@ -38,5 +39,6 @@ SdfPSInput main(Debug3dVSInput input) {
     vertexOut._localPosition = localPosition;
     vertexOut._worldPosition = worldPos.xyz;
     vertexOut._meshInstanceIndex = instanceId;
+    vertexOut._meshIndex = _meshInstances[instanceId]._meshIndex;
     return vertexOut;
 }

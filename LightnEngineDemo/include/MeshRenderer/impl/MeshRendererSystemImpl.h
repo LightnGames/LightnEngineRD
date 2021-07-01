@@ -93,6 +93,7 @@ private:
 
 	u32 _packedMeshletCount = 0;
 	bool _debugDrawMeshletBounds = false;
+	bool _debugDrawSdfMeshes = false;
 	GeometoryType _geometryType;
 	DebugPrimitiveType _debugPrimitiveType;
 	u8 _cullingDebugFlags = CULLING_DEBUG_TYPE_NONE;

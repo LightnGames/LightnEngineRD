@@ -20,7 +20,7 @@ struct StagingUpdateHeader {
 };
 
 struct TextureUpdateHeader {
-	static constexpr u32 SUBRESOURCE_COUNT_MAX = 64;
+	static constexpr u32 SUBRESOURCE_COUNT_MAX = 128;
 	GpuTexture* _dstTexture = nullptr;
 	u32 _firstSubResources = 0;
 	u32 _numSubresources = 0;

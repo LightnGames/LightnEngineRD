@@ -501,15 +501,18 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f min_box(boundsMin._x, boundsMin._y, boundsMin._z);
 	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
 
-	f32 dx = 0.1f;
+	f32 dx = 0.2f;
 	f32 padding = 2.0f;
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
 	Vec3ui ceiledSize = Vec3ui((max_box - min_box) / dx);
-	Vec3ui ceiledCenter = Vec3ui((max_box + min_box) / 2.0f / dx);
+	Vec3i ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
 	Vector3 center(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
 	Vector3 halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
+	LTN_ASSERT(ceiledSize[0] <= 128);
+	LTN_ASSERT(ceiledSize[1] <= 128);
+	LTN_ASSERT(ceiledSize[2] <= 128);
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
@@ -879,16 +882,17 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	// SDF
 	// ‚à‚Á‚Æ‚à‘e‚¢LODLevel‚Ìƒ[ƒhŽž‚ÉSDF‚ð¶¬‚µ‚Ü‚·
 	if (endLodLevel == meshInfo._totalLodMeshCount) {
-		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[endLodLevel]);
-		std::vector<Vec3ui> sdfTriangles(meshInfo._classicIndexCounts[endLodLevel] / 3);
-		memcpy(sdfVertices.data(), vertices.data() + vertexOffsets[endLodLevel], sizeof(Vec3f)* sdfVertices.size());
-		memcpy(sdfTriangles.data(), triangles.data() + classicIndexOffsets[endLodLevel], sizeof(Vec3ui)* sdfTriangles.size());
+		u32 lodLevel = endLodLevel - 1;
+		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[lodLevel]);
+		std::vector<Vec3ui> sdfTriangles(meshInfo._classicIndexCounts[lodLevel] / 3);
+		memcpy(sdfVertices.data(), vertices.data() + vertexOffsets[lodLevel], sizeof(Vec3f)* sdfVertices.size());
+		memcpy(sdfTriangles.data(), triangles.data() + classicIndexOffsets[lodLevel] / 3, sizeof(Vec3ui) * sdfTriangles.size());
 
 		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
 		Vec3f min_box(origin._x, origin._y, origin._z);
 
 		Array3c distances;
-		make_level_set3(triangles, vertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], distances);
+		make_level_set3(sdfTriangles, sdfVertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], distances);
 
 		GpuTexture& texture = _meshSdfs[meshIndex];
 		Device* device = GraphicsSystemImpl::Get()->getDevice();
@@ -937,6 +941,10 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 			}
 		}
 
+		if (subResourceIndex >= TextureUpdateHeader::SUBRESOURCE_COUNT_MAX) {
+			int y = 0;
+		}
+		LTN_ASSERT(subResourceIndex < TextureUpdateHeader::SUBRESOURCE_COUNT_MAX);
 		u64 requiredSize = 0;
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
