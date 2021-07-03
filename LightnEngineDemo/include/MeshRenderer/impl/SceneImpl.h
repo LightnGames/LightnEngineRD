@@ -344,6 +344,8 @@ public:
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
+	static constexpr u32 SDF_GLOBAL_CRLL_WIDTH = 16;
+	static constexpr u32 SDF_GLOBAL_CRLL_COUNT = SDF_GLOBAL_CRLL_WIDTH * SDF_GLOBAL_CRLL_WIDTH * SDF_GLOBAL_CRLL_WIDTH;
 
 	void initialize();
 	void update();
@@ -402,4 +404,12 @@ private:
 
 	SceneInfo _sceneInfo;
 	SceneInfo _visibleSceneInfo;
+
+	// SDF
+	u32 _sdfGlobalCells[SDF_GLOBAL_CRLL_COUNT] = {};
+	u32 _sdfGlobalMeshInstanceIndices[MESH_INSTANCE_COUNT_MAX] = {};
+	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
+
+	GpuBuffer _sdfGlobalCellBuffer;
+	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
 };
