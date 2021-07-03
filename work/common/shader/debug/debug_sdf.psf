@@ -29,7 +29,7 @@ float4 main(SdfPSInput input) : SV_TARGET {
             break;
         }
         
-        rayDistance += distance * 0.5;
+        rayDistance += distance;
     }
     
     //return float4(rayDirection, 1);

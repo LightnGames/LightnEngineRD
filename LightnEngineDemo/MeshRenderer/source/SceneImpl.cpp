@@ -10,9 +10,12 @@
 
 void Scene::initialize() {
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+
 	_gpuMeshInstances.initialize(MESH_INSTANCE_COUNT_MAX);
 	_gpuLodMeshInstances.initialize(LOD_MESH_INSTANCE_COUNT_MAX);
 	_gpuSubMeshInstances.initialize(SUB_MESH_INSTANCE_COUNT_MAX);
+	_sdfGlobalMeshInstanceIndicesArray.initialize(MESH_INSTANCE_COUNT_MAX);
 
 	// buffers
 	{
@@ -41,15 +44,36 @@ void Scene::initialize() {
 		_subMeshInstanceBuffer.initialize(desc);
 		_subMeshInstanceBuffer.setDebugName("Sub Mesh Instance");
 
+		desc._sizeInByte = sizeof(u32) * MESH_INSTANCE_COUNT_MAX;
+		_sdfGlobalMeshInstanceIndexBuffer.initialize(desc);
+		_sdfGlobalMeshInstanceIndexBuffer.setDebugName("SDF Mesh Instance Index");
+
 		desc._sizeInByte = GetConstantBufferAligned(sizeof(SceneCullingInfo));
 		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 		_sceneCullingConstantBuffer.initialize(desc);
 		_sceneCullingConstantBuffer.setDebugName("Culling Constant");
 	}
 
+	// Sdf
+	{
+		GpuTextureDesc textureDesc = {};
+		textureDesc._device = device;
+		textureDesc._format = FORMAT_R16_UINT;
+		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
+		textureDesc._width = SDF_GLOBAL_CRLL_WIDTH;
+		textureDesc._height = SDF_GLOBAL_CRLL_WIDTH;
+		textureDesc._depthOrArraySize = SDF_GLOBAL_CRLL_WIDTH;
+		textureDesc._mipLevels = 1;
+		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		_sdfGlobalTexture.initialize(textureDesc);
+		_sdfGlobalTexture.setDebugName("SDF Global");
+
+		_sdfGlobalSrv = allocator->allocateDescriptors(1);
+		device->createShaderResourceView(_sdfGlobalTexture.getResource(), nullptr, _sdfGlobalSrv._cpuHandle);
+	}
+
 	// descriptors
 	{
-		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshInstanceSrv = allocator->allocateDescriptors(3);
 		_meshInstanceWorldMatrixSrv = allocator->allocateDescriptors(1);
 		_meshInstanceBoundsMatrixSrv = allocator->allocateDescriptors(1);
@@ -201,14 +225,18 @@ void Scene::terminate() {
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_sceneCullingConstantBuffer.terminate();
+	_sdfGlobalTexture.terminate();
+	_sdfGlobalMeshInstanceIndexBuffer.terminate();
 
 	LTN_ASSERT(_gpuMeshInstances.getInstanceCount() == 0);
 	LTN_ASSERT(_gpuLodMeshInstances.getInstanceCount() == 0);
 	LTN_ASSERT(_gpuSubMeshInstances.getInstanceCount() == 0);
+	LTN_ASSERT(_sdfGlobalMeshInstanceIndicesArray.getInstanceCount() == 0);
 
 	_gpuMeshInstances.terminate();
 	_gpuLodMeshInstances.terminate();
 	_gpuSubMeshInstances.terminate();
+	_sdfGlobalMeshInstanceIndicesArray.terminate();
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceSrv);
@@ -216,6 +244,7 @@ void Scene::terminate() {
 	allocator->discardDescriptor(_meshInstanceBoundsMatrixSrv);
 	allocator->discardDescriptor(_meshInstanceBoundsInvMatrixSrv);
 	allocator->discardDescriptor(_cullingSceneConstantCbv);
+	allocator->discardDescriptor(_sdfGlobalSrv);
 }
 
 void Scene::terminateDefaultResources() {

@@ -9,14 +9,13 @@
 
 #if TARGET_WIN64
 #include <Windows.h>
-#define DEBUG_PRINT(x) OutputDebugString(x)
+#define DEBUG_PRINT(x) OutputDebugStringA(x)
 #endif
 
 #ifdef LTN_DEBUG
 #include <cassert>
 #include <type_traits>
-#define LTN_STATIC_ASSERT(x, s) static_assert(x, s)
-#define LTN_ASSERT(x) assert(x)
+#include <wchar.h>
 #define LTN_INFO( str, ... )			 \
       {									 \
         char c[256];				 \
@@ -24,6 +23,14 @@
         DEBUG_PRINT(c);			 \
         DEBUG_PRINT("\n");		 \
       }
+
+#define LTN_STATIC_ASSERT(x, s) static_assert(x, s)
+#define LTN_ASSERT(x) \
+if (!(x)) { \
+		LTN_INFO("Assertion failed! in %s (%d)", reinterpret_cast<const char*>(__FILE__), __LINE__); \
+		DebugBreak(); \
+}
+
 
 #define LTN_SUCCEEDED(hr) LTN_ASSERT(SUCCEEDED(hr))
 #else

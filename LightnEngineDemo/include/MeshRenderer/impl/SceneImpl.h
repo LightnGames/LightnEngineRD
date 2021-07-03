@@ -410,6 +410,7 @@ private:
 	u32 _sdfGlobalMeshInstanceIndices[MESH_INSTANCE_COUNT_MAX] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
 
-	GpuBuffer _sdfGlobalCellBuffer;
+	GpuTexture _sdfGlobalTexture;
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
+	DescriptorHandle _sdfGlobalSrv;
 };
