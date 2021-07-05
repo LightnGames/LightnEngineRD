@@ -185,6 +185,8 @@ public:
 	void setSubMeshInstance(SubMeshInstance* subMeshInstances) {
 		_subMeshInstances = subMeshInstances;
 	}
+
+	void setPrevWorldMatrix(const Matrix4& matrixWorld) { _prevMatrixWorld = matrixWorld; }
 };
 
 class GpuCullingResource {
@@ -344,8 +346,10 @@ public:
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
-	static constexpr u32 SDF_GLOBAL_CRLL_WIDTH = 16;
-	static constexpr u32 SDF_GLOBAL_CRLL_COUNT = SDF_GLOBAL_CRLL_WIDTH * SDF_GLOBAL_CRLL_WIDTH * SDF_GLOBAL_CRLL_WIDTH;
+	static constexpr u32 SDF_GLOBAL_WIDTH = 8;
+	static constexpr u32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
+	static constexpr f32 SDF_GLOBAL_CELL_SIZE = 30.0f;
+	static constexpr f32 SDF_GLOBAL_CELL_HALF_SIZE = SDF_GLOBAL_CELL_SIZE * SDF_GLOBAL_WIDTH * 0.5f;
 
 	void initialize();
 	void update();
@@ -357,7 +361,7 @@ public:
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();
 
-	bool isUpdatedInstancingOffset() const { return _isUpdatedInstancingOffset; }
+	bool isUpdatedInstancingOffset() const { return _updateInstancingOffset; }
 	MeshInstanceImpl* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 	void createMeshInstances(MeshInstance** outMeshInstances, const Mesh** meshes, u32 instanceCount);
 	GpuDescriptorHandle getMeshInstanceSrv() const { return _meshInstanceSrv._gpuHandle; }
@@ -373,6 +377,10 @@ public:
 	const u8* getMeshInstanceStateFlags() const { return _meshInstanceStateFlags; }
 	SceneInfo getSceneInfo() const { return _sceneInfo; }
 	SceneInfo getVisibleSceneInfo() const { return _visibleSceneInfo; }
+
+private:
+	void addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
+	void removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -400,17 +408,17 @@ private:
 	DescriptorHandle _meshInstanceBoundsInvMatrixSrv;
 	Material* _defaultMaterial = nullptr;
 	ShaderSet* _defaultShaderSet = nullptr;
-	bool _isUpdatedInstancingOffset = false;
+	bool _updateInstancingOffset = false;
 
 	SceneInfo _sceneInfo;
 	SceneInfo _visibleSceneInfo;
 
 	// SDF
-	u32 _sdfGlobalCells[SDF_GLOBAL_CRLL_COUNT] = {};
-	u32 _sdfGlobalMeshInstanceIndices[MESH_INSTANCE_COUNT_MAX] = {};
+	u32 _sdfGlobalCells[SDF_GLOBAL_CELL_COUNT] = {};
+	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
 
-	GpuTexture _sdfGlobalTexture;
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
+	GpuBuffer _sdfGlobalMeshInstanceCountBuffer;
 	DescriptorHandle _sdfGlobalSrv;
 };

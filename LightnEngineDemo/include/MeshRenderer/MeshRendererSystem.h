@@ -95,6 +95,10 @@ public:
 		return &_gpuMeshlets[index];
 	}
 
+	AABB createBounds(const Matrix4& matrix) const {
+		return AABB(_meshInfo->_boundsMin, _meshInfo->_boundsMax).getTransformedAabb(matrix);
+	}
+
 protected:
 	Asset* _asset = nullptr;
 	u8* _stateFlags = nullptr;
@@ -138,11 +142,13 @@ public:
 	void setMaterial(Material* material, u64 slotNameHash);
 	void setVisiblity(bool visible);
 	u32 getMaterialSlotIndex(u64 slotNameHash) const;
+	AABB createWorldBounds() const;
 
 	bool isVisible() const { return _visiblity; }
 	const Mesh* getMesh() const { return _mesh; }
 	SubMeshInstance* getSubMeshInstance(u32 index) { return &_subMeshInstances[index]; }
 	Matrix4 getWorldMatrix() const { return _matrixWorld; }
+	Matrix4 getPrevWorldMatrix() const { return _prevMatrixWorld; }
 
 	gpu::MeshInstance* getGpuMeshInstance() { return _gpuMeshInstance; }
 	gpu::LodMeshInstance* getGpuLodMeshInstance(u32 lodLevel) { return &_gpuLodMeshinstances[lodLevel];}
@@ -156,6 +162,7 @@ public:
 
 protected:
 	Matrix4 _matrixWorld;
+	Matrix4 _prevMatrixWorld;
 	bool _visiblity = false;
 	u8* _stateFlags = nullptr;
 	u8* _updateFlags = nullptr;

@@ -15,7 +15,7 @@ void Scene::initialize() {
 	_gpuMeshInstances.initialize(MESH_INSTANCE_COUNT_MAX);
 	_gpuLodMeshInstances.initialize(LOD_MESH_INSTANCE_COUNT_MAX);
 	_gpuSubMeshInstances.initialize(SUB_MESH_INSTANCE_COUNT_MAX);
-	_sdfGlobalMeshInstanceIndicesArray.initialize(MESH_INSTANCE_COUNT_MAX);
+	_sdfGlobalMeshInstanceIndicesArray.initialize(MESH_INSTANCE_COUNT_MAX * 4);
 
 	// buffers
 	{
@@ -45,31 +45,17 @@ void Scene::initialize() {
 		_subMeshInstanceBuffer.setDebugName("Sub Mesh Instance");
 
 		desc._sizeInByte = sizeof(u32) * MESH_INSTANCE_COUNT_MAX;
+		_sdfGlobalMeshInstanceCountBuffer.initialize(desc);
+		_sdfGlobalMeshInstanceCountBuffer.setDebugName("SDF Mesh Instance Index");
+
 		_sdfGlobalMeshInstanceIndexBuffer.initialize(desc);
-		_sdfGlobalMeshInstanceIndexBuffer.setDebugName("SDF Mesh Instance Index");
+		_sdfGlobalMeshInstanceIndexBuffer.setDebugName("SDF Global");
 
 		desc._sizeInByte = GetConstantBufferAligned(sizeof(SceneCullingInfo));
 		desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 		_sceneCullingConstantBuffer.initialize(desc);
 		_sceneCullingConstantBuffer.setDebugName("Culling Constant");
-	}
 
-	// Sdf
-	{
-		GpuTextureDesc textureDesc = {};
-		textureDesc._device = device;
-		textureDesc._format = FORMAT_R16_UINT;
-		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
-		textureDesc._width = SDF_GLOBAL_CRLL_WIDTH;
-		textureDesc._height = SDF_GLOBAL_CRLL_WIDTH;
-		textureDesc._depthOrArraySize = SDF_GLOBAL_CRLL_WIDTH;
-		textureDesc._mipLevels = 1;
-		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		_sdfGlobalTexture.initialize(textureDesc);
-		_sdfGlobalTexture.setDebugName("SDF Global");
-
-		_sdfGlobalSrv = allocator->allocateDescriptors(1);
-		device->createShaderResourceView(_sdfGlobalTexture.getResource(), nullptr, _sdfGlobalSrv._cpuHandle);
 	}
 
 	// descriptors
@@ -78,6 +64,8 @@ void Scene::initialize() {
 		_meshInstanceWorldMatrixSrv = allocator->allocateDescriptors(1);
 		_meshInstanceBoundsMatrixSrv = allocator->allocateDescriptors(1);
 		_meshInstanceBoundsInvMatrixSrv = allocator->allocateDescriptors(1);
+		_cullingSceneConstantCbv = allocator->allocateDescriptors(1);
+		_sdfGlobalSrv = allocator->allocateDescriptors(1);
 
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
@@ -113,13 +101,22 @@ void Scene::initialize() {
 			device->createShaderResourceView(_meshInstanceBoundsInvMatrixBuffer.getResource(), &desc, _meshInstanceBoundsInvMatrixSrv._cpuHandle);
 		}
 
+		// sdf
+		{
+			desc._buffer._numElements = MESH_INSTANCE_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(u32);
+			device->createShaderResourceView(_sdfGlobalMeshInstanceIndexBuffer.getResource(), &desc, _sdfGlobalSrv._cpuHandle);
+		}
+
 		// scene constant
 		{
-			_cullingSceneConstantCbv = allocator->allocateDescriptors(1);
 			device->createConstantBufferView(_sceneCullingConstantBuffer.getConstantBufferViewDesc(), _cullingSceneConstantCbv._cpuHandle);
 		}
 	}
 
+	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
+		_sdfGlobalCells[i] = gpu::INVALID_INDEX;
+	}
 
 	// default shader set
 	{
@@ -149,7 +146,7 @@ void Scene::update() {
 		}
 	}
 
-	_isUpdatedInstancingOffset = false;
+	_updateInstancingOffset = false;
 	u32 subMeshInstanceCount = _gpuSubMeshInstances.getResarveCount();
 	for (u32 subMeshInstanceIndex = 0; subMeshInstanceIndex < subMeshInstanceCount; ++subMeshInstanceIndex) {
 		if (_subMeshInstanceUpdateFlags[subMeshInstanceIndex] & SUB_MESH_INSTANCE_UPDATE_MATERIAL) {
@@ -165,7 +162,7 @@ void Scene::update() {
 			gpu::SubMeshInstance* mapSubMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, offset);
 			*mapSubMeshInstance = gpuSubMeshInstance;
 
-			_isUpdatedInstancingOffset = true;
+			_updateInstancingOffset = true;
 		}
 	}
 
@@ -225,8 +222,8 @@ void Scene::terminate() {
 	_lodMeshInstanceBuffer.terminate();
 	_subMeshInstanceBuffer.terminate();
 	_sceneCullingConstantBuffer.terminate();
-	_sdfGlobalTexture.terminate();
 	_sdfGlobalMeshInstanceIndexBuffer.terminate();
+	_sdfGlobalMeshInstanceCountBuffer.terminate();
 
 	LTN_ASSERT(_gpuMeshInstances.getInstanceCount() == 0);
 	LTN_ASSERT(_gpuLodMeshInstances.getInstanceCount() == 0);
@@ -237,6 +234,10 @@ void Scene::terminate() {
 	_gpuLodMeshInstances.terminate();
 	_gpuSubMeshInstances.terminate();
 	_sdfGlobalMeshInstanceIndicesArray.terminate();
+
+	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
+		LTN_ASSERT(_sdfGlobalMeshInstanceCounts[i] == 0);
+	}
 
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 	allocator->discardDescriptor(_meshInstanceSrv);
@@ -253,9 +254,7 @@ void Scene::terminateDefaultResources() {
 }
 
 void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
-	MeshInstanceImpl& meshInstance = _meshInstances[meshInstanceIndex];
-	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
-	const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
+	const MeshInstanceImpl& meshInstance = _meshInstances[meshInstanceIndex];
 	Matrix4 matrixWorld = meshInstance.getWorldMatrix();
 	Matrix4 transposedMatrixWorld = matrixWorld.transpose();
 	Vector3 worldScale = matrixWorld.getScale();
@@ -269,11 +268,11 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 		stateFlags |= gpu::MESH_INSTANCE_STATE_FLAGS_VISIBLE;
 	}
 
-	AABB meshInstanceLocalBounds(meshInfo->_boundsMin, meshInfo->_boundsMax);
-	AABB meshInstanceBounds = meshInstanceLocalBounds.getTransformedAabb(matrixWorld);
-	f32 boundsRadius = Vector3::length(meshInstanceBounds._max - meshInstanceBounds.getCenter());
-	gpuMeshInstance._aabbMin = meshInstanceBounds._min.getFloat3();
-	gpuMeshInstance._aabbMax = meshInstanceBounds._max.getFloat3();
+	AABB worldBounds = meshInstance.createWorldBounds();
+	f32 boundsRadius = Vector3::length(worldBounds._max - worldBounds.getCenter());
+	gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
+	gpuMeshInstance._aabbMin = worldBounds._min.getFloat3();
+	gpuMeshInstance._aabbMax = worldBounds._max.getFloat3();
 	gpuMeshInstance._stateFlags = stateFlags;
 	gpuMeshInstance._boundsRadius = boundsRadius;
 	gpuMeshInstance._worldScale = Max(worldScale._x, Max(worldScale._y, worldScale._z));
@@ -285,9 +284,10 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 	Matrix43* mapMeshInstanceWorldMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceWorldMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
 	*mapMeshInstanceWorldMatrix = transposedMatrixWorld.getMatrix43();
 
+	const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
 	AABB sdfBounds(meshInfo->_sdfBoundsMin, meshInfo->_sdfBundsMax);
 	Vector3 boundsLocalSize = sdfBounds.getSize();
-	Vector3 sdfBoundsCenter = meshInstanceBounds.getCenter();
+	Vector3 sdfBoundsCenter = worldBounds.getCenter();
 
 	Matrix4 boundsMatrix = matrixWorld;
 	boundsMatrix.m[0][0] *= boundsLocalSize._x;
@@ -310,20 +310,56 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 
 	Matrix43* mapMeshInstanceBoundsInvMatrix = vramUpdater->enqueueUpdate<Matrix43>(&_meshInstanceBoundsInvMatrixBuffer, sizeof(Matrix43) * meshInstanceIndex);
 	*mapMeshInstanceBoundsInvMatrix = transposedBoundsInvMatrix.getMatrix43();
+
+
+	// SDF Global Grid に移動情報を更新
+	{
+		AABB localBounds(meshInfo->_boundsMin, meshInfo->_boundsMax);
+		AABB prevWorldBounds = localBounds.getTransformedAabb(meshInstance.getPrevWorldMatrix());
+
+		removeMeshInstanceSdfGlobal(prevWorldBounds, meshInstanceIndex);
+		addMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+
+		s32 globalSdfMin[3];
+		globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+		globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+		globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+
+		s32 globalSdfMax[3];
+		globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+		globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+		globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+		for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+			u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
+			for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+				u32 heightOffset = depthOffset + y * SDF_GLOBAL_WIDTH;
+				u32 offsetSize = depthOffset + heightOffset;
+				u32 copySize = globalSdfMax[0];
+				u32* mapSdfGlobalMeshIndices = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, offsetSize, sizeof(u32) * copySize);
+				u32* mapSdfGlobalMeshCounts = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, offsetSize, sizeof(u32) * copySize);
+				memcpy(mapSdfGlobalMeshIndices, _sdfGlobalCells + offsetSize, sizeof(u32) * copySize);
+				memcpy(mapSdfGlobalMeshCounts, _sdfGlobalMeshInstanceCounts + offsetSize, sizeof(u32) * copySize);
+			}
+		}
+	}
+
+	_meshInstances[meshInstanceIndex].setPrevWorldMatrix(matrixWorld);
 }
 
 void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
-	const MeshInstanceImpl& meshInstanceInfo = _meshInstances[meshInstanceIndex];
-	const MeshInfo* meshInfo = meshInstanceInfo.getMesh()->getMeshInfo();
+	const MeshInstanceImpl& meshInstance = _meshInstances[meshInstanceIndex];
+	const MeshInfo* meshInfo = meshInstance.getMesh()->getMeshInfo();
 
 	u32 lodMeshCount = meshInfo->_totalLodMeshCount;
 	u32 subMeshCount = meshInfo->_totalSubMeshCount;
-	const gpu::MeshInstance& meshInstance = _gpuMeshInstances[meshInstanceIndex];
-	const gpu::LodMeshInstance& lodMeshInstance = _gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset];
-	const gpu::SubMeshInstance& subMeshInstance = _gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset];
-	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[lodMeshInstance._subMeshInstanceOffset], subMeshCount);
-	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[meshInstance._lodMeshInstanceOffset], lodMeshCount);
+	const gpu::MeshInstance& gpuMeshInstance = _gpuMeshInstances[meshInstanceIndex];
+	const gpu::LodMeshInstance& gpuLodMeshInstance = _gpuLodMeshInstances[gpuMeshInstance._lodMeshInstanceOffset];
+	const gpu::SubMeshInstance& gpuSubMeshInstance = _gpuSubMeshInstances[gpuLodMeshInstance._subMeshInstanceOffset];
+	_gpuSubMeshInstances.discard(&_gpuSubMeshInstances[gpuLodMeshInstance._subMeshInstanceOffset], subMeshCount);
+	_gpuLodMeshInstances.discard(&_gpuLodMeshInstances[gpuMeshInstance._lodMeshInstanceOffset], lodMeshCount);
 	_gpuMeshInstances.discard(&_gpuMeshInstances[meshInstanceIndex], 1);
+
+	removeMeshInstanceSdfGlobal(meshInstance.createWorldBounds(), meshInstanceIndex);
 
 	_meshInstances[meshInstanceIndex] = MeshInstanceImpl();
 
@@ -445,18 +481,18 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 	}
 
 	// メッシュインスタンス確保
-	u32 meshInstanceIndex = _gpuMeshInstances.request(instanceCount);
-	u32 lodMeshInstanceIndex = _gpuLodMeshInstances.request(totalLodMeshCount);
-	u32 subMeshInstanceIndex = _gpuSubMeshInstances.request(totalSubMeshCount);
+	u32 beginMeshInstanceIndex = _gpuMeshInstances.request(instanceCount);
+	u32 beginLodMeshInstanceIndex = _gpuLodMeshInstances.request(totalLodMeshCount);
+	u32 beginSubMeshInstanceIndex = _gpuSubMeshInstances.request(totalSubMeshCount);
 
 	// メッシュインスタンスに LOD・サブメッシュインスタンス・各種フラグをセット
 	u32 totalLodMeshCounter = 0;
 	u32 totalSubMeshCounter = 0;
 	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
 		const MeshInfo* meshInfo = meshes[instanceIndex]->getMeshInfo();
-		u32 globalMeshInstanceIndex = meshInstanceIndex + instanceIndex;
-		u32 globalLodMeshInstanceIndex = lodMeshInstanceIndex + totalLodMeshCounter;
-		u32 globalSubMeshInstanceIndex = subMeshInstanceIndex + totalSubMeshCounter;
+		u32 globalMeshInstanceIndex = beginMeshInstanceIndex + instanceIndex;
+		u32 globalLodMeshInstanceIndex = beginLodMeshInstanceIndex + totalLodMeshCounter;
+		u32 globalSubMeshInstanceIndex = beginSubMeshInstanceIndex + totalSubMeshCounter;
 		MeshInstanceImpl* meshInstance = &_meshInstances[globalMeshInstanceIndex];
 		meshInstance->setMesh(meshes[instanceIndex]);
 		meshInstance->setGpuMeshInstance(&_gpuMeshInstances[globalMeshInstanceIndex]);
@@ -466,6 +502,7 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 		meshInstance->setUpdateFlags(&_meshInstanceUpdateFlags[globalMeshInstanceIndex]);
 		meshInstance->setStateFlags(&_meshInstanceStateFlags[globalMeshInstanceIndex]);
 		meshInstance->setWorldMatrix(Matrix4::Identity);
+		meshInstance->setPrevWorldMatrix(Matrix4::Identity);
 		meshInstance->setVisiblity(true);
 		meshInstance->setEnabled();
 
@@ -489,7 +526,7 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 	u32 defaultMaterialIndex = materialSystem->getMaterialIndex(_defaultMaterial);
 	u32 defaultShaderSetIndex = materialSystem->getShaderSetIndex(static_cast<MaterialImpl*>(_defaultMaterial)->getShaderSet());
 	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
-		MeshInstanceImpl* meshInstance = &_meshInstances[meshInstanceIndex + instanceIndex];
+		MeshInstanceImpl* meshInstance = &_meshInstances[beginMeshInstanceIndex + instanceIndex];
 		const Mesh* mesh = meshInstance->getMesh();
 		const MeshInfo* meshInfo = mesh->getMeshInfo();
 		u32 lodMeshCount = meshInfo->_totalLodMeshCount;
@@ -516,26 +553,88 @@ void Scene::createMeshInstances(MeshInstance** outMeshInstances, const Mesh** me
 
 	// CPU 用サブメッシュインスタンスデータセット
 	for (u32 subMeshIndex = 0; subMeshIndex < totalSubMeshCount; ++subMeshIndex) {
-		u32 index = subMeshInstanceIndex + subMeshIndex;
+		u32 index = beginSubMeshInstanceIndex + subMeshIndex;
 		SubMeshInstanceImpl& subMeshInstance = _subMeshInstances[index];
 		subMeshInstance.setUpdateFlags(&_subMeshInstanceUpdateFlags[index]);
 		subMeshInstance.setMaterial(_defaultMaterial);
 		subMeshInstance.setPrevMaterial(_defaultMaterial);
 	}
 
+	for (u32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
+		const MeshInstanceImpl& meshInstance = _meshInstances[beginMeshInstanceIndex + instanceIndex];
+		addMeshInstanceSdfGlobal(meshInstance.createWorldBounds(), beginMeshInstanceIndex + instanceIndex);
+	}
+
 	// VRAM にアップロード
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	u32 lodMeshInstanceOffsetByte = sizeof(gpu::LodMeshInstance) * lodMeshInstanceIndex;
+	u32 lodMeshInstanceOffsetByte = sizeof(gpu::LodMeshInstance) * beginLodMeshInstanceIndex;
 	gpu::LodMeshInstance* lodMeshInstance = vramUpdater->enqueueUpdate<gpu::LodMeshInstance>(&_lodMeshInstanceBuffer, lodMeshInstanceOffsetByte, totalLodMeshCount);
-	memcpy(lodMeshInstance, &_gpuLodMeshInstances[lodMeshInstanceIndex], sizeof(gpu::LodMeshInstance) * totalLodMeshCount);
+	memcpy(lodMeshInstance, &_gpuLodMeshInstances[beginLodMeshInstanceIndex], sizeof(gpu::LodMeshInstance) * totalLodMeshCount);
 
-	u32 subMeshInstanceOffsetByte = sizeof(gpu::SubMeshInstance) * subMeshInstanceIndex;
+	u32 subMeshInstanceOffsetByte = sizeof(gpu::SubMeshInstance) * beginSubMeshInstanceIndex;
 	gpu::SubMeshInstance* subMeshInstance = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceBuffer, subMeshInstanceOffsetByte, totalSubMeshCount);
-	memcpy(subMeshInstance, &_gpuSubMeshInstances[subMeshInstanceIndex], sizeof(gpu::SubMeshInstance) * totalSubMeshCount);
+	memcpy(subMeshInstance, &_gpuSubMeshInstances[beginSubMeshInstanceIndex], sizeof(gpu::SubMeshInstance) * totalSubMeshCount);
 
-	u32 meshInstanceOffsetByte = sizeof(gpu::MeshInstance) * meshInstanceIndex;
+	u32 meshInstanceOffsetByte = sizeof(gpu::MeshInstance) * beginMeshInstanceIndex;
 	gpu::MeshInstance* mapMeshInstance = vramUpdater->enqueueUpdate<gpu::MeshInstance>(&_meshInstanceBuffer, meshInstanceOffsetByte, instanceCount);
-	memcpy(mapMeshInstance, &_gpuMeshInstances[meshInstanceIndex], sizeof(gpu::MeshInstance) * instanceCount);
+	memcpy(mapMeshInstance, &_gpuMeshInstances[beginMeshInstanceIndex], sizeof(gpu::MeshInstance) * instanceCount);
+}
+
+void Scene::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	s32 globalSdfMin[3];
+	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+
+	s32 globalSdfMax[3];
+	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
+		for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+			u32 heightOffset = y * SDF_GLOBAL_WIDTH;
+			for (s32 x = globalSdfMin[0]; x < globalSdfMax[0]; ++x) {
+				u32 offset = depthOffset + heightOffset + x;
+				LTN_ASSERT(offset < SDF_GLOBAL_CELL_COUNT);
+				if (_sdfGlobalMeshInstanceCounts[offset] > 0) {
+					_sdfGlobalMeshInstanceIndicesArray.discard(_sdfGlobalCells[offset], _sdfGlobalMeshInstanceCounts[offset]);
+				}
+				++_sdfGlobalMeshInstanceCounts[offset];
+				_sdfGlobalCells[offset] = _sdfGlobalMeshInstanceIndicesArray.request(_sdfGlobalMeshInstanceCounts[offset]);
+			}
+		}
+	}
+}
+
+void Scene::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	s32 globalSdfMin[3];
+	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+
+	s32 globalSdfMax[3];
+	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
+		for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+			u32 heightOffset = y * SDF_GLOBAL_WIDTH;
+			for (s32 x = globalSdfMin[0]; x < globalSdfMax[0]; ++x) {
+				u32 offset = depthOffset + heightOffset + x;
+				LTN_ASSERT(offset < SDF_GLOBAL_CELL_COUNT);
+				LTN_ASSERT(_sdfGlobalMeshInstanceCounts[offset] > 0);
+				_sdfGlobalMeshInstanceIndicesArray.discard(_sdfGlobalCells[offset], _sdfGlobalMeshInstanceCounts[offset]);
+				--_sdfGlobalMeshInstanceCounts[offset];
+				if (_sdfGlobalMeshInstanceCounts[offset] > 0) {
+					_sdfGlobalCells[offset] = _sdfGlobalMeshInstanceIndicesArray.request(_sdfGlobalMeshInstanceCounts[offset]);
+					continue;
+				}
+				_sdfGlobalCells[offset] = gpu::INVALID_INDEX;
+			}
+		}
+	}
 }
 
 void MeshInstance::requestToDelete() {
@@ -579,6 +678,10 @@ u32 MeshInstance::getMaterialSlotIndex(u64 slotNameHash) const {
 		}
 	}
 	return slotIndex;
+}
+
+AABB MeshInstance::createWorldBounds() const {
+	return _mesh->createBounds(_matrixWorld);
 }
 
 void SubMeshInstanceImpl::setMaterial(Material* material) {

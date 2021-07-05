@@ -398,6 +398,7 @@ public:
 	u32 getInstanceCount() const { return _instanceCount; }
 
 	u32 request(u32 numElements) {
+		LTN_ASSERT(numElements > 0);
 		u32 bestBlockIndex = INVILD_BLOCK_INDEX;
 		u32 bestBlockSize = static_cast<u32>(-1);
 		u32 emptyBlockInfoCount = _emptyBlockInfo.getResarveCount();
@@ -435,6 +436,7 @@ public:
 	}
 
 	void discard(u32 dataIndex, u32 numElements) {
+		LTN_ASSERT(numElements > 0);
 		u32 discardHeaderIndex = _emptyBlockInfo.request();
 		EmptyBlockHeader& discardHeader = _emptyBlockInfo[discardHeaderIndex];
 		discardHeader._index = dataIndex;
