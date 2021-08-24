@@ -375,6 +375,28 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 	_sceneInfo._triangleCount -= meshInfo->_primitiveCount;
 }
 
+void Scene::debugDrawGlobalSdfCells() {
+	Vector3 cellOffset(1.0f);
+	for (s32 z = 0; z < SDF_GLOBAL_WIDTH; ++z) {
+		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
+		for (s32 y = 0; y < SDF_GLOBAL_WIDTH; ++y) {
+			u32 heightOffset = y * SDF_GLOBAL_WIDTH;
+			for (s32 x = 0; x < SDF_GLOBAL_WIDTH; ++x) {
+				u32 offset = depthOffset + heightOffset + x;
+				u32 count = _sdfGlobalMeshInstanceCounts[offset];
+				if (count == 0) {
+					continue;
+				}
+				Vector3 cellIndex(x, y, z);
+				Vector3 start = cellIndex * SDF_GLOBAL_CELL_SIZE + cellOffset - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
+				Vector3 end = cellIndex * SDF_GLOBAL_CELL_SIZE - cellOffset + Vector3(SDF_GLOBAL_CELL_SIZE) - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
+				f32 alpha = static_cast<f32>(count) / 300.0f;
+				DebugRendererSystem::Get()->drawAabb(start, end, Color4(alpha, 0.2f, 0.2f, 1.0f));
+			}
+		}
+	}
+}
+
 void Scene::debugDrawMeshInstanceBounds() {
 	for (u32 meshInstanceIndex = 0; meshInstanceIndex < MESH_INSTANCE_COUNT_MAX; ++meshInstanceIndex) {
 		if (_meshInstanceStateFlags[meshInstanceIndex] == MESH_INSTANCE_FLAG_NONE) {

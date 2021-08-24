@@ -960,6 +960,7 @@ void MeshRendererSystemImpl::update() {
 			bool _passMeshletInstanceCulling = false;
 			bool _forceOnlyMeshShader = false;
 			bool _debugDrawSdfMeshes = false;
+			bool _drawGlobalSdfCells = false;
 			s32 _visibleHighPolygonMeshes = 0;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
 			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
@@ -971,6 +972,7 @@ void MeshRendererSystemImpl::update() {
 		DebugGui::Checkbox("draw mesh instance bounds", &debug._drawMeshInstanceBounds);
 		DebugGui::Checkbox("draw meshlet bounds", &debug._drawMeshletBounds);
 		DebugGui::Checkbox("draw sdf meshes", &debug._debugDrawSdfMeshes);
+		DebugGui::Checkbox("draw sdf global cells", &debug._drawGlobalSdfCells);
 		DebugGui::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
 		DebugGui::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
@@ -987,6 +989,10 @@ void MeshRendererSystemImpl::update() {
 
 		if (debug._drawMeshInstanceBounds) {
 			_scene.debugDrawMeshInstanceBounds();
+		}
+
+		if (debug._drawGlobalSdfCells) {
+			_scene.debugDrawGlobalSdfVolumes();
 		}
 
 		u32 packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);

@@ -58,6 +58,9 @@ struct LTN_CORE_API Color4 {
 	static const Color4 PURPLE;
 	static const Color4 BLACK;
 
+	Color4() :_r(0.0f), _g(0.0f), _b(0.0f), _a(0.0f) {}
+	Color4(f32 r, f32 g, f32 b, f32 a) :_r(r), _g(g), _b(b), _a(a) {}
+
 	f32 _r = 0;
 	f32 _g = 0;
 	f32 _b = 0;

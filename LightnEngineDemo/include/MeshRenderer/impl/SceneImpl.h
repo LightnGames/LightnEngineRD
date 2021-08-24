@@ -347,6 +347,7 @@ public:
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
 	static constexpr u32 SDF_GLOBAL_WIDTH = 8;
+	static constexpr u32 SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
 	static constexpr u32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 	static constexpr f32 SDF_GLOBAL_CELL_SIZE = 30.0f;
 	static constexpr f32 SDF_GLOBAL_CELL_HALF_SIZE = SDF_GLOBAL_CELL_SIZE * SDF_GLOBAL_WIDTH * 0.5f;
@@ -358,6 +359,7 @@ public:
 	void terminateDefaultResources();
 	void uploadMeshInstance(u32 meshInstanceIndex);
 	void deleteMeshInstance(u32 meshInstanceIndex);
+	void debugDrawGlobalSdfVolumes();
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();
 
