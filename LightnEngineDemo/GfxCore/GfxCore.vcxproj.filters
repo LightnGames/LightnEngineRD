@@ -37,6 +37,9 @@
     <Filter Include="shader\standard_mesh">
       <UniqueIdentifier>{b9d4ef35-49d7-48ee-85a7-625289a9dd70}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shader\sdf">
+      <UniqueIdentifier>{7f1f8511-3453-442e-97ac-1d03ab4169be}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\GfxCore\GraphicsSystem.h">
@@ -213,6 +216,9 @@
     </None>
     <None Include="..\..\work\common\shader\debug\debug_sdf.vsf">
       <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\sdf\compute_mesh_sdf.csf">
+      <Filter>shader\sdf</Filter>
     </None>
   </ItemGroup>
 </Project>

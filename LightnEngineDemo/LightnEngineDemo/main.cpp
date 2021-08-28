@@ -255,7 +255,7 @@ private:
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	// ÉÅÉÇÉäÉäÅ[ÉNåüèo
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	ApplicationSystem* appSystem = ApplicationSystem::Get();
 	GfxFramework* gfxFramework = GfxFramework::Get();

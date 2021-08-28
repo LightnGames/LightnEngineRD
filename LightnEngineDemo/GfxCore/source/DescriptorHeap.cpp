@@ -27,6 +27,5 @@ DescriptorHandle DescriptorHeapAllocator::allocateDescriptors(u32 numElements) {
 
 void DescriptorHeapAllocator::discardDescriptor(DescriptorHandle& descriptorHandle) {
 	u64 index = (descriptorHandle._cpuHandle._ptr - _cpuHandleStart._ptr) / _incrimentSize;
-	LTN_ASSERT(index < DESCRIPTOR_COUNT_MAX);
 	_handles.discard(static_cast<u32>(index), descriptorHandle._numDescriptor);
 }

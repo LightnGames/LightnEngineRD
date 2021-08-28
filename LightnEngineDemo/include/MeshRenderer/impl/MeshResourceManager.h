@@ -3,6 +3,8 @@
 #include <MeshRenderer/MeshRendererSystem.h>
 #include <MeshRenderer/GpuStruct.h>
 
+struct CommandList;
+
 enum VertexBufferViewLayout {
 	VERTEX_BUFFER_VIEW_LAYOUT_POSITION = 0,
 	VERTEX_BUFFER_VIEW_LAYOUT_NORMAL,
@@ -70,6 +72,46 @@ struct MeshResourceManagerInfo {
 	u32 _triangleCount = 0;
 };
 
+class MeshSdfGenerator {
+public:
+	static constexpr u32 PROCESS_QUEUE_COUNT_MAX = 64;
+	struct ProcessContext {
+		CommandList* _commandList = nullptr;
+		GpuDescriptorHandle _classicIndexSrv;
+		GpuDescriptorHandle _vertexPositionSrv;
+		GpuDescriptorHandle _meshSdfUav;
+	};
+
+	struct ComputeSdfConstant {
+		u32 _resolution[3];
+		u32 _indexCount;
+		Float3 _sdfBoundsMin;
+		u32 _indexOffset;
+		Float3 _sdfBoundsMax;
+		u32 _padding;
+	};
+
+	void initialize();
+	void terminate();
+
+	void enqueue(const MeshInfo* meshInfo, u32 meshIndex);
+
+	void update();
+	void processComputeMeshSdf(const ProcessContext& context);
+
+private:
+	u32 _processMeshIndex = 0;
+	u32 _processVoxelCount = 0;
+	u32 _queueCount = 0;
+	const MeshInfo* _processQueue[PROCESS_QUEUE_COUNT_MAX] = {};
+
+	GpuBuffer _computeMeshSdfConstantBuffer;
+	DescriptorHandle _computeMeshSdfCbv;
+
+	PipelineState* _computeMeshSdfPipelineState = nullptr;
+	RootSignature* _computeMeshSdfRootSignature = nullptr;
+};
+
 class MeshResourceManager {
 public:
 	static constexpr u32 MESH_COUNT_MAX = 256;
@@ -101,12 +143,16 @@ public:
 	GpuDescriptorHandle getMeshSrv() const { return _meshSrv._gpuHandle; }
 	GpuDescriptorHandle getSubMeshSrv() const;
 	GpuDescriptorHandle getVertexSrv() const { return _vertexSrv._gpuHandle; }
+	GpuDescriptorHandle getVertexPositionSrv() const;
+	GpuDescriptorHandle getClassicIndexSrv() const{ return _classicIndexSrv._gpuHandle; }
+	GpuDescriptorHandle getMeshSdfUav() const { return _meshSdfUav._gpuHandle; }
 	GpuBuffer* getPositionVertexBuffer() { return &_positionVertexBuffer; }
 	GpuBuffer* getNormalVertexBuffer() { return &_normalTangentVertexBuffer; }
 	GpuBuffer* getTexcoordVertexBuffer() { return &_texcoordVertexBuffer; }
 	GpuBuffer* getMeshLodLevelFeedbackBuffer() { return &_meshLodLevelFeedbackBuffer; }
 	GpuBuffer* getMeshLodLevelFeedbackReadbackBuffer() { return &_meshLodLevelFeedbackReadbackBuffer; }
 	MeshResourceManagerInfo getMeshResourceInfo() const;
+	MeshSdfGenerator* getMeshSdfGenerator() { return &_sdfGenerator; }
 
 #if ENABLE_CLASSIC_VERTEX
 	GpuBuffer* getClassicIndexBuffer() { return &_classicIndexBuffer; }
@@ -125,6 +171,7 @@ private:
 	void deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel);
 
 private:
+	MeshSdfGenerator _sdfGenerator;
 	Asset _meshAssets[MESH_COUNT_MAX] = {};
 	MeshImpl _meshInstances[MESH_COUNT_MAX] = {};
 	MeshInfo _meshInfos[MESH_COUNT_MAX] = {};
@@ -163,6 +210,7 @@ private:
 	DescriptorHandle _meshLodLevelFeedbackUav;
 	DescriptorHandle _meshLodLevelFeedbackCpuUav;
 	DescriptorHandle _meshSdfSrv;
+	DescriptorHandle _meshSdfUav;
 	DescriptorHandle _meshBoundsSizeSrv;
 	Mesh* _defaultCube = nullptr;
 	u32 _meshLodLevelFeedbacks[MESH_COUNT_MAX] = {};
@@ -170,6 +218,7 @@ private:
 #if ENABLE_CLASSIC_VERTEX
 	MultiDynamicQueueBlockManager _classicIndexBinaryHeaders;
 	GpuBuffer _classicIndexBuffer;
+	DescriptorHandle _classicIndexSrv;
 #endif
 	GpuBuffer _subMeshDrawInfoBuffer;
 	DescriptorHandle _subMeshDrawInfoSrv;

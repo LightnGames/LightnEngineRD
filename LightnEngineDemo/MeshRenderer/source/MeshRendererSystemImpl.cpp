@@ -24,6 +24,15 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
+	{
+		MeshSdfGenerator::ProcessContext context = {};
+		context._commandList = commandList;
+		context._classicIndexSrv = _resourceManager.getClassicIndexSrv();
+		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._meshSdfUav = _resourceManager.getMeshSdfUav();
+		_resourceManager.getMeshSdfGenerator()->processComputeMeshSdf(context);
+	}
+
 	// Lod level ŒvŽZ
 	{
 		ComputeLodContext context = {};
@@ -992,7 +1001,7 @@ void MeshRendererSystemImpl::update() {
 		}
 
 		if (debug._drawGlobalSdfCells) {
-			_scene.debugDrawGlobalSdfVolumes();
+			_scene.debugDrawGlobalSdfCells();
 		}
 
 		u32 packedMeshletCount = static_cast<u32>(debug._packedMeshletCount);

@@ -107,6 +107,7 @@ void MeshResourceManager::initialize() {
 		_meshLodLevelFeedbackUav = allocator->allocateDescriptors(1);
 		_meshLodLevelFeedbackCpuUav = cpuAllocator->allocateDescriptors(1);
 		_meshBoundsSizeSrv = allocator->allocateDescriptors(1);
+		_classicIndexSrv = allocator->allocateDescriptors(1);
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
 		ShaderResourceViewDesc desc = {};
@@ -165,6 +166,10 @@ void MeshResourceManager::initialize() {
 
 			desc._buffer._structureByteStride = sizeof(VertexTexcoord);
 			device->createShaderResourceView(_texcoordVertexBuffer.getResource(), &desc, handle + incrimentSize * 4);
+
+			desc._buffer._numElements = INDEX_COUNT_MAX;
+			desc._buffer._structureByteStride = sizeof(u32);
+			device->createShaderResourceView(_classicIndexBuffer.getResource(), &desc, _classicIndexSrv._cpuHandle);
 		}
 	}
 
@@ -182,11 +187,64 @@ void MeshResourceManager::initialize() {
 	{
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
 		_meshSdfSrv = allocator->allocateDescriptors(MESH_COUNT_MAX);
+		_meshSdfUav = allocator->allocateDescriptors(MESH_COUNT_MAX);
 	}
 
 	MeshDesc desc = {};
 	desc._filePath = "common/box.mesh";
 	_defaultCube = createMesh(desc);
+
+	_sdfGenerator.initialize();
+}
+
+void MeshResourceManager::terminate() {
+	_sdfGenerator.terminate();
+
+	_positionVertexBuffer.terminate();
+	_normalTangentVertexBuffer.terminate();
+	_texcoordVertexBuffer.terminate();
+	_vertexIndexBuffer.terminate();
+	_primitiveBuffer.terminate();
+	_meshBuffer.terminate();
+	_lodMeshBuffer.terminate();
+	_subMeshBuffer.terminate();
+	_meshletBuffer.terminate();
+	_meshletPrimitiveInfoBuffer.terminate();
+	_subMeshDrawInfoBuffer.terminate();
+	_meshLodLevelFeedbackBuffer.terminate();
+	_meshLodLevelFeedbackReadbackBuffer.terminate();
+	_meshBoundsSizeBuffer.terminate();
+
+#if ENABLE_CLASSIC_VERTEX
+	_classicIndexBuffer.terminate();
+	_classicIndexBinaryHeaders.terminate();
+#endif
+
+	LTN_ASSERT(_meshes.getInstanceCount() == 0);
+	LTN_ASSERT(_lodMeshes.getInstanceCount() == 0);
+	LTN_ASSERT(_subMeshes.getInstanceCount() == 0);
+
+	_meshes.terminate();
+	_lodMeshes.terminate();
+	_subMeshes.terminate();
+	_meshlets.terminate();
+
+	_vertexPositionBinaryHeaders.terminate();
+	_indexBinaryHeaders.terminate();
+	_primitiveBinaryHeaders.terminate();
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_meshSrv);
+	allocator->discardDescriptor(_vertexSrv);
+	allocator->discardDescriptor(_subMeshDrawInfoSrv);
+	allocator->discardDescriptor(_meshLodLevelFeedbackUav);
+	allocator->discardDescriptor(_meshSdfSrv);
+	allocator->discardDescriptor(_meshSdfUav);
+	allocator->discardDescriptor(_meshBoundsSizeSrv);
+	allocator->discardDescriptor(_classicIndexSrv);
+
+	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	cpuAllocator->discardDescriptor(_meshLodLevelFeedbackCpuUav);
 }
 
 void MeshResourceManager::update() {
@@ -242,6 +300,8 @@ void MeshResourceManager::update() {
 		DebugGui::Text("[%2d] %-70s", _meshLodLevelFeedbacks[i], _debugMeshInfo[i]._filePath);
 	}
 	DebugGui::End();
+
+	_sdfGenerator.update();
 }
 
 void MeshResourceManager::processDeletion() {
@@ -251,52 +311,6 @@ void MeshResourceManager::processDeletion() {
 			deleteMesh(meshIndex);
 		}
 	}
-}
-
-void MeshResourceManager::terminate() {
-	_positionVertexBuffer.terminate();
-	_normalTangentVertexBuffer.terminate();
-	_texcoordVertexBuffer.terminate();
-	_vertexIndexBuffer.terminate();
-	_primitiveBuffer.terminate();
-	_meshBuffer.terminate();
-	_lodMeshBuffer.terminate();
-	_subMeshBuffer.terminate();
-	_meshletBuffer.terminate();
-	_meshletPrimitiveInfoBuffer.terminate();
-	_subMeshDrawInfoBuffer.terminate();
-	_meshLodLevelFeedbackBuffer.terminate();
-	_meshLodLevelFeedbackReadbackBuffer.terminate();
-	_meshBoundsSizeBuffer.terminate();
-
-#if ENABLE_CLASSIC_VERTEX
-	_classicIndexBuffer.terminate();
-	_classicIndexBinaryHeaders.terminate();
-#endif
-
-	LTN_ASSERT(_meshes.getInstanceCount() == 0);
-	LTN_ASSERT(_lodMeshes.getInstanceCount() == 0);
-	LTN_ASSERT(_subMeshes.getInstanceCount() == 0);
-
-	_meshes.terminate();
-	_lodMeshes.terminate();
-	_subMeshes.terminate();
-	_meshlets.terminate();
-
-	_vertexPositionBinaryHeaders.terminate();
-	_indexBinaryHeaders.terminate();
-	_primitiveBinaryHeaders.terminate();
-
-	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_meshSrv);
-	allocator->discardDescriptor(_vertexSrv);
-	allocator->discardDescriptor(_subMeshDrawInfoSrv);
-	allocator->discardDescriptor(_meshLodLevelFeedbackUav);
-	allocator->discardDescriptor(_meshSdfSrv);
-	allocator->discardDescriptor(_meshBoundsSizeSrv);
-
-	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
-	cpuAllocator->discardDescriptor(_meshLodLevelFeedbackCpuUav);
 }
 
 void MeshResourceManager::terminateDefaultResources() {
@@ -662,6 +676,11 @@ GpuDescriptorHandle MeshResourceManager::getSubMeshSrv() const {
 	return _meshSrv._gpuHandle + incrementSize * 2;
 }
 
+GpuDescriptorHandle MeshResourceManager::getVertexPositionSrv() const {
+	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
+	return _vertexSrv._gpuHandle + incrementSize * 2;
+}
+
 MeshResourceManagerInfo MeshResourceManager::getMeshResourceInfo() const {
 	MeshResourceManagerInfo info;
 	info._meshCount = _meshes.getInstanceCount();
@@ -879,21 +898,11 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 	// 読み込み完了
 	_meshAssets[meshIndex].closeFile();
 
+#define SDF_GENERATE_GPU 1
+
 	// SDF
 	// もっとも粗いLODLevelのロード時にSDFを生成します
 	if (endLodLevel == meshInfo._totalLodMeshCount) {
-		u32 lodLevel = endLodLevel - 1;
-		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[lodLevel]);
-		std::vector<Vec3ui> sdfTriangles(meshInfo._classicIndexCounts[lodLevel] / 3);
-		memcpy(sdfVertices.data(), vertices.data() + vertexOffsets[lodLevel], sizeof(Vec3f)* sdfVertices.size());
-		memcpy(sdfTriangles.data(), triangles.data() + classicIndexOffsets[lodLevel] / 3, sizeof(Vec3ui) * sdfTriangles.size());
-
-		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
-		Vec3f min_box(origin._x, origin._y, origin._z);
-
-		Array3c distances;
-		make_level_set3(sdfTriangles, sdfVertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], distances);
-
 		GpuTexture& texture = _meshSdfs[meshIndex];
 		Device* device = GraphicsSystemImpl::Get()->getDevice();
 		GpuTextureDesc textureDesc = {};
@@ -905,11 +914,27 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		textureDesc._depthOrArraySize = meshInfo._sdfResolution[2];
 		textureDesc._mipLevels = 1;
 		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		textureDesc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		texture.initialize(textureDesc);
 
 		char debugName[128];
 		sprintf_s(debugName, "SDF %s", _debugMeshInfo[meshIndex]._filePath);
 		texture.setDebugName(debugName);
+
+#if SDF_GENERATE_GPU
+		_sdfGenerator.enqueue(&meshInfo, meshIndex);
+#else
+		u32 lodLevel = endLodLevel - 1;
+		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[lodLevel]);
+		std::vector<Vec3ui> sdfTriangles(meshInfo._classicIndexCounts[lodLevel] / 3);
+		memcpy(sdfVertices.data(), vertices.data() + vertexOffsets[lodLevel], sizeof(Vec3f)* sdfVertices.size());
+		memcpy(sdfTriangles.data(), triangles.data() + classicIndexOffsets[lodLevel] / 3, sizeof(Vec3ui) * sdfTriangles.size());
+
+		Vector3 origin = meshInfo._sdfBoundsMin + Vector3::One * meshInfo._sdfGridSize * 0.5f;
+		Vec3f min_box(origin._x, origin._y, origin._z);
+
+		Array3c distances;
+		make_level_set3(sdfTriangles, sdfVertices, min_box, meshInfo._sdfGridSize, meshInfo._sdfResolution[0], meshInfo._sdfResolution[1], meshInfo._sdfResolution[2], distances);
 
 		u32 subResourceIndex = 0;
 		u32 numberOfPlanes = device->getFormatPlaneCount(textureDesc._format);
@@ -976,8 +1001,10 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 			}
 		}
 
-		u32 incSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
-		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + static_cast<u64>(incSize) * meshIndex);
+#endif
+		u32 incSize = static_cast<u64>(GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize());
+		device->createShaderResourceView(texture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * meshIndex);
+		device->createUnorderedAccessView(texture.getResource(), nullptr, nullptr, _meshSdfUav._cpuHandle + incSize * meshIndex);
 
 		Vector3 boundsSize = meshInfo._sdfBundsMax - meshInfo._sdfBoundsMin;
 		gpu::MeshBounds meshBounds;
@@ -1032,4 +1059,122 @@ void MeshResourceManager::deleteLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 
 
 void Mesh::requestToDelete(){
 	*_stateFlags |= MESH_FLAG_STATE_REQUEST_DESTROY;
+}
+
+void MeshSdfGenerator::initialize() {
+	Device* device = GraphicsSystemImpl::Get()->getDevice();
+	{
+		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
+		{
+			GpuBufferDesc desc = {};
+			desc._sizeInByte = GetConstantBufferAligned(sizeof(ComputeSdfConstant));
+			desc._initialState = RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+			desc._device = device;
+			_computeMeshSdfConstantBuffer.initialize(desc);
+			_computeMeshSdfConstantBuffer.setDebugName("Compute Sdf Constant");
+		}
+
+		{
+			DescriptorRange sdfCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+			DescriptorRange indicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+			DescriptorRange vertexPositionSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+			DescriptorRange outSdfUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+
+			_computeMeshSdfRootSignature = allocator->allocateRootSignature();
+
+			RootParameter rootParameters[ComputeSdfRootParam::COUNT] = {};
+			rootParameters[ComputeSdfRootParam::COMPUTE_INFO].initializeDescriptorTable(1, &sdfCbvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ComputeSdfRootParam::INDICES].initializeDescriptorTable(1, &indicesSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ComputeSdfRootParam::VERTEX_POSITION].initializeDescriptorTable(1, &vertexPositionSrvRange, SHADER_VISIBILITY_ALL);
+			rootParameters[ComputeSdfRootParam::OUT_SDF].initializeDescriptorTable(1, &outSdfUavRange, SHADER_VISIBILITY_ALL);
+
+			RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc._device = device;
+			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+			rootSignatureDesc._parameters = rootParameters;
+			_computeMeshSdfRootSignature->iniaitlize(rootSignatureDesc);
+			_computeMeshSdfRootSignature->setDebugName("Gpu Culling");
+		}
+
+		{
+			ShaderBlob* computeShader = allocator->allocateShaderBlob();
+			computeShader->initialize("L:/LightnEngine/resource/common/shader/sdf/compute_mesh_sdf.cso");
+
+			ComputePipelineStateDesc pipelineStateDesc = {};
+			pipelineStateDesc._device = device;
+			pipelineStateDesc._rootSignature = _computeMeshSdfRootSignature;
+			pipelineStateDesc._cs = computeShader->getShaderByteCode();
+
+			_computeMeshSdfPipelineState = allocator->allocatePipelineState();
+			_computeMeshSdfPipelineState->iniaitlize(pipelineStateDesc);
+			_computeMeshSdfPipelineState->setDebugName("L:/LightnEngine/resource/common/shader/sdf/compute_mesh_sdf.cso");
+
+			computeShader->terminate();
+		}
+	}
+
+	// デスクリプタ
+	{
+		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+		_computeMeshSdfCbv = allocator->allocateDescriptors(1);
+		device->createConstantBufferView(_computeMeshSdfConstantBuffer.getConstantBufferViewDesc(), _computeMeshSdfCbv._cpuHandle);
+	}
+}
+
+void MeshSdfGenerator::terminate() {
+	_computeMeshSdfConstantBuffer.terminate();
+	_computeMeshSdfPipelineState->terminate();
+	_computeMeshSdfRootSignature->terminate();
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_computeMeshSdfCbv);
+}
+
+void MeshSdfGenerator::enqueue(const MeshInfo* meshInfo, u32 meshIndex) {
+	LTN_ASSERT(_queueCount < PROCESS_QUEUE_COUNT_MAX - 1);
+	_processQueue[_queueCount++] = meshInfo;
+	_processMeshIndex = meshIndex;
+}
+
+void MeshSdfGenerator::update() {
+	if (_queueCount == 0) {
+		return;
+	}
+
+	// もっとも粗いLODを指定
+	const MeshInfo* meshInfo = _processQueue[--_queueCount];
+	u32 lodOffset = meshInfo->_totalLodMeshCount - 1;
+	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
+	ComputeSdfConstant* constant = vramUpdater->enqueueUpdate<ComputeSdfConstant>(&_computeMeshSdfConstantBuffer, 0);
+	constant->_resolution[0] = meshInfo->_sdfResolution[0];
+	constant->_resolution[1] = meshInfo->_sdfResolution[1];
+	constant->_resolution[2] = meshInfo->_sdfResolution[2];
+	constant->_sdfBoundsMin = meshInfo->_sdfBoundsMin.getFloat3();
+	constant->_sdfBoundsMax = meshInfo->_sdfBundsMax.getFloat3();
+	constant->_indexOffset = meshInfo->_globalClassicIndexOffsets[lodOffset];
+	constant->_indexCount = meshInfo->_classicIndexCounts[lodOffset];
+
+	_processVoxelCount = meshInfo->_sdfResolution[0] * meshInfo->_sdfResolution[1] * meshInfo->_sdfResolution[2];
+}
+
+void MeshSdfGenerator::processComputeMeshSdf(const ProcessContext& context) {
+	if (_processVoxelCount == 0) {
+		return;
+	}
+
+	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
+	u64 meshSdfOffset = incrementSize * _processMeshIndex;
+	CommandList* commandList = context._commandList;
+	commandList->setComputeRootSignature(_computeMeshSdfRootSignature);
+	commandList->setPipelineState(_computeMeshSdfPipelineState);
+	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::COMPUTE_INFO, _computeMeshSdfCbv._gpuHandle);
+	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::INDICES, context._classicIndexSrv);
+	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::VERTEX_POSITION, context._vertexPositionSrv);
+	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::OUT_SDF, context._meshSdfUav + meshSdfOffset);
+	
+	u32 dispatchCountX = (_processVoxelCount / 32) + 1;
+	commandList->dispatch(dispatchCountX, 1, 1);
+
+	_processVoxelCount = 0;
+	_processMeshIndex = 0;
 }

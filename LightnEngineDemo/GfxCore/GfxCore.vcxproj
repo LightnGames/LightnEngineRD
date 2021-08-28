@@ -41,13 +41,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -200,6 +200,7 @@
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_frustum_occlusion.csf" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_shader_culling_uber.sfh" />
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_pass.csf" />
+    <None Include="..\..\work\common\shader\sdf\compute_mesh_sdf.csf" />
     <None Include="..\..\work\common\shader\shaderInput.sfh" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum.csf" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum_occlusion.csf" />

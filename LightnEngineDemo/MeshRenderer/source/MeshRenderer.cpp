@@ -579,6 +579,8 @@ void MeshRenderer::buildDebugDrawBounds(const BuildDebugDrawMeshletBoundsContext
 void MeshRenderer::debugDrawMeshSdf(const DebugDrawMeshSdfContext& context) const {
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::YELLOW, "Debug Draw Sdf");
+
 	viewInfo->_depthTexture.transitionResource(commandList, RESOURCE_STATE_DEPTH_WRITE);
 	commandList->setViewports(1, &viewInfo->_viewPort);
 	commandList->setScissorRects(1, &viewInfo->_scissorRect);

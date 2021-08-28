@@ -330,15 +330,26 @@ void Scene::uploadMeshInstance(u32 meshInstanceIndex) {
 		globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 		globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 		for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+			if (z < 0 || z >= SDF_GLOBAL_WIDTH) {
+				continue;
+			}
 			u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 			for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+				if (y < 0 || y >= SDF_GLOBAL_WIDTH) {
+					continue;
+				}
 				u32 heightOffset = depthOffset + y * SDF_GLOBAL_WIDTH;
-				u32 offsetSize = depthOffset + heightOffset;
-				u32 copySize = globalSdfMax[0];
-				u32* mapSdfGlobalMeshIndices = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, offsetSize, sizeof(u32) * copySize);
-				u32* mapSdfGlobalMeshCounts = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, offsetSize, sizeof(u32) * copySize);
-				memcpy(mapSdfGlobalMeshIndices, _sdfGlobalCells + offsetSize, sizeof(u32) * copySize);
-				memcpy(mapSdfGlobalMeshCounts, _sdfGlobalMeshInstanceCounts + offsetSize, sizeof(u32) * copySize);
+				for (s32 x = globalSdfMin[0]; x < globalSdfMax[0]; ++x) {
+					if (x < 0 || x >= SDF_GLOBAL_WIDTH) {
+						continue;
+					}
+
+					u32 offset = depthOffset + heightOffset + x;
+					u32* mapSdfGlobalMeshIndices = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, sizeof(u32) * offset, sizeof(u32));
+					u32* mapSdfGlobalMeshCounts = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceCountBuffer, sizeof(u32) * offset, sizeof(u32));
+					memcpy(mapSdfGlobalMeshIndices, _sdfGlobalCells + offset, sizeof(u32));
+					memcpy(mapSdfGlobalMeshCounts, _sdfGlobalMeshInstanceCounts + offset, sizeof(u32));
+				}
 			}
 		}
 	}
@@ -376,7 +387,8 @@ void Scene::deleteMeshInstance(u32 meshInstanceIndex) {
 }
 
 void Scene::debugDrawGlobalSdfCells() {
-	Vector3 cellOffset(1.0f);
+	u32 cellCounter = 0;
+	Vector3 cellOffset(0.5f);
 	for (s32 z = 0; z < SDF_GLOBAL_WIDTH; ++z) {
 		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 		for (s32 y = 0; y < SDF_GLOBAL_WIDTH; ++y) {
@@ -390,11 +402,13 @@ void Scene::debugDrawGlobalSdfCells() {
 				Vector3 cellIndex(x, y, z);
 				Vector3 start = cellIndex * SDF_GLOBAL_CELL_SIZE + cellOffset - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
 				Vector3 end = cellIndex * SDF_GLOBAL_CELL_SIZE - cellOffset + Vector3(SDF_GLOBAL_CELL_SIZE) - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
-				f32 alpha = static_cast<f32>(count) / 300.0f;
+				f32 alpha = static_cast<f32>(count) / 100.0f;
 				DebugRendererSystem::Get()->drawAabb(start, end, Color4(alpha, 0.2f, 0.2f, 1.0f));
+				cellCounter++;
 			}
 		}
 	}
+	cellCounter += 0;
 }
 
 void Scene::debugDrawMeshInstanceBounds() {
@@ -613,12 +627,21 @@ void Scene::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIn
 	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+		if (z < 0 || z >= SDF_GLOBAL_WIDTH) {
+			continue;
+		}
 		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 		for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+			if (y < 0 || y >= SDF_GLOBAL_WIDTH) {
+				continue;
+			}
 			u32 heightOffset = y * SDF_GLOBAL_WIDTH;
 			for (s32 x = globalSdfMin[0]; x < globalSdfMax[0]; ++x) {
+				if (x < 0 || x >= SDF_GLOBAL_WIDTH) {
+					continue;
+				}
+
 				u32 offset = depthOffset + heightOffset + x;
-				LTN_ASSERT(offset < SDF_GLOBAL_CELL_COUNT);
 				if (_sdfGlobalMeshInstanceCounts[offset] > 0) {
 					_sdfGlobalMeshInstanceIndicesArray.discard(_sdfGlobalCells[offset], _sdfGlobalMeshInstanceCounts[offset]);
 				}
@@ -640,12 +663,21 @@ void Scene::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanc
 	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
 	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
+		if (z < 0 || z >= SDF_GLOBAL_WIDTH) {
+			continue;
+		}
 		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 		for (s32 y = globalSdfMin[1]; y < globalSdfMax[1]; ++y) {
+			if (y < 0 || y >= SDF_GLOBAL_WIDTH) {
+				continue;
+			}
 			u32 heightOffset = y * SDF_GLOBAL_WIDTH;
 			for (s32 x = globalSdfMin[0]; x < globalSdfMax[0]; ++x) {
+				if (x < 0 || x >= SDF_GLOBAL_WIDTH) {
+					continue;
+				}
 				u32 offset = depthOffset + heightOffset + x;
-				LTN_ASSERT(offset < SDF_GLOBAL_CELL_COUNT);
+
 				LTN_ASSERT(_sdfGlobalMeshInstanceCounts[offset] > 0);
 				_sdfGlobalMeshInstanceIndicesArray.discard(_sdfGlobalCells[offset], _sdfGlobalMeshInstanceCounts[offset]);
 				--_sdfGlobalMeshInstanceCounts[offset];

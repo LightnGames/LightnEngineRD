@@ -4,7 +4,6 @@
 
 class LTN_GFX_CORE_API DescriptorHeapAllocator :public NonCopyable {
 public:
-	static constexpr u32 DESCRIPTOR_COUNT_MAX = 1024;
 	void initialize(const DescriptorHeapDesc& desc);
 	void terminate();
 

@@ -27,6 +27,16 @@ namespace GpuCullingRootParam {
 	};
 };
 
+namespace ComputeSdfRootParam {
+	enum {
+		COMPUTE_INFO,
+		INDICES,
+		VERTEX_POSITION,
+		OUT_SDF,
+		COUNT
+	};
+};
+
 namespace MultiDrawCullingRootParam {
 	enum {
 		ROOT_PARAM_MULTI_CULLING_SCENE_INFO = 0,
