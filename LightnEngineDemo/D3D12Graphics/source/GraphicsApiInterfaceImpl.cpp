@@ -1205,7 +1205,7 @@ void RootSignatureD3D12::iniaitlize(const RootSignatureDesc& desc) {
 		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 		samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
 		samplerDesc.MinLOD = 0.0f;
-		samplerDesc.MaxLOD = 0.0f;
+		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 		samplerDesc.ShaderRegister = 1;
 		samplerDesc.RegisterSpace = 0;
 		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;

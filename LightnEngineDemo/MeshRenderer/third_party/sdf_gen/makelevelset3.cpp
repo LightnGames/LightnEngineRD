@@ -143,66 +143,51 @@ void make_level_set3(const std::vector<Vec3ui>& tri, const std::vector<Vec3f>& x
 				double fir = ((double)x[r][0] - origin[0]) / dx, fjr = ((double)x[r][1] - origin[1]) / dx, fkr = ((double)x[r][2] - origin[2]) / dx;
 				
 				// do distances nearby
-				int i0 = clamp(int(min(fip, fiq, fir)) - exact_band, 0, ni - 1), i1 = clamp(int(max(fip, fiq, fir)) + exact_band + 1, 0, ni - 1);
-				int j0 = clamp(int(min(fjp, fjq, fjr)) - exact_band, 0, nj - 1), j1 = clamp(int(max(fjp, fjq, fjr)) + exact_band + 1, 0, nj - 1);
-				int k0 = clamp(int(min(fkp, fkq, fkr)) - exact_band, 0, nk - 1), k1 = clamp(int(max(fkp, fkq, fkr)) + exact_band + 1, 0, nk - 1);
-				for (int k = k0; k <= k1; ++k) {
-					for (int j = j0; j <= j1; ++j) {
-						for (int i = i0; i <= i1; ++i) {
-							Vec3f gx(i * dx + origin[0], j * dx + origin[1], k * dx + origin[2]);
-							float d = point_triangle_distance(gx, x[p], x[q], x[r]);
-							std::lock_guard<std::mutex> guard(intersectionMutex);
-							float sd = distances(i, j, k) / 128.0f;
-							if (d < sd) {
-								distances(i, j, k) = static_cast<char>(sd);
-								closest_tri(i, j, k) = t;
+				{
+					int i0 = clamp(int(min(fip, fiq, fir)) - exact_band, 0, ni - 1), i1 = clamp(int(max(fip, fiq, fir)) + exact_band + 1, 0, ni - 1);
+					int j0 = clamp(int(min(fjp, fjq, fjr)) - exact_band, 0, nj - 1), j1 = clamp(int(max(fjp, fjq, fjr)) + exact_band + 1, 0, nj - 1);
+					int k0 = clamp(int(min(fkp, fkq, fkr)) - exact_band, 0, nk - 1), k1 = clamp(int(max(fkp, fkq, fkr)) + exact_band + 1, 0, nk - 1);
+					for (int k = k0; k <= k1; ++k) {
+						for (int j = j0; j <= j1; ++j) {
+							for (int i = i0; i <= i1; ++i) {
+								Vec3f gx(i * dx + origin[0], j * dx + origin[1], k * dx + origin[2]);
+								float d = point_triangle_distance(gx, x[p], x[q], x[r]);
+								std::lock_guard<std::mutex> guard(intersectionMutex);
+								float sd = distances(i, j, k) / 128.0f;
+								if (d < sd) {
+									distances(i, j, k) = static_cast<char>(sd);
+									closest_tri(i, j, k) = t;
+								}
 							}
 						}
 					}
 				}
-			}
-		}));
-	}
-
-	for (int i = 0; i < threadCount; ++i) {
-		threads[i].join();
-	}
-	threads.clear();
-
-	// compute intersections
-	for (int i = 0; i < threadCount; ++i) {
-		unsigned int beginTriIndex = i * threadTriCount;
-		unsigned int endTriIndex = min((i + 1) * threadTriCount, (int)tri.size());
-		threads.push_back(std::thread([&, beginTriIndex, endTriIndex]() {
-			for (unsigned int t = beginTriIndex; t < endTriIndex; ++t) {
-				unsigned int p, q, r;
-				assign(tri[t], p, q, r);
-
-				// coordinates in grid to high precision
-				double fip = ((double)x[p][0] - origin[0]) / dx, fjp = ((double)x[p][1] - origin[1]) / dx, fkp = ((double)x[p][2] - origin[2]) / dx;
-				double fiq = ((double)x[q][0] - origin[0]) / dx, fjq = ((double)x[q][1] - origin[1]) / dx, fkq = ((double)x[q][2] - origin[2]) / dx;
-				double fir = ((double)x[r][0] - origin[0]) / dx, fjr = ((double)x[r][1] - origin[1]) / dx, fkr = ((double)x[r][2] - origin[2]) / dx;
 
 				// and do intersection counts
-				int j0 = clamp((int)std::ceil(min(fjp, fjq, fjr)), 0, nj - 1);
-				int j1 = clamp((int)std::floor(max(fjp, fjq, fjr)), 0, nj - 1);
-				int k0 = clamp((int)std::ceil(min(fkp, fkq, fkr)), 0, nk - 1);
-				int k1 = clamp((int)std::floor(max(fkp, fkq, fkr)), 0, nk - 1);
-				for (int k = k0; k <= k1; ++k) {
-					for (int j = j0; j <= j1; ++j) {
-						double a, b, c;
-						if (point_in_triangle_2d(j, k, fjp, fkp, fjq, fkq, fjr, fkr, a, b, c)) {
-							double fi = a * fip + b * fiq + c * fir; // intersection i coordinate
-							int i_interval = int(std::ceil(fi)); // intersection is in (i_interval-1,i_interval]
-							if (i_interval < 0) {
-								std::lock_guard<std::mutex> guard(intersectionMutex);
-								++intersection_count(0, j, k); // we enlarge the first interval to include everything to the -x direction
+				{
+					int j0 = clamp((int)std::ceil(min(fjp, fjq, fjr)), 0, nj - 1);
+					int j1 = clamp((int)std::floor(max(fjp, fjq, fjr)), 0, nj - 1);
+					int k0 = clamp((int)std::ceil(min(fkp, fkq, fkr)), 0, nk - 1);
+					int k1 = clamp((int)std::floor(max(fkp, fkq, fkr)), 0, nk - 1);
+					for (int k = k0; k <= k1; ++k) {
+						for (int j = j0; j <= j1; ++j) {
+							double a, b, c;
+							if (point_in_triangle_2d(j, k, fjp, fkp, fjq, fkq, fjr, fkr, a, b, c)) {
+								double fi = a * fip + b * fiq + c * fir; // intersection i coordinate
+								Vec3f normal = cross(x[q] - x[r], x[r] - x[p]);
+								int inc = (normal[0] > 0) ? 1 : -1;
+
+								int i_interval = int(std::ceil(fi)); // intersection is in (i_interval-1,i_interval]
+								if (i_interval < 0) {
+									std::lock_guard<std::mutex> guard(intersectionMutex);
+									intersection_count(0, j, k) += inc; // we enlarge the first interval to include everything to the -x direction
+								}
+								else if (i_interval < ni) {
+									std::lock_guard<std::mutex> guard(intersectionMutex);
+									intersection_count(i_interval, j, k) += inc;
+								}
+								// we ignore intersections that are beyond the +x side of the grid
 							}
-							else if (i_interval < ni) {
-								std::lock_guard<std::mutex> guard(intersectionMutex);
-								++intersection_count(i_interval, j, k);
-							}
-							// we ignore intersections that are beyond the +x side of the grid
 						}
 					}
 				}
@@ -240,8 +225,8 @@ void make_level_set3(const std::vector<Vec3ui>& tri, const std::vector<Vec3f>& x
 				int total_count = 0;
 				for (int i = 0; i < ni; ++i) {
 					total_count += intersection_count(i, j, k);
-					if (total_count % 2 == 1) { // if parity of intersections so far is odd,
-						distances(i, j, k) = -distances(i, j, k); // we are inside the mesh
+					if (total_count > 0) {
+						distances(i, j, k) = -distances(i, j, k);
 					}
 				}
 			}

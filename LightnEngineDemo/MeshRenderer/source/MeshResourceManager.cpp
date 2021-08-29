@@ -301,6 +301,10 @@ void MeshResourceManager::update() {
 	}
 	DebugGui::End();
 
+	//if (_meshInfos[0]._sdfResolution[0] > 0) {
+	//	_sdfGenerator.enqueue(&_meshInfos[0], 0, &_meshSdfs[0]);
+	//}
+
 	_sdfGenerator.update();
 }
 
@@ -516,7 +520,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
 
 	f32 dx = 0.2f;
-	f32 padding = 2.0f;
+	f32 padding = 3.0f;
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
@@ -851,7 +855,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		fseek(fin, srcOffset, SEEK_CUR);
 		fread_s(triangles.data(), sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
 		fseek(fin, endOffset, SEEK_CUR);
-		memcpy(classicIndexPtr, triangles.data(), sizeof(u32)* triangles.size());
+		memcpy(classicIndexPtr, triangles.data(), sizeof(u32)* classicIndexCount);
 	}
 
 	u32 classicIndexLocalOffset = 0;
@@ -922,7 +926,7 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 		texture.setDebugName(debugName);
 
 #if SDF_GENERATE_GPU
-		_sdfGenerator.enqueue(&meshInfo, meshIndex);
+		_sdfGenerator.enqueue(&meshInfo, meshIndex, &_meshSdfs[meshIndex]);
 #else
 		u32 lodLevel = endLodLevel - 1;
 		std::vector<Vec3f> sdfVertices(meshInfo._vertexCounts[lodLevel]);
@@ -966,9 +970,6 @@ void MeshResourceManager::loadLodMeshes(u32 meshIndex, u32 beginLodLevel, u32 en
 			}
 		}
 
-		if (subResourceIndex >= TextureUpdateHeader::SUBRESOURCE_COUNT_MAX) {
-			int y = 0;
-		}
 		LTN_ASSERT(subResourceIndex < TextureUpdateHeader::SUBRESOURCE_COUNT_MAX);
 		u64 requiredSize = 0;
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
@@ -1130,10 +1131,11 @@ void MeshSdfGenerator::terminate() {
 	allocator->discardDescriptor(_computeMeshSdfCbv);
 }
 
-void MeshSdfGenerator::enqueue(const MeshInfo* meshInfo, u32 meshIndex) {
+void MeshSdfGenerator::enqueue(const MeshInfo* meshInfo, u32 meshIndex, GpuTexture* sdfTexture) {
 	LTN_ASSERT(_queueCount < PROCESS_QUEUE_COUNT_MAX - 1);
 	_processQueue[_queueCount++] = meshInfo;
 	_processMeshIndex = meshIndex;
+	_processSdfTexture = sdfTexture;
 }
 
 void MeshSdfGenerator::update() {
@@ -1153,18 +1155,21 @@ void MeshSdfGenerator::update() {
 	constant->_sdfBoundsMax = meshInfo->_sdfBundsMax.getFloat3();
 	constant->_indexOffset = meshInfo->_globalClassicIndexOffsets[lodOffset];
 	constant->_indexCount = meshInfo->_classicIndexCounts[lodOffset];
+	constant->_vertexOffset = meshInfo->_globalVertexOffsets[lodOffset];
 
 	_processVoxelCount = meshInfo->_sdfResolution[0] * meshInfo->_sdfResolution[1] * meshInfo->_sdfResolution[2];
 }
 
 void MeshSdfGenerator::processComputeMeshSdf(const ProcessContext& context) {
-	if (_processVoxelCount == 0) {
+	if (_processSdfTexture == nullptr) {
 		return;
 	}
 
 	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
 	u64 meshSdfOffset = incrementSize * _processMeshIndex;
 	CommandList* commandList = context._commandList;
+	_processSdfTexture->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+
 	commandList->setComputeRootSignature(_computeMeshSdfRootSignature);
 	commandList->setPipelineState(_computeMeshSdfPipelineState);
 	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::COMPUTE_INFO, _computeMeshSdfCbv._gpuHandle);
@@ -1175,6 +1180,9 @@ void MeshSdfGenerator::processComputeMeshSdf(const ProcessContext& context) {
 	u32 dispatchCountX = (_processVoxelCount / 32) + 1;
 	commandList->dispatch(dispatchCountX, 1, 1);
 
+	_processSdfTexture->transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 	_processVoxelCount = 0;
 	_processMeshIndex = 0;
+	_processSdfTexture = nullptr;
 }

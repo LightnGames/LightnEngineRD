@@ -287,19 +287,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		//desc._filePath = "victorian\\facade_c\\sm_facade_c_door_lvl0.mesh";
 		//mesh = meshSystem->createMesh(desc);
 
-		//desc._filePath = "common/torus_high.mesh";
-		//mesh2 = meshSystem->createMesh(desc);
+		desc._filePath = "common/torus_high.mesh";
+		mesh2 = meshSystem->createMesh(desc);
 
 		//desc._filePath = "victorian/side_walk/sm_street_a.mesh";
 		//mesh3 = meshSystem->createMesh(desc);
 
 	}
 
-	//{
-	//	MaterialDesc desc = {};
-	//	desc._filePath = "common/default_mesh.mto";
-	//	material = materialSystem->createMaterial(desc);
-	//}
+	{
+		MaterialDesc desc = {};
+		desc._filePath = "common/default_mesh.mto";
+		material = materialSystem->createMaterial(desc);
+	}
 
 	{
 		TextureDesc desc = {};
@@ -317,10 +317,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		////meshInstance->setMaterialSlotIndex(material, 0);
 		//meshInstance->setWorldMatrix(Matrix4::rotateY(DegToRad(0)) * Matrix4::translate(-5, 2, 3));
 
-		//desc.mesh = mesh2;
-		//meshInstance2 = meshSystem->createMeshInstance(desc);
-		//meshInstance2->setMaterialSlotIndex(material, 0);
-		//meshInstance2->setWorldMatrix(Matrix4::translate(-1, 0, 0));
+		const Mesh* tmpMesh = mesh2;
+		desc._meshes = &tmpMesh;
+		desc._instanceCount = 1;
+		meshSystem->createMeshInstance(&meshInstance2, desc);
+		meshInstance2->setMaterialSlotIndex(material, 0);
+		meshInstance2->setWorldMatrix(Matrix4::translate(0, 1, 0));
 
 		//desc._meshes = mesh3;
 		//meshInstance3 = meshSystem->createMeshInstance(desc);
@@ -344,12 +346,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
 	level.unload();
 
-	//material->requestToDelete();
+	material->requestToDelete();
 	//meshInstance->requestToDelete();
-	//meshInstance2->requestToDelete();
+	meshInstance2->requestToDelete();
 	//meshInstance3->requestToDelete();
 	//mesh->requestToDelete();
-	//mesh2->requestToDelete();
+	mesh2->requestToDelete();
 	//mesh3->requestToDelete();
 	texture->requestToDelete();
 	colorChartTexture->requestToDelete();

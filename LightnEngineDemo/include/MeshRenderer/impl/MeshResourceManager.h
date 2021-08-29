@@ -88,13 +88,13 @@ public:
 		Float3 _sdfBoundsMin;
 		u32 _indexOffset;
 		Float3 _sdfBoundsMax;
-		u32 _padding;
+		u32 _vertexOffset;
 	};
 
 	void initialize();
 	void terminate();
 
-	void enqueue(const MeshInfo* meshInfo, u32 meshIndex);
+	void enqueue(const MeshInfo* meshInfo, u32 meshIndex, GpuTexture* sdfTexture);
 
 	void update();
 	void processComputeMeshSdf(const ProcessContext& context);
@@ -103,6 +103,7 @@ private:
 	u32 _processMeshIndex = 0;
 	u32 _processVoxelCount = 0;
 	u32 _queueCount = 0;
+	GpuTexture* _processSdfTexture = nullptr;
 	const MeshInfo* _processQueue[PROCESS_QUEUE_COUNT_MAX] = {};
 
 	GpuBuffer _computeMeshSdfConstantBuffer;
