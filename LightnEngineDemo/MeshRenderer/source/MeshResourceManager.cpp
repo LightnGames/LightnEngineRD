@@ -519,8 +519,8 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f min_box(boundsMin._x, boundsMin._y, boundsMin._z);
 	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
 
-	f32 dx = 0.2f;
-	f32 padding = 3.0f;
+	f32 dx = 0.05f;
+	f32 padding = 2.0f;
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
@@ -528,9 +528,9 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3i ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
 	Vector3 center(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
 	Vector3 halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
-	LTN_ASSERT(ceiledSize[0] <= 128);
-	LTN_ASSERT(ceiledSize[1] <= 128);
-	LTN_ASSERT(ceiledSize[2] <= 128);
+	LTN_ASSERT(ceiledSize[0] <= 512);
+	LTN_ASSERT(ceiledSize[1] <= 512);
+	LTN_ASSERT(ceiledSize[2] <= 512);
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
@@ -551,7 +551,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshInfo._sdfResolution[0] = ceiledSize[0];
 	meshInfo._sdfResolution[1] = ceiledSize[1];
 	meshInfo._sdfResolution[2] = ceiledSize[2];
-	meshInfo._sdfGridSize = dx;
+	meshInfo._sdfCellSize = dx;
 	meshInfo._classicIndexCount = classicIndexCount;
 
 	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < totalLodMeshCount; ++lodMeshLocalIndex) {
@@ -1156,6 +1156,7 @@ void MeshSdfGenerator::update() {
 	constant->_indexOffset = meshInfo->_globalClassicIndexOffsets[lodOffset];
 	constant->_indexCount = meshInfo->_classicIndexCounts[lodOffset];
 	constant->_vertexOffset = meshInfo->_globalVertexOffsets[lodOffset];
+	constant->_cellSize = meshInfo->_sdfCellSize;
 
 	_processVoxelCount = meshInfo->_sdfResolution[0] * meshInfo->_sdfResolution[1] * meshInfo->_sdfResolution[2];
 }

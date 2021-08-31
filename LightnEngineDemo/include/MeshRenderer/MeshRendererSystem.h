@@ -43,7 +43,7 @@ struct MeshInfo {
 	Vector3 _sdfBoundsMin;
 	Vector3 _sdfBundsMax;
 	u32 _sdfResolution[3] = {};
-	f32 _sdfGridSize = 0;
+	f32 _sdfCellSize = 0;
 };
 
 struct LodInfo {

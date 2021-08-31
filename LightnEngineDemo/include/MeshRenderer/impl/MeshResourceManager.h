@@ -89,6 +89,7 @@ public:
 		u32 _indexOffset;
 		Float3 _sdfBoundsMax;
 		u32 _vertexOffset;
+		f32 _cellSize;
 	};
 
 	void initialize();

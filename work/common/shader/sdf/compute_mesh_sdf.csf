@@ -9,6 +9,7 @@ struct ComputeSdfConstant
     uint _indexOffset;
     float3 _sdfBoundsMax;
     uint _vertexOffset;
+    float _cellSize;
 };
 
 ConstantBuffer<ComputeSdfConstant> _constant : register(b0);
@@ -17,60 +18,17 @@ StructuredBuffer<float3> _vertexPositions : register(t1);
 
 RWTexture3D<float> _outSdf : register(u0);
 
-///* Returns the normal of the input triangle. */
-//float3 TriangleNormal(uint triangleId) {
-//    uint t1 = _constant._vertexOffset + _indices[triangleId * 3 + 2];
-//    uint t2 = _constant._vertexOffset + _indices[triangleId * 3 + 1];
-//    uint t3 = _constant._vertexOffset + _indices[triangleId * 3];
-//    float3 ba = _vertexPositions[t2] - _vertexPositions[t1];
-//    float3 cb = _vertexPositions[t3] - _vertexPositions[t2];
-//    float3 ac = _vertexPositions[t1] - _vertexPositions[t3];
-//    return normalize(cross(ba, ac));
-//}
-
-//float3 Remap(float3 v, float3 fromMin, float3 fromMax, float3 toMin, float3 toMax) {
-//    return (v - fromMin) / (fromMax - fromMin) * (toMax - toMin) + toMin;
-//}
-
 /* Returns the position (relative to the triangle buffer) of the voxel id. */
 float3 PositionFromVoxelId(uint3 id)
 {
-    float cellSize = 0.2;
+    float cellSize = _constant._cellSize;
     float halfCellSize = cellSize / 2.0;
     float3 resolution = (float3) _constant._resolution;
     float3 offset = resolution * halfCellSize;
     float3 boundsCenterOffset = (_constant._sdfBoundsMin + _constant._sdfBoundsMax) / 2.0;
     float3 voxelPosition = (float3) id;
     return voxelPosition * cellSize + boundsCenterOffset - offset + float3(halfCellSize, halfCellSize, halfCellSize);
-	/*
-	// Center within voxels.
-	float3 pos = (float3)id + float3(0.5, 0.5, 0.5);
-
-	// Normalize into 0...1 range.
-	pos /= (float)textureSize;
-
-	// Remap to mesh extents.
-	pos *= (maxExtents - minExtents);
-	pos += minExtents;
-
-	return pos;
-	*/
 }
-/*
-float3 PositionFromVoxelId(uint3 id) {
-	float3 pos = (float3)id;  // 0:textureSize-1
-	pos = pos / ((float)textureSize - 1.0);  // 0:1
-	pos = pos * (totalUnitsInTexture);  // 0:meshSize
-	pos = pos - (totalUnitsInTexture / 2.0);  // -meshExtent:+meshExtent
-	return pos;
-}
-*/
-
-
-
-//float dot2(float3 v) {
-//    return dot(v, v);
-//}
 
 float mag2(float3 a)
 {
@@ -145,21 +103,6 @@ float DistanceToTriangle(float3 position, uint triangleId)
     float3 pb = _vertexPositions[t2];
     float3 pc = _vertexPositions[t3];
     return point_triangle_distance(position, pa, pb, pc);
-    
-    //float3 ba = _vertexPositions[t2] - _vertexPositions[t1];
-    //float3 cb = _vertexPositions[t3] - _vertexPositions[t2];
-    //float3 ac = _vertexPositions[t1] - _vertexPositions[t3];
-
-    //float3 nor = TriangleNormal(triangleId);
-
-    //if (sign(dot(cross(ba, nor), pa)) + sign(dot(cross(cb, nor), pb)) + sign(dot(cross(ac, nor), pc)) < 2.0) {
-    //    float x = dot2(ba * clamp(dot(ba, pa) / dot2(ba), 0.0, 1.0) - pa);
-    //    float y = dot2(cb * clamp(dot(cb, pb) / dot2(cb), 0.0, 1.0) - pb);
-    //    float z = dot2(ac * clamp(dot(ac, pc) / dot2(ac), 0.0, 1.0) - pc);
-    //    return sqrt(min(min(x, y), z));
-    //} else {
-    //    return sqrt(dot(nor, pa) * dot(nor, pa) / dot2(nor));
-    //}
 }
 
 // calculate twice signed area of triangle (0,0)-(x1,y1)-(x2,y2)
@@ -211,39 +154,6 @@ bool point_in_triangle_2d(float x0, float y0,
     return true;
 }
 
-/* Returns the index of the nearest triangle to the input position. */
-uint NearestTriangleId(float3 position)
-{
-    uint id = 0;
-    uint triangleStrat = _constant._indexOffset / 3;
-    uint triangleEnd = triangleStrat + _constant._indexCount / 3;
-    for (uint t = triangleStrat; t < triangleEnd; t++)
-    {
-        if (DistanceToTriangle(position, t) < DistanceToTriangle(position, id))
-        {
-            id = t;
-        }
-    }
-    return id;
-}
-
-/* Returns the index of the nearest triangle to the input position. */
-float NearestTriangleDistance(float3 position)
-{
-    float distance = 10000.0;
-    uint triangleStrat = _constant._indexOffset / 3;
-    uint triangleEnd = triangleStrat + _constant._indexCount / 3;
-    for (uint t = triangleStrat; t < triangleEnd; t++)
-    {
-        float triangleDistance = DistanceToTriangle(position, t);
-        if (triangleDistance < distance)
-        {
-            distance = triangleDistance;
-        }
-    }
-    return distance;
-}
-
 /* Returns whether a ray intersects a triangle. Developed by Möller–Trumbore. */
 uint RayIntersectsTriangle(float3 o, float3 d, uint triangleId)
 {
@@ -283,55 +193,29 @@ uint RayIntersectsTriangle(float3 o, float3 d, uint triangleId)
  
     float t = dot(v0v2, qvec) * invDet;
  
-    return (t >= 0.0) ? 1 : 0;
-    
-    //float3 e1, e2, h, s, q;
-    //float a, f, u, v, t;
-
-    //e1 = v1 - v0;
-    //e2 = v2 - v0;
-
-    //h = cross(d, e2);
-    //a = dot(e1, h);
-
-    //if (abs(a) < EPSILON)
-    //{
-    //    return 0; // ray is parallel to triangle
-    //}
-
-    //f = 1.0 / a;
-    //s = o - v0;
-    //u = f * dot(s, h);
-
-    //if (u < 0.0 || u > 1.0)
-    //{
-    //    return 0;
-    //}
-
-    //q = cross(s, e1);
-    //v = f * dot(d, q);
-
-    //if (v < 0.0 || u + v > 1.0)
-    //{
-    //    return 0;
-    //}
-
-    //t = f * dot(e2, q);
-
-    //return (t >= 0.0) ? 1 : 0;
+    return (t > EPSILON) ? 1 : 0;
 }
 
-uint IntersectionCount(float3 position, float3 direction)
+/* Returns the index of the nearest triangle to the input position. */
+float NearestTriangleDistance(float3 position)
 {
-    uint count = 0;
+    float3 direction = normalize(float3(0, 1, 0.01));
+    uint intersectCount = 0;
+    float distance = 10000.0;
     uint triangleStrat = _constant._indexOffset / 3;
     uint triangleEnd = triangleStrat + _constant._indexCount / 3;
     for (uint t = triangleStrat; t < triangleEnd; t++)
     {
-        count += RayIntersectsTriangle(position, direction, t);
-    }
+        float triangleDistance = DistanceToTriangle(position, t);
+        if (triangleDistance < distance)
+        {
+            distance = triangleDistance;
+        }
+        intersectCount += RayIntersectsTriangle(position, direction, t);
 
-    return count;
+    }
+    int sign = (intersectCount % 2) == 0 ? 1 : -1;
+    return distance * sign;
 }
 
 uint3 To3D(uint id)
@@ -359,7 +243,5 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint3 voxelId = To3D(dtid);
     float3 pos = PositionFromVoxelId(voxelId);
     float distance = NearestTriangleDistance(pos);
-    float s = (IntersectionCount(pos, normalize(pos)) % 2 == 0) ? 1 : -1;
-    _outSdf[voxelId] = distance * s;
-    //_outSdf[voxelId] = pos.x;
+    _outSdf[voxelId] = distance;
 }
