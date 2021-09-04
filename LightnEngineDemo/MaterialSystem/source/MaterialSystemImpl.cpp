@@ -147,7 +147,7 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 Material* MaterialSystemImpl::createMaterial(const MaterialDesc& desc) {
 	// アセット実パスに変換
 	char meshFilePath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(meshFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+	sprintf_s(meshFilePath, "%s%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
 	// IO読み取り初期化
 	std::ifstream fin(meshFilePath, std::ios::in | std::ios::binary);
@@ -183,8 +183,9 @@ Material* MaterialSystemImpl::createMaterial(const MaterialDesc& desc) {
 	_materialStateFlags[materialIndex] |= MATERIAL_STATE_FLAG_CREATED;
 	_materialUpdateFlags[materialIndex] |= MATERIAL_UPDATE_FLAG_UPDATE_PARAMS;
 
+	Texture* texture = TextureSystemImpl::Get()->findTexture(textureFileHashes[0]);
 	material->setParameter<Color4>(StrHash32("BaseColor"), Color4::WHITE);
-	material->setTexture(StrHash32("AlbedoTextureIndex"), TextureSystemImpl::Get()->findTexture(textureFileHashes[0]));
+	material->setTexture(StrHash32("BaseColorRoughness"), texture);
 
 	return material;
 }
@@ -228,9 +229,7 @@ const u8* MaterialImpl::getParameterRaw(u32 nameHash) const {
 
 void MaterialImpl::setParameterRaw(u32 nameHash, const void* dataPtr) {
 	u16 findIndex = findParameter(nameHash);
-	if (findIndex == INVALID_PARAMETER_INDEX) {
-		return;
-	}
+	LTN_ASSERT(findIndex != INVALID_PARAMETER_INDEX);
 
 	u16 copySizeInByte = PARAM_TYPE_SIZE_IN_BYTE[_shaderSet->_parameterTypes[findIndex]];
 	u16 offset = _shaderSet->_parameterByteOffset[findIndex];
@@ -270,7 +269,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// シェーダーパス
 	{
 		char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+		sprintf_s(shaderSetFilePath, "%s%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
 		std::ifstream fin(shaderSetFilePath, std::ios::in | std::ios::binary);
 		fin.exceptions(std::ios::badbit);
@@ -286,13 +285,13 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	char meshShaderPath[FILE_PATH_COUNT_MAX] = {};
 	char pixelShaderPath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(meshShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, meshShaderName);
-	sprintf_s(pixelShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
+	sprintf_s(meshShaderPath, "%s%s", RESOURCE_FOLDER_PATH, meshShaderName);
+	sprintf_s(pixelShaderPath, "%s%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
 	// シェーダーパラメーター
 	{
 		char shaderSetFilePath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(shaderSetFilePath, "%s/%s", RESOURCE_FOLDER_PATH, pixelShaderName);
+		sprintf_s(shaderSetFilePath, "%s%s", RESOURCE_FOLDER_PATH, pixelShaderName);
 
 		// シェーダーパスから Info パスに変換
 		char* str = shaderSetFilePath;
@@ -530,7 +529,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		memcpy(vertexShaderName + meshShaderNameLength - 3, "vso", 3);
 
 		char vertexShaderPath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(vertexShaderPath, "%s/%s", RESOURCE_FOLDER_PATH, vertexShaderName);
+		sprintf_s(vertexShaderPath, "%s%s", RESOURCE_FOLDER_PATH, vertexShaderName);
 
 		ClassicPipelineStateGroupDesc desc = {};
 		desc._vertexShaderFilePath = vertexShaderPath;

@@ -435,7 +435,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 
 	// アセット実パスに変換
 	char meshFilePath[FILE_PATH_COUNT_MAX] = {};
-	sprintf_s(meshFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+	sprintf_s(meshFilePath, "%s%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
 	Asset& asset = _meshAssets[meshIndex];
 	asset.openFile(meshFilePath);
@@ -528,6 +528,22 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3i ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
 	Vector3 center(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
 	Vector3 halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
+	
+	// 最大長さが16mを超えるもの
+	Vector3 boundsSize = boundsMax - boundsMin;
+	f32 maxSize = max(boundsSize._x, max(boundsSize._y, boundsSize._z));
+	if (maxSize > 16) {
+		dx = 1;
+		min_box = Vec3f(boundsMin._x, boundsMin._y, boundsMin._z);
+		max_box = Vec3f(boundsMax._x, boundsMax._y, boundsMax._z);
+		min_box -= padding * dx * unit;
+		max_box += padding * dx * unit;
+		ceiledSize = Vec3ui((max_box - min_box) / dx);
+		ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
+		center = Vector3(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
+		halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
+	}
+
 	LTN_ASSERT(ceiledSize[0] <= 512);
 	LTN_ASSERT(ceiledSize[1] <= 512);
 	LTN_ASSERT(ceiledSize[2] <= 512);

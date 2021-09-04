@@ -9,9 +9,9 @@
 
 class Level {
 public:
-	void startLoad(const char* filePath) {
+	void startLoad(const char* levelFilePath) {
 		// IOì«Ç›éÊÇËèâä˙âª
-		_fin = std::ifstream(filePath, std::ios::in | std::ios::binary);
+		_fin = std::ifstream(levelFilePath, std::ios::in | std::ios::binary);
 		_fin.exceptions(std::ios::badbit);
 		LTN_ASSERT(!_fin.fail());
 
@@ -279,7 +279,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	TextureSystem* textureSystem = TextureSystem::Get();
 
 	Level level;
-	level.startLoad("L:/LightnEngine/resource/victorian/level.level");
+	level.startLoad("L:\\LightnEngine\\resource\\fantasy_village\\level.level");
 
 	{
 		MeshDesc desc = {};

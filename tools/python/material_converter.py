@@ -42,8 +42,7 @@ if __name__ == "__main__":
                 fout.write(struct.pack('<Q', shader_set_hash))
 
                 fout.write(struct.pack('<I', texture_parameter_count))
-                for texture_parameter in texture_parameters.items():
-                    key = texture_parameter[0]
-                    texture_path = texture_parameter[1]
+                for texture_parameter in texture_parameters:
+                    texture_path = texture_parameter
                     texture_path_hash = xxhash.xxh64(texture_path.encode(string_format)).intdigest()
                     fout.write(struct.pack('<Q', texture_path_hash))

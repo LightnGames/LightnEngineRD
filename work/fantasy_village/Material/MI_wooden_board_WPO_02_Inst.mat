@@ -1,0 +1,4 @@
+shader_set: default.sseto
+textures:
+    - fantasy_village\Texture\T_wooden_board_03_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_board_03_Normal.dds

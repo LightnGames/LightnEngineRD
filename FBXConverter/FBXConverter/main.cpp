@@ -1081,6 +1081,33 @@ void probeNode(FbxNode* node, std::vector<FbxMesh*>& meshes) {
 	}
 }
 
+FbxAMatrix GetGeometryTransformation(FbxNode* Node)
+{
+	if (!Node)
+	{
+		throw std::exception("Null for mesh geometry");
+	}
+
+	const FbxVector4 lT = Node->GetGeometricTranslation(FbxNode::eSourcePivot);
+	const FbxVector4 lR = Node->GetGeometricRotation(FbxNode::eSourcePivot);
+	const FbxVector4 lS = Node->GetGeometricScaling(FbxNode::eSourcePivot);
+
+	return FbxAMatrix(lT, lR, lS);
+}
+
+DirectX::XMMATRIX FbxMatToGlm(const FbxAMatrix& mat) {
+	FbxVector4 c0 = mat.GetColumn(0);
+	FbxVector4 c1 = mat.GetColumn(1);
+	FbxVector4 c2 = mat.GetColumn(2);
+	FbxVector4 c3 = mat.GetColumn(3);
+	DirectX::XMMATRIX localMat = DirectX::XMMatrixSet(
+		(float)c0[0], (float)c0[1], (float)c0[2], (float)c0[3],
+		(float)c1[0], (float)c1[1], (float)c1[2], (float)c1[3],
+		(float)c2[0], (float)c2[1], (float)c2[2], (float)c2[3],
+		(float)c3[0], (float)c3[1], (float)c3[2], (float)c3[3]);
+	return DirectX::XMMatrixInverse(nullptr, localMat);
+}
+
 void exportMesh(const char* fileName) {
 	std::vector<FbxMesh*> _fbxMeshes;
 	std::vector<Subset>                     m_meshletSubsets;
@@ -1243,6 +1270,9 @@ void exportMesh(const char* fileName) {
 
 		optimizedVertices.reserve(indexCount);
 
+		FbxAMatrix fbxMat = GetGeometryTransformation(mesh->GetNode());
+		DirectX::XMMATRIX directxMat = FbxMatToGlm(fbxMat);
+
 		for (uint32 sourcePolygonIndex = 0; sourcePolygonIndex < polygonCount; ++sourcePolygonIndex) {
 			uint32 rowMaterialIndex = meshMaterials->GetIndexArray().GetAt(sourcePolygonIndex);
 			uint32 materialIndex = localRemapedMaterialIndices[rowMaterialIndex];
@@ -1268,9 +1298,20 @@ void exportMesh(const char* fileName) {
 				mesh->GetPolygonVertexUV(sourcePolygonIndex, j, uvSetName, texcoord, bIsUnmapped);
 				mesh->GetPolygonVertexNormal(sourcePolygonIndex, j, normal);
 
+				//FBXÇÕâEéËç¿ïWånÇ»ÇÃÇ≈ç∂éËç¿ïWånÇ…íºÇ∑ÇΩÇﬂÇ…ZÇîΩì]Ç∑ÇÈ
+				DirectX::XMVECTOR localPosition = DirectX::XMVectorSet((float)v[0], (float)v[1], -(float)v[2], 1.0f);
+				DirectX::XMVECTOR localNormal = DirectX::XMVectorSet((float)normal[0], (float)normal[1], -(float)normal[2], 1.0f);
+				DirectX::XMVECTOR transformedPosition = DirectX::XMVector4Transform(localPosition, directxMat);
+				DirectX::XMVECTOR transformedNormal = DirectX::XMVector4Transform(localNormal, directxMat);
+
+				DirectX::XMFLOAT3 storeLocalPosition;
+				DirectX::XMFLOAT3 storeLocalNormal;
+				DirectX::XMStoreFloat3(&storeLocalPosition, transformedPosition);
+				DirectX::XMStoreFloat3(&storeLocalNormal, transformedNormal);
+
 				RawVertex r;
-				r.position = { (float)v[0], (float)v[1], -(float)v[2] };//FBXÇÕâEéËç¿ïWånÇ»ÇÃÇ≈ç∂éËç¿ïWånÇ…íºÇ∑ÇΩÇﬂÇ…ZÇîΩì]Ç∑ÇÈ
-				r.normal = { (float)normal[0], (float)normal[1], -(float)normal[2] };
+				r.position = { storeLocalPosition.x, storeLocalPosition.y, storeLocalPosition.z };
+				r.normal = { storeLocalNormal.x, storeLocalNormal.y, storeLocalNormal.z };
 				r.texcoord = { (float)texcoord[0], 1 - (float)texcoord[1] };//UVÇÃYé≤ÇîΩì]
 
 				const XMVECTOR vectorUp = XMVectorSet(0.0f, 1, FLT_EPSILON, 0);

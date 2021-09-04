@@ -13,17 +13,17 @@ float sampleSdf(uint textureIndex, float3 localPosition) {
 
 float4 main(SdfPSInput input) : SV_TARGET {
     float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
-    float3 invViewDirection = -viewDirection;
+    float3 invViewDirection = normalize(-viewDirection);
     float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
     float3 rayDirection = mul(invViewDirection, meshInstanceScaleRotateMatrix);
-    rayDirection = normalize(rayDirection);
     float rayEndThreshold = 0.01;
+    float3 rayStart = mul(float4(input._worldPosition, 1), _sdfBoundsInvWorldMatrics[input._meshInstanceIndex]).xyz;
     bool isHit = false;
     float rayDistance = 0.0;
     float minDistance = 1.0000;
     int SAMPLE_COUNT_MAX = 128;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
-        float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
+        float3 currentRayOrigin = rayStart + rayDistance * rayDirection;
         float distance = sampleSdf(input._meshIndex, currentRayOrigin);
         
         minDistance = min(minDistance, distance);
@@ -46,5 +46,5 @@ float4 main(SdfPSInput input) : SV_TARGET {
         clip(-1);
     }
     
-    return float4(float3(1.0, 0.3, 0.3), saturate(rayDistance));
+    return float4(float3(1.0, 0.3, 0.3), 1);
 }

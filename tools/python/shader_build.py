@@ -42,7 +42,7 @@ def convert(shader_file_path):
     # 5: texture
     if shader_output_ext == 'pso':
         base_color_hash = xxhash.xxh32(b'BaseColor').intdigest()
-        albedo_texture_index_hash = xxhash.xxh32(b'AlbedoTextureIndex').intdigest()
+        albedo_texture_index_hash = xxhash.xxh32(b'BaseColorRoughness').intdigest()
         shader_parameters = []
         shader_parameters.append([base_color_hash, 3])
         shader_parameters.append([albedo_texture_index_hash, 5])

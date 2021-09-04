@@ -163,7 +163,7 @@ void VramShaderSet::updateMaterialParameter(u32 materialInstanceIndex) {
 	MaterialImpl* material = _materials[materialInstanceIndex];
 	MaterialParameter* mapParam = vramUpdater->enqueueUpdate<MaterialParameter>(&_parameterBuffer, offset);
 	mapParam->_baseColor = *material->getParameter<Color4>(StrHash32("BaseColor"));
-	mapParam->_albedoTextureIndex = *material->getParameter<u32>(StrHash32("AlbedoTextureIndex"));
+	mapParam->_albedoTextureIndex = *material->getParameter<u32>(StrHash32("BaseColorRoughness"));
 }
 
 void VramShaderSet::removeMaterialInstance(u32 materialInstanceIndex) {

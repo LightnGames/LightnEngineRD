@@ -104,7 +104,7 @@ Texture* TextureSystemImpl::allocateTexture(const TextureDesc& desc) {
 
 		// アセット実パスに変換
 		char textureFilePath[FILE_PATH_COUNT_MAX] = {};
-		sprintf_s(textureFilePath, "%s/%s", RESOURCE_FOLDER_PATH, desc._filePath);
+		sprintf_s(textureFilePath, "%s%s", RESOURCE_FOLDER_PATH, desc._filePath);
 
 		TextureImpl& texture = _textures[textureIndex];
 		Asset* textureAsset = &_textureAssets[textureIndex];
