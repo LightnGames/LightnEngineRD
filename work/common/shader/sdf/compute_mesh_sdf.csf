@@ -221,11 +221,7 @@ float NearestTriangleDistance(float3 position)
         intersectCounts.z += RayIntersectsTriangle(position, float3(0, 0, 1), t);
     }
     
-    //return (float)intersectCount / 100.0;
     bool backface = false;
-    //backface |= (intersectCounts.x % 2) == 1;
-    //backface |= (intersectCounts.y % 2) == 1;
-    //backface |= (intersectCounts.z % 2) == 1;
     backface |= intersectCounts.x > 0;
     backface |= intersectCounts.y > 0;
     backface |= intersectCounts.z > 0;

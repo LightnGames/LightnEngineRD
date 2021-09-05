@@ -16,24 +16,22 @@ float4 main(SdfPSInput input) : SV_TARGET {
     float3 invViewDirection = normalize(-viewDirection);
     float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
     float3 rayDirection = mul(invViewDirection, meshInstanceScaleRotateMatrix);
-    float rayEndThreshold = 0.01;
     bool isHit = false;
-    float rayDistance = 0.0;
-    float minDistance = 1.0000;
+    float rayDistance = 0.01;
     int SAMPLE_COUNT_MAX = 256;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
         float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
-        if (currentRayOrigin.x < -0.51 || currentRayOrigin.x > 0.51)
+        if (currentRayOrigin.x < -0.5 || currentRayOrigin.x > 0.5)
         {
             break;
         }
         
-        if (currentRayOrigin.y < -0.51 || currentRayOrigin.y > 0.51)
+        if (currentRayOrigin.y < -0.5 || currentRayOrigin.y > 0.5)
         {
             break;
         }
         
-        if (currentRayOrigin.z < -0.51 || currentRayOrigin.z > 0.51)
+        if (currentRayOrigin.z < -0.5 || currentRayOrigin.z > 0.5)
         {
             break;
         }

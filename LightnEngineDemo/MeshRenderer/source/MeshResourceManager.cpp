@@ -520,16 +520,19 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
 
 	f32 dx = 0.05f;
+	// ç≈ëÂí∑Ç≥Ç™16mÇí¥Ç¶ÇÈÇ‡ÇÃ
+	Vector3 boundsSize = boundsMax - boundsMin;
+	f32 maxSize = max(boundsSize._x, max(boundsSize._y, boundsSize._z));
+	if (maxSize > 16) {
+		dx = 1.0f;
+	}
+
 	f32 padding = 2.0f;
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
 	Vec3i sdfMin(min_box / dx);
 	Vec3i sdfMax(max_box / dx);
-	
-	// ç≈ëÂí∑Ç≥Ç™16mÇí¥Ç¶ÇÈÇ‡ÇÃ
-	Vector3 boundsSize = boundsMax - boundsMin;
-	f32 maxSize = max(boundsSize._x, max(boundsSize._y, boundsSize._z));
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
@@ -545,8 +548,8 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshInfo._meshletStartIndex = meshletStartIndex;
 	meshInfo._boundsMin = boundsMin;
 	meshInfo._boundsMax = boundsMax;
-	meshInfo._sdfBoundsMin = Vector3(sdfMin[0], sdfMin[1], sdfMin[2]) * dx;
-	meshInfo._sdfBundsMax = Vector3(sdfMax[0], sdfMax[1], sdfMax[2]) * dx;
+	meshInfo._sdfBoundsMin = Vector3(static_cast<f32>(sdfMin[0]), static_cast<f32>(sdfMin[1]), static_cast<f32>(sdfMin[2])) * dx;
+	meshInfo._sdfBundsMax = Vector3(static_cast<f32>(sdfMax[0]), static_cast<f32>(sdfMax[1]), static_cast<f32>(sdfMax[2])) * dx;
 	meshInfo._sdfResolution[0] = sdfMax[0] - sdfMin[0];
 	meshInfo._sdfResolution[1] = sdfMax[1] - sdfMin[1];
 	meshInfo._sdfResolution[2] = sdfMax[2] - sdfMin[2];
