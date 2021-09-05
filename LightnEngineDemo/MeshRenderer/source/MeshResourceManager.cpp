@@ -524,29 +524,12 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f unit(1, 1, 1);
 	min_box -= padding * dx * unit;
 	max_box += padding * dx * unit;
-	Vec3ui ceiledSize = Vec3ui((max_box - min_box) / dx);
-	Vec3i ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
-	Vector3 center(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
-	Vector3 halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
+	Vec3i sdfMin(min_box / dx);
+	Vec3i sdfMax(max_box / dx);
 	
 	// Å‘å’·‚³‚ª16m‚ð’´‚¦‚é‚à‚Ì
 	Vector3 boundsSize = boundsMax - boundsMin;
 	f32 maxSize = max(boundsSize._x, max(boundsSize._y, boundsSize._z));
-	if (maxSize > 16) {
-		dx = 1;
-		min_box = Vec3f(boundsMin._x, boundsMin._y, boundsMin._z);
-		max_box = Vec3f(boundsMax._x, boundsMax._y, boundsMax._z);
-		min_box -= padding * dx * unit;
-		max_box += padding * dx * unit;
-		ceiledSize = Vec3ui((max_box - min_box) / dx);
-		ceiledCenter = Vec3i((max_box + min_box) / 2.0f / dx);
-		center = Vector3(static_cast<f32>(ceiledCenter[0]), static_cast<f32>(ceiledCenter[1]), static_cast<f32>(ceiledCenter[2]));
-		halfSize = Vector3(static_cast<f32>(ceiledSize[0]), static_cast<f32>(ceiledSize[1]), static_cast<f32>(ceiledSize[2])) / 2.0f;
-	}
-
-	LTN_ASSERT(ceiledSize[0] <= 512);
-	LTN_ASSERT(ceiledSize[1] <= 512);
-	LTN_ASSERT(ceiledSize[2] <= 512);
 
 	MeshInfo& meshInfo = _meshInfos[meshIndex];
 	meshInfo._meshIndex = meshIndex;
@@ -562,13 +545,17 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	meshInfo._meshletStartIndex = meshletStartIndex;
 	meshInfo._boundsMin = boundsMin;
 	meshInfo._boundsMax = boundsMax;
-	meshInfo._sdfBoundsMin = (center - halfSize) * dx;
-	meshInfo._sdfBundsMax = (center + halfSize) * dx;
-	meshInfo._sdfResolution[0] = ceiledSize[0];
-	meshInfo._sdfResolution[1] = ceiledSize[1];
-	meshInfo._sdfResolution[2] = ceiledSize[2];
+	meshInfo._sdfBoundsMin = Vector3(sdfMin[0], sdfMin[1], sdfMin[2]) * dx;
+	meshInfo._sdfBundsMax = Vector3(sdfMax[0], sdfMax[1], sdfMax[2]) * dx;
+	meshInfo._sdfResolution[0] = sdfMax[0] - sdfMin[0];
+	meshInfo._sdfResolution[1] = sdfMax[1] - sdfMin[1];
+	meshInfo._sdfResolution[2] = sdfMax[2] - sdfMin[2];
 	meshInfo._sdfCellSize = dx;
 	meshInfo._classicIndexCount = classicIndexCount;
+
+	LTN_ASSERT(meshInfo._sdfResolution[0] <= 512);
+	LTN_ASSERT(meshInfo._sdfResolution[1] <= 512);
+	LTN_ASSERT(meshInfo._sdfResolution[2] <= 512);
 
 	for (u32 lodMeshLocalIndex = 0; lodMeshLocalIndex < totalLodMeshCount; ++lodMeshLocalIndex) {
 		const LodInfo& info = lodInfos[lodMeshLocalIndex];
@@ -1149,9 +1136,10 @@ void MeshSdfGenerator::terminate() {
 
 void MeshSdfGenerator::enqueue(const MeshInfo* meshInfo, u32 meshIndex, GpuTexture* sdfTexture) {
 	LTN_ASSERT(_queueCount < PROCESS_QUEUE_COUNT_MAX - 1);
-	_processQueue[_queueCount++] = meshInfo;
-	_processMeshIndex = meshIndex;
-	_processSdfTexture = sdfTexture;
+	QueueData& data = _processQueue[_queueCount++];
+	data._meshInfo = meshInfo;
+	data._processMeshIndex = meshIndex;
+	data._processSdfTexture = sdfTexture;
 }
 
 void MeshSdfGenerator::update() {
@@ -1160,7 +1148,8 @@ void MeshSdfGenerator::update() {
 	}
 
 	// ‚à‚Á‚Æ‚à‘e‚¢LOD‚ðŽw’è
-	const MeshInfo* meshInfo = _processQueue[--_queueCount];
+	const QueueData& data = _processQueue[_queueCount - 1];
+	const MeshInfo* meshInfo = data._meshInfo;
 	u32 lodOffset = meshInfo->_totalLodMeshCount - 1;
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	ComputeSdfConstant* constant = vramUpdater->enqueueUpdate<ComputeSdfConstant>(&_computeMeshSdfConstantBuffer, 0);
@@ -1173,19 +1162,18 @@ void MeshSdfGenerator::update() {
 	constant->_indexCount = meshInfo->_classicIndexCounts[lodOffset];
 	constant->_vertexOffset = meshInfo->_globalVertexOffsets[lodOffset];
 	constant->_cellSize = meshInfo->_sdfCellSize;
-
-	_processVoxelCount = meshInfo->_sdfResolution[0] * meshInfo->_sdfResolution[1] * meshInfo->_sdfResolution[2];
 }
 
 void MeshSdfGenerator::processComputeMeshSdf(const ProcessContext& context) {
-	if (_processSdfTexture == nullptr) {
+	if (_queueCount == 0) {
 		return;
 	}
 
+	const QueueData& data = _processQueue[--_queueCount];
 	u64 incrementSize = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize();
-	u64 meshSdfOffset = incrementSize * _processMeshIndex;
+	u64 meshSdfOffset = incrementSize * data._processMeshIndex;
 	CommandList* commandList = context._commandList;
-	_processSdfTexture->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+	data._processSdfTexture->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
 
 	commandList->setComputeRootSignature(_computeMeshSdfRootSignature);
 	commandList->setPipelineState(_computeMeshSdfPipelineState);
@@ -1194,12 +1182,9 @@ void MeshSdfGenerator::processComputeMeshSdf(const ProcessContext& context) {
 	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::VERTEX_POSITION, context._vertexPositionSrv);
 	commandList->setComputeRootDescriptorTable(ComputeSdfRootParam::OUT_SDF, context._meshSdfUav + meshSdfOffset);
 	
-	u32 dispatchCountX = (_processVoxelCount / 32) + 1;
+	u32 voxelCount = data._meshInfo->_sdfResolution[0] * data._meshInfo->_sdfResolution[1] * data._meshInfo->_sdfResolution[2];
+	u32 dispatchCountX = (voxelCount / 32) + 1;
 	commandList->dispatch(dispatchCountX, 1, 1);
 
-	_processSdfTexture->transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-	_processVoxelCount = 0;
-	_processMeshIndex = 0;
-	_processSdfTexture = nullptr;
+	data._processSdfTexture->transitionResource(commandList, RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

@@ -17,16 +17,28 @@ float4 main(SdfPSInput input) : SV_TARGET {
     float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
     float3 rayDirection = mul(invViewDirection, meshInstanceScaleRotateMatrix);
     float rayEndThreshold = 0.01;
-    float3 rayStart = mul(float4(input._worldPosition, 1), _sdfBoundsInvWorldMatrics[input._meshInstanceIndex]).xyz;
     bool isHit = false;
     float rayDistance = 0.0;
     float minDistance = 1.0000;
-    int SAMPLE_COUNT_MAX = 128;
+    int SAMPLE_COUNT_MAX = 256;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
-        float3 currentRayOrigin = rayStart + rayDistance * rayDirection;
-        float distance = sampleSdf(input._meshIndex, currentRayOrigin);
+        float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
+        if (currentRayOrigin.x < -0.51 || currentRayOrigin.x > 0.51)
+        {
+            break;
+        }
         
-        minDistance = min(minDistance, distance);
+        if (currentRayOrigin.y < -0.51 || currentRayOrigin.y > 0.51)
+        {
+            break;
+        }
+        
+        if (currentRayOrigin.z < -0.51 || currentRayOrigin.z > 0.51)
+        {
+            break;
+        }
+        
+        float distance = sampleSdf(input._meshIndex, currentRayOrigin);
         
         float minStepSize = 1.0f / (4 * SAMPLE_COUNT_MAX);
         float stepDistance = max(distance, minStepSize);

@@ -92,6 +92,13 @@ public:
 		f32 _cellSize;
 	};
 
+	struct QueueData {
+		const MeshInfo* _meshInfo = nullptr;
+		GpuTexture* _processSdfTexture = nullptr;
+		u32 _processMeshIndex = 0;
+		u32 _processVoxelCount = 0;
+	};
+
 	void initialize();
 	void terminate();
 
@@ -101,11 +108,8 @@ public:
 	void processComputeMeshSdf(const ProcessContext& context);
 
 private:
-	u32 _processMeshIndex = 0;
-	u32 _processVoxelCount = 0;
 	u32 _queueCount = 0;
-	GpuTexture* _processSdfTexture = nullptr;
-	const MeshInfo* _processQueue[PROCESS_QUEUE_COUNT_MAX] = {};
+	QueueData _processQueue[PROCESS_QUEUE_COUNT_MAX] = {};
 
 	GpuBuffer _computeMeshSdfConstantBuffer;
 	DescriptorHandle _computeMeshSdfCbv;
