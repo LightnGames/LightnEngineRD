@@ -51,9 +51,7 @@ public:
 
 				char filePath[FILE_PATH_COUNT_MAX] = {};
 				_fin.read(filePath, filePathLength);
-				if (meshIndex > 1) {
-					continue;
-				}
+
 				MeshDesc desc = {};
 				desc._filePath = filePath;
 				_meshes[meshIndex] = meshSystem->allocateMesh(desc);

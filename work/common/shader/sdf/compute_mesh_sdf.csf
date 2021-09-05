@@ -192,9 +192,14 @@ int RayIntersectsTriangle(float3 o, float3 d, uint triangleId)
     }
  
     float t = dot(v0v2, qvec) * invDet;
-    return t > EPSILON ? 1 : 0;
-    //float3 normal = cross(v0v1, v0v2);
-    //return dot(d, normal) < 0 ? 1 : -1;
+    //return t > EPSILON ? 1 : 0;
+    
+    if (t < EPSILON)
+    {
+        return 0;
+    }
+    float3 normal = cross(v0v1, v0v2);
+    return dot(d, normal) > 0 ? 1 : -1;
 }
 
 /* Returns the index of the nearest triangle to the input position. */
@@ -218,9 +223,12 @@ float NearestTriangleDistance(float3 position)
     
     //return (float)intersectCount / 100.0;
     bool backface = false;
-    backface |= (intersectCounts.x % 2) == 1;
-    backface |= (intersectCounts.y % 2) == 1;
-    backface |= (intersectCounts.z % 2) == 1;
+    //backface |= (intersectCounts.x % 2) == 1;
+    //backface |= (intersectCounts.y % 2) == 1;
+    //backface |= (intersectCounts.z % 2) == 1;
+    backface |= intersectCounts.x > 0;
+    backface |= intersectCounts.y > 0;
+    backface |= intersectCounts.z > 0;
     int s = backface ? -1 : 1;
     return distance * s;
 }
