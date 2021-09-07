@@ -371,6 +371,8 @@ public:
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsMatrixSrv() const { return _meshInstanceBoundsMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsInvMatrixSrv() const { return _meshInstanceBoundsInvMatrixSrv._gpuHandle; }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _sdfGlobalMeshInstanceCountSrv._gpuHandle; }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _sdfGlobalMeshInstanceIndexSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getResarveCount(); }
@@ -422,5 +424,6 @@ private:
 
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
 	GpuBuffer _sdfGlobalMeshInstanceCountBuffer;
-	DescriptorHandle _sdfGlobalSrv;
+	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
+	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
 };

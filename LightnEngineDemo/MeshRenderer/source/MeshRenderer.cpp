@@ -315,12 +315,12 @@ void MeshRenderer::initialize() {
 		DescriptorRange viewInfoCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 		DescriptorRange meshInstanceBoundsMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange meshInstancesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-		DescriptorRange meshInstanceBoundsInvMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 1);
+		DescriptorRange meshInstanceBoundsInvMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, gpu::MESH_SDF_COUNT_MAX, 2);
 
 		RootParameter rootParameters[DebugSdfRootParameters::COUNT] = {};
 		rootParameters[DebugSdfRootParameters::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, SHADER_VISIBILITY_ALL);
-		rootParameters[DebugSdfRootParameters::BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[DebugSdfRootParameters::BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsMatrixSrvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DebugSdfRootParameters::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstancesSrvRange, SHADER_VISIBILITY_VERTEX);
 		rootParameters[DebugSdfRootParameters::INV_BOUNDS_MATRIX].initializeDescriptorTable(1, &meshInstanceBoundsInvMatrixSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DebugSdfRootParameters::SDF_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
@@ -350,8 +350,8 @@ void MeshRenderer::initialize() {
 		pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineStateDesc._rootSignature = _debugMeshSdfRootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
-		pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
-		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
+		//pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
+		//pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
 		_debugMeshSdfPipelineState->iniaitlize(pipelineStateDesc);
 
 		vertexShader->terminate();
@@ -674,6 +674,12 @@ void MeshRenderer::setMeshShaderResources(const RenderContext& context, VramShad
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_PRIMITIVE_INFO, instancingResource->getPrimitiveInfoSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX, instancingResource->getMeshInstanceIndexSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, scene->getMeshInstanceWorldMatrixSrv());
+
+	// sdf
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_BOUNDS, scene->getMeshInstanceBoundsMatrixSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT, scene->getSdfGlobalMeshInstanceCountSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX, scene->getSdfGlobalMeshInstanceIndexSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_TEXTURE, context._meshSdfSrv);
 
 	context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);
 }

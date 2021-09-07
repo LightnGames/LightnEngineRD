@@ -26,6 +26,7 @@ struct RenderContext {
 	GpuDescriptorHandle _meshSrv;
 	GpuDescriptorHandle _vertexResourceDescriptors;
 	GpuDescriptorHandle _debugFixedViewCbv;
+	GpuDescriptorHandle _meshSdfSrv;
 	const Scene* _scene = nullptr;
 	bool _collectResult = false;
 };

@@ -4,7 +4,14 @@
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 Texture2D _textures[] : register(t29);
+
+StructuredBuffer<float4x3> _meshInstanceBoundsMatrices : register(t157);
+StructuredBuffer<uint> _sdfMeshInstanceIndices : register(t158);
+StructuredBuffer<uint> _sdfMeshInstanceCounts : register(t159);
+Texture3D _sdfTextures[] : register(t160);
+
 SamplerState _sampler : register(s0);
+SamplerState _linerSampler : register(s1);
 
 float4 main(VertexOut input) : SV_TARGET {
     CustomParameters materialParameter = _customParameters[input._materialIndex];

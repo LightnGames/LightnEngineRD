@@ -23,10 +23,10 @@ float3 PositionFromVoxelId(uint3 id)
 {
     float cellSize = _constant._cellSize;
     float halfCellSize = cellSize / 2.0;
-    float3 resolution = (float3) _constant._resolution;
+    float3 resolution = float3(_constant._resolution);
     float3 offset = resolution * halfCellSize;
     float3 boundsCenterOffset = (_constant._sdfBoundsMin + _constant._sdfBoundsMax) / 2.0;
-    float3 voxelPosition = (float3) id;
+    float3 voxelPosition = float3(id);
     return voxelPosition * cellSize + boundsCenterOffset - offset + float3(halfCellSize, halfCellSize, halfCellSize);
 }
 
@@ -206,6 +206,7 @@ int RayIntersectsTriangle(float3 o, float3 d, uint triangleId)
 float NearestTriangleDistance(float3 position)
 {
     int3 intersectCounts = int3(0, 0, 0);
+    int3 negativeIntersectCounts = int3(0, 0, 0);
     float distance = 10000.0;
     uint triangleStrat = _constant._indexOffset / 3;
     uint triangleEnd = triangleStrat + _constant._indexCount / 3;
@@ -219,12 +220,18 @@ float NearestTriangleDistance(float3 position)
         intersectCounts.x += RayIntersectsTriangle(position, float3(1, 0, 0), t);
         intersectCounts.y += RayIntersectsTriangle(position, float3(0, 1, 0), t);
         intersectCounts.z += RayIntersectsTriangle(position, float3(0, 0, 1), t);
+        negativeIntersectCounts.x += RayIntersectsTriangle(position, float3(-1, 0, 0), t);
+        negativeIntersectCounts.y += RayIntersectsTriangle(position, float3(0, -1, 0), t);
+        negativeIntersectCounts.z += RayIntersectsTriangle(position, float3(0, 0, -1), t);
     }
     
     bool backface = false;
     backface |= intersectCounts.x > 0;
     backface |= intersectCounts.y > 0;
     backface |= intersectCounts.z > 0;
+    backface |= negativeIntersectCounts.x > 0;
+    backface |= negativeIntersectCounts.y > 0;
+    backface |= negativeIntersectCounts.z > 0;
     int s = backface ? -1 : 1;
     return distance * s;
 }

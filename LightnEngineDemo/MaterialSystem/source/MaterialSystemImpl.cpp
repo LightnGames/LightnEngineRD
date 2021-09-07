@@ -328,6 +328,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	_parameterDatas = new u8[_parameterSizeInByte * MATERIAL_COUNT_MAX];
 
 	constexpr u32 TEXTURE_BASE_REGISTER = 29;
+	constexpr u32 SDF_TEXTURE_BASE_REGISTER = 157;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	DescriptorRange cullingViewCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 	DescriptorRange viewCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
@@ -342,6 +343,10 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	DescriptorRange meshletInstanceWorldMatrixRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 19);
 	DescriptorRange hizRange(DESCRIPTOR_RANGE_TYPE_SRV, 8, 20);
 	DescriptorRange textureDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
+	DescriptorRange sdfMeshInstanceBoundsSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER);
+	DescriptorRange sdfMeshInstanceIndicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 1);
+	DescriptorRange sdfMeshInstanceCountSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 2);
+	DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 256, SDF_TEXTURE_BASE_REGISTER + 3);
 	DescriptorRange cullingResultDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
 	constexpr u32 ROOT_FRUSTUM_COUNT = DefaultMeshRootParam::ROOT_DEFAULT_MESH_COUNT - 2;
@@ -367,6 +372,10 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[DefaultMeshRootParam::MESHLET_PRIMITIVE_INFO].initializeDescriptorTable(1, &meshletInstancePrimitiveInfoRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &meshletInstanceMeshInstanceIndexRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshletInstanceWorldMatrixRange, SHADER_VISIBILITY_ALL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &sdfMeshInstanceIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT].initializeDescriptorTable(1, &sdfMeshInstanceCountSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
 
 		rootSignatureDescFurstumCulling._device = device;
 		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(furstumCullingRootParameters);

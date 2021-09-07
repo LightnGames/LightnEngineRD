@@ -64,8 +64,9 @@ void Scene::initialize() {
 		_meshInstanceWorldMatrixSrv = allocator->allocateDescriptors(1);
 		_meshInstanceBoundsMatrixSrv = allocator->allocateDescriptors(1);
 		_meshInstanceBoundsInvMatrixSrv = allocator->allocateDescriptors(1);
+		_sdfGlobalMeshInstanceCountSrv = allocator->allocateDescriptors(1);
+		_sdfGlobalMeshInstanceIndexSrv = allocator->allocateDescriptors(1);
 		_cullingSceneConstantCbv = allocator->allocateDescriptors(1);
-		_sdfGlobalSrv = allocator->allocateDescriptors(1);
 
 		u64 incrimentSize = static_cast<u64>(allocator->getIncrimentSize());
 
@@ -105,7 +106,9 @@ void Scene::initialize() {
 		{
 			desc._buffer._numElements = MESH_INSTANCE_COUNT_MAX;
 			desc._buffer._structureByteStride = sizeof(u32);
-			device->createShaderResourceView(_sdfGlobalMeshInstanceIndexBuffer.getResource(), &desc, _sdfGlobalSrv._cpuHandle);
+			device->createShaderResourceView(_sdfGlobalMeshInstanceIndexBuffer.getResource(), &desc, _sdfGlobalMeshInstanceIndexSrv._cpuHandle);
+			device->createShaderResourceView(_sdfGlobalMeshInstanceCountBuffer.getResource(), &desc, _sdfGlobalMeshInstanceCountSrv._cpuHandle);
+
 		}
 
 		// scene constant
@@ -131,6 +134,41 @@ void Scene::initialize() {
 		desc._filePath = "common/default_mesh.mto";
 		_defaultMaterial = MaterialSystem::Get()->createMaterial(desc);
 	}
+}
+
+void Scene::terminate() {
+	_meshInstanceBuffer.terminate();
+	_meshInstanceWorldMatrixBuffer.terminate();
+	_meshInstanceBoundsMatrixBuffer.terminate();
+	_meshInstanceBoundsInvMatrixBuffer.terminate();
+	_lodMeshInstanceBuffer.terminate();
+	_subMeshInstanceBuffer.terminate();
+	_sceneCullingConstantBuffer.terminate();
+	_sdfGlobalMeshInstanceIndexBuffer.terminate();
+	_sdfGlobalMeshInstanceCountBuffer.terminate();
+
+	LTN_ASSERT(_gpuMeshInstances.getInstanceCount() == 0);
+	LTN_ASSERT(_gpuLodMeshInstances.getInstanceCount() == 0);
+	LTN_ASSERT(_gpuSubMeshInstances.getInstanceCount() == 0);
+	LTN_ASSERT(_sdfGlobalMeshInstanceIndicesArray.getInstanceCount() == 0);
+
+	_gpuMeshInstances.terminate();
+	_gpuLodMeshInstances.terminate();
+	_gpuSubMeshInstances.terminate();
+	_sdfGlobalMeshInstanceIndicesArray.terminate();
+
+	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
+		LTN_ASSERT(_sdfGlobalMeshInstanceCounts[i] == 0);
+	}
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_meshInstanceSrv);
+	allocator->discardDescriptor(_meshInstanceWorldMatrixSrv);
+	allocator->discardDescriptor(_meshInstanceBoundsMatrixSrv);
+	allocator->discardDescriptor(_meshInstanceBoundsInvMatrixSrv);
+	allocator->discardDescriptor(_cullingSceneConstantCbv);
+	allocator->discardDescriptor(_sdfGlobalMeshInstanceIndexSrv);
+	allocator->discardDescriptor(_sdfGlobalMeshInstanceCountSrv);
 }
 
 void Scene::update() {
@@ -212,40 +250,6 @@ void Scene::processDeletion() {
 			_subMeshInstanceUpdateFlags[subMeshInstanceIndex] &= ~SUB_MESH_INSTANCE_UPDATE_MATERIAL;
 		}
 	}
-}
-
-void Scene::terminate() {
-	_meshInstanceBuffer.terminate();
-	_meshInstanceWorldMatrixBuffer.terminate();
-	_meshInstanceBoundsMatrixBuffer.terminate();
-	_meshInstanceBoundsInvMatrixBuffer.terminate();
-	_lodMeshInstanceBuffer.terminate();
-	_subMeshInstanceBuffer.terminate();
-	_sceneCullingConstantBuffer.terminate();
-	_sdfGlobalMeshInstanceIndexBuffer.terminate();
-	_sdfGlobalMeshInstanceCountBuffer.terminate();
-
-	LTN_ASSERT(_gpuMeshInstances.getInstanceCount() == 0);
-	LTN_ASSERT(_gpuLodMeshInstances.getInstanceCount() == 0);
-	LTN_ASSERT(_gpuSubMeshInstances.getInstanceCount() == 0);
-	LTN_ASSERT(_sdfGlobalMeshInstanceIndicesArray.getInstanceCount() == 0);
-
-	_gpuMeshInstances.terminate();
-	_gpuLodMeshInstances.terminate();
-	_gpuSubMeshInstances.terminate();
-	_sdfGlobalMeshInstanceIndicesArray.terminate();
-
-	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
-		LTN_ASSERT(_sdfGlobalMeshInstanceCounts[i] == 0);
-	}
-
-	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_meshInstanceSrv);
-	allocator->discardDescriptor(_meshInstanceWorldMatrixSrv);
-	allocator->discardDescriptor(_meshInstanceBoundsMatrixSrv);
-	allocator->discardDescriptor(_meshInstanceBoundsInvMatrixSrv);
-	allocator->discardDescriptor(_cullingSceneConstantCbv);
-	allocator->discardDescriptor(_sdfGlobalSrv);
 }
 
 void Scene::terminateDefaultResources() {
@@ -399,7 +403,7 @@ void Scene::debugDrawGlobalSdfCells() {
 				if (count == 0) {
 					continue;
 				}
-				Vector3 cellIndex(x, y, z);
+				Vector3 cellIndex(static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(z));
 				Vector3 start = cellIndex * SDF_GLOBAL_CELL_SIZE + cellOffset - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
 				Vector3 end = cellIndex * SDF_GLOBAL_CELL_SIZE - cellOffset + Vector3(SDF_GLOBAL_CELL_SIZE) - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
 				f32 alpha = static_cast<f32>(count) / 100.0f;

@@ -3,8 +3,9 @@
 #include "../gpu_driven.sfh"
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
-StructuredBuffer<float4x3> _sdfBoundsInvWorldMatrics : register(t0);
-Texture3D _sdf[] : register(t1);
+StructuredBuffer<float4x3> _sdfBoundsWorldMatrics : register(t0);
+StructuredBuffer<float4x3> _sdfBoundsInvWorldMatrics : register(t1);
+Texture3D _sdf[] : register(t2);
 sampler _linerSampler : register(s1);
 
 float sampleSdf(uint textureIndex, float3 localPosition) {
@@ -14,13 +15,15 @@ float sampleSdf(uint textureIndex, float3 localPosition) {
 float4 main(SdfPSInput input) : SV_TARGET {
     float3 viewDirection = normalize(_viewInfo._cameraPosition - input._worldPosition);
     float3 invViewDirection = normalize(-viewDirection);
-    float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
-    float3 rayDirection = mul(invViewDirection, meshInstanceScaleRotateMatrix);
+    float3x3 meshInstanceInvScaleRotateMatrix = (float3x3) _sdfBoundsInvWorldMatrics[input._meshInstanceIndex];
+    float3 rayDirection = mul(invViewDirection, meshInstanceInvScaleRotateMatrix);
     bool isHit = false;
+    float3 currentRayOrigin = input._localPosition;
+    uint meshIndex = input._meshIndex;
     float rayDistance = 0.01;
     int SAMPLE_COUNT_MAX = 256;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i) {
-        float3 currentRayOrigin = input._localPosition + rayDistance * rayDirection;
+        currentRayOrigin = input._localPosition + rayDistance * rayDirection;
         if (currentRayOrigin.x < -0.5 || currentRayOrigin.x > 0.5)
         {
             break;
@@ -36,7 +39,7 @@ float4 main(SdfPSInput input) : SV_TARGET {
             break;
         }
         
-        float distance = sampleSdf(input._meshIndex, currentRayOrigin);
+        float distance = sampleSdf(meshIndex, currentRayOrigin);
         
         float minStepSize = 1.0f / (4 * SAMPLE_COUNT_MAX);
         float stepDistance = max(distance, minStepSize);
@@ -56,5 +59,20 @@ float4 main(SdfPSInput input) : SV_TARGET {
         clip(-1);
     }
     
+    float3x3 meshInstanceScaleRotateMatrix = (float3x3) _sdfBoundsWorldMatrics[input._meshInstanceIndex];
+    float3 position = currentRayOrigin;
+    float offset = 0.01;
+    float3 widthOffset = float3(offset, 0, 0);
+    float3 heightOffset = float3(0, offset, 0);
+    float3 depthOffset = float3(0, 0, offset);
+    float3 normal = float3(
+        sampleSdf(meshIndex, position + widthOffset) - sampleSdf(meshIndex, position - widthOffset),
+        sampleSdf(meshIndex, position + heightOffset) - sampleSdf(meshIndex, position - heightOffset),
+        sampleSdf(meshIndex, position + depthOffset) - sampleSdf(meshIndex, position - depthOffset));
+    normal = normalize(mul(normal, meshInstanceScaleRotateMatrix));
+    
+    // -1 ~ 1 -> 0 ~ 1
+    float3 packedNormal = (normal + float3(1, 1, 1)) / 2.0;
+    return float4(packedNormal, 1);
     return float4(float3(1.0, 0.3, 0.3), 1);
 }

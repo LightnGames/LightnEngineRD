@@ -107,6 +107,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._instancingResource = &_instancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._scene = &_scene;
+		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
 		_meshRenderer.render(context);
 	}
 
@@ -185,6 +186,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._scene = &_scene;
+		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
 		context._collectResult = true;
 		_meshRenderer.render(context);
 
@@ -264,6 +266,7 @@ void MeshRendererSystemImpl::renderMeshShaderDebugFixed(CommandList* commandList
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
 		context._scene = &_scene;
+		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
 		context._collectResult = false;
 		_meshRenderer.render(context);
 
