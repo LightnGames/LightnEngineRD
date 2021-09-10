@@ -36,14 +36,19 @@ struct ComputeLodContext {
 	ViewInfo* _viewInfo = nullptr;
 	GpuBuffer* _meshLodLevelFeedbackBuffer = nullptr;
 	GpuBuffer* _meshLodLevelFeedbackReadbackBuffer = nullptr;
+	GpuBuffer* _materialScreenAreaFeedbackBuffer = nullptr;
+	GpuBuffer* _materialScreenAreaReadbackBuffer = nullptr;
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	u32 _meshCount = 0;
+	u32 _materialCount = 0;
 	u32 _meshInstanceCountMax = 0;
 	GpuDescriptorHandle _meshInstanceHandle;
 	GpuDescriptorHandle _meshHandle;
 	GpuDescriptorHandle _sceneConstantCbv;
 	GpuDescriptorHandle _meshLodLevelFeedbackUav;
 	CpuDescriptorHandle _meshLodLevelFeedbackCpuUav;
+	GpuDescriptorHandle _materialScreenAreaFeedbackUav;
+	CpuDescriptorHandle _materialScreenAreaFeedbackCpuUav;
 };
 
 struct GpuCullingContext {

@@ -1,6 +1,7 @@
 #pragma once
 #include <MaterialSystem/MaterialSystem.h>
 #include <MaterialSystem/impl/PipelineStateSystem.h>
+#include <GfxCore/impl/GpuResourceImpl.h>
 
 enum MaterialStateFlags {
 	MATERIAL_STATE_FLAG_NONE = 0,
@@ -153,6 +154,10 @@ public:
 	bool isEnabledShaderSet(const ShaderSetImpl* shaderSet) const;
 
 	PipelineStateSet* getPipelineStateSet(Type type) { return &_pipelineStateSets[type]; }
+	GpuDescriptorHandle getScreenAreaFeedbackUav() const { return _screenAreaFeedbackUav._gpuHandle; }
+	CpuDescriptorHandle getScreenAreaFeedbackCpuUav() const { return _screenAreaFeedbackCpuUav._cpuHandle; }
+	GpuBuffer* getScreenAreaFeedbackBuffer() { return &_screenAreaFeedbackBuffer; }
+	GpuBuffer* getScreenAreaReadbackBuffer() { return &_screenAreaReadbackBuffer; }
 
 	virtual ShaderSet* createShaderSet(const ShaderSetDesc& desc) override;
 	virtual Material* createMaterial(const MaterialDesc& desc) override;
@@ -167,6 +172,12 @@ private:
 	u8 _materialStateFlags[MATERIAL_COUNT_MAX] = {};
 	u8 _shaderSetStateFlags[SHADER_SET_COUNT_MAX] = {};
 	u8 _materialUpdateFlags[MATERIAL_COUNT_MAX] = {};
+
+	GpuBuffer _screenAreaFeedbackBuffer;
+	GpuBuffer _screenAreaReadbackBuffer;
+	DescriptorHandle _screenAreaFeedbackUav;
+	DescriptorHandle _screenAreaFeedbackCpuUav;
+	u32 _screenAreas[MATERIAL_COUNT_MAX] = {}; // u16 unorm
 
 	PipelineStateSet _pipelineStateSets[TYPE_COUNT] = {};
 };

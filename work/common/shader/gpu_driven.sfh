@@ -1,4 +1,5 @@
 #define INVALID_INDEX 0xffffffff
+#define UINT16_SIZE_IN_BYTE 2
 #define UINT32_SIZE_IN_BYTE 4
 #define EPSILON 0.000001
 

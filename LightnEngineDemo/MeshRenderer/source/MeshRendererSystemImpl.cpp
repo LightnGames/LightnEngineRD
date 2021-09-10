@@ -47,6 +47,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshLodLevelFeedbackUav = _resourceManager.getMeshLodLevelFeedbackUav();
 		context._meshLodLevelFeedbackCpuUav = _resourceManager.getMeshLodLevelFeedbackCpuUav();
 		context._meshLodLevelFeedbackReadbackBuffer = _resourceManager.getMeshLodLevelFeedbackReadbackBuffer();
+		context._materialCount = materialSystem->getMaterialCount();
+		context._materialScreenAreaFeedbackBuffer = materialSystem->getScreenAreaFeedbackBuffer();
+		context._materialScreenAreaReadbackBuffer = materialSystem->getScreenAreaReadbackBuffer();
+		context._materialScreenAreaFeedbackUav = materialSystem->getScreenAreaFeedbackUav();
+		context._materialScreenAreaFeedbackCpuUav = materialSystem->getScreenAreaFeedbackCpuUav();
 		context._meshCount = MeshResourceManager::MESH_COUNT_MAX;
 		_meshRenderer.computeLod(context);
 	}
@@ -296,6 +301,11 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshLodLevelFeedbackUav = _resourceManager.getMeshLodLevelFeedbackUav();
 		context._meshLodLevelFeedbackCpuUav = _resourceManager.getMeshLodLevelFeedbackCpuUav();
 		context._meshLodLevelFeedbackReadbackBuffer = _resourceManager.getMeshLodLevelFeedbackReadbackBuffer();
+		context._materialCount = materialSystem->getMaterialCount();
+		context._materialScreenAreaFeedbackBuffer = materialSystem->getScreenAreaFeedbackBuffer();
+		context._materialScreenAreaReadbackBuffer = materialSystem->getScreenAreaReadbackBuffer();
+		context._materialScreenAreaFeedbackUav = materialSystem->getScreenAreaFeedbackUav();
+		context._materialScreenAreaFeedbackCpuUav = materialSystem->getScreenAreaFeedbackCpuUav();
 		context._meshCount = MeshResourceManager::MESH_COUNT_MAX;
 		_meshRenderer.computeLod(context);
 	}

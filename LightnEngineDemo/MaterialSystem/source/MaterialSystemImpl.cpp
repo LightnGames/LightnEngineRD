@@ -11,6 +11,58 @@ void MaterialSystemImpl::initialize() {
 	_materials.initialize(MATERIAL_COUNT_MAX);
 	_shaderSets.initialize(SHADER_SET_COUNT_MAX);
 	PipelineStateSystem::Get()->initialize();
+
+	Device* device = GraphicsSystemImpl::Get()->getDevice();
+
+	// Material screen area feedback buffers
+	{
+		GpuBufferDesc desc = {};
+		desc._device = device;
+		desc._sizeInByte = MATERIAL_COUNT_MAX * sizeof(u32);
+		desc._initialState = RESOURCE_STATE_UNORDERED_ACCESS;
+		desc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		_screenAreaFeedbackBuffer.initialize(desc);
+		_screenAreaFeedbackBuffer.setDebugName("Material Lod Level Feedback");
+
+		desc._sizeInByte = MATERIAL_COUNT_MAX * sizeof(u32) * BACK_BUFFER_COUNT;
+		desc._initialState = RESOURCE_STATE_COPY_DEST;
+		desc._heapType = HEAP_TYPE_READBACK;
+		desc._flags = RESOURCE_FLAG_NONE;
+		_screenAreaReadbackBuffer.initialize(desc);
+		_screenAreaReadbackBuffer.setDebugName("Material Lod Level Readback");
+	}
+
+	{
+		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+		DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+		_screenAreaFeedbackUav = allocator->allocateDescriptors(1);
+		_screenAreaFeedbackCpuUav = cpuAllocator->allocateDescriptors(1);
+
+		UnorderedAccessViewDesc desc = {};
+		desc._format = FORMAT_R32_TYPELESS;
+		desc._viewDimension = UAV_DIMENSION_BUFFER;
+		desc._buffer._firstElement = 0;
+		desc._buffer._numElements = MATERIAL_COUNT_MAX;
+		desc._buffer._flags = BUFFER_UAV_FLAG_RAW;
+		device->createUnorderedAccessView(_screenAreaFeedbackBuffer.getResource(), nullptr, &desc, _screenAreaFeedbackUav._cpuHandle);
+		device->createUnorderedAccessView(_screenAreaFeedbackBuffer.getResource(), nullptr, &desc, _screenAreaFeedbackCpuUav._cpuHandle);
+	}
+}
+
+void MaterialSystemImpl::terminate() {
+	processDeletion();
+	LTN_ASSERT(_materials.getInstanceCount() == 0);
+	_materials.terminate();
+	_shaderSets.terminate();
+	PipelineStateSystem::Get()->terminate();
+
+	_screenAreaFeedbackBuffer.terminate();
+	_screenAreaReadbackBuffer.terminate();
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	DescriptorHeapAllocator* cpuAllocator = GraphicsSystemImpl::Get()->getSrvCbvUavCpuDescriptorAllocator();
+	allocator->discardDescriptor(_screenAreaFeedbackUav);
+	cpuAllocator->discardDescriptor(_screenAreaFeedbackCpuUav);
 }
 
 void MaterialSystemImpl::update() {
@@ -63,14 +115,6 @@ void MaterialSystemImpl::processDeletion() {
 	}
 
 	PipelineStateSystem::Get()->processDeletion();
-}
-
-void MaterialSystemImpl::terminate() {
-	processDeletion();
-	LTN_ASSERT(_materials.getInstanceCount() == 0);
-	_materials.terminate();
-	_shaderSets.terminate();
-	PipelineStateSystem::Get()->terminate();
 }
 
 u32 MaterialSystemImpl::findShaderSetIndex(u64 fileHash) {

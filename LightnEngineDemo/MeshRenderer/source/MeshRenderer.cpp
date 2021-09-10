@@ -195,9 +195,10 @@ void MeshRenderer::initialize() {
 		DescriptorRange sceneCullingConstantRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 		DescriptorRange cullingViewInfoConstantRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 		DescriptorRange meshDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
-		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
+		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 3, 3);
 		DescriptorRange resultLodLevelDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 		DescriptorRange lodLevelFeedbackUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+		DescriptorRange materialLodLevelFeedbackUavRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
 
 		RootParameter rootParameters[GpuComputeLodRootParam::COUNT] = {};
 		rootParameters[GpuComputeLodRootParam::SCENE_INFO].initializeDescriptorTable(1, &sceneCullingConstantRange, SHADER_VISIBILITY_ALL);
@@ -206,6 +207,7 @@ void MeshRenderer::initialize() {
 		rootParameters[GpuComputeLodRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[GpuComputeLodRootParam::RESULT_LEVEL].initializeDescriptorTable(1, &resultLodLevelDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[GpuComputeLodRootParam::FEEDBACK_LEVEL].initializeDescriptorTable(1, &lodLevelFeedbackUavRange, SHADER_VISIBILITY_ALL);
+		rootParameters[GpuComputeLodRootParam::MATERIAL_LEVEL].initializeDescriptorTable(1, &materialLodLevelFeedbackUavRange, SHADER_VISIBILITY_ALL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
@@ -447,12 +449,20 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	GpuCullingResource* gpuCullingResource = context._gpuCullingResource;
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::BLUE, "Compute Lod");
 
+	u32 clearValues[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+
 	// Lod level feedback buffer をクリア
 	{
-		u32 clearValues[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
 		GpuDescriptorHandle gpuDescriptor = context._meshLodLevelFeedbackUav;
 		CpuDescriptorHandle cpuDescriptor = context._meshLodLevelFeedbackCpuUav;
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, context._meshLodLevelFeedbackBuffer->getResource(), clearValues, 0, nullptr);
+	}
+
+	// Material screen area feedback buffer をクリア
+	{
+		GpuDescriptorHandle gpuDescriptor = context._materialScreenAreaFeedbackUav;
+		CpuDescriptorHandle cpuDescriptor = context._materialScreenAreaFeedbackCpuUav;
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, context._materialScreenAreaFeedbackBuffer->getResource(), clearValues, 0, nullptr);
 	}
 
 	commandList->setComputeRootSignature(_computeLodRootSignature);
@@ -465,6 +475,7 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::LOD_MESH, context._meshHandle);
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::MESH_INSTANCE, context._meshInstanceHandle);
 	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::FEEDBACK_LEVEL, context._meshLodLevelFeedbackUav);
+	commandList->setComputeRootDescriptorTable(GpuComputeLodRootParam::MATERIAL_LEVEL, context._materialScreenAreaFeedbackUav);
 
 	u32 dispatchCount = RoundUp(context._meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
@@ -474,11 +485,22 @@ void MeshRenderer::computeLod(const ComputeLodContext& context) const {
 	{
 		context._meshLodLevelFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
 
-		u32 meshSizeInByte = sizeof(u32) * context._meshCount;
-		u32 offset = GraphicsSystemImpl::Get()->getFrameIndex() * meshSizeInByte;
-		commandList->copyBufferRegion(context._meshLodLevelFeedbackReadbackBuffer->getResource(), offset, context._meshLodLevelFeedbackBuffer->getResource(), 0, meshSizeInByte);
+		u32 copySizeInByte = sizeof(u32) * context._meshCount;
+		u32 offset = GraphicsSystemImpl::Get()->getFrameIndex() * copySizeInByte;
+		commandList->copyBufferRegion(context._meshLodLevelFeedbackReadbackBuffer->getResource(), offset, context._meshLodLevelFeedbackBuffer->getResource(), 0, copySizeInByte);
 
 		context._meshLodLevelFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
+	}
+
+	// Material screen area feedback 結果をリードバックバッファにコピー
+	{
+		context._materialScreenAreaFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_COPY_SOURCE);
+
+		u32 copySizeInByte = sizeof(u32) * context._materialCount;
+		u32 offset = GraphicsSystemImpl::Get()->getFrameIndex() * copySizeInByte;
+		commandList->copyBufferRegion(context._materialScreenAreaReadbackBuffer->getResource(), offset, context._materialScreenAreaFeedbackBuffer->getResource(), 0, copySizeInByte);
+
+		context._materialScreenAreaFeedbackBuffer->transitionResource(commandList, RESOURCE_STATE_UNORDERED_ACCESS);
 	}
 }
 
