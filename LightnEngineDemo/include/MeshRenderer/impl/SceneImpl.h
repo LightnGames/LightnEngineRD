@@ -373,6 +373,7 @@ public:
 	GpuDescriptorHandle getMeshInstanceBoundsInvMatrixSrv() const { return _meshInstanceBoundsInvMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _sdfGlobalMeshInstanceCountSrv._gpuHandle; }
 	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _sdfGlobalMeshInstanceIndexSrv._gpuHandle; }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceOffsetSrv() const { return _sdfGlobalMeshInstanceOffsetSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getResarveCount(); }
@@ -418,12 +419,15 @@ private:
 	SceneInfo _visibleSceneInfo;
 
 	// SDF
-	u32 _sdfGlobalCells[SDF_GLOBAL_CELL_COUNT] = {};
+	u32 _sdfGlobalOffsets[SDF_GLOBAL_CELL_COUNT] = {};
 	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
+	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_CELL_COUNT] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
 
+	GpuBuffer _sdfGlobalMeshInstanceOffsetBuffer;
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
 	GpuBuffer _sdfGlobalMeshInstanceCountBuffer;
+	DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
 };

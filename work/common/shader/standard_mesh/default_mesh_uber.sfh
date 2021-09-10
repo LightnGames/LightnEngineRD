@@ -92,6 +92,7 @@ void main(
         vertexOut._meshletIndex = vertexIndexOffset;
         vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
+        vertexOut._worldPosition = worldPos.xyz;
         verts[gtid] = vertexOut;
     }
 #endif
@@ -156,6 +157,7 @@ void main(
         vertexOut._meshletIndex = meshletIndex;
         vertexOut._materialIndex = vertexMeshletInstanceInfo._materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
+        vertexOut._worldPosition = worldPos.xyz;
         verts[gtid] = vertexOut;
     }
 #endif

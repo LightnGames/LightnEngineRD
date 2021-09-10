@@ -344,9 +344,11 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	DescriptorRange hizRange(DESCRIPTOR_RANGE_TYPE_SRV, 8, 20);
 	DescriptorRange textureDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
 	DescriptorRange sdfMeshInstanceBoundsSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER);
-	DescriptorRange sdfMeshInstanceIndicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 1);
-	DescriptorRange sdfMeshInstanceCountSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 2);
-	DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 256, SDF_TEXTURE_BASE_REGISTER + 3);
+	DescriptorRange sdfMeshInstanceInvBoundsSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 1);
+	DescriptorRange sdfMeshInstanceIndexOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 2);
+	DescriptorRange sdfMeshInstanceIndicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 3);
+	DescriptorRange sdfMeshInstanceCountSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 4);
+	DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 256, SDF_TEXTURE_BASE_REGISTER + 5);
 	DescriptorRange cullingResultDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
 	constexpr u32 ROOT_FRUSTUM_COUNT = DefaultMeshRootParam::ROOT_DEFAULT_MESH_COUNT - 2;
@@ -373,6 +375,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[DefaultMeshRootParam::MESHLET_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &meshletInstanceMeshInstanceIndexRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshletInstanceWorldMatrixRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_INV_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceInvBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_OFFSET].initializeDescriptorTable(1, &sdfMeshInstanceIndexOffsetSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &sdfMeshInstanceIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT].initializeDescriptorTable(1, &sdfMeshInstanceCountSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
