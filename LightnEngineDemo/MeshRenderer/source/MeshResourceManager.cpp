@@ -519,7 +519,7 @@ MeshImpl* MeshResourceManager::allocateMesh(const MeshDesc& desc) {
 	Vec3f min_box(boundsMin._x, boundsMin._y, boundsMin._z);
 	Vec3f max_box(boundsMax._x, boundsMax._y, boundsMax._z);
 
-	f32 dx = 0.05f;
+	f32 dx = 0.1f;
 	// Å‘å’·‚³‚ª16m‚ğ’´‚¦‚é‚à‚Ì
 	Vector3 boundsSize = boundsMax - boundsMin;
 	f32 maxSize = max(boundsSize._x, max(boundsSize._y, boundsSize._z));

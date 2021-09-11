@@ -1,6 +1,7 @@
 #include <TextureSystem/impl/TextureSystemImpl.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
 #include <GfxCore/impl/VramBufferUpdater.h>
+#include <TextureSystem/impl/TextureStreamingSystem.h> // 循環参照？
 
 TextureSystemImpl _textureSystem;
 void TextureSystemImpl::initialize() {
@@ -14,7 +15,7 @@ void TextureSystemImpl::initialize() {
 	desc._filePath = "common/common_black.dds";
 	_commonBlackTexture = allocateTexture(desc);
 	_commonBlackTexture->getAsset()->requestLoad();
-	loadTexture(0, 0);
+	loadTexture(0, 64);
 	Resource* commonBlackResource = static_cast<TextureImpl*>(_commonBlackTexture)->getGpuTexture()->getResource();
 
 	// デスクリプター初期値として黒のテクスチャで埋める
@@ -24,17 +25,32 @@ void TextureSystemImpl::initialize() {
 		CpuDescriptorHandle descriptor = _descriptors._cpuHandle + static_cast<u64>(incrimentSize) * textureIndex;
 		device->createShaderResourceView(commonBlackResource, nullptr, descriptor);
 	}
+
+	TextureStreamingSystem::Get()->initialize();
+}
+
+void TextureSystemImpl::terminate() {
+	_commonBlackTexture->requestToDelete();
+	processDeletion();
+	LTN_ASSERT(_textures.getInstanceCount() == 0);
+	_textures.terminate();
+	delete[] _textureAssets;
+	GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->discardDescriptor(_descriptors);
+
+	TextureStreamingSystem::Get()->terminate();
 }
 
 void TextureSystemImpl::update() {
 	u32 textureCount = _textures.getInstanceCount();
 	for (u32 textureIndex = 0; textureIndex < textureCount; ++textureIndex) {
 		if (_assetStateFlags[textureIndex] & ASSET_STATE_REQUEST_LOAD) {
-			loadTexture(textureIndex, 1);
+			loadTexture(textureIndex, 64);
 		}
 	}
 
 	debugDrawGui();
+
+	TextureStreamingSystem::Get()->update();
 }
 
 void TextureSystemImpl::processDeletion() {
@@ -50,15 +66,6 @@ void TextureSystemImpl::processDeletion() {
 			_fileHashes[textureIndex] = 0;
 		}
 	}
-}
-
-void TextureSystemImpl::terminate() {
-	_commonBlackTexture->requestToDelete();
-	processDeletion();
-	LTN_ASSERT(_textures.getInstanceCount() == 0);
-	_textures.terminate();
-	delete[] _textureAssets;
-	GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->discardDescriptor(_descriptors);
 }
 
 void TextureSystemImpl::debugDrawGui() {
@@ -138,6 +145,11 @@ Texture* TextureSystemImpl::allocateTexture(const TextureDesc& desc) {
 
 u32 TextureSystemImpl::getTextureIndex(const Texture* texture) const {
 	return _textures.getArrayIndex(static_cast<const TextureImpl*>(texture));
+}
+
+TextureImpl* TextureSystemImpl::getTexture(u32 textureIndex)
+{
+	return &_textures[textureIndex];
 }
 
 Texture* TextureSystemImpl::findTexture(u64 fileHash) {
@@ -453,7 +465,7 @@ HRESULT GetSurfaceInfo(
 void TextureImpl::initialize(const TextureDesc& desc) {
 }
 
-void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
+void TextureSystemImpl::loadTexture(u32 textureIndex, u32 maxResolution) {
 	LTN_ASSERT(_assetStateFlags[textureIndex] == ASSET_STATE_REQUEST_LOAD);
 
 	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
@@ -515,7 +527,6 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
 	fread_s(&ddsHeader, sizeof(DdsHeader), sizeof(DdsHeader), 1, fin);
 	LTN_ASSERT(ddsHeader._ddspf._flags & DDS_FOURCC);
 	LTN_ASSERT(MAKEFOURCC('D', 'X', '1', '0') == ddsHeader._ddspf._fourCC);
-	LTN_ASSERT(mipmapLevel < ddsHeader._mipMapCount);
 
 	DdsHeaderDxt10 ddsHeaderDxt10;
 	fread_s(&ddsHeaderDxt10, sizeof(DdsHeaderDxt10), sizeof(DdsHeaderDxt10), 1, fin);
@@ -526,61 +537,38 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
 	bool is3dTexture = ddsHeaderDxt10._resourceDimension == RESOURCE_DIMENSION_TEXTURE3D;
 	bool isCubeMapTexture = false;
 
-	u32 subResourceIndex = 0;
-	SubResourceData subResources[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
-	for (u32 planeIndex = 0; planeIndex < numberOfPlanes; ++planeIndex) {
-		u64 srcBits = 0;
-		for (u32 arrayIndex = 0; arrayIndex < ddsHeaderDxt10._arraySize; arrayIndex++) {
-			u32 w = ddsHeader._width;
-			u32 h = ddsHeader._width;
-			u32 d = ddsHeader._depth;
-			for (u32 mipIndex = 0; mipIndex < mipCount; mipIndex++) {
-				u32 numBytes = 0;
-				u32 rowBytes = 0;
-				LTN_SUCCEEDED(GetSurfaceInfo(w, h, ddsHeaderDxt10._dxgiFormat, &numBytes, &rowBytes, nullptr));
-
-				SubResourceData& subResource = subResources[subResourceIndex++];
-				subResource._data = reinterpret_cast<void*>(srcBits);
-				subResource._rowPitch = static_cast<s64>(rowBytes);
-				subResource._slicePitch = static_cast<s64>(numBytes);
-
-				// AdjustPlaneResource(ddsHeaderDxt10._dxgiFormat, h, planeIndex, subResource);
-				srcBits += numBytes * d;
-
-				w = Max(w / 2, 1u);
-				h = Max(h / 2, 1u);
-				d = Max(d / 2, 1u);
-			}
-		}
-	}
-
+	u32 clampedWidth = min(ddsHeader._width, maxResolution);
+	u32 clampedHeight = min(ddsHeader._height, maxResolution);
+	u32 mipLevel = static_cast<u32>(std::log2(max(clampedWidth, clampedHeight)) + 1);
 	GpuTextureDesc textureDesc = {};
 	textureDesc._device = device;
 	textureDesc._format = ddsHeaderDxt10._dxgiFormat;
-	textureDesc._width = ddsHeader._width / (mipmapLevel + 1);
-	textureDesc._height = ddsHeader._height / (mipmapLevel + 1);
-	textureDesc._mipLevels = mipCount - mipmapLevel;
+	textureDesc._width = clampedWidth;
+	textureDesc._height = clampedHeight;
+	textureDesc._mipLevels = mipLevel;
 	textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	gpuTexture.initialize(textureDesc);
 	gpuTexture.setDebugName(_debugNames[textureIndex]._name);
 
 	u32 numArray = is3dTexture ? 1 : ddsHeaderDxt10._arraySize;
 	ResourceDesc textureResourceDesc = gpuTexture.getResourceDesc();
-	if (mipmapLevel > 0) {
+
+	// 最大解像度が指定してある場合、それ以外のピクセルを読み飛ばします。
+	u32 skipMipLevel = mipCount - mipLevel;
+	if (skipMipLevel > 0) {
 		ResourceDesc resourceDesc = textureResourceDesc;
 		resourceDesc._width = ddsHeader._width;
 		resourceDesc._height = ddsHeader._height;
 		resourceDesc._mipLevels = mipCount;
 
-		u64 requiredSize = 0;
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u64 rowSizesInBytes[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u32 numberOfResources = numArray * mipCount * numberOfPlanes;
-		device->getCopyableFootprints(&resourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
+		device->getCopyableFootprints(&resourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, nullptr);
 
 		u32 textureFileSeekSizeInbyte = 0;
-		for (u32 subResourceIndex = 0; subResourceIndex < mipmapLevel; ++subResourceIndex) {
+		for (u32 subResourceIndex = 0; subResourceIndex < skipMipLevel; ++subResourceIndex) {
 			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
 			u32 rowSizeInBytes = static_cast<u32>(rowSizesInBytes[subResourceIndex]);
 			u32 numRow = numRows[subResourceIndex];
@@ -592,12 +580,41 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
 		fseek(fin, textureFileSeekSizeInbyte, SEEK_CUR);
 	}
 
+	// サブリソースのレイアウトに沿ってファイルからピクセルデータを読み込み＆ VRAM にアップロード
 	u64 requiredSize = 0;
 	{
+		u32 subResourceIndex = 0;
+		SubResourceData subResources[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
+		for (u32 planeIndex = 0; planeIndex < numberOfPlanes; ++planeIndex) {
+			u64 srcBits = 0;
+			for (u32 arrayIndex = 0; arrayIndex < ddsHeaderDxt10._arraySize; arrayIndex++) {
+				u32 w = ddsHeader._width;
+				u32 h = ddsHeader._height;
+				u32 d = ddsHeader._depth;
+				for (u32 mipIndex = 0; mipIndex < mipLevel; mipIndex++) {
+					u32 numBytes = 0;
+					u32 rowBytes = 0;
+					LTN_SUCCEEDED(GetSurfaceInfo(w, h, ddsHeaderDxt10._dxgiFormat, &numBytes, &rowBytes, nullptr));
+
+					SubResourceData& subResource = subResources[subResourceIndex++];
+					subResource._data = reinterpret_cast<void*>(srcBits);
+					subResource._rowPitch = static_cast<s64>(rowBytes);
+					subResource._slicePitch = static_cast<s64>(numBytes);
+
+					// AdjustPlaneResource(ddsHeaderDxt10._dxgiFormat, h, planeIndex, subResource);
+					srcBits += numBytes * d;
+
+					w = Max(w / 2, 1u);
+					h = Max(h / 2, 1u);
+					d = Max(d / 2, 1u);
+				}
+			}
+		}
+
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u64 rowSizesInBytes[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
-		u32 numberOfResources = numArray * textureDesc._mipLevels * numberOfPlanes;
+		u32 numberOfResources = numArray * mipLevel * numberOfPlanes;
 		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
 
 		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
@@ -630,6 +647,10 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipmapLevel) {
 
 	_textures[textureIndex].setReqiredSize(static_cast<u32>(requiredSize));
 	_textureSizeInByte += requiredSize;
+}
+
+void TextureSystemImpl::loadResidentTexture(u32 textureIndex)
+{
 }
 
 void TextureImpl::terminate() {

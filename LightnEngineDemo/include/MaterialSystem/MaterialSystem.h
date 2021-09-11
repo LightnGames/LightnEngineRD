@@ -21,10 +21,16 @@ struct LTN_MATERIAL_SYSTEM_API Material {
 	virtual void requestToDelete() = 0;
 	virtual void setTexture(u32 nameHash, Texture* texture) = 0;
 	virtual const u8* getParameterRaw(u32 nameHash) const = 0;
+	virtual const u8* getParameterRawFromIndex(u32 index) const = 0;
 
 	template<class T>
 	const T* getParameter(u32 nameHash) const {
 		return reinterpret_cast<const T*>(getParameterRaw(nameHash));
+	}
+
+	template<class T>
+	const T* getParameterFromIndex(u32 index) const {
+		return reinterpret_cast<const T*>(getParameterRawFromIndex(index));
 	}
 
 	template<class T>

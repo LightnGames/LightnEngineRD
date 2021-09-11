@@ -95,8 +95,10 @@ struct MaterialImpl :public Material {
 	void setStateFlags(u8* flags) { _stateFlags = flags; }
 	void setUpdateFlags(u8* flags) { _updateFlags = flags; }
 	void setShaderSet(ShaderSetImpl* shaderSet) { _shaderSet = shaderSet; }
+	u16 findParameterCount(u16 typeIndex, u16* outTypeIndices = nullptr) const;
 
 protected:
+	virtual const u8* getParameterRawFromIndex(u32 index) const override;
 	virtual const u8* getParameterRaw(u32 nameHash) const override;
 	virtual void setParameterRaw(u32 nameHash, const void* dataPtr) override;
 

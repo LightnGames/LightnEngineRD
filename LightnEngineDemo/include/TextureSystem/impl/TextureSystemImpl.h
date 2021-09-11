@@ -45,15 +45,17 @@ private:
 
 class LTN_TEXTURE_SYSTEM_API TextureSystemImpl :public TextureSystem {
 public:
-	static constexpr u32 TEXTURE_COUNT_MAX = 512;
 	void initialize();
 	void update();
 	void processDeletion();
 	void terminate();
 	void debugDrawGui();
-	void loadTexture(u32 textureIndex, u32 mipmapLevel);
+	void loadTexture(u32 textureIndex, u32 maxResolution);
+	void loadResidentTexture(u32 textureIndex);
 
+	u32 getTextureResarveCount() const { return _textures.getResarveCount(); }
 	u32 getTextureIndex(const Texture* texture) const;
+	TextureImpl* getTexture(u32 textureIndex);
 	Texture* findTexture(u64 fileHash);
 	DescriptorHandle getDescriptors() const { return _descriptors; }
 	virtual Texture* createTexture(const TextureDesc& desc) override;

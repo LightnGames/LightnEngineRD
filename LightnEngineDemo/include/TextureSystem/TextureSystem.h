@@ -18,6 +18,8 @@ protected:
 
 class LTN_TEXTURE_SYSTEM_API TextureSystem {
 public:
+	static constexpr u32 TEXTURE_COUNT_MAX = 512;
+
 	virtual Texture* createTexture(const TextureDesc& desc) = 0;
 	virtual Texture* allocateTexture(const TextureDesc& desc) = 0;
 

@@ -3,6 +3,7 @@
 #include <GfxCore/impl/GraphicsApiInterface.h>
 #include <MeshRenderer/GpuStruct.h>
 #include <TextureSystem/impl/TextureSystemImpl.h>
+#include <TextureSystem/impl/TextureStreamingSystem.h>
 #include <fstream>
 
 MaterialSystemImpl _materialSystem;
@@ -67,6 +68,30 @@ void MaterialSystemImpl::terminate() {
 
 void MaterialSystemImpl::update() {
 	PipelineStateSystem::Get()->update();
+
+	// Screen area をリードバック
+	{
+		u32 frameIndex = GraphicsSystemImpl::Get()->getFrameIndex();
+		u64 startOffset = static_cast<u64>(frameIndex) * MATERIAL_COUNT_MAX;
+		MemoryRange range(startOffset, MATERIAL_COUNT_MAX);
+		u32* mapPtr = _screenAreaReadbackBuffer.map<u32>(&range);
+		memcpy(_screenAreas, mapPtr, sizeof(u32) * MATERIAL_COUNT_MAX);
+		_screenAreaReadbackBuffer.unmap();
+	}
+
+	// テクスチャストリーミングシステムにマテリアルが持っているテクスチャにストリーミングレベルを送信
+	TextureStreamingSystem* textureStreamingSystem = TextureStreamingSystem::Get();
+	u32 materialCount = _materials.getResarveCount();
+	for (u32 i = 0; i < materialCount; ++i) {
+		MaterialImpl* material = &_materials[i];
+		f32 screenArea = static_cast<f32>(_screenAreas[i]) / UINT16_MAX;
+		u16 foundIndices[16];
+		u16 foundCount = _materials[i].findParameterCount(Material::ShaderValiableType::TEXTURE, foundIndices);
+		for (u32 j = 0; j < foundCount; ++j) {
+			const u32* textureIndex = _materials[i].getParameterFromIndex<u32>(foundIndices[j]);
+			textureStreamingSystem->updateStreamingLevel(*textureIndex, screenArea);
+		}
+	}
 }
 
 void MaterialSystemImpl::processDeletion() {
@@ -262,13 +287,18 @@ void MaterialImpl::setTexture(u32 nameHash, Texture* texture) {
 	setParameter<u32>(nameHash, TextureSystemImpl::Get()->getTextureIndex(texture));
 }
 
+const u8* MaterialImpl::getParameterRawFromIndex(u32 index) const
+{
+	return &_parameterData[_shaderSet->_parameterByteOffset[index]];
+}
+
 const u8* MaterialImpl::getParameterRaw(u32 nameHash) const {
 	u16 findIndex = findParameter(nameHash);
 	if (findIndex == INVALID_PARAMETER_INDEX) {
 		return nullptr;
 	}
 
-	return &_parameterData[_shaderSet->_parameterByteOffset[findIndex]];
+	return getParameterRawFromIndex(findIndex);
 }
 
 void MaterialImpl::setParameterRaw(u32 nameHash, const void* dataPtr) {
@@ -293,6 +323,23 @@ u16 MaterialImpl::findParameter(u32 nameHash) const {
 	}
 
 	return INVALID_PARAMETER_INDEX;
+}
+
+u16 MaterialImpl::findParameterCount(u16 typeIndex, u16* outTypeIndices) const
+{
+	u16 parameterCount = _shaderSet->_parameterCount;
+	u16* parameterTypes = _shaderSet->_parameterTypes;
+	u16 foundCount = 0;
+	for (u16 parameterIndex = 0; parameterIndex < parameterCount; ++parameterIndex) {
+		if (typeIndex == parameterTypes[parameterIndex]) {
+			if (outTypeIndices != nullptr) {
+				outTypeIndices[foundCount] = parameterIndex;
+			}
+			foundCount++;
+		}
+	}
+
+	return foundCount;
 }
 
 void ShaderSetImpl::requestToDelete() {

@@ -127,7 +127,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)__Intermediate\Bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Core.lib;D3D12Graphics.lib;GfxCore.lib;DebugRenderer.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Core.lib;D3D12Graphics.lib;GfxCore.lib;DebugRenderer.lib;Win64Application.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,15 +149,17 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)__Intermediate\Bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Core.lib;D3D12Graphics.lib;GfxCore.lib;DebugRenderer.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Core.lib;D3D12Graphics.lib;GfxCore.lib;DebugRenderer.lib;Win64Application.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\TextureSystem\impl\TextureStreamingSystem.h" />
     <ClInclude Include="..\include\TextureSystem\impl\TextureSystemImpl.h" />
     <ClInclude Include="..\include\TextureSystem\ModuleSettings.h" />
     <ClInclude Include="..\include\TextureSystem\TextureSystem.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\TextureStreamingSystem.cpp" />
     <ClCompile Include="source\TextureSystemImpl.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
