@@ -6,6 +6,7 @@ void GpuResource::initialize() {
 
 void GpuResource::terminate() {
 	_resource->terminate();
+	_resource = nullptr;
 }
 
 void GpuResource::transitionResource(CommandList* commandList, ResourceStates stateAfter) {

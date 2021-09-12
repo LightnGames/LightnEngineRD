@@ -336,7 +336,8 @@ void DeviceD3D12::createCommittedResource(HeapType heapType, HeapFlags heapFlags
 	D3D12_HEAP_PROPERTIES heapProperties = {};
 	heapProperties.Type = toD3d12(heapType);
 
-	LTN_SUCCEEDED(_device->CreateCommittedResource(&heapProperties, toD3d12(heapFlags), &resourceDesc, toD3d12(initialResourceState), toD3d12(optimizedClearValue), IID_PPV_ARGS(&resource)));
+	HRESULT hr = _device->CreateCommittedResource(&heapProperties, toD3d12(heapFlags), &resourceDesc, toD3d12(initialResourceState), toD3d12(optimizedClearValue), IID_PPV_ARGS(&resource));
+	LTN_SUCCEEDED(hr);
 	static_cast<ResourceD3D12*>(dstResource)->initialize(resource);
 }
 

@@ -503,7 +503,7 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 			commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
-			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE, meshInstanceHandle);
+			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, meshInstanceHandle);
 			commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
 
 			u32 instanceInfo[2] = {};

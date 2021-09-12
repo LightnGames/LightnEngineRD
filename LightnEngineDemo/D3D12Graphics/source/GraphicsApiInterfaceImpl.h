@@ -506,6 +506,7 @@ struct GraphicsApiArray {
 
 	u32 request() {
 		u32 index = _array.request();
+		LTN_ASSERT(_flags[index] == GRAPHICS_INTERFACE_STATE_NONE);
 		resetStateFlags(index);
 		return index;
 	}

@@ -45,7 +45,7 @@ void ViewSystemImpl::update() {
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
 	if (DebugGui::BeginTabBar("ViewSystemTabBar")) {
 		if (DebugGui::BeginTabItem("Fixed View")) {
-			DebugGui::Image(_debugFixedView._hdrSrv._gpuHandle, Vector2(200 * aspectRate, 200));
+			//DebugGui::Image(_debugFixedView._hdrSrv._gpuHandle, Vector2(200 * aspectRate, 200));
 			DebugGui::EndTabItem();
 		}
 		DebugGui::EndTabBar();

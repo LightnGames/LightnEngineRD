@@ -81,10 +81,11 @@ void MaterialSystemImpl::update() {
 
 	// テクスチャストリーミングシステムにマテリアルが持っているテクスチャにストリーミングレベルを送信
 	TextureStreamingSystem* textureStreamingSystem = TextureStreamingSystem::Get();
+	textureStreamingSystem->resetStreamingLevels();
 	u32 materialCount = _materials.getResarveCount();
 	for (u32 i = 0; i < materialCount; ++i) {
 		MaterialImpl* material = &_materials[i];
-		f32 screenArea = static_cast<f32>(_screenAreas[i]) / UINT16_MAX;
+		f32 screenArea = static_cast<f32>(min(_screenAreas[i], UINT16_MAX)) / UINT16_MAX;
 		u16 foundIndices[16];
 		u16 foundCount = _materials[i].findParameterCount(Material::ShaderValiableType::TEXTURE, foundIndices);
 		for (u32 j = 0; j < foundCount; ++j) {
@@ -611,16 +612,30 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// classic
 	{
 		DescriptorRange cbvDescriptorRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		DescriptorRange meshInstanceDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange meshInstanceWordlMatrixSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		DescriptorRange materialDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		DescriptorRange meshInstanceSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
 		DescriptorRange textureDescriptorRange(DESCRIPTOR_RANGE_TYPE_SRV, 128, TEXTURE_BASE_REGISTER);
+		DescriptorRange sdfMeshInstanceBoundsSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER);
+		DescriptorRange sdfMeshInstanceInvBoundsSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 1);
+		DescriptorRange sdfMeshInstanceIndexOffsetSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 2);
+		DescriptorRange sdfMeshInstanceIndicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 3);
+		DescriptorRange sdfMeshInstanceCountSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, SDF_TEXTURE_BASE_REGISTER + 4);
+		DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 256, SDF_TEXTURE_BASE_REGISTER + 5);
 
 		RootParameter rootParameters[ClassicMeshRootParam::COUNT] = {};
 		rootParameters[ClassicMeshRootParam::SCENE_CONSTANT].initializeDescriptorTable(1, &cbvDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[ClassicMeshRootParam::MESH_INFO].initializeConstant(1, 2, SHADER_VISIBILITY_VERTEX);
 		rootParameters[ClassicMeshRootParam::MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_PIXEL);
-		rootParameters[ClassicMeshRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[ClassicMeshRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, SHADER_VISIBILITY_ALL);
+		rootParameters[ClassicMeshRootParam::MESH_INSTANCE_WORLD_MATRIX].initializeDescriptorTable(1, &meshInstanceWordlMatrixSrvRange, SHADER_VISIBILITY_VERTEX);
 		rootParameters[ClassicMeshRootParam::TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_INSTANCE_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_INSTANCE_INV_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceInvBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_INSTANCE_OFFSET].initializeDescriptorTable(1, &sdfMeshInstanceIndexOffsetSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &sdfMeshInstanceIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_INSTANCE_COUNT].initializeDescriptorTable(1, &sdfMeshInstanceCountSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ClassicMeshRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
 
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;

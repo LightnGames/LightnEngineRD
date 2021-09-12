@@ -656,7 +656,7 @@ void MeshRenderer::multiDrawRender(const MultiIndirectRenderContext& context) co
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE, context._meshInstanceWorldMatrixSrv);
+		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
 		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
 
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
@@ -721,6 +721,7 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	commandList->setComputeRootSignature(_gpuCullingRootSignature);
 	commandList->setPipelineState(pipelineState);
 	gpuCullingResource->setGpuCullingResources(commandList);
+	gpuCullingResource->resourceBarriersHizTextureToSrv(commandList);
 
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::SCENE_INFO, context._sceneConstantCbv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::VIEW_INFO, context._cullingViewCbv);
@@ -737,6 +738,7 @@ void MeshRenderer::gpuCulling(const GpuCullingContext& context, PipelineState* p
 	u32 dispatchCount = RoundUp(meshInstanceCountMax, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	instancingResource->resetResourceGpuCullingBarriers(commandList);
+	gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);
 }
 
 void MeshRenderer::gpuCulling(const MultiDrawGpuCullingContext& context, PipelineState* pipelineState) const {

@@ -29,5 +29,6 @@ VertexOut main(VSInput input){
     vertexOut._meshletIndex = 0;
     vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
     vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
+    vertexOut._worldPosition = worldPos.xyz;
     return vertexOut;
 }

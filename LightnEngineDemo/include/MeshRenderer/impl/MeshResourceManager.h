@@ -74,7 +74,7 @@ struct MeshResourceManagerInfo {
 
 class MeshSdfGenerator {
 public:
-	static constexpr u32 PROCESS_QUEUE_COUNT_MAX = 64;
+	static constexpr u32 PROCESS_QUEUE_COUNT_MAX = 256;
 	struct ProcessContext {
 		CommandList* _commandList = nullptr;
 		GpuDescriptorHandle _classicIndexSrv;

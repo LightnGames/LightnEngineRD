@@ -58,6 +58,7 @@ public:
 	TextureImpl* getTexture(u32 textureIndex);
 	Texture* findTexture(u64 fileHash);
 	DescriptorHandle getDescriptors() const { return _descriptors; }
+	const u8* getAssetStateFlags() const { return _assetStateFlags; }
 	virtual Texture* createTexture(const TextureDesc& desc) override;
 	virtual Texture* allocateTexture(const TextureDesc& desc) override;
 

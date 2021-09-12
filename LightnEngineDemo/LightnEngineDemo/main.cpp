@@ -134,12 +134,14 @@ public:
 			return;
 		}
 
-		if (_assetStreamingCounter < _assetCount) {
-			u32 currentAssetIndex = _assetStreamingCounter++;
-			_assets[currentAssetIndex]->requestLoad();
+		constexpr u32 LOAD_COUNT = 5;
+		for (u32 i = 0; i < LOAD_COUNT; ++i) {
+			if (_assetStreamingCounter < _assetCount) {
+				u32 currentAssetIndex = _assetStreamingCounter++;
+				_assets[currentAssetIndex]->requestLoad();
+			}
 		}
 
-		constexpr u32 LOAD_COUNT = 10;
 		u32 meshInstanceCount = min(_levelHeader._meshInstanceCount - _meshInstanceStreamingCounter, LOAD_COUNT);
 		if (meshInstanceCount > 0) {
 			const Mesh* meshes[LOAD_COUNT];

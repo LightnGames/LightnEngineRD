@@ -466,7 +466,7 @@ void TextureImpl::initialize(const TextureDesc& desc) {
 }
 
 void TextureSystemImpl::loadTexture(u32 textureIndex, u32 maxResolution) {
-	LTN_ASSERT(_assetStateFlags[textureIndex] == ASSET_STATE_REQUEST_LOAD);
+	LTN_ASSERT((_assetStateFlags[textureIndex] == ASSET_STATE_REQUEST_LOAD) || (_assetStateFlags[textureIndex] == ASSET_STATE_ENABLE));
 
 	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
 	u64 incrimentSize = static_cast<u64>(graphicsSystem->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize());
