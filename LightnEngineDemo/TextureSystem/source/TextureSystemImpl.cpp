@@ -541,7 +541,7 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 	bool is3dTexture = ddsHeaderDxt10._resourceDimension == RESOURCE_DIMENSION_TEXTURE3D;
 	bool isCubeMapTexture = false;
 
-	u32 targetMipCount = min(mipCount, ddsMipCount);
+	u32 targetMipCount = min(mipOffset + mipCount, ddsMipCount);
 	u32 maxResolution = 1 << (targetMipCount - 1);
 	u32 clampedWidth = min(ddsHeader._width, maxResolution);
 	u32 clampedHeight = min(ddsHeader._height, maxResolution);
@@ -597,9 +597,9 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
 
 		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, targetMipCount, nullptr, static_cast<u32>(requiredSize));
+		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, mipCount, nullptr, static_cast<u32>(requiredSize));
 
-		for (u32 subResourceIndex = 0; subResourceIndex < targetMipCount; ++subResourceIndex) {
+		for (u32 subResourceIndex = 0; subResourceIndex < mipCount; ++subResourceIndex) {
 			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
 			u8* data = reinterpret_cast<u8*>(pixelData) + layout._offset;
 			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];
@@ -625,10 +625,10 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 	_textureSizeInByte += requiredSize;
 }
 
-void TextureSystemImpl::copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 mipCount) {
+void TextureSystemImpl::copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-	for (u32 i = 0; i < mipCount; ++i) {
-		vramUpdater->enqueueUpdate(_textures[dstTextureIndex].getGpuTexture(), srcTexture, i);
+	for (u32 i = 0; i < subResourceCount; ++i) {
+		vramUpdater->enqueueUpdate(_textures[dstTextureIndex].getGpuTexture(), srcTexture, firstSubResource + i);
 	}
 }
 

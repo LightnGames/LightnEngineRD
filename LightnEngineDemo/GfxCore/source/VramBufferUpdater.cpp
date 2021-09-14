@@ -84,12 +84,12 @@ void* VramBufferUpdater::enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, u3
 void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	constexpr u32 BARRIER_COUNT_MAX = 128;
 	constexpr u32 UNKNOWN_RESOURCE_INDEX = 0xffffffff;
-	GpuResource* uniqueResources[BARRIER_COUNT_MAX] = {};
+	void* uniqueResources[BARRIER_COUNT_MAX] = {};
 	ResourceTransitionBarrier barriers[BARRIER_COUNT_MAX] = {};
 	u32 barrierCount = 0;
 
 	// 重複リソース検索ラムダ
-	auto findUniqueResource = [&uniqueResources, &barrierCount, UNKNOWN_RESOURCE_INDEX](GpuResource* resource) {
+	auto findUniqueResource = [&uniqueResources, &barrierCount, UNKNOWN_RESOURCE_INDEX](void* resource) {
 		for (u32 resourceIndex = 0; resourceIndex < barrierCount; ++resourceIndex) {
 			if (uniqueResources[resourceIndex] == resource) {
 				return resourceIndex;
@@ -140,10 +140,10 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	// texture to texture
 	for (u32 headerIndex = 0; headerIndex < _textureCopyHeaderCount; ++headerIndex) {
 		TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
-		u32 srcResourceIndex = findUniqueResource(&header._srcTexture);
+		u32 srcResourceIndex = findUniqueResource(header._srcTexture.getResource());
 		if (srcResourceIndex == UNKNOWN_RESOURCE_INDEX) {
 			barriers[barrierCount] = header._srcTexture.getTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
-			uniqueResources[barrierCount++] = &header._srcTexture;
+			uniqueResources[barrierCount++] = header._srcTexture.getResource();
 		}
 
 		u32 dstResourceIndex = findUniqueResource(header._dstTexture);

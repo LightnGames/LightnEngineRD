@@ -30,8 +30,12 @@ void TextureStreamingSystem::update() {
 		if (textureSystem->getAssetStateFlags()[textureIndex] != ASSET_STATE_ENABLE) {
 			continue;
 		}
-		u32 currentStreamingLevel = _currentStreamingLevels[textureIndex];
 		u32 targetStreamingLevel = _targetStreamingLevels[textureIndex];
+		if (targetStreamingLevel == 0xff) {
+			continue;
+		}
+
+		u32 currentStreamingLevel = _currentStreamingLevels[textureIndex];
 		if (currentStreamingLevel == targetStreamingLevel) {
 			continue;
 		}
@@ -51,13 +55,10 @@ void TextureStreamingSystem::update() {
 		_reloadTextureIndices[reloadQueueIndex] = textureIndex;
 
 		if (targetStreamingLevel > currentStreamingLevel) {
-			//u32 count = targetStreamingLevel - currentStreamingLevel;
-			//textureSystem->loadTexture(textureIndex, currentStreamingLevel, count);
-			//textureSystem->copyTexture(textureIndex, &currentTexture, currentStreamingLevel);
-			textureSystem->loadTexture(textureIndex, 0, targetStreamingLevel);
+			u32 count = targetStreamingLevel - currentStreamingLevel;
+			textureSystem->loadTexture(textureIndex, currentStreamingLevel, count);
 		} else {
 			textureSystem->loadTexture(textureIndex, 0, targetStreamingLevel);
-			//textureSystem->copyTexture(textureIndex, &currentTexture, targetStreamingLevel);
 		}
 
 		_currentStreamingLevels[textureIndex] = targetStreamingLevel;
