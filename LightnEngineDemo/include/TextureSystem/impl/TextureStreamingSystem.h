@@ -20,4 +20,5 @@ private:
 	u32 _reloadQueueOffset = 0;
 	u32 _reloadQueueTimers[TextureSystem::RELOAD_QUEUE_COUNT_MAX] = {};
 	Resource* _reloadTextures[TextureSystem::RELOAD_QUEUE_COUNT_MAX] = {};
+	u32 _reloadTextureIndices[TextureSystem::RELOAD_QUEUE_COUNT_MAX] = {};
 };

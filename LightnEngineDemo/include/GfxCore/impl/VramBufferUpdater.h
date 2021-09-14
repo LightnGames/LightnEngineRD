@@ -25,7 +25,12 @@ struct TextureUpdateHeader {
 	u32 _firstSubResources = 0;
 	u32 _numSubresources = 0;
 	u32 _stagingBufferOffset = 0;
-	SubResourceData _subResources[SUBRESOURCE_COUNT_MAX] = {};
+};
+
+struct TextureCopyHeader {
+	GpuTexture* _dstTexture = nullptr;
+	GpuTexture _srcTexture;
+	u32 _subResourceIndex = 0;
 };
 
 class LTN_GFX_CORE_API VramBufferUpdater {
@@ -39,8 +44,9 @@ public:
 	void update();
 
 	void enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, GpuResource* sourceBuffer, u32 sourceOffset, u32 copySizeInByte);
+	void enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 subResourceIndex);
 	void* enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, u32 copySizeInByte);
-	void* enqueueUpdate(GpuTexture* dstTexture, u32 subResourceCount, const SubResourceData* subResources, u32 copySizeInByte);
+	void* enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceIndex, u32 subResourceCount, const SubResourceData* subResources, u32 copySizeInByte);
 
 	template<class T>
 	T* enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, u32 numElements) {
@@ -63,6 +69,7 @@ private:
 	UpdateHeader _updateHeaders[BUFFER_HEADER_COUNT_MAX] = {};
 	StagingUpdateHeader _stagingUpdateHeaders[BUFFER_HEADER_COUNT_MAX] = {};
 	TextureUpdateHeader _textureUpdateHeaders[TEXTURE_HEADER_COUNT_MAX] = {};
+	TextureCopyHeader _textureCopyHeaders[TEXTURE_HEADER_COUNT_MAX] = {};
 	GpuBuffer _stagingBuffer;
 	u8* _stagingMapPtr = nullptr;
 	u32 _frameStarts[BACK_BUFFER_COUNT] = {};
@@ -71,5 +78,6 @@ private:
 	u32 _updateHeaderCount = 0;
 	u32 _stagingUpdateHeaderCount = 0;
 	u32 _textureUpdateHeaderCount = 0;
+	u32 _textureCopyHeaderCount = 0;
 	u32 _uploadSizeInByte = 0;
 };

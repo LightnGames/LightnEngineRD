@@ -50,8 +50,9 @@ public:
 	void processDeletion();
 	void terminate();
 	void debugDrawGui();
-	void loadTexture(u32 textureIndex, u32 maxResolution);
-	void loadResidentTexture(u32 textureIndex);
+	void loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCount);
+	void copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 mipCount);
+	void initializeShaderResourceView(u32 textureIndex);
 
 	u32 getTextureResarveCount() const { return _textures.getResarveCount(); }
 	u32 getTextureIndex(const Texture* texture) const;

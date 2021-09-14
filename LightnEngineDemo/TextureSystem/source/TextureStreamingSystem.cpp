@@ -8,6 +8,9 @@ void TextureStreamingSystem::initialize() {}
 void TextureStreamingSystem::terminate() {}
 
 void TextureStreamingSystem::update() {
+	TextureSystemImpl* textureSystem = TextureSystemImpl::Get();
+
+	// 再生成要求で設定した寿命が来たら新しいテクスチャSRVに差し替えて古いリソースを破棄
 	for (u32 reloadIndex = 0; reloadIndex < TextureSystem::RELOAD_QUEUE_COUNT_MAX; ++reloadIndex) {
 		if (_reloadQueueTimers[reloadIndex] == 0) {
 			continue;
@@ -15,34 +18,47 @@ void TextureStreamingSystem::update() {
 
 		u32 lifeTime = --_reloadQueueTimers[reloadIndex];
 		if (lifeTime == 0) {
+			textureSystem->initializeShaderResourceView(_reloadTextureIndices[reloadIndex]);
 			_reloadTextures[reloadIndex]->terminate();
 			_reloadQueueCount--;
 		}
 	}
 
-	TextureSystemImpl* textureSystem = TextureSystemImpl::Get();
+	// 要求ストリーミングレベルが現在のレベルと違うテクスチャに対して再生成要求
 	u32 textureCount = textureSystem->getTextureResarveCount();
 	for (u32 textureIndex = 0; textureIndex < textureCount; ++textureIndex) {
 		if (textureSystem->getAssetStateFlags()[textureIndex] != ASSET_STATE_ENABLE) {
 			continue;
 		}
+		u32 currentStreamingLevel = _currentStreamingLevels[textureIndex];
 		u32 targetStreamingLevel = _targetStreamingLevels[textureIndex];
-		if (_currentStreamingLevels[textureIndex] == targetStreamingLevel) {
+		if (currentStreamingLevel == targetStreamingLevel) {
 			continue;
 		}
 
+		// コモンリソースはストリーミングしない
+		// TODO: テクスチャごとにストリーミング設定を追加する
 		if (textureIndex == 0) {
 			continue;
 		}
 
 		TextureImpl* texture = textureSystem->getTexture(textureIndex);
+		GpuTexture currentTexture = *texture->getGpuTexture();
 		u32 reloadQueueIndex = (_reloadQueueOffset++ % TextureSystem::RELOAD_QUEUE_COUNT_MAX);
 		_reloadQueueCount++;
 		_reloadQueueTimers[reloadQueueIndex] = BACK_BUFFER_COUNT;
-		_reloadTextures[reloadQueueIndex] = texture->getGpuTexture()->getResource();
+		_reloadTextures[reloadQueueIndex] = currentTexture.getResource();
+		_reloadTextureIndices[reloadQueueIndex] = textureIndex;
 
-		u32 targetResolution = max(64, 1 << targetStreamingLevel);
-		textureSystem->loadTexture(textureIndex, targetResolution);
+		if (targetStreamingLevel > currentStreamingLevel) {
+			//u32 count = targetStreamingLevel - currentStreamingLevel;
+			//textureSystem->loadTexture(textureIndex, currentStreamingLevel, count);
+			//textureSystem->copyTexture(textureIndex, &currentTexture, currentStreamingLevel);
+			textureSystem->loadTexture(textureIndex, 0, targetStreamingLevel);
+		} else {
+			textureSystem->loadTexture(textureIndex, 0, targetStreamingLevel);
+			//textureSystem->copyTexture(textureIndex, &currentTexture, targetStreamingLevel);
+		}
 
 		_currentStreamingLevels[textureIndex] = targetStreamingLevel;
 	}
@@ -53,11 +69,13 @@ void TextureStreamingSystem::updateStreamingLevel(u32 textureIndex, f32 screenAr
 	Application* app = ApplicationSystem::Get()->getApplication();
 	u32 screenWidth = app->getScreenWidth();
 	u64 sourceWidth = texture->getGpuTexture()->getResourceDesc()._width;
-	u32 targetWidth = screenArea * screenWidth;
+	u32 targetWidth = static_cast<u32>(screenArea * screenWidth);
 	u8 requestMipLevel = 0;
 	for (u32 i = 1; i < targetWidth; i *= 2) {
 		requestMipLevel++;
 	}
+	requestMipLevel = max(requestMipLevel, 7);
+
 	_targetStreamingLevels[textureIndex] = min(_targetStreamingLevels[textureIndex], requestMipLevel);
 }
 

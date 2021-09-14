@@ -40,7 +40,15 @@ void VramBufferUpdater::enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, Gpu
 	LTN_ASSERT(headerIndex < BUFFER_HEADER_COUNT_MAX);
 }
 
-void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 numSubResource, const SubResourceData* subResources, u32 copySizeInByte) {
+void VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 subResourceIndex) {
+	u32 headerIndex = _textureCopyHeaderCount++; // atomic incriment
+	TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
+	header._dstTexture = dstTexture;
+	header._srcTexture = *srcTexture;
+	header._subResourceIndex = subResourceIndex;
+}
+
+void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceIndex, u32 numSubResource, const SubResourceData* subResources, u32 copySizeInByte) {
 	LTN_ASSERT(numSubResource > 0);
 	LTN_ASSERT(copySizeInByte > 0);
 	u32 headerIndex = _textureUpdateHeaderCount++; // atomic incriment
@@ -49,12 +57,8 @@ void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 numSubResourc
 	TextureUpdateHeader& header = _textureUpdateHeaders[headerIndex];
 	header._dstTexture = dstTexture;
 	header._numSubresources = numSubResource;
+	header._firstSubResources = firstSubResourceIndex;
 	header._stagingBufferOffset = getStagingBufferStartOffset(stagingBufferPtr);
-	for (u32 subResourceIndex = 0; subResourceIndex < numSubResource; ++subResourceIndex) {
-		SubResourceData& subResource = header._subResources[subResourceIndex];
-		subResource = subResources[subResourceIndex];
-		subResource._data = reinterpret_cast<const u8*>(subResource._data) + reinterpret_cast<u64>(stagingBufferPtr);
-	}
 	LTN_ASSERT(header._stagingBufferOffset + copySizeInByte <= _stagingBuffer.getSizeInByte());
 	LTN_ASSERT(headerIndex < BUFFER_HEADER_COUNT_MAX);
 
@@ -108,8 +112,8 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 
 		u32 sourceResourceIndex = findUniqueResource(header._sourceResource);
 		if (sourceResourceIndex == UNKNOWN_RESOURCE_INDEX) {
-			barriers[barrierCount] = header._dstResource->getTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
-			uniqueResources[barrierCount++] = header._dstResource;
+			barriers[barrierCount] = header._sourceResource->getTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
+			uniqueResources[barrierCount++] = header._sourceResource;
 		}
 	}
 
@@ -126,6 +130,22 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	// texture to vram
 	for (u32 headerIndex = 0; headerIndex < _textureUpdateHeaderCount; ++headerIndex) {
 		TextureUpdateHeader& header = _textureUpdateHeaders[headerIndex];
+		u32 dstResourceIndex = findUniqueResource(header._dstTexture);
+		if (dstResourceIndex == UNKNOWN_RESOURCE_INDEX) {
+			barriers[barrierCount] = header._dstTexture->getTransitionBarrier(RESOURCE_STATE_COPY_DEST);
+			uniqueResources[barrierCount++] = header._dstTexture;
+		}
+	}
+
+	// texture to texture
+	for (u32 headerIndex = 0; headerIndex < _textureCopyHeaderCount; ++headerIndex) {
+		TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
+		u32 srcResourceIndex = findUniqueResource(&header._srcTexture);
+		if (srcResourceIndex == UNKNOWN_RESOURCE_INDEX) {
+			barriers[barrierCount] = header._srcTexture.getTransitionBarrier(RESOURCE_STATE_COPY_SOURCE);
+			uniqueResources[barrierCount++] = &header._srcTexture;
+		}
+
 		u32 dstResourceIndex = findUniqueResource(header._dstTexture);
 		if (dstResourceIndex == UNKNOWN_RESOURCE_INDEX) {
 			barriers[barrierCount] = header._dstTexture->getTransitionBarrier(RESOURCE_STATE_COPY_DEST);
@@ -156,10 +176,11 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 		Device* device = GraphicsSystemImpl::Get()->getDevice();
 		ResourceDesc textureDesc = header._dstTexture->getResourceDesc();
 		u64 requiredSize = 0;
+		u32 subResourceCount = header._firstSubResources + header._numSubresources;
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX];
 		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX];
 		u64 rowSizesInBytes[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX];
-		device->getCopyableFootprints(&textureDesc, header._firstSubResources, header._numSubresources, header._stagingBufferOffset, layouts, numRows, rowSizesInBytes, &requiredSize);
+		device->getCopyableFootprints(&textureDesc, 0, subResourceCount, header._stagingBufferOffset, layouts, numRows, rowSizesInBytes, &requiredSize);
 
 		for (u32 subResourceIndex = 0; subResourceIndex < header._numSubresources; ++subResourceIndex) {
 			TextureCopyLocation src = {};
@@ -174,6 +195,22 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 
 			commandList->copyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 		}
+	}
+
+	// Texture to texture
+	for (u32 headerIndex = 0; headerIndex < _textureCopyHeaderCount; ++headerIndex) {
+		TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
+		TextureCopyLocation src = {};
+		src._resource = header._srcTexture.getResource();
+		src._subresourceIndex = header._subResourceIndex;
+		src._type = TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+
+		TextureCopyLocation dst = {};
+		dst._resource = header._dstTexture->getResource();
+		dst._subresourceIndex = header._subResourceIndex;
+		dst._type = TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+
+		commandList->copyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 	}
 
 	// 変更したリソースを元に戻すバリアを構築
@@ -193,6 +230,7 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 	_updateHeaderCount = 0;
 	_stagingUpdateHeaderCount = 0;
 	_textureUpdateHeaderCount = 0;
+	_textureCopyHeaderCount = 0;
 }
 
 void* VramBufferUpdater::allocateUpdateBuffer(u32 sizeInByte, u32 alignment) {

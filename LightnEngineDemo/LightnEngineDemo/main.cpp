@@ -303,14 +303,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		material = materialSystem->createMaterial(desc);
 	}
 
-	{
-		TextureDesc desc = {};
-		desc._filePath = "common/checker.dds";
-		texture = textureSystem->createTexture(desc);
+	//{
+	//	TextureDesc desc = {};
+	//	desc._filePath = "common/checker.dds";
+	//	texture = textureSystem->createTexture(desc);
 
-		desc._filePath = "common/color_chart.dds";
-		colorChartTexture = textureSystem->createTexture(desc);
-	}
+	//	desc._filePath = "common/color_chart.dds";
+	//	colorChartTexture = textureSystem->createTexture(desc);
+	//}
 
 	{
 		MeshInstanceDesc desc = {};
@@ -355,8 +355,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	//mesh->requestToDelete();
 	mesh2->requestToDelete();
 	//mesh3->requestToDelete();
-	texture->requestToDelete();
-	colorChartTexture->requestToDelete();
+	//texture->requestToDelete();
+	//colorChartTexture->requestToDelete();
 
 	app->terminate();
 	gfxFramework->terminate();
