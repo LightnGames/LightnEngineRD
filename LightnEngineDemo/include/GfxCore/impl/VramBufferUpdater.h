@@ -30,7 +30,8 @@ struct TextureUpdateHeader {
 struct TextureCopyHeader {
 	GpuTexture* _dstTexture = nullptr;
 	GpuTexture _srcTexture;
-	u32 _subResourceIndex = 0;
+	u32 _srcSubResourceIndex = 0;
+	u32 _dstSubResourceIndex = 0;
 };
 
 class LTN_GFX_CORE_API VramBufferUpdater {
@@ -44,7 +45,7 @@ public:
 	void update();
 
 	void enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, GpuResource* sourceBuffer, u32 sourceOffset, u32 copySizeInByte);
-	void enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 subResourceIndex);
+	void enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 srcSubResourceIndex, u32 dstSubResourceIndex);
 	void* enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, u32 copySizeInByte);
 	void* enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceIndex, u32 subResourceCount, const SubResourceData* subResources, u32 copySizeInByte);
 

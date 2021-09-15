@@ -40,12 +40,13 @@ void VramBufferUpdater::enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, Gpu
 	LTN_ASSERT(headerIndex < BUFFER_HEADER_COUNT_MAX);
 }
 
-void VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 subResourceIndex) {
+void VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 srcSubResourceIndex, u32 dstSubResourceIndex) {
 	u32 headerIndex = _textureCopyHeaderCount++; // atomic incriment
 	TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
 	header._dstTexture = dstTexture;
 	header._srcTexture = *srcTexture;
-	header._subResourceIndex = subResourceIndex;
+	header._srcSubResourceIndex = srcSubResourceIndex;
+	header._dstSubResourceIndex = dstSubResourceIndex;
 }
 
 void* VramBufferUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceIndex, u32 numSubResource, const SubResourceData* subResources, u32 copySizeInByte) {
@@ -202,12 +203,12 @@ void VramBufferUpdater::populateCommandList(CommandList* commandList) {
 		TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
 		TextureCopyLocation src = {};
 		src._resource = header._srcTexture.getResource();
-		src._subresourceIndex = header._subResourceIndex;
+		src._subresourceIndex = header._srcSubResourceIndex;
 		src._type = TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 
 		TextureCopyLocation dst = {};
 		dst._resource = header._dstTexture->getResource();
-		dst._subresourceIndex = header._subResourceIndex;
+		dst._subresourceIndex = header._dstSubResourceIndex;
 		dst._type = TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 
 		commandList->copyTextureRegion(&dst, 0, 0, 0, &src, nullptr);

@@ -541,28 +541,21 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 	bool is3dTexture = ddsHeaderDxt10._resourceDimension == RESOURCE_DIMENSION_TEXTURE3D;
 	bool isCubeMapTexture = false;
 
+	u32 numArray = is3dTexture ? 1 : ddsHeaderDxt10._arraySize;
 	u32 targetMipCount = min(mipOffset + mipCount, ddsMipCount);
 	u32 maxResolution = 1 << (targetMipCount - 1);
 	u32 clampedWidth = min(ddsHeader._width, maxResolution);
 	u32 clampedHeight = min(ddsHeader._height, maxResolution);
 	u32 mipBackLevelOffset = ddsMipCount - targetMipCount;
 	u32 mipFrontLevelOffset = mipOffset;
-	GpuTextureDesc textureDesc = {};
-	textureDesc._device = device;
-	textureDesc._format = ddsHeaderDxt10._dxgiFormat;
-	textureDesc._width = clampedWidth;
-	textureDesc._height = clampedHeight;
-	textureDesc._mipLevels = targetMipCount;
-	textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	gpuTexture.initialize(textureDesc);
+
+	createTexture(textureIndex, clampedWidth, clampedHeight, ddsHeaderDxt10._dxgiFormat);
 	gpuTexture.setDebugName(_debugNames[textureIndex]._name);
 
-	u32 numArray = is3dTexture ? 1 : ddsHeaderDxt10._arraySize;
-	ResourceDesc textureResourceDesc = gpuTexture.getResourceDesc();
 
 	// 最大解像度が指定してある場合、それ以外のピクセルを読み飛ばします。
 	if (mipBackLevelOffset > 0) {
-		ResourceDesc resourceDesc = textureResourceDesc;
+		ResourceDesc resourceDesc = gpuTexture.getResourceDesc();
 		resourceDesc._width = ddsHeader._width;
 		resourceDesc._height = ddsHeader._height;
 		resourceDesc._mipLevels = ddsMipCount;
@@ -590,6 +583,7 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 
 	// サブリソースのレイアウトに沿ってファイルからピクセルデータを読み込み＆ VRAM にアップロード
 	{
+		ResourceDesc textureResourceDesc = gpuTexture.getResourceDesc();
 		PlacedSubresourceFootprint layouts[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u32 numRows[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
 		u64 rowSizesInBytes[TextureUpdateHeader::SUBRESOURCE_COUNT_MAX] = {};
@@ -625,10 +619,28 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 	_textureSizeInByte += requiredSize;
 }
 
-void TextureSystemImpl::copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount) {
+void TextureSystemImpl::createTexture(u32 textureIndex, u32 width, u32 height, Format format) {
+	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
+	Device* device = graphicsSystem->getDevice();
+
+	u32 mipLevel = static_cast<u32>(std::log2(max(width, height)) + 1);
+	GpuTextureDesc textureDesc = {};
+	textureDesc._device = device;
+	textureDesc._format = format;
+	textureDesc._width = width;
+	textureDesc._height = height;
+	textureDesc._mipLevels = mipLevel;
+	textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+	GpuTexture& gpuTexture = _gpuTextures[textureIndex];
+	gpuTexture.initialize(textureDesc);
+}
+
+void TextureSystemImpl::copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount, s32 srcSubResourceOffset, s32 dstSubResourceOffset) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	for (u32 i = 0; i < subResourceCount; ++i) {
-		vramUpdater->enqueueUpdate(_textures[dstTextureIndex].getGpuTexture(), srcTexture, firstSubResource + i);
+		u32 srcSubResourceIndex = firstSubResource + i;
+		vramUpdater->enqueueUpdate(_textures[dstTextureIndex].getGpuTexture(), srcTexture, srcSubResourceIndex + srcSubResourceOffset, srcSubResourceIndex + dstSubResourceOffset);
 	}
 }
 

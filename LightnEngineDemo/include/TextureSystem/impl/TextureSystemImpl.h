@@ -51,7 +51,8 @@ public:
 	void terminate();
 	void debugDrawGui();
 	void loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCount);
-	void copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount);
+	void createTexture(u32 textureIndex, u32 width, u32 height, Format format);
+	void copyTexture(u32 dstTextureIndex, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount, s32 srcSubResourceOffset, s32 dstSubResourceOffset);
 	void initializeShaderResourceView(u32 textureIndex);
 
 	u32 getTextureResarveCount() const { return _textures.getResarveCount(); }

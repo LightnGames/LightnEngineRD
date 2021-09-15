@@ -54,11 +54,15 @@ void TextureStreamingSystem::update() {
 		_reloadTextures[reloadQueueIndex] = currentTexture.getResource();
 		_reloadTextureIndices[reloadQueueIndex] = textureIndex;
 
+		s32 dstSubResourceOffset = targetStreamingLevel - currentStreamingLevel;
 		if (targetStreamingLevel > currentStreamingLevel) {
-			u32 count = targetStreamingLevel - currentStreamingLevel;
-			textureSystem->loadTexture(textureIndex, currentStreamingLevel, count);
+			textureSystem->loadTexture(textureIndex, currentStreamingLevel, dstSubResourceOffset);
+			textureSystem->copyTexture(textureIndex, &currentTexture, 0, currentStreamingLevel, 0, dstSubResourceOffset);
 		} else {
-			textureSystem->loadTexture(textureIndex, 0, targetStreamingLevel);
+			u32 size = 1 << (targetStreamingLevel - 1);
+			u32 subResourceOffset = currentStreamingLevel - targetStreamingLevel;
+			textureSystem->createTexture(textureIndex, size, size, currentTexture.getResourceDesc()._format);
+			textureSystem->copyTexture(textureIndex, &currentTexture, 0, targetStreamingLevel, subResourceOffset, 0);
 		}
 
 		_currentStreamingLevels[textureIndex] = targetStreamingLevel;
