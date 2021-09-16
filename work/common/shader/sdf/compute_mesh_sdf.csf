@@ -222,7 +222,6 @@ int RayIntersectsTriangle(float3 o, float3 d, uint triangleId)
 /* Returns the index of the nearest triangle to the input position. */
 float NearestTriangleDistance(float3 position)
 {
-    int3 intersectCounts = int3(0, 0, 0);
     float distance = 10000.0;
     uint triangleStrat = _constant._indexOffset / 3;
     uint triangleEnd = triangleStrat + _constant._indexCount / 3;
@@ -234,7 +233,6 @@ float NearestTriangleDistance(float3 position)
         {
             distance = triangleDistance;
             frontface = frontfaceTriangle(t, position);
-
         }
     }
     

@@ -21,6 +21,7 @@ static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
 static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
 static const int SDF_GLOBAL_WIDTH = 8;
 static const int SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
+static const int SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 
 uint getSdfIndexFromId(int3 id)
 {
@@ -32,41 +33,49 @@ uint getSdfIndexFromId(int3 id)
 
 float sampleSdf(uint textureIndex, float3 localPosition)
 {
-    return _sdfTextures[textureIndex].Sample(_linerSampler, localPosition + float3(0.5, 0.5, 0.5)).x;
+    float3 size;
+    float level;
+    _sdfTextures[textureIndex].GetDimensions(0, size.x, size.y, size.z, level);
+    
+    float3 offset = float3(1.0, 1.0, 1.0) / size * 0.5;
+    offset = float3(0, 0, 0);
+    return _sdfTextures[textureIndex].Sample(_linerSampler, localPosition + float3(0.5, 0.5, 0.5) + offset).x;
 }
 
 bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
 {
+    float invStepScale = max(1.0 / length(rayDirection), 0.01);
+    int SAMPLE_COUNT_MAX = 32;
+    float BIAS = 0.01;
+    float minStepSize = 1.0f / (4 * SAMPLE_COUNT_MAX);
     bool isHit = false;
     float3 rayStartPosition = position;
     float3 currentRayOrigin = rayStartPosition;
-    float rayDistance = 0.01;
-    int SAMPLE_COUNT_MAX = 16;
+    float rayDistance = invStepScale * 0.08;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
     {
         currentRayOrigin = rayStartPosition + rayDistance * rayDirection;
-        if (currentRayOrigin.x < -0.5 || currentRayOrigin.x > 0.5)
+        if (abs(currentRayOrigin.x) > 0.5)
         {
             return false;
         }
         
-        if (currentRayOrigin.y < -0.5 || currentRayOrigin.y > 0.5)
+        if (abs(currentRayOrigin.y) > 0.5)
         {
             return false;
         }
         
-        if (currentRayOrigin.z < -0.5 || currentRayOrigin.z > 0.5)
+        if (abs(currentRayOrigin.z) > 0.5)
         {
             return false;
         }
         
         float distance = sampleSdf(sdfIndex, currentRayOrigin);
         
-        float minStepSize = 1.0f / (4 * SAMPLE_COUNT_MAX);
         float stepDistance = max(distance, minStepSize);
         rayDistance += stepDistance;
         
-        if (distance < 0)
+        if (distance < BIAS)
         {
             return true;
         }
@@ -127,7 +136,14 @@ float4 main(VertexOut input) : SV_TARGET {
     float3 worldPosition = input._worldPosition;
     int3 sdfGridId = int3((worldPosition + float3(SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE)) / SDF_GLOBAL_CELL_SIZE);
     uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
-    uint sdfInstanceCount = _sdfMeshInstanceCounts[sdfGridIndex];
+    uint sdfInstanceCount = INVALID_INDEX;
+    if ((abs(worldPosition.x) < SDF_GLOBAL_CELL_HALF_SIZE) &&
+        (abs(worldPosition.y) < SDF_GLOBAL_CELL_HALF_SIZE) &&
+        (abs(worldPosition.z) < SDF_GLOBAL_CELL_HALF_SIZE))
+    {
+        sdfInstanceCount = _sdfMeshInstanceCounts[sdfGridIndex];
+    }
+    
     bool shadow = false;
     if (sdfInstanceCount != INVALID_INDEX)
     {

@@ -18,6 +18,7 @@ protected:
 
 class LTN_TEXTURE_SYSTEM_API TextureSystem {
 public:
+	static constexpr u32 RESIDENT_MIP_COUNT = 7; // 64 px
 	static constexpr u32 TEXTURE_COUNT_MAX = 512;
 	static constexpr u32 RELOAD_QUEUE_COUNT_MAX = 512;
 

@@ -8,6 +8,7 @@ void TextureStreamingSystem::initialize() {}
 void TextureStreamingSystem::terminate() {}
 
 void TextureStreamingSystem::update() {
+	return;
 	TextureSystemImpl* textureSystem = TextureSystemImpl::Get();
 
 	// 再生成要求で設定した寿命が来たら新しいテクスチャSRVに差し替えて古いリソースを破棄
@@ -54,11 +55,13 @@ void TextureStreamingSystem::update() {
 		_reloadTextures[reloadQueueIndex] = currentTexture.getResource();
 		_reloadTextureIndices[reloadQueueIndex] = textureIndex;
 
-		s32 dstSubResourceOffset = targetStreamingLevel - currentStreamingLevel;
+		// レベルが上がったら差分をロードしてすれでに読み込まれている範囲をコピー
 		if (targetStreamingLevel > currentStreamingLevel) {
+			s32 dstSubResourceOffset = targetStreamingLevel - currentStreamingLevel;
 			textureSystem->loadTexture(textureIndex, currentStreamingLevel, dstSubResourceOffset);
 			textureSystem->copyTexture(textureIndex, &currentTexture, 0, currentStreamingLevel, 0, dstSubResourceOffset);
 		} else {
+			// レベルが下がったら縮小されたテクスチャにコピー
 			u32 size = 1 << (targetStreamingLevel - 1);
 			u32 subResourceOffset = currentStreamingLevel - targetStreamingLevel;
 			textureSystem->createTexture(textureIndex, size, size, currentTexture.getResourceDesc()._format);
@@ -79,7 +82,7 @@ void TextureStreamingSystem::updateStreamingLevel(u32 textureIndex, f32 screenAr
 	for (u32 i = 1; i < targetWidth; i *= 2) {
 		requestMipLevel++;
 	}
-	requestMipLevel = max(requestMipLevel, 7);
+	requestMipLevel = max(requestMipLevel, TextureSystem::RESIDENT_MIP_COUNT);
 
 	_targetStreamingLevels[textureIndex] = min(_targetStreamingLevels[textureIndex], requestMipLevel);
 }

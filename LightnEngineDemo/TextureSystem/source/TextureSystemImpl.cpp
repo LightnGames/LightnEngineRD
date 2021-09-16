@@ -3,8 +3,6 @@
 #include <GfxCore/impl/VramBufferUpdater.h>
 #include <TextureSystem/impl/TextureStreamingSystem.h> // èzä¬éQè∆ÅH
 
-constexpr u32 RESIDENT_MIP_COUNT = 7; // 64 px
-
 TextureSystemImpl _textureSystem;
 void TextureSystemImpl::initialize() {
 	GraphicsSystemImpl* graphicsSystem = GraphicsSystemImpl::Get();
