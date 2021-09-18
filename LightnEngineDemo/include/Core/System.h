@@ -223,6 +223,7 @@ public:
 	}
 
 	void discard(u32 index) {
+		LTN_ASSERT(_emptyIndicesCount < _sizeCountMax);
 		_emptyIndices[_emptyIndicesCount] = index;
 		_emptyIndicesCount++;
 		_instanceCount--;

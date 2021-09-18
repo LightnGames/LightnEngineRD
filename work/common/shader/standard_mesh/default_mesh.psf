@@ -51,7 +51,7 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     bool isHit = false;
     float3 rayStartPosition = position;
     float3 currentRayOrigin = rayStartPosition;
-    float rayDistance = invStepScale * 0.08;
+    float rayDistance = invStepScale * 0.1;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
     {
         currentRayOrigin = rayStartPosition + rayDistance * rayDirection;
@@ -83,17 +83,8 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     return false;
 }
 
-bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float3 uv3)
-{
-    if ((ro.x >= -0.5 && ro.x <= 0.5) &&
-        (ro.y >= -0.5 && ro.y <= 0.5) &&
-        (ro.z >= -0.5 && ro.z <= 0.5))
-    {
-        uv3 = ro;
-        return true;
-    }
-    
-    // Basic ray/AABB intersection (see Section 32.3)
+bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2 distances, out float3 uv3)
+{   
     float3 tmin = (pmin - ro) / rd;
     float3 tmax = (pmax - ro) / rd;
     float3 sc = min(tmin, tmax);
@@ -101,19 +92,29 @@ bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float3
     float t0 = max(max(sc.x, sc.y), sc.z);
     float t1 = min(min(sf.x, sf.y), sf.z);
 
+    distances = float2(t0, t1);
+    
+    if ((abs(ro.x) <= 0.5) &&
+        (abs(ro.y) <= 0.5) &&
+        (abs(ro.z) <= 0.5))
+    {
+        uv3 = ro;
+        return true;
+    }
+    
     // Texture coordinates
     float3 uv = ro + t0 * rd;
-    if (uv.x < -0.501 || uv.x > 0.501)
+    if (abs(uv.x) - EPSILON > 0.5)
     {
         return false;
     }
         
-    if (uv.y < -0.501 || uv.y > 0.501)
+    if (abs(uv.y) - EPSILON > 0.5)
     {
         return false;
     }
         
-    if (uv.z < -0.501 || uv.z > 0.501)
+    if (abs(uv.z) - EPSILON > 0.5)
     {
         return false;
     }
@@ -124,6 +125,7 @@ bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float3
     }
     
     uv3 = uv;
+    
     return true;
 }
 
@@ -133,31 +135,41 @@ float4 main(VertexOut input) : SV_TARGET {
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
     float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
     
-    float3 worldPosition = input._worldPosition;
-    int3 sdfGridId = int3((worldPosition + float3(SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE)) / SDF_GLOBAL_CELL_SIZE);
-    uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
-    uint sdfInstanceCount = INVALID_INDEX;
-    if ((abs(worldPosition.x) < SDF_GLOBAL_CELL_HALF_SIZE) &&
+    uint debugTotalStep = 0;
+    float3 invLightDirection = normalize(-float3(-1, -1, -1));
+    uint WORLD_CELL_LOOP_COUNT_MAX = 14;
+    float cellDistance = 0;
+    bool shadow = false;
+    for (uint cellItr = 0; cellItr < WORLD_CELL_LOOP_COUNT_MAX; ++cellItr)
+    {
+        float3 worldPosition = input._worldPosition + cellDistance * invLightDirection;
+        int3 sdfGridId = int3((worldPosition + float3(SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE)) / SDF_GLOBAL_CELL_SIZE);
+        uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
+        uint sdfInstanceCount = INVALID_INDEX;
+        if ((abs(worldPosition.x) < SDF_GLOBAL_CELL_HALF_SIZE) &&
         (abs(worldPosition.y) < SDF_GLOBAL_CELL_HALF_SIZE) &&
         (abs(worldPosition.z) < SDF_GLOBAL_CELL_HALF_SIZE))
-    {
-        sdfInstanceCount = _sdfMeshInstanceCounts[sdfGridIndex];
-    }
+        {
+            sdfInstanceCount = _sdfMeshInstanceCounts[sdfGridIndex];
+        }
     
-    bool shadow = false;
-    if (sdfInstanceCount != INVALID_INDEX)
-    {
+        if (sdfInstanceCount == INVALID_INDEX)
+        {
+            break;
+        }
+        
         uint sdfInstanceStartOffset = _sdfMeshInstanceIndexOffsets[sdfGridIndex];
-        float3 invLightDirection = normalize(-float3(-1, -1, -1));
         for (int i = 0; i < sdfInstanceCount; ++i)
         {
             uint sdfMeshInstanceIndex = _sdfMeshInstanceIndices[sdfInstanceStartOffset + i];
             float4x3 invBoundsMatrix = _meshInstanceBoundsInvMatrices[sdfMeshInstanceIndex];
             float3 position = mul(float4(worldPosition, 1), invBoundsMatrix).xyz;
             float3 rayDirection = mul(invLightDirection, (float3x3) invBoundsMatrix);
+            float2 distances;
             float3 uv3;
-            if (intersectRayAABB(position, rayDirection, float3(-0.5, -0.5, -0.5), float3(0.5, 0.5, 0.5), uv3))
+            if (intersectRayAABB(position, rayDirection, float3(-0.5, -0.5, -0.5), float3(0.5, 0.5, 0.5), distances, uv3))
             {
+                debugTotalStep++;
                 MeshInstance meshInstance = _meshInstances[sdfMeshInstanceIndex];
                 if (intersectSdf(meshInstance._meshIndex, uv3, rayDirection))
                 {
@@ -166,9 +178,22 @@ float4 main(VertexOut input) : SV_TARGET {
                 }
             }
         }
+        
+        if (shadow)
+        {
+            break;
+        }
+        
+        float3 halfCellSize = float3(SDF_GLOBAL_CELL_SIZE, SDF_GLOBAL_CELL_SIZE, SDF_GLOBAL_CELL_SIZE) / 2.0;
+        float3 cellCenter = floor(worldPosition / SDF_GLOBAL_CELL_SIZE) * SDF_GLOBAL_CELL_SIZE + halfCellSize;
+        float2 distances;
+        float3 uv3;
+        intersectRayAABB(worldPosition, invLightDirection, cellCenter - halfCellSize, cellCenter + halfCellSize, distances, uv3);
+        cellDistance += distances.y + EPSILON;
     }
     //return float4(float3(sdfInstanceCount, sdfGridIndex, 0) / 100.0, 1);
     
     //return float4(sdfInstanceCount, 0.1, 0, 1);
+    //return float4(debugTotalStep / 20.0, 0, 0, 1);
     return float4(lerp(baseColor, float3(0, 0, 0), shadow ? 0.5 : 0), 1.0);
 }

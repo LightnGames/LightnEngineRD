@@ -15,7 +15,7 @@ void Scene::initialize() {
 	_gpuMeshInstances.initialize(MESH_INSTANCE_COUNT_MAX);
 	_gpuLodMeshInstances.initialize(LOD_MESH_INSTANCE_COUNT_MAX);
 	_gpuSubMeshInstances.initialize(SUB_MESH_INSTANCE_COUNT_MAX);
-	_sdfGlobalMeshInstanceIndicesArray.initialize(MESH_INSTANCE_COUNT_MAX * 4);
+	_sdfGlobalMeshInstanceIndicesArray.initialize(SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
 
 	// buffers
 	{
@@ -636,6 +636,7 @@ void Scene::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIn
 					}
 				}
 
+				LTN_ASSERT(_sdfGlobalOffsets[offset] + currentCountIndex < SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
 				_sdfGlobalMeshInstanceIndices[_sdfGlobalOffsets[offset] + currentCountIndex] = meshInstanceIndex;
 
 				u32 dstOffset = _sdfGlobalOffsets[offset];

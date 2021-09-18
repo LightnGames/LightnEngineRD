@@ -351,6 +351,7 @@ public:
 	static constexpr s32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 	static constexpr f32 SDF_GLOBAL_CELL_SIZE = 6.4f;
 	static constexpr f32 SDF_GLOBAL_CELL_HALF_SIZE = SDF_GLOBAL_CELL_SIZE * SDF_GLOBAL_WIDTH * 0.5f;
+	static constexpr s32 SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX = 1024 * 64;
 
 	void initialize();
 	void update();
@@ -421,7 +422,7 @@ private:
 	// SDF
 	u32 _sdfGlobalOffsets[SDF_GLOBAL_CELL_COUNT] = {};
 	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
-	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_CELL_COUNT] = {};
+	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
 
 	GpuBuffer _sdfGlobalMeshInstanceOffsetBuffer;

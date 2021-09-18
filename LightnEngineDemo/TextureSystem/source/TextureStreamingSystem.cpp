@@ -8,7 +8,6 @@ void TextureStreamingSystem::initialize() {}
 void TextureStreamingSystem::terminate() {}
 
 void TextureStreamingSystem::update() {
-	return;
 	TextureSystemImpl* textureSystem = TextureSystemImpl::Get();
 
 	// 再生成要求で設定した寿命が来たら新しいテクスチャSRVに差し替えて古いリソースを破棄

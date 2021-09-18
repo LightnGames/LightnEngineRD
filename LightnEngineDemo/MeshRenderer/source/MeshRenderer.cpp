@@ -353,7 +353,7 @@ void MeshRenderer::initialize() {
 		pipelineStateDesc._rootSignature = _debugMeshSdfRootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
 		//pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
-		//pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
+		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS;
 		_debugMeshSdfPipelineState->iniaitlize(pipelineStateDesc);
 
 		vertexShader->terminate();

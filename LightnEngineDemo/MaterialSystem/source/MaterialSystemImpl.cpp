@@ -85,7 +85,12 @@ void MaterialSystemImpl::update() {
 	u32 materialCount = _materials.getResarveCount();
 	for (u32 i = 0; i < materialCount; ++i) {
 		MaterialImpl* material = &_materials[i];
-		f32 screenArea = static_cast<f32>(min(_screenAreas[i], UINT16_MAX)) / UINT16_MAX;
+		u16 screenAreaUint = min(_screenAreas[i], UINT16_MAX);
+		if (screenAreaUint == UINT16_MAX) {
+			continue;
+		}
+
+		f32 screenArea = static_cast<f32>(screenAreaUint) / UINT16_MAX;
 		u16 foundIndices[16];
 		u16 foundCount = _materials[i].findParameterCount(Material::ShaderValiableType::TEXTURE, foundIndices);
 		for (u32 j = 0; j < foundCount; ++j) {
