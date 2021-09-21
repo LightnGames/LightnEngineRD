@@ -13,7 +13,7 @@ void GraphicsSystemImpl::initialize() {
 	allocator->initialize();
 
 	HardwareFactoryDesc factoryDesc = {};
-	//factoryDesc._flags = HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG;
+	factoryDesc._flags = HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG;
 	_factory = allocator->allocateHardwareFactroy();
 	_factory->initialize(factoryDesc);
 

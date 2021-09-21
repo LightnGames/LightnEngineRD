@@ -8,6 +8,7 @@
 #include <MeshRenderer/impl/MeshRenderer.h>
 #include <MeshRenderer/impl/SceneImpl.h>
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
+#include <MeshRenderer/impl/GlobalDistanceField.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
 #include <DebugRenderer/impl/DebugRendererSystemImpl.h>
 
@@ -682,6 +683,7 @@ void MeshRenderer::setMeshShaderResources(const RenderContext& context, VramShad
 	CommandList* commandList = context._commandList;
 	ViewInfo* viewInfo = context._viewInfo;
 	const Scene* scene = context._scene;
+	const GlobalDistanceField* globalDistanceField = context._globalDistanceField;
 	InstancingResource* instancingResource = context._instancingResource;
 	DescriptorHandle textureDescriptors = TextureSystemImpl::Get()->getDescriptors();
 
@@ -700,9 +702,9 @@ void MeshRenderer::setMeshShaderResources(const RenderContext& context, VramShad
 	// sdf
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_BOUNDS, scene->getMeshInstanceBoundsMatrixSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_INV_BOUNDS, scene->getMeshInstanceBoundsInvMatrixSrv());
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_OFFSET, scene->getSdfGlobalMeshInstanceOffsetSrv());
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT, scene->getSdfGlobalMeshInstanceCountSrv());
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX, scene->getSdfGlobalMeshInstanceIndexSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_OFFSET, globalDistanceField->getSdfGlobalMeshInstanceOffsetSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT, globalDistanceField->getSdfGlobalMeshInstanceCountSrv());
+	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX, globalDistanceField->getSdfGlobalMeshInstanceIndexSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_TEXTURE, context._meshSdfSrv);
 
 	context._gpuCullingResource->setDrawCurrentLodDescriptorTable(commandList);

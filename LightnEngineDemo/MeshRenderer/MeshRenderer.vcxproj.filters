@@ -69,6 +69,9 @@
     <ClInclude Include="third_party\sdf_gen\vec.h">
       <Filter>third_party\sdf_gen</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\MeshRenderer\impl\GlobalDistanceField.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\SceneImpl.cpp">
@@ -88,6 +91,9 @@
     </ClCompile>
     <ClCompile Include="third_party\sdf_gen\makelevelset3.cpp">
       <Filter>third_party\sdf_gen</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GlobalDistanceField.cpp">
+      <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

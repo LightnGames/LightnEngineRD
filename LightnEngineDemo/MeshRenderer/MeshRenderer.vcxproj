@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\MeshRenderer\GpuStruct.h" />
+    <ClInclude Include="..\include\MeshRenderer\impl\GlobalDistanceField.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRenderer.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRendererSystemImpl.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshResourceManager.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="third_party\sdf_gen\vec.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\GlobalDistanceField.cpp" />
     <ClCompile Include="source\MeshRenderer.cpp" />
     <ClCompile Include="source\MeshRendererSystemImpl.cpp" />
     <ClCompile Include="source\MeshResourceManager.cpp" />

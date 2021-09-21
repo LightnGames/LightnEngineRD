@@ -10,6 +10,7 @@ class InstancingResource;
 class GpuCullingResource;
 class BuildIndirectArgumentResource;
 class Scene;
+class GlobalDistanceField;
 
 struct RenderContext {
 	CommandList* _commandList = nullptr;
@@ -28,6 +29,7 @@ struct RenderContext {
 	GpuDescriptorHandle _debugFixedViewCbv;
 	GpuDescriptorHandle _meshSdfSrv;
 	const Scene* _scene = nullptr;
+	const GlobalDistanceField* _globalDistanceField = nullptr;
 	bool _collectResult = false;
 };
 

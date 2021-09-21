@@ -588,10 +588,11 @@ void TextureSystemImpl::loadTexture(u32 textureIndex, u32 mipOffset, u32 mipCoun
 		u32 numberOfResources = numArray * targetMipCount * numberOfPlanes;
 		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
 
+		u32 clampedMipCount = min(mipCount, ddsMipCount);
 		VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
-		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, mipCount, nullptr, static_cast<u32>(requiredSize));
+		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, clampedMipCount, nullptr, static_cast<u32>(requiredSize));
 
-		for (u32 subResourceIndex = 0; subResourceIndex < mipCount; ++subResourceIndex) {
+		for (u32 subResourceIndex = 0; subResourceIndex < clampedMipCount; ++subResourceIndex) {
 			const PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
 			u8* data = reinterpret_cast<u8*>(pixelData) + layout._offset;
 			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];

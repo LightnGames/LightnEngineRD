@@ -21,6 +21,7 @@ enum SubMeshInstanceUpdateFlag {
 	SUB_MESH_INSTANCE_UPDATE_MATERIAL = 1 << 1,
 };
 
+class GlobalDistanceField;
 class PipelineStateGroup;
 struct ViewInfo;
 struct ShaderSet;
@@ -346,12 +347,6 @@ public:
 	static constexpr u32 SUB_MESH_INSTANCE_COUNT_MAX = 1024 * 256;
 	static constexpr u32 MESHLET_INSTANCE_MESHLET_COUNT_MAX = 64;
 	static constexpr u32 MESHLET_INSTANCE_INFO_COUNT_MAX = (MESHLET_INSTANCE_MESHLET_COUNT_MAX + 1) * gpu::SHADER_SET_COUNT_MAX;
-	static constexpr s32 SDF_GLOBAL_WIDTH = 8;
-	static constexpr s32 SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
-	static constexpr s32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
-	static constexpr f32 SDF_GLOBAL_CELL_SIZE = 6.4f;
-	static constexpr f32 SDF_GLOBAL_CELL_HALF_SIZE = SDF_GLOBAL_CELL_SIZE * SDF_GLOBAL_WIDTH * 0.5f;
-	static constexpr s32 SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX = 1024 * 64;
 
 	void initialize();
 	void update();
@@ -360,7 +355,6 @@ public:
 	void terminateDefaultResources();
 	void uploadMeshInstance(u32 meshInstanceIndex);
 	void deleteMeshInstance(u32 meshInstanceIndex);
-	void debugDrawGlobalSdfCells();
 	void debugDrawMeshInstanceBounds();
 	void debugDrawGui();
 
@@ -372,9 +366,6 @@ public:
 	GpuDescriptorHandle getMeshInstanceWorldMatrixSrv() const { return _meshInstanceWorldMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsMatrixSrv() const { return _meshInstanceBoundsMatrixSrv._gpuHandle; }
 	GpuDescriptorHandle getMeshInstanceBoundsInvMatrixSrv() const { return _meshInstanceBoundsInvMatrixSrv._gpuHandle; }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _sdfGlobalMeshInstanceCountSrv._gpuHandle; }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _sdfGlobalMeshInstanceIndexSrv._gpuHandle; }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceOffsetSrv() const { return _sdfGlobalMeshInstanceOffsetSrv._gpuHandle; }
 	u32 getMeshInstanceCountMax() const { return MESH_INSTANCE_COUNT_MAX; }
 	u32 getMeshInstanceCount() const { return _gpuMeshInstances.getInstanceCount(); }
 	u32 getMeshInstanceArrayCountMax() const { return _gpuMeshInstances.getResarveCount(); }
@@ -383,10 +374,7 @@ public:
 	const u8* getMeshInstanceStateFlags() const { return _meshInstanceStateFlags; }
 	SceneInfo getSceneInfo() const { return _sceneInfo; }
 	SceneInfo getVisibleSceneInfo() const { return _visibleSceneInfo; }
-
-private:
-	void addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
-	void removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
+	const GlobalDistanceField* getGlobalDistanceField() const { return _globalDistanceField; }
 
 private:
 	u8 _meshInstanceStateFlags[MESH_INSTANCE_COUNT_MAX] = {};
@@ -418,17 +406,5 @@ private:
 
 	SceneInfo _sceneInfo;
 	SceneInfo _visibleSceneInfo;
-
-	// SDF
-	u32 _sdfGlobalOffsets[SDF_GLOBAL_CELL_COUNT] = {};
-	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
-	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX] = {};
-	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
-
-	GpuBuffer _sdfGlobalMeshInstanceOffsetBuffer;
-	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
-	GpuBuffer _sdfGlobalMeshInstanceCountBuffer;
-	DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
-	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
-	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
+	GlobalDistanceField* _globalDistanceField = nullptr;
 };
