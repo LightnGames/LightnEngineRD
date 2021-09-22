@@ -4,7 +4,45 @@
 #include <DebugRenderer/DebugRendererSystem.h>
 
 void GlobalDistanceField::initialize() {
+	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+		_layers[i].initialize(i);
+	}
+}
+
+void GlobalDistanceField::terminate() {
+	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+		_layers[i].terminate();
+	}
+}
+
+void GlobalDistanceField::update() {
+	//for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+	//	_layers[i].update();
+	//}
+}
+
+void GlobalDistanceField::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+		_layers[i].addMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+	}
+}
+
+void GlobalDistanceField::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+		_layers[i].removeMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+	}
+}
+
+void GlobalDistanceField::debugDrawGlobalSdfCells() const {
+	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
+		_layers[i].debugDrawGlobalSdfCells();
+	}
+}
+
+void DistanceFieldLayer::initialize(u32 layerLevel) {
 	_sdfGlobalMeshInstanceIndicesArray.initialize(SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
+	_cellSize = static_cast<f32>(layerLevel + 1) * SDF_GLOBAL_CELL_SIZE;
+	_globalCellHalfExtent = SDF_GLOBAL_WIDTH * _cellSize * 0.5f;
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
@@ -48,7 +86,7 @@ void GlobalDistanceField::initialize() {
 	}
 }
 
-void GlobalDistanceField::terminate() {
+void DistanceFieldLayer::terminate() {
 	_sdfGlobalMeshInstanceIndexBuffer.terminate();
 	_sdfGlobalMeshInstanceCountBuffer.terminate();
 	_sdfGlobalMeshInstanceOffsetBuffer.terminate();
@@ -65,22 +103,20 @@ void GlobalDistanceField::terminate() {
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceIndexSrv);
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceCountSrv);
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceOffsetSrv);
+
 }
 
-void GlobalDistanceField::update() {
-}
-
-void GlobalDistanceField::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+void DistanceFieldLayer::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	s32 globalSdfMin[3];
-	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
-	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
-	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + _globalCellHalfExtent) / _cellSize);
+	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + _globalCellHalfExtent) / _cellSize);
+	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + _globalCellHalfExtent) / _cellSize);
 
 	s32 globalSdfMax[3];
-	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
-	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
-	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + _globalCellHalfExtent) / _cellSize) + 1;
+	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + _globalCellHalfExtent) / _cellSize) + 1;
+	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + _globalCellHalfExtent) / _cellSize) + 1;
 	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
 		if (z < 0 || z >= SDF_GLOBAL_WIDTH) {
 			continue;
@@ -113,8 +149,9 @@ void GlobalDistanceField::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 
 					}
 				}
 
-				LTN_ASSERT(_sdfGlobalOffsets[offset] + currentCountIndex < SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
-				_sdfGlobalMeshInstanceIndices[_sdfGlobalOffsets[offset] + currentCountIndex] = meshInstanceIndex;
+				u32 indexOffset = _sdfGlobalOffsets[offset] + currentCountIndex;
+				LTN_ASSERT(indexOffset < SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
+				_sdfGlobalMeshInstanceIndices[indexOffset] = meshInstanceIndex;
 
 				u32 dstOffset = _sdfGlobalOffsets[offset];
 				u32 copyCount = _sdfGlobalMeshInstanceCounts[offset];
@@ -129,17 +166,17 @@ void GlobalDistanceField::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 
 	}
 }
 
-void GlobalDistanceField::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+void DistanceFieldLayer::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
 	VramBufferUpdater* vramUpdater = GraphicsSystemImpl::Get()->getVramUpdater();
 	s32 globalSdfMin[3];
-	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
-	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
-	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE);
+	globalSdfMin[0] = static_cast<s32>((worldBounds._min._x + _globalCellHalfExtent) / _cellSize);
+	globalSdfMin[1] = static_cast<s32>((worldBounds._min._y + _globalCellHalfExtent) / _cellSize);
+	globalSdfMin[2] = static_cast<s32>((worldBounds._min._z + _globalCellHalfExtent) / _cellSize);
 
 	s32 globalSdfMax[3];
-	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
-	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
-	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + SDF_GLOBAL_CELL_HALF_SIZE) / SDF_GLOBAL_CELL_SIZE) + 1;
+	globalSdfMax[0] = static_cast<s32>((worldBounds._max._x + _globalCellHalfExtent) / _cellSize) + 1;
+	globalSdfMax[1] = static_cast<s32>((worldBounds._max._y + _globalCellHalfExtent) / _cellSize) + 1;
+	globalSdfMax[2] = static_cast<s32>((worldBounds._max._z + _globalCellHalfExtent) / _cellSize) + 1;
 	for (s32 z = globalSdfMin[2]; z < globalSdfMax[2]; ++z) {
 		if (z < 0 || z >= SDF_GLOBAL_WIDTH) {
 			continue;
@@ -204,8 +241,7 @@ void GlobalDistanceField::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u
 	}
 }
 
-void GlobalDistanceField::debugDrawGlobalSdfCells() const {
-	u32 cellCounter = 0;
+void DistanceFieldLayer::debugDrawGlobalSdfCells() const {
 	Vector3 cellOffset(0.5f);
 	for (s32 z = 0; z < SDF_GLOBAL_WIDTH; ++z) {
 		u32 depthOffset = z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
@@ -218,13 +254,11 @@ void GlobalDistanceField::debugDrawGlobalSdfCells() const {
 					continue;
 				}
 				Vector3 cellIndex(static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(z));
-				Vector3 start = cellIndex * SDF_GLOBAL_CELL_SIZE + cellOffset - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
-				Vector3 end = cellIndex * SDF_GLOBAL_CELL_SIZE - cellOffset + Vector3(SDF_GLOBAL_CELL_SIZE) - Vector3(SDF_GLOBAL_CELL_HALF_SIZE);
+				Vector3 start = cellIndex * _cellSize + cellOffset - Vector3(_globalCellHalfExtent);
+				Vector3 end = cellIndex * _cellSize - cellOffset + Vector3(_cellSize) - Vector3(_globalCellHalfExtent);
 				f32 alpha = static_cast<f32>(count) / 100.0f;
-				DebugRendererSystem::Get()->drawAabb(start, end, Color4(alpha, 0.2f, 0.2f, 1.0f));
-				cellCounter++;
+				DebugRendererSystem::Get()->drawAabb(start, end, Color4(alpha, _layerLevel * 0.2f, 0.2f, 1.0f));
 			}
 		}
 	}
-	cellCounter += 0;
 }
