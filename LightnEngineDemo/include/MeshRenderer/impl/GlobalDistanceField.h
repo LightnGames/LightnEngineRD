@@ -6,7 +6,6 @@ static constexpr s32 SDF_GLOBAL_WIDTH = 8;
 static constexpr s32 SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
 static constexpr s32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 static constexpr f32 SDF_GLOBAL_CELL_SIZE = 6.4f;
-//static constexpr f32 SDF_GLOBAL_CELL_HALF_SIZE = SDF_GLOBAL_CELL_SIZE * SDF_GLOBAL_WIDTH * 0.5f;
 static constexpr s32 SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX = 1024 * 64;
 
 class DistanceFieldLayer {
@@ -31,6 +30,7 @@ private:
 	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
 	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
+	GpuTexture _globalSdfTextures[SDF_GLOBAL_CELL_COUNT] = {};
 
 	GpuBuffer _sdfGlobalMeshInstanceOffsetBuffer;
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
@@ -38,6 +38,8 @@ private:
 	DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
+	DescriptorHandle _globalSdfSrv;
+	DescriptorHandle _globalSdfUav;
 };
 
 class GlobalDistanceField {

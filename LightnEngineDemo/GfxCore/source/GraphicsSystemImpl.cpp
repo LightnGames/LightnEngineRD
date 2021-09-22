@@ -61,7 +61,7 @@ void GraphicsSystemImpl::initialize() {
 	_dsvDescriptorAllocator.initialize(descriptorAllocatorDesc);
 
 	// gpu descriptr heap
-	descriptorAllocatorDesc._numDescriptors = 1024 * 2;
+	descriptorAllocatorDesc._numDescriptors = 1024 * 4;
 	descriptorAllocatorDesc._flags = DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	descriptorAllocatorDesc._type = DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	_srvCbvUavGpuDescriptorAllocator.initialize(descriptorAllocatorDesc);
