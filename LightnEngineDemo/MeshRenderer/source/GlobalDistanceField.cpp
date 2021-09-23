@@ -4,8 +4,20 @@
 #include <DebugRenderer/DebugRendererSystem.h>
 
 void GlobalDistanceField::initialize() {
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	u64 descriptorIncrementSize = allocator->getIncrimentSize();
+	_sdfGlobalMeshInstanceCountSrv = allocator->allocateDescriptors(LAYER_COUNT_MAX);
+	_sdfGlobalMeshInstanceIndexSrv = allocator->allocateDescriptors(LAYER_COUNT_MAX);
+	_sdfGlobalMeshInstanceOffsetSrv = allocator->allocateDescriptors(LAYER_COUNT_MAX);
+
+
 	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
-		_layers[i].initialize(i);
+		DistanceFieldLayer::DistanceFieldLayerDesc desc = {};
+		desc._layerLevel = i;
+		desc._sdfGlobalMeshInstanceCountSrv = _sdfGlobalMeshInstanceCountSrv + descriptorIncrementSize * i;
+		desc._sdfGlobalMeshInstanceIndexSrv = _sdfGlobalMeshInstanceIndexSrv + descriptorIncrementSize * i;
+		desc._sdfGlobalMeshInstanceOffsetSrv = _sdfGlobalMeshInstanceOffsetSrv + descriptorIncrementSize * i;
+		_layers[i].initialize(desc);
 	}
 }
 
@@ -39,9 +51,10 @@ void GlobalDistanceField::debugDrawGlobalSdfCells() const {
 	}
 }
 
-void DistanceFieldLayer::initialize(u32 layerLevel) {
+void DistanceFieldLayer::initialize(const DistanceFieldLayerDesc& desc) {
+	_layerLevel = desc._layerLevel;
 	_sdfGlobalMeshInstanceIndicesArray.initialize(SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
-	_cellSize = static_cast<f32>(layerLevel + 1) * SDF_GLOBAL_CELL_SIZE;
+	_cellSize = static_cast<f32>(_layerLevel + 1) * SDF_GLOBAL_CELL_SIZE;
 	_globalCellHalfExtent = SDF_GLOBAL_WIDTH * _cellSize * 0.5f;
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
@@ -54,20 +67,25 @@ void DistanceFieldLayer::initialize(u32 layerLevel) {
 		desc._sizeInByte = sizeof(u32) * Scene::MESH_INSTANCE_COUNT_MAX;
 		desc._initialState = RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		_sdfGlobalMeshInstanceCountBuffer.initialize(desc);
-		_sdfGlobalMeshInstanceCountBuffer.setDebugName("SDF Mesh Instance Count");
-
 		_sdfGlobalMeshInstanceIndexBuffer.initialize(desc);
-		_sdfGlobalMeshInstanceIndexBuffer.setDebugName("SDF Mesh Instance Index");
-
 		_sdfGlobalMeshInstanceOffsetBuffer.initialize(desc);
-		_sdfGlobalMeshInstanceOffsetBuffer.setDebugName("SDF Mesh Instance Offset");
+
+		char debugName[128];
+		sprintf_s(debugName, "GDF Mesh Instance Count [%d]", _layerLevel);
+		_sdfGlobalMeshInstanceCountBuffer.setDebugName(debugName);
+		
+		sprintf_s(debugName, "GDF Mesh Instance Index [%d]", _layerLevel);
+		_sdfGlobalMeshInstanceIndexBuffer.setDebugName(debugName);
+
+		sprintf_s(debugName, "GDF Mesh Instance Offset [%d]", _layerLevel);
+		_sdfGlobalMeshInstanceOffsetBuffer.setDebugName(debugName);
 	}
 
 	// descriptor
 	{
-		_sdfGlobalMeshInstanceCountSrv = allocator->allocateDescriptors(1);
-		_sdfGlobalMeshInstanceIndexSrv = allocator->allocateDescriptors(1);
-		_sdfGlobalMeshInstanceOffsetSrv = allocator->allocateDescriptors(1);
+		_sdfGlobalMeshInstanceCountSrv = desc._sdfGlobalMeshInstanceCountSrv;
+		_sdfGlobalMeshInstanceIndexSrv = desc._sdfGlobalMeshInstanceIndexSrv;
+		_sdfGlobalMeshInstanceOffsetSrv = desc._sdfGlobalMeshInstanceOffsetSrv;
 
 		ShaderResourceViewDesc desc = {};
 		desc._format = FORMAT_UNKNOWN;
@@ -79,13 +97,6 @@ void DistanceFieldLayer::initialize(u32 layerLevel) {
 		device->createShaderResourceView(_sdfGlobalMeshInstanceIndexBuffer.getResource(), &desc, _sdfGlobalMeshInstanceIndexSrv._cpuHandle);
 		device->createShaderResourceView(_sdfGlobalMeshInstanceCountBuffer.getResource(), &desc, _sdfGlobalMeshInstanceCountSrv._cpuHandle);
 		device->createShaderResourceView(_sdfGlobalMeshInstanceOffsetBuffer.getResource(), &desc, _sdfGlobalMeshInstanceOffsetSrv._cpuHandle);
-	}
-
-	// gdf
-	{
-		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-		_globalSdfSrv = allocator->allocateDescriptors(SDF_GLOBAL_CELL_COUNT);
-		_globalSdfUav = allocator->allocateDescriptors(SDF_GLOBAL_CELL_COUNT);
 	}
 
 	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
@@ -110,8 +121,6 @@ void DistanceFieldLayer::terminate() {
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceIndexSrv);
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceCountSrv);
 	allocator->discardDescriptor(_sdfGlobalMeshInstanceOffsetSrv);
-	allocator->discardDescriptor(_globalSdfSrv);
-	allocator->discardDescriptor(_globalSdfUav);
 }
 
 void DistanceFieldLayer::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
@@ -146,28 +155,6 @@ void DistanceFieldLayer::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 m
 				if (_sdfGlobalMeshInstanceCounts[offset] > 0) {
 					currentSdfOffset = _sdfGlobalOffsets[offset];
 					_sdfGlobalMeshInstanceIndicesArray.discard(currentSdfOffset, _sdfGlobalMeshInstanceCounts[offset]);
-				} else {
-					GpuTexture& texture = _globalSdfTextures[offset];
-					Device* device = graphicsSystem->getDevice();
-					GpuTextureDesc textureDesc = {};
-					textureDesc._device = device;
-					textureDesc._format = FORMAT_R8_SNORM;
-					textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
-					textureDesc._width = 32;
-					textureDesc._height = 32;
-					textureDesc._depthOrArraySize = 32;
-					textureDesc._mipLevels = 1;
-					textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-					textureDesc._flags = RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-					texture.initialize(textureDesc);
-
-					char debugName[128];
-					sprintf_s(debugName, "GDF [%2d, %2d, %2d] %3d", x, y, z, offset);
-					texture.setDebugName(debugName);
-
-					u32 incSize = static_cast<u64>(graphicsSystem->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize());
-					device->createShaderResourceView(texture.getResource(), nullptr, _globalSdfSrv._cpuHandle + incSize * offset);
-					device->createUnorderedAccessView(texture.getResource(), nullptr, nullptr, _globalSdfUav._cpuHandle + incSize * offset);
 				}
 				u32 currentCountIndex = _sdfGlobalMeshInstanceCounts[offset]++;
 				_sdfGlobalOffsets[offset] = _sdfGlobalMeshInstanceIndicesArray.request(_sdfGlobalMeshInstanceCounts[offset]);
@@ -235,7 +222,6 @@ void DistanceFieldLayer::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u3
 				}
 				else {
 					_sdfGlobalOffsets[offset] = gpu::INVALID_INDEX;
-					_globalSdfTextures[offset].terminate();
 				}
 
 				u32* mapSdfGlobalMeshOffsets = vramUpdater->enqueueUpdate<u32>(&_sdfGlobalMeshInstanceOffsetBuffer, sizeof(u32) * offset);

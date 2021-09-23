@@ -213,6 +213,7 @@
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh_uber.sfh" />
     <None Include="..\..\work\common\shader\standard_mesh\screen_triangle.psf" />
     <None Include="..\..\work\common\shader\standard_mesh\screen_triangle.vsf" />
+    <None Include="..\..\work\common\shader\util.sfh" />
     <None Include="..\..\work\common\shader\vertex_common.sfh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,5 +1,6 @@
 #include "constant_buffer.sfh"
 #include "gpu_driven.sfh"
+#include "util.sfh"
 
 ConstantBuffer<SceneCullingInfo> _sceneCullingInfo : register(b0);
 ConstantBuffer<ViewInfo> _viewInfo :register(b1);

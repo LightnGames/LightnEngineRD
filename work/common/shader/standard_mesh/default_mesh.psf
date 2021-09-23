@@ -2,26 +2,24 @@
 #include "../constant_buffer.sfh"
 #include "../gpu_driven.sfh"
 
+static const uint GLOBAL_SDF_LAYER_LEVEL = 2;
+static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
+static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
+static const int SDF_GLOBAL_WIDTH = 8;
+
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 Texture2D _textures[128] : register(t29);
 
-StructuredBuffer<float4x3> _meshInstanceBoundsMatrices : register(t157);
-StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t158);
-StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets : register(t159);
-StructuredBuffer<uint> _sdfMeshInstanceIndices : register(t160);
-StructuredBuffer<uint> _sdfMeshInstanceCounts : register(t161);
-Texture3D _sdfTextures[] : register(t162);
+StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
+StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t158);
+StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t160);
+StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t162);
+Texture3D _sdfTextures[] : register(t164);
 
 SamplerState _sampler : register(s0);
 SamplerState _linerSampler : register(s1);
-
-static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
-static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
-static const int SDF_GLOBAL_WIDTH = 8;
-static const int SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
-static const int SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 
 uint getSdfIndexFromId(int3 id)
 {
@@ -83,6 +81,13 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     return false;
 }
 
+bool isInsideAABB(float3 position, float halfExtent)
+{
+    return abs(position.x) <= halfExtent &&
+            abs(position.y) <= halfExtent &&
+            abs(position.z) <= halfExtent;
+}
+
 bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2 distances, out float3 uv3)
 {   
     float3 tmin = (pmin - ro) / rd;
@@ -94,9 +99,7 @@ bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2
 
     distances = float2(t0, t1);
     
-    if ((abs(ro.x) <= 0.5) &&
-        (abs(ro.y) <= 0.5) &&
-        (abs(ro.z) <= 0.5))
+    if (isInsideAABB(ro, 0.5))
     {
         uv3 = ro;
         return true;
@@ -129,6 +132,21 @@ bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2
     return true;
 }
 
+uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
+{
+    float width = SDF_GLOBAL_CELL_HALF_SIZE;
+    for (uint i = 0; i < GLOBAL_SDF_LAYER_LEVEL; ++i)
+    {
+        if (isInsideAABB(worldPosition, width))
+        {
+            return i;
+        }
+        width *= 2;
+    }
+
+    return GLOBAL_SDF_LAYER_LEVEL - 1;
+}
+
 
 float4 main(VertexOut input) : SV_TARGET {
     CustomParameters materialParameter = _customParameters[input._materialIndex];
@@ -143,14 +161,17 @@ float4 main(VertexOut input) : SV_TARGET {
     for (uint cellItr = 0; cellItr < WORLD_CELL_LOOP_COUNT_MAX; ++cellItr)
     {
         float3 worldPosition = input._worldPosition + cellDistance * invLightDirection;
-        int3 sdfGridId = int3((worldPosition + float3(SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE, SDF_GLOBAL_CELL_HALF_SIZE)) / SDF_GLOBAL_CELL_SIZE);
+        uint layerLevel = getGlobalDistanceFieldLayerLevel(worldPosition);
+        float layerExtent = SDF_GLOBAL_CELL_HALF_SIZE * (layerLevel + 1);
+        float cellSize = SDF_GLOBAL_CELL_SIZE * (layerLevel + 1);
+        float3 layerCenterOffset = float3(layerExtent, layerExtent, layerExtent);
+        int3 sdfGridId = int3((worldPosition + layerCenterOffset) / cellSize);
         uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
+        
         uint sdfInstanceCount = INVALID_INDEX;
-        if ((abs(worldPosition.x) < SDF_GLOBAL_CELL_HALF_SIZE) &&
-        (abs(worldPosition.y) < SDF_GLOBAL_CELL_HALF_SIZE) &&
-        (abs(worldPosition.z) < SDF_GLOBAL_CELL_HALF_SIZE))
+        if (isInsideAABB(worldPosition, layerExtent))
         {
-            sdfInstanceCount = _sdfMeshInstanceCounts[sdfGridIndex];
+            sdfInstanceCount = _sdfMeshInstanceCounts[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
         }
     
         if (sdfInstanceCount == INVALID_INDEX)
@@ -158,10 +179,10 @@ float4 main(VertexOut input) : SV_TARGET {
             break;
         }
         
-        uint sdfInstanceStartOffset = _sdfMeshInstanceIndexOffsets[sdfGridIndex];
+        uint sdfInstanceStartOffset = _sdfMeshInstanceIndexOffsets[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
         for (int i = 0; i < sdfInstanceCount; ++i)
         {
-            uint sdfMeshInstanceIndex = _sdfMeshInstanceIndices[sdfInstanceStartOffset + i];
+            uint sdfMeshInstanceIndex = _sdfMeshInstanceIndices[NonUniformResourceIndex(layerLevel)][sdfInstanceStartOffset + i];
             float4x3 invBoundsMatrix = _meshInstanceBoundsInvMatrices[sdfMeshInstanceIndex];
             float3 position = mul(float4(worldPosition, 1), invBoundsMatrix).xyz;
             float3 rayDirection = mul(invLightDirection, (float3x3) invBoundsMatrix);
@@ -184,8 +205,8 @@ float4 main(VertexOut input) : SV_TARGET {
             break;
         }
         
-        float3 halfCellSize = float3(SDF_GLOBAL_CELL_SIZE, SDF_GLOBAL_CELL_SIZE, SDF_GLOBAL_CELL_SIZE) / 2.0;
-        float3 cellCenter = floor(worldPosition / SDF_GLOBAL_CELL_SIZE) * SDF_GLOBAL_CELL_SIZE + halfCellSize;
+        float3 halfCellSize = float3(cellSize, cellSize, cellSize) / 2.0;
+        float3 cellCenter = floor(worldPosition / cellSize) * cellSize + halfCellSize;
         float2 distances;
         float3 uv3;
         intersectRayAABB(worldPosition, invLightDirection, cellCenter - halfCellSize, cellCenter + halfCellSize, distances, uv3);

@@ -220,5 +220,8 @@
     <None Include="..\..\work\common\shader\sdf\compute_mesh_sdf.csf">
       <Filter>shader\sdf</Filter>
     </None>
+    <None Include="..\..\work\common\shader\util.sfh">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

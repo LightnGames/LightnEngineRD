@@ -10,17 +10,20 @@ static constexpr s32 SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX = 1024 * 64;
 
 class DistanceFieldLayer {
 public:
-	void initialize(u32 layerLevel);
+	struct DistanceFieldLayerDesc {
+		u32 _layerLevel = 0;
+		DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
+		DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
+		DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
+	};
+
+	void initialize(const DistanceFieldLayerDesc& desc);
 	void terminate();
 
 	void addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
 	void removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
 
 	void debugDrawGlobalSdfCells() const;
-
-	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _sdfGlobalMeshInstanceCountSrv._gpuHandle; }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _sdfGlobalMeshInstanceIndexSrv._gpuHandle; }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceOffsetSrv() const { return _sdfGlobalMeshInstanceOffsetSrv._gpuHandle; }
 
 private:
 	u32 _layerLevel = 0;
@@ -30,7 +33,6 @@ private:
 	u32 _sdfGlobalMeshInstanceCounts[SDF_GLOBAL_CELL_COUNT] = {};
 	u32 _sdfGlobalMeshInstanceIndices[SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX] = {};
 	MultiDynamicQueueBlockManager _sdfGlobalMeshInstanceIndicesArray;
-	GpuTexture _globalSdfTextures[SDF_GLOBAL_CELL_COUNT] = {};
 
 	GpuBuffer _sdfGlobalMeshInstanceOffsetBuffer;
 	GpuBuffer _sdfGlobalMeshInstanceIndexBuffer;
@@ -38,8 +40,6 @@ private:
 	DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
 	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
-	DescriptorHandle _globalSdfSrv;
-	DescriptorHandle _globalSdfUav;
 };
 
 class GlobalDistanceField {
@@ -51,12 +51,15 @@ public:
 	void addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
 	void removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex);
 
-	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _layers[0].getSdfGlobalMeshInstanceCountSrv(); }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _layers[0].getSdfGlobalMeshInstanceIndexSrv(); }
-	GpuDescriptorHandle getSdfGlobalMeshInstanceOffsetSrv() const { return _layers[0].getSdfGlobalMeshInstanceOffsetSrv(); }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceCountSrv() const { return _sdfGlobalMeshInstanceCountSrv._gpuHandle; }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceIndexSrv() const { return _sdfGlobalMeshInstanceIndexSrv._gpuHandle; }
+	GpuDescriptorHandle getSdfGlobalMeshInstanceOffsetSrv() const { return _sdfGlobalMeshInstanceOffsetSrv._gpuHandle; }
 
 	void debugDrawGlobalSdfCells() const;
 
 private:
 	DistanceFieldLayer _layers[LAYER_COUNT_MAX] = {};
+	DescriptorHandle _sdfGlobalMeshInstanceOffsetSrv;
+	DescriptorHandle _sdfGlobalMeshInstanceIndexSrv;
+	DescriptorHandle _sdfGlobalMeshInstanceCountSrv;
 };

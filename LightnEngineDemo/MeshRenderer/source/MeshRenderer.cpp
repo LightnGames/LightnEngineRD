@@ -700,7 +700,6 @@ void MeshRenderer::setMeshShaderResources(const RenderContext& context, VramShad
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, scene->getMeshInstanceWorldMatrixSrv());
 
 	// sdf
-	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_BOUNDS, scene->getMeshInstanceBoundsMatrixSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_INV_BOUNDS, scene->getMeshInstanceBoundsInvMatrixSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_OFFSET, globalDistanceField->getSdfGlobalMeshInstanceOffsetSrv());
 	commandList->setGraphicsRootDescriptorTable(DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT, globalDistanceField->getSdfGlobalMeshInstanceCountSrv());
