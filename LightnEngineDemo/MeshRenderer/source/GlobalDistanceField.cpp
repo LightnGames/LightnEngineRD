@@ -34,14 +34,26 @@ void GlobalDistanceField::update() {
 }
 
 void GlobalDistanceField::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	Vector3 extent = worldBounds.getSize();
+	f32 extentComponentMax = max(extent._x, max(extent._y, extent._z));
 	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
-		_layers[i].addMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+		u32 layerIndex = LAYER_COUNT_MAX - i - 1;
+		if (LAYER_THRESHOLDS[layerIndex] < extentComponentMax) {
+			_layers[layerIndex].addMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+			break;
+		}
 	}
 }
 
 void GlobalDistanceField::removeMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {
+	Vector3 extent = worldBounds.getSize();
+	f32 extentComponentMax = max(extent._x, max(extent._y, extent._z));
 	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
-		_layers[i].removeMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+		u32 layerIndex = LAYER_COUNT_MAX - i - 1;
+		if (LAYER_THRESHOLDS[layerIndex] < extentComponentMax) {
+			_layers[layerIndex].removeMeshInstanceSdfGlobal(worldBounds, meshInstanceIndex);
+			break;
+		}
 	}
 }
 

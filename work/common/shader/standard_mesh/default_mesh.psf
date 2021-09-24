@@ -21,6 +21,15 @@ Texture3D _sdfTextures[] : register(t164);
 SamplerState _sampler : register(s0);
 SamplerState _linerSampler : register(s1);
 
+// position が AABB の内側にあるか判定します
+bool isInsideAABB(float3 position, float halfExtent)
+{
+    return abs(position.x) <= halfExtent &&
+            abs(position.y) <= halfExtent &&
+            abs(position.z) <= halfExtent;
+}
+
+// [ x, y, z ] のインデックスから 1次元配列にアクセスするためのインデックスを計算します
 uint getSdfIndexFromId(int3 id)
 {
     uint depthOffset = id.z * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
@@ -29,17 +38,13 @@ uint getSdfIndexFromId(int3 id)
     return depthOffset + heightOffset + widthOffset;
 }
 
+// SDF の 3D テクスチャをサンプルします
 float sampleSdf(uint textureIndex, float3 localPosition)
 {
-    float3 size;
-    float level;
-    _sdfTextures[textureIndex].GetDimensions(0, size.x, size.y, size.z, level);
-    
-    float3 offset = float3(1.0, 1.0, 1.0) / size * 0.5;
-    offset = float3(0, 0, 0);
-    return _sdfTextures[textureIndex].Sample(_linerSampler, localPosition + float3(0.5, 0.5, 0.5) + offset).x;
+    return _sdfTextures[textureIndex].Sample(_linerSampler, localPosition + float3(0.5, 0.5, 0.5)).x;
 }
 
+// SDF をレイマーチして交差するか取得します
 bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
 {
     float invStepScale = max(1.0 / length(rayDirection), 0.01);
@@ -49,27 +54,16 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     bool isHit = false;
     float3 rayStartPosition = position;
     float3 currentRayOrigin = rayStartPosition;
-    float rayDistance = invStepScale * 0.1;
+    float rayDistance = invStepScale * 0.05;
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
     {
         currentRayOrigin = rayStartPosition + rayDistance * rayDirection;
-        if (abs(currentRayOrigin.x) > 0.5)
+        if (!isInsideAABB(currentRayOrigin, 0.5))
         {
-            return false;
+            break;
         }
         
-        if (abs(currentRayOrigin.y) > 0.5)
-        {
-            return false;
-        }
-        
-        if (abs(currentRayOrigin.z) > 0.5)
-        {
-            return false;
-        }
-        
-        float distance = sampleSdf(sdfIndex, currentRayOrigin);
-        
+        float distance = sampleSdf(sdfIndex, currentRayOrigin);      
         float stepDistance = max(distance, minStepSize);
         rayDistance += stepDistance;
         
@@ -81,15 +75,9 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     return false;
 }
 
-bool isInsideAABB(float3 position, float halfExtent)
-{
-    return abs(position.x) <= halfExtent &&
-            abs(position.y) <= halfExtent &&
-            abs(position.z) <= halfExtent;
-}
-
+// レイが AABB と交差するか取得します
 bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2 distances, out float3 uv3)
-{   
+{
     float3 tmin = (pmin - ro) / rd;
     float3 tmax = (pmax - ro) / rd;
     float3 sc = min(tmin, tmax);
@@ -105,113 +93,130 @@ bool intersectRayAABB(float3 ro, float3 rd, float3 pmin, float3 pmax, out float2
         return true;
     }
     
-    // Texture coordinates
-    float3 uv = ro + t0 * rd;
-    if (abs(uv.x) - EPSILON > 0.5)
-    {
-        return false;
-    }
-        
-    if (abs(uv.y) - EPSILON > 0.5)
-    {
-        return false;
-    }
-        
-    if (abs(uv.z) - EPSILON > 0.5)
-    {
-        return false;
-    }
-    
     if (t0 < 0)
     {
         return false;
     }
     
-    uv3 = uv;
+    // Texture coordinates
+    float3 uv = ro + t0 * rd;
+    if (isInsideAABB(uv, 0.5 + EPSILON))
+    {
+        uv3 = uv;
+        return true;
+    }
     
-    return true;
+    return false;
 }
 
+// ワールド座標から GDF レイヤーレベルを取得します
 uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
 {
-    float width = SDF_GLOBAL_CELL_HALF_SIZE;
-    for (uint i = 0; i < GLOBAL_SDF_LAYER_LEVEL; ++i)
-    {
-        if (isInsideAABB(worldPosition, width))
-        {
-            return i;
-        }
-        width *= 2;
-    }
-
-    return GLOBAL_SDF_LAYER_LEVEL - 1;
+    uint3 position = abs(int3(worldPosition / SDF_GLOBAL_CELL_HALF_SIZE));
+    uint3 levels = countbits(position);
+    uint level = max(levels.x, max(levels.y, levels.z));
+    return min(level, GLOBAL_SDF_LAYER_LEVEL - 1);
 }
 
-
-float4 main(VertexOut input) : SV_TARGET {
-    CustomParameters materialParameter = _customParameters[input._materialIndex];
-    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
-    float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
-    
-    uint debugTotalStep = 0;
-    float3 invLightDirection = normalize(-float3(-1, -1, -1));
+// Distance field を用いたシャドウ
+bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
+{
+    float3 invLightDirection = -lightDirection;
     uint WORLD_CELL_LOOP_COUNT_MAX = 14;
-    float cellDistance = 0;
-    bool shadow = false;
+    float cellDistance = 0.15;
+    uint currentLayerLevels[GLOBAL_SDF_LAYER_LEVEL];
+    
+    [unroll]
+    for (uint i = 0; i < GLOBAL_SDF_LAYER_LEVEL; ++i)
+    {
+        currentLayerLevels[i] = INVALID_INDEX;
+    }
+    
+    // セルごとにグリッドを走査
     for (uint cellItr = 0; cellItr < WORLD_CELL_LOOP_COUNT_MAX; ++cellItr)
     {
-        float3 worldPosition = input._worldPosition + cellDistance * invLightDirection;
-        uint layerLevel = getGlobalDistanceFieldLayerLevel(worldPosition);
-        float layerExtent = SDF_GLOBAL_CELL_HALF_SIZE * (layerLevel + 1);
-        float cellSize = SDF_GLOBAL_CELL_SIZE * (layerLevel + 1);
-        float3 layerCenterOffset = float3(layerExtent, layerExtent, layerExtent);
-        int3 sdfGridId = int3((worldPosition + layerCenterOffset) / cellSize);
-        uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
+        float3 worldPosition = rayOrigin + cellDistance * invLightDirection;
+        uint minLayerLevel = getGlobalDistanceFieldLayerLevel(worldPosition);
+        uint topLayerLevel = GLOBAL_SDF_LAYER_LEVEL - 1;
         
-        uint sdfInstanceCount = INVALID_INDEX;
-        if (isInsideAABB(worldPosition, layerExtent))
+        // レイヤーレベルごとにグリッドインデックスを検索
+        uint sdfGridIndices[GLOBAL_SDF_LAYER_LEVEL];
+        for (uint i = minLayerLevel; i < GLOBAL_SDF_LAYER_LEVEL; ++i)
         {
-            sdfInstanceCount = _sdfMeshInstanceCounts[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
-        }
-    
-        if (sdfInstanceCount == INVALID_INDEX)
-        {
-            break;
-        }
-        
-        uint sdfInstanceStartOffset = _sdfMeshInstanceIndexOffsets[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
-        for (int i = 0; i < sdfInstanceCount; ++i)
-        {
-            uint sdfMeshInstanceIndex = _sdfMeshInstanceIndices[NonUniformResourceIndex(layerLevel)][sdfInstanceStartOffset + i];
-            float4x3 invBoundsMatrix = _meshInstanceBoundsInvMatrices[sdfMeshInstanceIndex];
-            float3 position = mul(float4(worldPosition, 1), invBoundsMatrix).xyz;
-            float3 rayDirection = mul(invLightDirection, (float3x3) invBoundsMatrix);
-            float2 distances;
-            float3 uv3;
-            if (intersectRayAABB(position, rayDirection, float3(-0.5, -0.5, -0.5), float3(0.5, 0.5, 0.5), distances, uv3))
+            float layerExtent = SDF_GLOBAL_CELL_HALF_SIZE * (i + 1);
+            float cellSize = SDF_GLOBAL_CELL_SIZE * (i + 1);
+            float3 layerCenterOffset = float3(layerExtent, layerExtent, layerExtent);
+            int3 sdfGridId = int3((worldPosition + layerCenterOffset) / cellSize);
+            uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
+            sdfGridIndices[i] = sdfGridIndex;
+            
+            // まだ走査されていないグリッドインデックスの場合、走査最大レベルを更新
+            if (currentLayerLevels[i] != sdfGridIndex)
             {
-                debugTotalStep++;
-                MeshInstance meshInstance = _meshInstances[sdfMeshInstanceIndex];
-                if (intersectSdf(meshInstance._meshIndex, uv3, rayDirection))
+                topLayerLevel = i;
+            }
+        }
+        
+        // 最小～最大レイヤーレベルまでグリッド内のメッシュインスタンスを走査
+        for (uint layerLevel = minLayerLevel; layerLevel < topLayerLevel + 1; ++layerLevel)
+        {
+            // このレイヤーレベルの範囲外かチェック
+            float layerExtent = SDF_GLOBAL_CELL_HALF_SIZE * (layerLevel + 1);
+            if (!isInsideAABB(worldPosition, layerExtent))
+            {
+                break;
+            }
+        
+            // 走査済みグリッドインデックスを保存
+            uint sdfGridIndex = sdfGridIndices[layerLevel];
+            currentLayerLevels[layerLevel] = sdfGridIndex;
+            
+            // グリッド内のメッシュインスタンスバウンディングOBBにレイがヒットするかチェック
+            uint sdfInstanceCount = _sdfMeshInstanceCounts[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
+            uint sdfInstanceStartOffset = _sdfMeshInstanceIndexOffsets[NonUniformResourceIndex(layerLevel)][sdfGridIndex];
+            for (int i = 0; i < sdfInstanceCount; ++i)
+            {
+                uint sdfMeshInstanceIndex = _sdfMeshInstanceIndices[NonUniformResourceIndex(layerLevel)][sdfInstanceStartOffset + i];
+                float4x3 invBoundsMatrix = _meshInstanceBoundsInvMatrices[sdfMeshInstanceIndex];
+                float3 position = mul(float4(worldPosition, 1), invBoundsMatrix).xyz;
+                float3 rayDirection = mul(invLightDirection, (float3x3) invBoundsMatrix);
+                float2 distances;
+                float3 uv3;
+                if (intersectRayAABB(position, rayDirection, float3(-0.5, -0.5, -0.5), float3(0.5, 0.5, 0.5), distances, uv3))
                 {
-                    shadow = true;
-                    break;
+                    // バウンディングOBBにヒットした場合、メッシュインスタンスに対してレイマーチする
+                    MeshInstance meshInstance = _meshInstances[sdfMeshInstanceIndex];
+                    if (intersectSdf(meshInstance._meshIndex, uv3, rayDirection))
+                    {
+                        return true;
+                    }
                 }
             }
         }
         
-        if (shadow)
-        {
-            break;
-        }
-        
+        // レイがいずれもヒットしない場合、cellDistance を次のグリッドを示す距離にする
+        float cellSize = SDF_GLOBAL_CELL_SIZE * (minLayerLevel + 1);
         float3 halfCellSize = float3(cellSize, cellSize, cellSize) / 2.0;
         float3 cellCenter = floor(worldPosition / cellSize) * cellSize + halfCellSize;
         float2 distances;
         float3 uv3;
         intersectRayAABB(worldPosition, invLightDirection, cellCenter - halfCellSize, cellCenter + halfCellSize, distances, uv3);
+        
+        // 現在のグリッドAABBの終端までの距離を加算する
         cellDistance += distances.y + EPSILON;
     }
+    
+    return false;
+}
+
+
+float4 main(VertexOut input) : SV_TARGET
+{
+    CustomParameters materialParameter = _customParameters[input._materialIndex];
+    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
+    float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
+    
+    bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
     //return float4(float3(sdfInstanceCount, sdfGridIndex, 0) / 100.0, 1);
     
     //return float4(sdfInstanceCount, 0.1, 0, 1);
