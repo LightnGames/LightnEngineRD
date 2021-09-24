@@ -25,6 +25,11 @@ void GlobalDistanceField::terminate() {
 	for (u32 i = 0; i < LAYER_COUNT_MAX; ++i) {
 		_layers[i].terminate();
 	}
+
+	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
+	allocator->discardDescriptor(_sdfGlobalMeshInstanceCountSrv);
+	allocator->discardDescriptor(_sdfGlobalMeshInstanceIndexSrv);
+	allocator->discardDescriptor(_sdfGlobalMeshInstanceOffsetSrv);
 }
 
 void GlobalDistanceField::update() {
@@ -128,11 +133,6 @@ void DistanceFieldLayer::terminate() {
 	for (u32 i = 0; i < SDF_GLOBAL_CELL_COUNT; ++i) {
 		LTN_ASSERT(_sdfGlobalMeshInstanceCounts[i] == 0);
 	}
-
-	DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator();
-	allocator->discardDescriptor(_sdfGlobalMeshInstanceIndexSrv);
-	allocator->discardDescriptor(_sdfGlobalMeshInstanceCountSrv);
-	allocator->discardDescriptor(_sdfGlobalMeshInstanceOffsetSrv);
 }
 
 void DistanceFieldLayer::addMeshInstanceSdfGlobal(const AABB& worldBounds, u32 meshInstanceIndex) {

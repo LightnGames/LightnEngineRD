@@ -32,7 +32,7 @@ void ApplicationImpl::initialize() {
 	HINSTANCE windowHandle = GetModuleHandle(NULL);
 
 	// Initialize the window class.
-	WNDCLASSEX windowClass = { 0 };
+	WNDCLASSEX windowClass = {};
 	windowClass.cbSize = sizeof(WNDCLASSEX);
 	windowClass.style = CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = WindowProc;

@@ -424,7 +424,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	_parameterDatas = new u8[_parameterSizeInByte * MATERIAL_COUNT_MAX];
 
-	constexpr u32 GLOBAL_SDF_LAYER_COUNT = 2;
+	constexpr u32 GLOBAL_SDF_LAYER_COUNT = 4;
 	constexpr u32 TEXTURE_BASE_REGISTER = 29;
 	constexpr u32 MESH_INSTANCE_INV_BOUNDS_BASE_REGISTER = 157;
 	constexpr u32 SDF_GROUP_BASE_REGISTER = MESH_INSTANCE_INV_BOUNDS_BASE_REGISTER + 1;

@@ -2,7 +2,7 @@
 #include "../constant_buffer.sfh"
 #include "../gpu_driven.sfh"
 
-static const uint GLOBAL_SDF_LAYER_LEVEL = 2;
+static const uint GLOBAL_SDF_LAYER_LEVEL = 4;
 static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
 static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
 static const int SDF_GLOBAL_WIDTH = 8;
@@ -10,13 +10,13 @@ static const int SDF_GLOBAL_WIDTH = 8;
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
-Texture2D _textures[128] : register(t29);
+Texture2D _textures[] : register(t29);
 
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
 StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t158);
-StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t160);
-StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t162);
-Texture3D _sdfTextures[] : register(t164);
+StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t162);
+StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t166);
+Texture3D _sdfTextures[] : register(t170);
 
 SamplerState _sampler : register(s0);
 SamplerState _linerSampler : register(s1);
@@ -114,8 +114,7 @@ uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
 {
     uint3 position = abs(int3(worldPosition / SDF_GLOBAL_CELL_HALF_SIZE));
     uint3 levels = countbits(position);
-    uint level = max(levels.x, max(levels.y, levels.z));
-    return min(level, GLOBAL_SDF_LAYER_LEVEL - 1);
+    return max(levels.x, max(levels.y, levels.z));
 }
 
 // Distance field を用いたシャドウ
@@ -138,6 +137,10 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
         float3 worldPosition = rayOrigin + cellDistance * invLightDirection;
         uint minLayerLevel = getGlobalDistanceFieldLayerLevel(worldPosition);
         uint topLayerLevel = GLOBAL_SDF_LAYER_LEVEL - 1;
+        if (minLayerLevel >= GLOBAL_SDF_LAYER_LEVEL)
+        {
+            break;
+        }
         
         // レイヤーレベルごとにグリッドインデックスを検索
         uint sdfGridIndices[GLOBAL_SDF_LAYER_LEVEL];
@@ -216,7 +219,8 @@ float4 main(VertexOut input) : SV_TARGET
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
     float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
     
-    bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
+    //bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
+    bool shadow = false;
     //return float4(float3(sdfInstanceCount, sdfGridIndex, 0) / 100.0, 1);
     
     //return float4(sdfInstanceCount, 0.1, 0, 1);

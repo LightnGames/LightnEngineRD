@@ -1,13 +1,13 @@
 #pragma once
 #include <GfxCore/impl/GpuResourceImpl.h>
 
-static constexpr u32 LAYER_COUNT_MAX = 2;
+static constexpr u32 LAYER_COUNT_MAX = 4;
 static constexpr s32 SDF_GLOBAL_WIDTH = 8;
 static constexpr s32 SDF_GLOBAL_HALF_WIDTH = SDF_GLOBAL_WIDTH / 2;
 static constexpr s32 SDF_GLOBAL_CELL_COUNT = SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH * SDF_GLOBAL_WIDTH;
 static constexpr f32 SDF_GLOBAL_CELL_SIZE = 6.4f;
 static constexpr s32 SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX = 1024 * 64;
-static constexpr f32 LAYER_THRESHOLDS[LAYER_COUNT_MAX] = { 0.0f, 16.0f };
+static constexpr f32 LAYER_THRESHOLDS[LAYER_COUNT_MAX] = { 0.0f, 16.0f,32,64 };
 
 class DistanceFieldLayer {
 public:
