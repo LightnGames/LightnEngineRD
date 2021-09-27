@@ -10,7 +10,7 @@ static const int SDF_GLOBAL_WIDTH = 8;
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
-Texture2D _textures[] : register(t29);
+Texture2D _textures[128] : register(t29);
 
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
 StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t158);
@@ -146,8 +146,8 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
         uint sdfGridIndices[GLOBAL_SDF_LAYER_LEVEL];
         for (uint i = minLayerLevel; i < GLOBAL_SDF_LAYER_LEVEL; ++i)
         {
-            float layerExtent = SDF_GLOBAL_CELL_HALF_SIZE * (i + 1);
-            float cellSize = SDF_GLOBAL_CELL_SIZE * (i + 1);
+            float cellSize = (1 << i) * SDF_GLOBAL_CELL_SIZE;
+            float layerExtent = float(SDF_GLOBAL_WIDTH) * cellSize * 0.5;
             float3 layerCenterOffset = float3(layerExtent, layerExtent, layerExtent);
             int3 sdfGridId = int3((worldPosition + layerCenterOffset) / cellSize);
             uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
@@ -198,7 +198,7 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
         }
         
         // レイがいずれもヒットしない場合、cellDistance を次のグリッドを示す距離にする
-        float cellSize = SDF_GLOBAL_CELL_SIZE * (minLayerLevel + 1);
+        float cellSize = (1 << minLayerLevel) * SDF_GLOBAL_CELL_SIZE;
         float3 halfCellSize = float3(cellSize, cellSize, cellSize) / 2.0;
         float3 cellCenter = floor(worldPosition / cellSize) * cellSize + halfCellSize;
         float2 distances;
@@ -219,8 +219,8 @@ float4 main(VertexOut input) : SV_TARGET
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
     float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
     
-    //bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
-    bool shadow = false;
+    bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
+    //bool shadow = false;
     //return float4(float3(sdfInstanceCount, sdfGridIndex, 0) / 100.0, 1);
     
     //return float4(sdfInstanceCount, 0.1, 0, 1);

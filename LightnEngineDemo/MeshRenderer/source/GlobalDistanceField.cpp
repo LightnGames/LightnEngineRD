@@ -71,7 +71,7 @@ void GlobalDistanceField::debugDrawGlobalSdfCells() const {
 void DistanceFieldLayer::initialize(const DistanceFieldLayerDesc& desc) {
 	_layerLevel = desc._layerLevel;
 	_sdfGlobalMeshInstanceIndicesArray.initialize(SDF_GLOBAL_MESH_INDEX_ARRAY_COUNT_MAX);
-	_cellSize = static_cast<f32>(_layerLevel + 1) * SDF_GLOBAL_CELL_SIZE;
+	_cellSize = static_cast<f32>(1 << _layerLevel) * SDF_GLOBAL_CELL_SIZE;
 	_globalCellHalfExtent = SDF_GLOBAL_WIDTH * _cellSize * 0.5f;
 
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
