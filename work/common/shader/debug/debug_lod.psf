@@ -1,6 +1,7 @@
 #include "../shaderInput.sfh"
 #include "../constant_buffer.sfh"
 #include "../gpu_driven.sfh"
+#include "../util.sfh"
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 

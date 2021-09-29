@@ -1023,7 +1023,8 @@ void ResourceD3D12::setDebugName(const char* name) {
 void* ResourceD3D12::map(const MemoryRange* range) {
 	const D3D12_RANGE* memoryRange = reinterpret_cast<const D3D12_RANGE*>(range);
 	void* ptr = nullptr;
-	_resource->Map(0, memoryRange, &ptr);
+	HRESULT hr = _resource->Map(0, memoryRange, &ptr);
+	LTN_SUCCEEDED(hr);
 	return ptr;
 }
 

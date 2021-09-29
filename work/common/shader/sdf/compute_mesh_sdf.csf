@@ -1,5 +1,5 @@
 ﻿#include "../constant_buffer.sfh"
-#include "../gpu_driven.sfh"
+#include "../util.sfh"
 
 struct ComputeSdfConstant
 {
