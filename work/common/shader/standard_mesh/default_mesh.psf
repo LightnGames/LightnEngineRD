@@ -56,6 +56,8 @@ bool intersectSdf(uint sdfIndex, float3 position, float3 rayDirection)
     float3 rayStartPosition = position;
     float3 currentRayOrigin = rayStartPosition;
     float rayDistance = invStepScale * 0.05;
+    
+    [loop]
     for (int i = 0; i < SAMPLE_COUNT_MAX; ++i)
     {
         currentRayOrigin = rayStartPosition + rayDistance * rayDirection;
@@ -122,7 +124,7 @@ uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
 bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 {
     float3 invLightDirection = -lightDirection;
-    uint WORLD_CELL_LOOP_COUNT_MAX = 4;
+    uint WORLD_CELL_LOOP_COUNT_MAX = 8;
     float cellDistance = 0.15;
     uint3 prevWorldPosition = uint3(0, 0, 0);
     
@@ -159,7 +161,7 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
             float cellSize = (1 << layerLevel) * SDF_GLOBAL_CELL_SIZE;
             float layerExtent = float(SDF_GLOBAL_WIDTH) * cellSize * 0.5;
             float3 layerCenterOffset = float3(layerExtent, layerExtent, layerExtent);
-            int3 sdfGridId = int3(floor((worldPosition + layerCenterOffset) / cellSize));
+            int3 sdfGridId = int3((worldPosition + layerCenterOffset) / cellSize);
             uint sdfGridIndex = getSdfIndexFromId(sdfGridId);
             
             // グリッド内のメッシュインスタンスバウンディング OBB にレイがヒットするかチェック
