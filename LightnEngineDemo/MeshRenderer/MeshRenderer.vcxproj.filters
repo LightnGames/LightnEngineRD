@@ -72,6 +72,9 @@
     <ClInclude Include="..\include\MeshRenderer\impl\GlobalDistanceField.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\MeshRenderer\impl\VisiblityBufferRenderer.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\SceneImpl.cpp">
@@ -93,6 +96,9 @@
       <Filter>third_party\sdf_gen</Filter>
     </ClCompile>
     <ClCompile Include="source\GlobalDistanceField.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\VisiblityBufferRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

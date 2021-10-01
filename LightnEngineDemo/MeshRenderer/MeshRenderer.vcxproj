@@ -158,6 +158,7 @@
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRendererSystemImpl.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshResourceManager.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\SceneImpl.h" />
+    <ClInclude Include="..\include\MeshRenderer\impl\VisiblityBufferRenderer.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\VramShaderSetSystem.h" />
     <ClInclude Include="..\include\MeshRenderer\MeshRendererSystem.h" />
     <ClInclude Include="third_party\sdf_gen\array1.h" />
@@ -175,6 +176,7 @@
     <ClCompile Include="source\MeshRendererSystemImpl.cpp" />
     <ClCompile Include="source\MeshResourceManager.cpp" />
     <ClCompile Include="source\SceneImpl.cpp" />
+    <ClCompile Include="source\VisiblityBufferRenderer.cpp" />
     <ClCompile Include="source\VramShaderSetSystem.cpp" />
     <ClCompile Include="third_party\sdf_gen\makelevelset3.cpp" />
   </ItemGroup>

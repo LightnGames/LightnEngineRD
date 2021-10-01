@@ -891,6 +891,7 @@ void MeshRendererSystemImpl::initialize() {
 	_scene.initialize();
 	_resourceManager.initialize();
 	_meshRenderer.initialize();
+	_visiblityBufferRenderer.initialize();
 	_vramShaderSetSystem.initialize();
 	_instancingResource.initialize();
 
@@ -955,6 +956,7 @@ void MeshRendererSystemImpl::terminate() {
 	_scene.terminate();
 	_vramShaderSetSystem.terminate();
 	_resourceManager.terminate();
+	_visiblityBufferRenderer.terminate();
 	_meshRenderer.terminate();
 	_indirectArgumentResource.terminate();
 	_primIndirectArgumentResource.terminate();

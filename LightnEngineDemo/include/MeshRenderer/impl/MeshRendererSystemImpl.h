@@ -4,6 +4,7 @@
 #include <MeshRenderer/impl/SceneImpl.h>
 #include <MeshRenderer/impl/MeshResourceManager.h>
 #include <MeshRenderer/impl/MeshRenderer.h>
+#include <MeshRenderer/impl/VisiblityBufferRenderer.h>
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 
 class PipelineStateGroup;
@@ -51,6 +52,7 @@ private:
 	Scene _scene;
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;
+	VisiblityBufferRenderer _visiblityBufferRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
 	InstancingResource _instancingResource;
 	IndirectArgumentResource _indirectArgumentResource;
