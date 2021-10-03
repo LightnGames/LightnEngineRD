@@ -232,5 +232,8 @@
     <None Include="..\..\work\common\shader\visibility_buffer\shading_quad.vsf">
       <Filter>shader\visibility_buffer</Filter>
     </None>
+    <None Include="..\..\work\common\shader\visibility_buffer\geometry_pass.psf">
+      <Filter>shader\visibility_buffer</Filter>
+    </None>
   </ItemGroup>
 </Project>

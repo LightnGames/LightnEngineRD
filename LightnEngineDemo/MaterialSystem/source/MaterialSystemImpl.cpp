@@ -180,6 +180,7 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		PipelineStateSet& meshShaderPipelineStateSet = _pipelineStateSets[TYPE_AS_MESH_SHADER];
 		PipelineStateSet& primInstancingPipelineStateSet = _pipelineStateSets[TYPE_MESH_SHADER];
 		PipelineStateSet& classicPipelineStateSet = _pipelineStateSets[TYPE_CLASSIC];
+		PipelineStateSet& shadingPipelineStateSet = _pipelineStateSets[TYPE_SHADING];
 
 		ShaderSetImplDesc implDesc = {};
 		implDesc._debugCullingPassPipelineStateGroup = &meshShaderPipelineStateSet._debugCullingPassPipelineStateGroups[findIndex];
@@ -207,6 +208,8 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 		implDesc._classicPipelineStateGroup = &classicPipelineStateSet._pipelineStateGroups[findIndex];
 		implDesc._classicDepthPipelineStateGroup = &classicPipelineStateSet._depthPipelineStateGroups[findIndex];
 		implDesc._multiDrawCommandSignature = &classicPipelineStateSet._commandSignatures[findIndex];
+
+		implDesc._shadingPipelineStateGroup = &shadingPipelineStateSet._pipelineStateGroups[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, implDesc);
@@ -381,9 +384,14 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	}
 
 	char meshShaderPath[FILE_PATH_COUNT_MAX] = {};
-	char pixelShaderPath[FILE_PATH_COUNT_MAX] = {};
+	char pixelShaderPath_[FILE_PATH_COUNT_MAX] = {};
 	sprintf_s(meshShaderPath, "%s%s", RESOURCE_FOLDER_PATH, meshShaderName);
-	sprintf_s(pixelShaderPath, "%s%s", RESOURCE_FOLDER_PATH, pixelShaderName);
+	sprintf_s(pixelShaderPath_, "%s%s", RESOURCE_FOLDER_PATH, pixelShaderName);
+#if ENABLE_VISIBILITY_BUFFER
+	const char* pixelShaderPath = "L://LightnEngine//resource//common//shader//visibility_buffer//geometry_pass.pso";
+#else
+	const char* pixelShaderPath = pixelShaderPath_;
+#endif
 
 	// シェーダーパラメーター
 	{
@@ -516,11 +524,23 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	constexpr char psDebugWireFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_wireframe.pso";
 	constexpr char psDebugOcclusionFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_occlusion_culling.pso";
 
+#if ENABLE_VISIBILITY_BUFFER
+	Format rtvFormats[2];
+	rtvFormats[0] = FORMAT_R32G32_UINT;
+	rtvFormats[1] = FORMAT_R8_UINT;
+#else
+	Format rtvFormats[1];
+	rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
+#endif
+
+	MeshShaderPipelineStateGroupDesc sharedMeshShaderPipelineStateDesc = {};
+	sharedMeshShaderPipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+	sharedMeshShaderPipelineStateDesc._rtvCount = LTN_COUNTOF(rtvFormats);
+	sharedMeshShaderPipelineStateDesc._rtvFormats = rtvFormats;
+
 	// メッシュシェーダーのみ
 	{
-		MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
-		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-
+		MeshShaderPipelineStateGroupDesc pipelineStateDesc = sharedMeshShaderPipelineStateDesc;
 		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
 		rootSignatureDesc._parameters = furstumCullingRootParameters;
 
@@ -557,16 +577,19 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		}
 
 		// オクルージョンカリング可視化
+#if ENABLE_VISIBILITY_BUFFER
+		* implDesc._debugOcclusionPipelineStateGroup = nullptr;
+#else
 		pipelineStateDesc._pixelShaderFilePath = psDebugOcclusionFilePath;
 		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
 		pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
 		*implDesc._debugPrimOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+#endif
 	}
 
 	// メッシュシェーダー + 増幅シェーダー
 	{
-		MeshShaderPipelineStateGroupDesc pipelineStateDesc = {};
-		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+		MeshShaderPipelineStateGroupDesc pipelineStateDesc = sharedMeshShaderPipelineStateDesc;
 		pipelineStateDesc._meshShaderFilePath = meshShaderPath;
 
 		// GPU カリング無効デバッグ用
@@ -608,11 +631,47 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		*implDesc._depthPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
 
 		// オクルージョンカリング可視化
+#if ENABLE_VISIBILITY_BUFFER
+			* implDesc._debugOcclusionPipelineStateGroup = nullptr;
+#else
 		pipelineStateDesc._pixelShaderFilePath = psDebugOcclusionFilePath;
 		pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_ALWAYS;
 		pipelineStateDesc._blendDesc._renderTarget[0] = debugOcclusionBlendDesc;
 		*implDesc._debugOcclusionPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDescFurstumOcclusionCulling);
+#endif
 	}
+
+#if ENABLE_VISIBILITY_BUFFER
+	// shading
+	{
+		DescriptorRange constantCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		DescriptorRange shaderRangeSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		RootParameter rootParameters[ShadingRootParam::COUNT] = {};
+		rootParameters[ShadingRootParam::CONSTANT].initializeDescriptorTable(1, &constantCbvRange, SHADER_VISIBILITY_VERTEX);
+		rootParameters[ShadingRootParam::ROOT_CONSTANT].initializeConstant(1, 1, SHADER_VISIBILITY_VERTEX);
+		rootParameters[ShadingRootParam::SHADER_RANGE].initializeDescriptorTable(1, &shaderRangeSrvRange, SHADER_VISIBILITY_VERTEX);
+
+		rootParameters[ShadingRootParam::VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceDescriptorRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
+
+		RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+
+		ClassicPipelineStateGroupDesc desc = {};
+		desc._vertexShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\visibility_buffer\\shading_quad.vso";
+		desc._pixelShaderFilePath = pixelShaderPath_;
+		desc._depthComparisonFunc = COMPARISON_FUNC_EQUAL;
+		desc._rtvCount = LTN_COUNTOF(rtvFormats);
+		desc._rtvFormats = rtvFormats;
+		desc._dsvFormat = FORMAT_D16_UNORM;
+		*implDesc._shadingPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+	}
+#endif
 
 	// classic
 	{
@@ -647,10 +706,24 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		char vertexShaderPath[FILE_PATH_COUNT_MAX] = {};
 		sprintf_s(vertexShaderPath, "%s%s", RESOURCE_FOLDER_PATH, vertexShaderName);
 
+		InputElementDesc inputElements[2] = {};
+		inputElements[0]._inputSlot = 0;
+		inputElements[0]._format = FORMAT_R32G32B32_FLOAT;
+		inputElements[0]._semanticName = "POSITION";
+
+		inputElements[1]._inputSlot = 1;
+		inputElements[1]._format = FORMAT_R32_UINT;
+		inputElements[1]._semanticName = "PACKED_TEX";
+
 		ClassicPipelineStateGroupDesc desc = {};
+		desc._rtvCount = LTN_COUNTOF(rtvFormats);
+		desc._rtvFormats = rtvFormats;
 		desc._vertexShaderFilePath = vertexShaderPath;
 		desc._pixelShaderFilePath = pixelShaderPath;
+		desc._inputElements = inputElements;
+		desc._inputElementCount = LTN_COUNTOF(inputElements);
 		desc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
+		desc._dsvFormat = FORMAT_D32_FLOAT;
 		*implDesc._classicPipelineStateGroup = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 
 		desc._pixelShaderFilePath = nullptr;

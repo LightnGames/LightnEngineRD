@@ -30,8 +30,8 @@ void VisiblityBufferRenderer::initialize() {
 		_triangleIdTexture.setDebugName("Visiblity Buffer Triangle ID");
 
 		desc._format = FORMAT_R8_UINT;
-		_shaderIdTexture.initialize(desc);
-		_shaderIdTexture.setDebugName("Visiblity Buffer Shader ID");
+		_triangleShaderIdTexture.initialize(desc);
+		_triangleShaderIdTexture.setDebugName("Visiblity Buffer Triangle Shader ID");
 	}
 
 	// Shader range
@@ -54,8 +54,8 @@ void VisiblityBufferRenderer::initialize() {
 		desc._height = static_cast<u64>(viewPort._height);
 		desc._flags = RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		desc._initialState = RESOURCE_STATE_DEPTH_WRITE;
-		_materialIdTexture.initialize(desc);
-		_materialIdTexture.setDebugName("Visiblity Buffer Shader ID Depth");
+		_shaderIdDepth.initialize(desc);
+		_shaderIdDepth.setDebugName("Visiblity Buffer Shader ID Depth");
 	}
 
 	// Constant buffer
@@ -93,14 +93,14 @@ void VisiblityBufferRenderer::initialize() {
 		u64 incremenetSize = allocator->getIncrimentSize();
 		_triangleIdRtv = allocator->allocateDescriptors(2);
 		device->createRenderTargetView(_triangleIdTexture.getResource(), _triangleIdRtv._cpuHandle);
-		device->createRenderTargetView(_shaderIdTexture.getResource(), _triangleIdRtv._cpuHandle + incremenetSize);
+		device->createRenderTargetView(_triangleShaderIdTexture.getResource(), _triangleIdRtv._cpuHandle + incremenetSize);
 	}
 
 	// DSV
 	{
 		DescriptorHeapAllocator* allocator = GraphicsSystemImpl::Get()->getDsvGpuDescriptorAllocator();
 		_shaderIdDsv = allocator->allocateDescriptors(1);
-		device->createDepthStencilView(_materialIdTexture.getResource(), _shaderIdDsv._cpuHandle);
+		device->createDepthStencilView(_shaderIdDepth.getResource(), _shaderIdDsv._cpuHandle);
 	}
 
 	// SRV & UAV & CBV
@@ -113,7 +113,7 @@ void VisiblityBufferRenderer::initialize() {
 		_buildShaderIdCbv = allocator->allocateDescriptors(1);
 		_shadingCbv = allocator->allocateDescriptors(1);
 		device->createShaderResourceView(_triangleIdTexture.getResource(), nullptr, _triangleIdSrv._cpuHandle);
-		device->createShaderResourceView(_shaderIdTexture.getResource(), nullptr, _shaderIdSrv._cpuHandle);
+		device->createShaderResourceView(_triangleShaderIdTexture.getResource(), nullptr, _shaderIdSrv._cpuHandle);
 
 		u32 shaderRangeByteStride = sizeof(u32) * 2;
 		u32 shaderRangeNumElements = _shaderRangeBuffer.getSizeInByte() / shaderRangeByteStride;
@@ -197,8 +197,8 @@ void VisiblityBufferRenderer::initialize() {
 
 void VisiblityBufferRenderer::terminate() {
 	_triangleIdTexture.terminate();
-	_shaderIdTexture.terminate();
-	_materialIdTexture.terminate();
+	_triangleShaderIdTexture.terminate();
+	_shaderIdDepth.terminate();
 	_shaderRangeBuffer.terminate();
 	_shadingConstantBuffer.terminate();
 	_buildShaderIdConstantBuffer.terminate();
@@ -236,6 +236,7 @@ void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdContext& context)
 		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 	}
 
+	commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->setRenderTargets(0, nullptr, &_shaderIdDsv);
 	commandList->setGraphicsRootSignature(_buildShaderIdRootSignature);
 	commandList->setPipelineState(_buildShaderIdPipelineState);
@@ -261,7 +262,7 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 
 	{
 		ResourceTransitionBarrier barriers[1] = {};
-		barriers[0] = _shaderIdTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_READ);
+		barriers[0] = _shaderIdDepth.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_READ);
 		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 	}
 
@@ -286,17 +287,16 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 		commandList->setGraphicsRootSignature(pipelineState->getRootSignature());
 		commandList->setPipelineState(pipelineState->getPipelineState());
 		commandList->setPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::SCENE_CONSTANT, viewInfo->_viewInfoCbv._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::MESH_INSTANCE_WORLD_MATRIX, context._meshInstanceWorldMatrixSrv);
-		commandList->setGraphicsRootDescriptorTable(ClassicMeshRootParam::TEXTURES, textureDescriptors._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::CONSTANT, _shadingCbv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADER_RANGE, _shaderRangeSrv._gpuHandle);
+		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::ROOT_CONSTANT, 1, &pipelineStateIndex, 0);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}
 
 	{
 		ResourceTransitionBarrier barriers[1] = {};
-		barriers[0] = _shaderIdTexture.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_WRITE);
+		barriers[0] = _shaderIdDepth.getAndUpdateTransitionBarrier(RESOURCE_STATE_DEPTH_WRITE);
 		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 	}
 }

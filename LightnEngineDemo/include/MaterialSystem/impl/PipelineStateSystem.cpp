@@ -191,8 +191,6 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
     pipelineStateDesc._ms = meshShader->getShaderByteCode();
     pipelineStateDesc._as = amplificationShaderByteCode;
 	pipelineStateDesc._ps = pixelShaderByteCode;
-    pipelineStateDesc._numRenderTarget = 1;
-    pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
     pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     pipelineStateDesc._rootSignature = sharedRootSignature->_rootSignature;
     pipelineStateDesc._sampleDesc._count = 1;
@@ -200,6 +198,11 @@ void PipelineStateGroup::initialize(const MeshShaderPipelineStateGroupDesc& desc
 	pipelineStateDesc._depthComparisonFunc = desc._depthComparisonFunc;
     pipelineStateDesc._blendDesc = desc._blendDesc;
 	pipelineStateDesc._fillMode = desc._fillMode;
+    pipelineStateDesc._numRenderTarget = desc._rtvCount;
+    for (u32 i = 0; i < desc._rtvCount; ++i) {
+        pipelineStateDesc._rtvFormats[i] = desc._rtvFormats[i];
+    }
+
     _pipelineState = allocator->allocatePipelineState();
     _pipelineState->iniaitlize(pipelineStateDesc);
     _pipelineState->setDebugName(desc._meshShaderFilePath);
@@ -228,31 +231,24 @@ void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, S
     if (desc._pixelShaderFilePath != nullptr) {
         pixelShader = allocator->allocateShaderBlob();
         pixelShader->initialize(desc._pixelShaderFilePath);
-        pixelShaderByteCode = pixelShader->getShaderByteCode();;
+        pixelShaderByteCode = pixelShader->getShaderByteCode();
     }
-
-    InputElementDesc inputElements[2] = {};
-    inputElements[0]._inputSlot = 0;
-    inputElements[0]._format = FORMAT_R32G32B32_FLOAT;
-    inputElements[0]._semanticName = "POSITION";
-
-    inputElements[1]._inputSlot = 1;
-    inputElements[1]._format = FORMAT_R32_UINT;
-    inputElements[1]._semanticName = "PACKED_TEX";
 
     GraphicsPipelineStateDesc pipelineStateDesc = {};
     pipelineStateDesc._device = device;
     pipelineStateDesc._vs = vertexShader->getShaderByteCode();
     pipelineStateDesc._ps = pixelShaderByteCode;
-    pipelineStateDesc._numRenderTarget = 1;
-    pipelineStateDesc._rtvFormats[0] = FORMAT_R8G8B8A8_UNORM;
     pipelineStateDesc._topologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     pipelineStateDesc._rootSignature = sharedRootSignature->_rootSignature;
     pipelineStateDesc._sampleDesc._count = 1;
-    pipelineStateDesc._dsvFormat = FORMAT_D32_FLOAT;
-    pipelineStateDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
-    pipelineStateDesc._inputElements = inputElements;
-    pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
+    pipelineStateDesc._dsvFormat = desc._dsvFormat;
+    pipelineStateDesc._depthComparisonFunc = desc._depthComparisonFunc;
+    pipelineStateDesc._inputElements = desc._inputElements;
+    pipelineStateDesc._inputElementCount = desc._inputElementCount;
+    pipelineStateDesc._numRenderTarget = desc._rtvCount;
+    for (u32 i = 0; i < desc._rtvCount; ++i) {
+        pipelineStateDesc._rtvFormats[i] = desc._rtvFormats[i];
+    }
     _pipelineState = allocator->allocatePipelineState();
     _pipelineState->iniaitlize(pipelineStateDesc);
 	_sharedRootSignature = sharedRootSignature;

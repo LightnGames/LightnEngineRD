@@ -54,6 +54,9 @@ struct ShaderSetImplDesc {
 	PipelineStateGroup** _debugWireFramePipelineStateGroup = nullptr;
 	PipelineStateGroup** _classicPipelineStateGroup = nullptr;
 	PipelineStateGroup** _classicDepthPipelineStateGroup = nullptr;
+
+	PipelineStateGroup** _shadingPipelineStateGroup = nullptr;
+
 	CommandSignature** _commandSignature = nullptr;
 	CommandSignature** _msCommandSignature = nullptr;
 	CommandSignature** _multiDrawCommandSignature = nullptr;
@@ -135,6 +138,7 @@ public:
 		TYPE_AS_MESH_SHADER = 0,
 		TYPE_MESH_SHADER,
 		TYPE_CLASSIC,
+		TYPE_SHADING,
 		TYPE_COUNT
 	};
 

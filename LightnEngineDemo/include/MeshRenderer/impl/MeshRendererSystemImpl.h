@@ -52,7 +52,7 @@ private:
 	Scene _scene;
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;
-	VisiblityBufferRenderer _visiblityBufferRenderer;
+	VisiblityBufferRenderer _visibilityBufferRenderer;
 	VramShaderSetSystem _vramShaderSetSystem;
 	InstancingResource _instancingResource;
 	IndirectArgumentResource _indirectArgumentResource;

@@ -177,6 +177,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		LTN_ASSERT(pipelineStates != nullptr);
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
 
+#if ENABLE_VISIBILITY_BUFFER
+		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
+		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+#endif
+
 		RenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
@@ -200,6 +205,30 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 		_gpuCullingResource.resourceBarriersHizSrvToTexture(commandList);
 	}
+
+#if ENABLE_VISIBILITY_BUFFER
+	// シェーダーID 構築
+	{
+		VisiblityBufferRenderer::BuildShaderIdContext context = {};
+		context._commandList = commandList;
+		_visibilityBufferRenderer.buildShaderId(context);
+	}
+
+	// シェーディング
+	{
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_SHADING);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+
+		VisiblityBufferRenderer::ShadingContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+		context._pipelineStates = pipelineStates;
+		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		_visibilityBufferRenderer.shading(context);
+	}
+#endif
 
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Read back Culling Result");
@@ -891,7 +920,7 @@ void MeshRendererSystemImpl::initialize() {
 	_scene.initialize();
 	_resourceManager.initialize();
 	_meshRenderer.initialize();
-	_visiblityBufferRenderer.initialize();
+	_visibilityBufferRenderer.initialize();
 	_vramShaderSetSystem.initialize();
 	_instancingResource.initialize();
 
@@ -956,7 +985,7 @@ void MeshRendererSystemImpl::terminate() {
 	_scene.terminate();
 	_vramShaderSetSystem.terminate();
 	_resourceManager.terminate();
-	_visiblityBufferRenderer.terminate();
+	_visibilityBufferRenderer.terminate();
 	_meshRenderer.terminate();
 	_indirectArgumentResource.terminate();
 	_primIndirectArgumentResource.terminate();

@@ -1,0 +1,18 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
+#include "../util.sfh"
+
+struct OutputPS
+{
+    uint2 _triangleId : SV_Target0;
+    uint _shaderId : SV_Target1;
+};
+
+OutputPS main(VertexOut input)
+{
+    OutputPS output;
+    output._triangleId = uint2(0, 0);
+    output._shaderId = 0;
+    return output;
+}

@@ -3,7 +3,7 @@
 #include "../gpu_driven.sfh"
 #include "../util.sfh"
 
-#define ENABLE_VISIBILITY_BUFFER 0
+#define ENABLE_SDF 0
 
 static const uint GLOBAL_SDF_LAYER_LEVEL = 4;
 static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
@@ -14,14 +14,15 @@ ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 Texture2D _textures[128] : register(t29);
+SamplerState _sampler : register(s0);
 
+#if ENABLE_SDF
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
 StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t158);
 StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t162);
 StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t166);
 Texture3D _sdfTextures[] : register(t170);
 
-SamplerState _sampler : register(s0);
 SamplerState _linerSampler : register(s1);
 
 // position ‚ª AABB ‚Ì“à‘¤‚É‚ ‚é‚©”»’è‚µ‚Ü‚·
@@ -210,21 +211,14 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
     
     return false;
 }
+#endif
 
-
-struct OutputPS
-{
-    uint2 _triangleId : COLOR0;
-    uint _shaderId : SHADER_ID;
-};
-
+#define ENABLE_VISIBILITY_BUFFER 0
 #if ENABLE_VISIBILITY_BUFFER
-OutputPS main(VertexOut input)
+float4 main(float4 _position : SV_Position) : SV_TARGET
 {
-    OutputPS output;
-    output._triangleId = uint2(0, 0);
-    output._shaderId = 0;
-    return output;
+    return float4(_position.xy / float2(1920, 1080), 0, 1);
+
 }
 #else
 float4 main(VertexOut input) : SV_TARGET
@@ -233,8 +227,12 @@ float4 main(VertexOut input) : SV_TARGET
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
     float3 baseColor = albedoTexture.Sample(_sampler, input._texcoord).rgb;
     
+#if ENABLE_SDF    
     bool shadow = raytraceShadow(input._worldPosition, normalize(float3(-1, -1, -1)));
-    //bool shadow = false;
+#else
+    bool shadow = false;
+#endif
+
     //return float4(float3(sdfInstanceCount, sdfGridIndex, 0) / 100.0, 1);
     
     //return float4(sdfInstanceCount, 0.1, 0, 1);

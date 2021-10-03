@@ -907,6 +907,19 @@ void CommandListD3D12::setRenderTargets(u32 count, DescriptorHandle* rtvHandles,
 	_commandList->OMSetRenderTargets(count, handles, FALSE, dsvPtr);
 }
 
+void CommandListD3D12::setRenderTargets(u32 count, CpuDescriptorHandle rtvHandles, DescriptorHandle* dsvHandle) {
+	D3D12_CPU_DESCRIPTOR_HANDLE handles;
+	handles.ptr = rtvHandles._ptr;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+	D3D12_CPU_DESCRIPTOR_HANDLE* dsvPtr = nullptr;
+	if (dsvHandle != nullptr) {
+		dsv.ptr = dsvHandle->_cpuHandle._ptr;
+		dsvPtr = &dsv;
+	}
+	_commandList->OMSetRenderTargets(count, &handles, TRUE, dsvPtr);
+}
+
 void CommandListD3D12::clearRenderTargetView(DescriptorHandle rtvHandle, f32 clearColor[4]) {
 	_commandList->ClearRenderTargetView(toD3d12(rtvHandle._cpuHandle), clearColor, 0, nullptr);
 }

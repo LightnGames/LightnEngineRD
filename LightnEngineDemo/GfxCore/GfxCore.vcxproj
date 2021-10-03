@@ -216,6 +216,7 @@
     <None Include="..\..\work\common\shader\util.sfh" />
     <None Include="..\..\work\common\shader\vertex_common.sfh" />
     <None Include="..\..\work\common\shader\visibility_buffer\build_shader_id.psf" />
+    <None Include="..\..\work\common\shader\visibility_buffer\geometry_pass.psf" />
     <None Include="..\..\work\common\shader\visibility_buffer\shading_quad.vsf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -27,7 +27,6 @@ public:
 		ViewInfo* _viewInfo = nullptr;
 		VramShaderSet* _vramShaderSets = nullptr;
 		PipelineStateGroup** _pipelineStates = nullptr;
-		u32 _numVertexBufferView = 0;
 		const u32* _indirectArgmentCounts = nullptr;
 		GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
 	};
@@ -37,7 +36,7 @@ public:
 	void buildShaderId(const BuildShaderIdContext& context);
 	void shading(const ShadingContext& context);
 
-	GpuDescriptorHandle getTriangleIdRtvs() { return _triangleIdRtv._gpuHandle; }
+	DescriptorHandle getTriangleIdRtvs() const { return _triangleIdRtv; }
 
 private:
 	u32 _shadingQuadCount = 0;
@@ -45,8 +44,8 @@ private:
 	PipelineState* _buildShaderIdPipelineState = nullptr;
 
 	GpuTexture _triangleIdTexture;
-	GpuTexture _shaderIdTexture;
-	GpuTexture _materialIdTexture;
+	GpuTexture _triangleShaderIdTexture;
+	GpuTexture _shaderIdDepth;
 	GpuBuffer _shaderRangeBuffer;
 	GpuBuffer _buildShaderIdConstantBuffer;
 	GpuBuffer _shadingConstantBuffer;

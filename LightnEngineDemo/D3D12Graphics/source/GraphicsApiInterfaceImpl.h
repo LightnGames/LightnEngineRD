@@ -410,6 +410,7 @@ struct CommandListD3D12 : public CommandList {
 	virtual void setViewports(u32 count, const ViewPort* viewPorts) override;
 	virtual void setScissorRects(u32 count, const Rect* scissorRects) override;
 	virtual void setRenderTargets(u32 count, DescriptorHandle* rtvHandles, DescriptorHandle* dsvHandle) override;
+	virtual void setRenderTargets(u32 count, CpuDescriptorHandle rtvHandles, DescriptorHandle* dsvHandle) override;
 	virtual void clearRenderTargetView(DescriptorHandle rtvHandle, f32 clearColor[4]) override;
 	virtual void clearDepthStencilView(CpuDescriptorHandle depthStencilView, ClearFlags clearFlags, f32 depth, u8 stencil, u32 numRects, const Rect* rects) override;
 	virtual void setPipelineState(PipelineState* pipelineState) override;

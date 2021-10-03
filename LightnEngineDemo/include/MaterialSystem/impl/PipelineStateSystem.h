@@ -54,10 +54,26 @@ namespace ClassicMeshRootParam {
 	};
 };
 
+#define ENABLE_VISIBILITY_BUFFER 0
+namespace ShadingRootParam {
+	enum {
+		CONSTANT = 0,
+		ROOT_CONSTANT,
+		SHADER_RANGE,
+		VIEW_CONSTANT,
+		MATERIALS,
+		MESH_INSTANCE,
+		TEXTURES,
+		COUNT
+	};
+};
+
 struct MeshShaderPipelineStateGroupDesc {
 	ComparisonFunc _depthComparisonFunc;
 	BlendDesc _blendDesc;
 	FillMode _fillMode = FILL_MODE_SOLID;
+	Format* _rtvFormats = nullptr;
+	u32 _rtvCount = 0;
 	const char* _meshShaderFilePath = nullptr;
 	const char* _amplificationShaderFilePath = nullptr;
 	const char* _pixelShaderFilePath = nullptr;
@@ -65,8 +81,13 @@ struct MeshShaderPipelineStateGroupDesc {
 
 struct ClassicPipelineStateGroupDesc {
 	ComparisonFunc _depthComparisonFunc;
+	Format _dsvFormat;
 	BlendDesc _blendDesc;
 	FillMode _fillMode = FILL_MODE_SOLID;
+	u32 _rtvCount = 0;
+	Format* _rtvFormats = nullptr;
+	u32 _inputElementCount = 0;
+	InputElementDesc* _inputElements = nullptr;
 	const char* _vertexShaderFilePath = nullptr;
 	const char* _pixelShaderFilePath = nullptr;
 };
