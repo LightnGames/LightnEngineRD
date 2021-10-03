@@ -3,6 +3,8 @@
 #include "../gpu_driven.sfh"
 #include "../util.sfh"
 
+#define ENABLE_VISIBILITY_BUFFER 0
+
 static const uint GLOBAL_SDF_LAYER_LEVEL = 4;
 static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
 static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
@@ -210,6 +212,21 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 }
 
 
+struct OutputPS
+{
+    uint2 _triangleId : COLOR0;
+    uint _shaderId : SHADER_ID;
+};
+
+#if ENABLE_VISIBILITY_BUFFER
+OutputPS main(VertexOut input)
+{
+    OutputPS output;
+    output._triangleId = uint2(0, 0);
+    output._shaderId = 0;
+    return output;
+}
+#else
 float4 main(VertexOut input) : SV_TARGET
 {
     CustomParameters materialParameter = _customParameters[input._materialIndex];
@@ -224,3 +241,4 @@ float4 main(VertexOut input) : SV_TARGET
     //return float4(debugTotalStep / 20.0, 0, 0, 1);
     return float4(lerp(baseColor, float3(0, 0, 0), shadow ? 0.5 : 0), 1.0);
 }
+#endif

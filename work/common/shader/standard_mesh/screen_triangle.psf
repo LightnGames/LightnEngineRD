@@ -1,9 +1,8 @@
 struct PSInput{
     float4 _position : SV_Position;
-    float2 _positionNdc : NDC_POSITION;
 };
 
 float4 main(PSInput input) : SV_TARGET {
-    return float4(input._positionNdc, 0, 1);
+    return float4(input._position.xy, 0, 1);
 }
 

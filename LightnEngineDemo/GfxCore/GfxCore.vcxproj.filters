@@ -40,6 +40,9 @@
     <Filter Include="shader\sdf">
       <UniqueIdentifier>{7f1f8511-3453-442e-97ac-1d03ab4169be}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shader\visibility_buffer">
+      <UniqueIdentifier>{b7a02962-2bfa-4f5f-bbbf-5362834f28ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\GfxCore\GraphicsSystem.h">
@@ -222,6 +225,12 @@
     </None>
     <None Include="..\..\work\common\shader\util.sfh">
       <Filter>shader</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\visibility_buffer\build_shader_id.psf">
+      <Filter>shader\visibility_buffer</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\visibility_buffer\shading_quad.vsf">
+      <Filter>shader\visibility_buffer</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -111,6 +111,15 @@ namespace DebugSdfRootParameters {
 	};
 };
 
+namespace VisibilityBufferBuildShaderIdRootParam {
+	enum {
+		CONSTANT = 0,
+		TRIANGLE_ID,
+		SHADER_RANGE,
+		COUNT
+	};
+};
+
 struct GpuBufferDesc {
 	Device* _device = nullptr;
 	ResourceStates _initialState;

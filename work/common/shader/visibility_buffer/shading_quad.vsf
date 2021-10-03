@@ -1,0 +1,64 @@
+#include "../util.sfh"
+
+struct VSInput
+{
+    uint _vertexId : SV_VertexId;
+    uint _instanceIndex : SV_InstanceID;
+};
+
+struct PSInput
+{
+    float4 _position : SV_Position;
+};
+
+struct Constant
+{
+    float2 _quadNdcSize;
+    uint2 _shaderRangeResolution;
+};
+
+struct RootConstant
+{
+    uint _shaderIndex;
+};
+
+ConstantBuffer<Constant> _constant : register(b0);
+ConstantBuffer<RootConstant> _rootConstant : register(b1);
+StructuredBuffer<uint2> _shaderRanges : register(t0);
+
+PSInput main(VSInput input)
+{
+    PSInput result = (PSInput) 0;
+    uint triangleIndex = input._vertexId / 3;
+    float x = 0;
+    float y = 0;
+    if (triangleIndex == 0)
+    {
+        x = input._vertexId % 3 == 0 ? 0.05 : -0.05;
+        y = input._vertexId % 3 == 2 ? 0.05 : -0.05;
+    }
+    else
+    {
+        x = input._vertexId % 3 == 0 ? 0.05 : -0.05;
+        y = input._vertexId % 3 == 0 ? 0.05 : -0.05;
+    }
+    
+    uint instanceIndex = input._instanceIndex;
+    float2 quadUv = float2(instanceIndex / _constant._shaderRangeResolution.x, instanceIndex % _constant._shaderRangeResolution.x);
+    x += quadUv.x * _constant._quadNdcSize.x;
+    y += quadUv.y * _constant._quadNdcSize.y;
+    
+    // シェーダーインデックスが範囲外の場合、NANをセットしてラスタライズを棄却
+    uint2 shaderRange = _shaderRanges[instanceIndex];
+    uint shaderIndex = _rootConstant._shaderIndex;
+    if (shaderIndex < shaderIndex.x || shaderIndex < shaderRange.y)
+    {
+        x = POS_NAN;
+    }
+    
+    
+    float shaderRangeUnorm = shaderIndex / float(UINT16_MAX);
+    result._position = float4(x, y, shaderRangeUnorm, 1);
+
+    return result;
+}

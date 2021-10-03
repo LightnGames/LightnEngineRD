@@ -215,6 +215,8 @@
     <None Include="..\..\work\common\shader\standard_mesh\screen_triangle.vsf" />
     <None Include="..\..\work\common\shader\util.sfh" />
     <None Include="..\..\work\common\shader\vertex_common.sfh" />
+    <None Include="..\..\work\common\shader\visibility_buffer\build_shader_id.psf" />
+    <None Include="..\..\work\common\shader\visibility_buffer\shading_quad.vsf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
