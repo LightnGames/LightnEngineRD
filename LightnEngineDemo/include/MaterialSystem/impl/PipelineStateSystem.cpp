@@ -245,6 +245,7 @@ void PipelineStateGroup::initialize(const ClassicPipelineStateGroupDesc& desc, S
     pipelineStateDesc._depthComparisonFunc = desc._depthComparisonFunc;
     pipelineStateDesc._inputElements = desc._inputElements;
     pipelineStateDesc._inputElementCount = desc._inputElementCount;
+    pipelineStateDesc._depthWriteMask = desc._depthWriteMask;
     pipelineStateDesc._numRenderTarget = desc._rtvCount;
     for (u32 i = 0; i < desc._rtvCount; ++i) {
         pipelineStateDesc._rtvFormats[i] = desc._rtvFormats[i];

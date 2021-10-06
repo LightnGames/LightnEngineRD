@@ -24,7 +24,8 @@ struct RootConstant
 
 ConstantBuffer<Constant> _constant : register(b0);
 ConstantBuffer<RootConstant> _rootConstant : register(b1);
-StructuredBuffer<uint2> _shaderRanges : register(t0);
+ByteAddressBuffer _shaderRangeMin : register(t0);
+ByteAddressBuffer _shaderRangeMax : register(t1);
 
 PSInput main(VSInput input)
 {
@@ -32,26 +33,29 @@ PSInput main(VSInput input)
     uint triangleIndex = input._vertexId / 3;
     float x = 0;
     float y = 0;
+    float2 ndcQuadSize = _constant._quadNdcSize;
+    float2 ndcHalfQuadSize = ndcQuadSize / 2.0;
     if (triangleIndex == 0)
     {
-        x = input._vertexId % 3 == 0 ? 0.05 : -0.05;
-        y = input._vertexId % 3 == 2 ? 0.05 : -0.05;
+        x = input._vertexId % 3 == 0 ? ndcQuadSize.x : -ndcQuadSize.x;
+        y = input._vertexId % 3 == 2 ? ndcQuadSize.y : -ndcQuadSize.y;
     }
     else
     {
-        x = input._vertexId % 3 == 0 ? 0.05 : -0.05;
-        y = input._vertexId % 3 == 0 ? 0.05 : -0.05;
+        x = input._vertexId % 3 == 1 ? -ndcQuadSize.x : ndcQuadSize.x;
+        y = input._vertexId % 3 == 0 ? -ndcQuadSize.y : ndcQuadSize.y;
     }
     
     uint instanceIndex = input._instanceIndex;
-    float2 quadUv = float2(instanceIndex / _constant._shaderRangeResolution.x, instanceIndex % _constant._shaderRangeResolution.x);
-    x += quadUv.x * _constant._quadNdcSize.x;
-    y += quadUv.y * _constant._quadNdcSize.y;
+    float2 quadUv = float2(instanceIndex % _constant._shaderRangeResolution.x, (_constant._shaderRangeResolution.y - 1) -
+    instanceIndex / _constant._shaderRangeResolution.x) * 2;
+    x += quadUv.x * ndcQuadSize.x - 1.0 + ndcQuadSize.x;
+    y += quadUv.y * ndcQuadSize.y - 1.0 + ndcQuadSize.y;
     
     // シェーダーインデックスが範囲外の場合、NANをセットしてラスタライズを棄却
-    uint2 shaderRange = _shaderRanges[instanceIndex];
+    uint2 shaderRange = uint2(_shaderRangeMin.Load(instanceIndex * UINT32_SIZE_IN_BYTE), _shaderRangeMax.Load(instanceIndex * UINT32_SIZE_IN_BYTE));
     uint shaderIndex = _rootConstant._shaderIndex;
-    if (shaderIndex < shaderIndex.x || shaderIndex < shaderRange.y)
+    if (shaderIndex < shaderRange.x || shaderIndex > shaderRange.y)
     {
         x = POS_NAN;
     }

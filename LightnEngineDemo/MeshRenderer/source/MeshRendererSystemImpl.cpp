@@ -178,8 +178,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
 
 #if ENABLE_VISIBILITY_BUFFER
+		u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
+		f32 clearColor[4] = { UINT8_MAX };
 		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
 		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
 #endif
 
 		RenderContext context = {};
@@ -209,6 +212,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 #if ENABLE_VISIBILITY_BUFFER
 	// シェーダーID 構築
 	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
 		VisiblityBufferRenderer::BuildShaderIdContext context = {};
 		context._commandList = commandList;
 		_visibilityBufferRenderer.buildShaderId(context);
@@ -216,6 +220,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	// シェーディング
 	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_SHADING);
 		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
 
@@ -225,7 +230,13 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._pipelineStates = pipelineStates;
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshesSrv = _resourceManager.getMeshSrv();
+		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
 		_visibilityBufferRenderer.shading(context);
 	}
 #endif
@@ -419,6 +430,14 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
 
+#if ENABLE_VISIBILITY_BUFFER
+		u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
+		f32 clearColor[4] = { UINT8_MAX };
+		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
+		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+#endif
+
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
 		context._viewInfo = viewInfo;
@@ -435,6 +454,37 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
 		_meshRenderer.multiDrawRender(context);
 	}
+
+#if ENABLE_VISIBILITY_BUFFER
+	// シェーダーID 構築
+	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
+		VisiblityBufferRenderer::BuildShaderIdContext context = {};
+		context._commandList = commandList;
+		_visibilityBufferRenderer.buildShaderId(context);
+	}
+
+	// シェーディング
+	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_SHADING);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+
+		VisiblityBufferRenderer::ShadingContext context = {};
+		context._commandList = commandList;
+		context._viewInfo = viewInfo;
+		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+		context._pipelineStates = pipelineStates;
+		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
+		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+		context._meshesSrv = _resourceManager.getMeshSrv();
+		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+		_visibilityBufferRenderer.shading(context);
+	}
+#endif
 
 	_gpuCullingResource.readbackCullingResultBuffer(commandList);
 }

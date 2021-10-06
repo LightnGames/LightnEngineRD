@@ -31,6 +31,13 @@ StructuredBuffer<MeshletInstancePrimitiveInfo> _meshletInstancePrimitiveInfos : 
 StructuredBuffer<uint> _meshletInstanceMeshInstanceIndices : register(t18);
 StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t19);
 
+struct PrimitiveAttributes
+{
+    // User-defined per-primitive attributes
+    // semantics are required but interpolation mode is ignored
+    uint _primitiveId : SV_PrimitiveID;
+};
+
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void main(
@@ -40,6 +47,7 @@ void main(
 #if UBER_DEFAULT
     in payload PayloadStruct meshPayload,
 #endif
+    out primitives PrimitiveAttributes sharedPrimitives[126],
     out indices uint3 tris[126],
     out vertices VertexOut verts[64]
 )
@@ -70,6 +78,11 @@ void main(
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
         uint indexOffset = primitiveInstanceIndex * vertexCount;
         tris[gtid] = unpackedIndex + uint3(indexOffset, indexOffset, indexOffset);
+
+        uint packedPrimitiveAttributes = primitiveLocalGtid;
+        PrimitiveAttributes primitiveAttributes;
+        primitiveAttributes._primitiveId = packedPrimitiveAttributes;
+        sharedPrimitives[gtid] = primitiveAttributes;
     }
 
     if(gtid < totalVertexCount){
@@ -93,6 +106,7 @@ void main(
         vertexOut._materialIndex = materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         vertexOut._worldPosition = worldPos.xyz;
+        vertexOut._triangleOffset = meshPayload._primitiveOffset[instanceOffset];
         verts[gtid] = vertexOut;
     }
 #endif
@@ -118,11 +132,11 @@ void main(
     uint totalPrimitiveCount = primitiveCount * instanceCount;
     SetMeshOutputCounts(totalVertexCount, totalPrimitiveCount);
 
+    uint primitiveInstanceIndex = gtid / primitiveCount;
+    uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
+    MeshletInstancePrimitiveInfo primitiveMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoOffset + primitiveInstanceIndex];
     if(gtid < totalPrimitiveCount) {
-        uint infoOffset = globalInstanceIndex + meshletInfoLocalOffset;
-        uint primitiveInstanceIndex = gtid / primitiveCount;
 
-        MeshletInstancePrimitiveInfo primitiveMeshletInstanceInfo = _meshletInstancePrimitiveInfos[infoOffset + primitiveInstanceIndex];
         uint primitiveGtid = gtid % primitiveCount;
         uint primitiveOffset = primitiveMeshletInstanceInfo._primitiveOffset;
         uint primitiveIndex = meshlet._primitiveOffset + primitiveGtid;
@@ -131,6 +145,11 @@ void main(
         uint3 unpackedIndex = uint3(packedIndex & 0xff, (packedIndex >> 8) & 0xff, (packedIndex >> 16) & 0xff);
         uint indexOffset = vertexCount * primitiveInstanceIndex;
         tris[gtid] = unpackedIndex + uint3(indexOffset, indexOffset, indexOffset);
+
+        uint packedPrimitiveAttributes = primitiveIndex;
+        PrimitiveAttributes primitiveAttributes;
+        primitiveAttributes._primitiveId = packedPrimitiveAttributes;
+        sharedPrimitives[gtid] = primitiveAttributes;
     }
 
     if(gtid < totalVertexCount) {
@@ -158,6 +177,7 @@ void main(
         vertexOut._materialIndex = vertexMeshletInstanceInfo._materialIndex;
         vertexOut._meshInstanceIndex = meshInstanceIndex;
         vertexOut._worldPosition = worldPos.xyz;
+        vertexOut._triangleOffset = primitiveMeshletInstanceInfo._primitiveOffset;
         verts[gtid] = vertexOut;
     }
 #endif

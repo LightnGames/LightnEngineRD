@@ -12,6 +12,7 @@ struct VertexOut {
     float4 _positionNdc : SCREEN_POSITION;
     float3 _worldPosition : WORLD_POSITION;
     float2 _texcoord : TEXCOORD0;
+    nointerpolation uint _triangleOffset : TRIANGLE_OFFSET;
     nointerpolation uint _meshletIndex : MESHLET_INDEX;
     nointerpolation uint _meshInstanceIndex : MESH_INSTANCE_INDEX;
     nointerpolation uint _materialIndex : MATERIAL_INDEX;

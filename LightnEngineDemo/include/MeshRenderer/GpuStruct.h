@@ -104,6 +104,7 @@ namespace gpu {
 	struct StarndardMeshIndirectArguments {
 		u32 _meshInstanceIndex = 0;
 		u32 _materialIndex = 0;
+		u32 _triangleOffset = 0;
 		u32 _indexCountPerInstance = 0;
 		u32 _instanceCount = 0;
 		u32 _startIndexLocation = 0;

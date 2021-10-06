@@ -28,7 +28,12 @@ public:
 		VramShaderSet* _vramShaderSets = nullptr;
 		PipelineStateGroup** _pipelineStates = nullptr;
 		const u32* _indirectArgmentCounts = nullptr;
+		GpuDescriptorHandle _primitiveIndicesSrv;
+		GpuDescriptorHandle _vertexPositionSrv;
 		GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
+		GpuDescriptorHandle _meshInstanceSrv;
+		GpuDescriptorHandle _meshesSrv;
+		GpuDescriptorHandle _currentLodLevelSrv;
 	};
 
 	void initialize();
@@ -46,7 +51,7 @@ private:
 	GpuTexture _triangleIdTexture;
 	GpuTexture _triangleShaderIdTexture;
 	GpuTexture _shaderIdDepth;
-	GpuBuffer _shaderRangeBuffer;
+	GpuBuffer _shaderRangeBuffer[2];// [min, max]
 	GpuBuffer _buildShaderIdConstantBuffer;
 	GpuBuffer _shadingConstantBuffer;
 
@@ -58,4 +63,5 @@ private:
 	DescriptorHandle _shaderIdDsv;
 	DescriptorHandle _shaderRangeSrv;
 	DescriptorHandle _shaderRangeUav;
+	DescriptorHandle _shaderRangeCpuUav;
 };

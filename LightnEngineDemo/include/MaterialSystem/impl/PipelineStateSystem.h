@@ -54,7 +54,7 @@ namespace ClassicMeshRootParam {
 	};
 };
 
-#define ENABLE_VISIBILITY_BUFFER 0
+#define ENABLE_VISIBILITY_BUFFER 1
 namespace ShadingRootParam {
 	enum {
 		CONSTANT = 0,
@@ -64,6 +64,12 @@ namespace ShadingRootParam {
 		MATERIALS,
 		MESH_INSTANCE,
 		TEXTURES,
+		TRIANGLE_ATTRIBUTE,
+		PRIMITIVE_INDICES,
+		VERTEX_POSITION,
+		MESH_INSTANCE_WORLD_MATRICES,
+		MESHES,
+		LOD_LEVELS,
 		COUNT
 	};
 };
@@ -81,6 +87,7 @@ struct MeshShaderPipelineStateGroupDesc {
 
 struct ClassicPipelineStateGroupDesc {
 	ComparisonFunc _depthComparisonFunc;
+	DepthWriteMask _depthWriteMask = DEPTH_WRITE_MASK_ALL;
 	Format _dsvFormat;
 	BlendDesc _blendDesc;
 	FillMode _fillMode = FILL_MODE_SOLID;

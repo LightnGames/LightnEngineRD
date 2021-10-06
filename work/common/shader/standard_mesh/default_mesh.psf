@@ -10,11 +10,19 @@ static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
 static const float SDF_GLOBAL_CELL_SIZE = 6.4f;
 static const int SDF_GLOBAL_WIDTH = 8;
 
-ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
-Texture2D _textures[128] : register(t29);
+Texture2D _textures[128] : register(t36);
 SamplerState _sampler : register(s0);
+
+Texture2D<uint2> _triangleAttributes : register(t29);
+StructuredBuffer<uint> _primitiveIndices : register(t30);
+StructuredBuffer<float3> _vertexPositions : register(t31);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t32);
+StructuredBuffer<Mesh> _meshes : register(t33);
+StructuredBuffer<LodMesh> _lodMeshes : register(t34);
+ByteAddressBuffer _currentLodLevels : register(t35);
 
 #if ENABLE_SDF
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
@@ -213,12 +221,98 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 }
 #endif
 
-#define ENABLE_VISIBILITY_BUFFER 0
+#define ENABLE_VISIBILITY_BUFFER 1
 #if ENABLE_VISIBILITY_BUFFER
+struct FBarycentrics
+{
+    float3 UVW;
+    float3 UVW_dx;
+    float3 UVW_dy;
+};
+
+/** Calculates perspective correct barycentric coordinates and partial derivatives using screen derivatives. */
+FBarycentrics CalculateTriangleBarycentrics(float2 PixelClip, float4 PointClip0, float4 PointClip1, float4 PointClip2, float2 ViewInvSize)
+{
+    FBarycentrics Result;
+
+    float3 Pos0 = PointClip0.xyz / PointClip0.w;
+    float3 Pos1 = PointClip1.xyz / PointClip1.w;
+    float3 Pos2 = PointClip2.xyz / PointClip2.w;
+
+    float3 RcpW = rcp(float3(PointClip0.w, PointClip1.w, PointClip2.w));
+
+    float3 Pos120X = float3(Pos1.x, Pos2.x, Pos0.x);
+    float3 Pos120Y = float3(Pos1.y, Pos2.y, Pos0.y);
+    float3 Pos201X = float3(Pos2.x, Pos0.x, Pos1.x);
+    float3 Pos201Y = float3(Pos2.y, Pos0.y, Pos1.y);
+
+    float3 C_dx = Pos201Y - Pos120Y;
+    float3 C_dy = Pos120X - Pos201X;
+
+    float3 C = C_dx * (PixelClip.x - Pos120X) + C_dy * (PixelClip.y - Pos120Y); // Evaluate the 3 edge functions
+    float3 G = C * RcpW;
+
+    float H = dot(C, RcpW);
+    float RcpH = rcp(H);
+
+	// UVW = C * RcpW / dot(C, RcpW)
+    Result.UVW = G * RcpH;
+
+	// Texture coordinate derivatives:
+	// UVW = G / H where G = C * RcpW and H = dot(C, RcpW)
+	// UVW' = (G' * H - G * H') / H^2
+	// float2 TexCoordDX = UVW_dx.y * TexCoord10 + UVW_dx.z * TexCoord20;
+	// float2 TexCoordDY = UVW_dy.y * TexCoord10 + UVW_dy.z * TexCoord20;
+    float3 G_dx = C_dx * RcpW;
+    float3 G_dy = C_dy * RcpW;
+
+    float H_dx = dot(C_dx, RcpW);
+    float H_dy = dot(C_dy, RcpW);
+
+    Result.UVW_dx = (G_dx * H - G * H_dx) * (RcpH * RcpH) * (2.0f * ViewInvSize.x);
+    Result.UVW_dy = (G_dy * H - G * H_dy) * (RcpH * RcpH) * (-2.0f * ViewInvSize.y);
+
+    return Result;
+}
+
 float4 main(float4 _position : SV_Position) : SV_TARGET
 {
-    return float4(_position.xy / float2(1920, 1080), 0, 1);
-
+    uint2 pixelPosition = _position.xy;
+    uint2 triangleAttributes = _triangleAttributes[pixelPosition];
+    
+    uint meshInstanceIndex = triangleAttributes.y;
+    uint currentLodLevel = _currentLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);
+    MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+    LodMesh lodMesh = _lodMeshes[mesh._lodMeshOffset + currentLodLevel];
+    
+    uint3 primitiveIndices = uint3(
+            _primitiveIndices[triangleAttributes.x * 3] + lodMesh._vertexOffset,
+            _primitiveIndices[triangleAttributes.x * 3 + 1] + lodMesh._vertexOffset,
+            _primitiveIndices[triangleAttributes.x * 3 + 2] + lodMesh._vertexOffset
+    );
+    const float3 PointLocal0 = _vertexPositions[primitiveIndices.x];
+    const float3 PointLocal1 = _vertexPositions[primitiveIndices.y];
+    const float3 PointLocal2 = _vertexPositions[primitiveIndices.z];
+    
+    float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
+    float3 pointToWorld0 = mul(float4(PointLocal0, 1), matrixWorld);
+    float3 pointToWorld1 = mul(float4(PointLocal1, 1), matrixWorld);
+    float3 pointToWorld2 = mul(float4(PointLocal2, 1), matrixWorld);
+    
+    const float4 PointClip0 = mul(float4(pointToWorld0, 1), _viewInfo._matrixViewProj);
+    const float4 PointClip1 = mul(float4(pointToWorld1, 1), _viewInfo._matrixViewProj);
+    const float4 PointClip2 = mul(float4(pointToWorld2, 1), _viewInfo._matrixViewProj);
+    
+    float2 viewInvSize = float2(1.0, 1.0) / float2(_viewInfo._viewPortSize);
+    const float2 PixelClip = (pixelPosition + 0.5) * viewInvSize * float2(2, -2) + float2(-1, 1);
+    
+    // Calculate perspective correct barycentric coordinates with screen derivatives
+    const FBarycentrics Barycentrics = CalculateTriangleBarycentrics(PixelClip, PointClip0, PointClip1, PointClip2, viewInvSize);
+    
+    float3 worldPosition = Barycentrics.UVW.x * pointToWorld0 + Barycentrics.UVW.y * pointToWorld1 + Barycentrics.UVW.z * pointToWorld2;
+    return float4(worldPosition/10.0, 1);
+    //return float4(_position.xy / float2(1920, 1080), 0, 1);
 }
 #else
 float4 main(VertexOut input) : SV_TARGET

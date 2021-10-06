@@ -1410,6 +1410,21 @@ void exportMesh(const char* fileName) {
 			cullData.data()
 		);
 
+		// メッシュレット化したプリミティブインデックスと一致するインデックスバッファ
+		VectorArray<uint32> meshletizedTriangleIndices;
+		meshletizedTriangleIndices.reserve(indexCount);
+		uint32 meshletizedOffset = 0;
+		for (uint32 meshletIndex = 0; meshletIndex < meshlets.size(); ++meshletIndex) {
+			const Meshlet& meshlet = meshlets[meshletIndex];
+			for (uint32 primIndex = 0; primIndex < meshlet.PrimCount; ++primIndex) {
+				uint32 baseOffset = (meshletizedOffset + primIndex) * 3;
+				meshletizedTriangleIndices.push_back(indices[baseOffset]);
+				meshletizedTriangleIndices.push_back(indices[baseOffset + 1]);
+				meshletizedTriangleIndices.push_back(indices[baseOffset + 2]);
+			}
+			meshletizedOffset += meshlet.PrimCount;
+		}
+
 		LodInfo& lodInfo = lodInfos[lodIndex];
 		lodInfo.subMeshCount = subMeshCount;
 		lodInfo.vertexCount = positions.size();
@@ -1440,8 +1455,8 @@ void exportMesh(const char* fileName) {
 		normalsAndTangentsL.reserve(normalsAndTangentsL.size() + normalAndTangents.size());
 		std::copy(normalAndTangents.begin(), normalAndTangents.end(), std::back_inserter(normalsAndTangentsL));
 
-		m_classicIndices.reserve(m_classicIndices.size() + indices.size());
-		std::copy(indices.begin(), indices.end(), std::back_inserter(m_classicIndices));
+		m_classicIndices.reserve(m_classicIndices.size() + meshletizedTriangleIndices.size());
+		std::copy(meshletizedTriangleIndices.begin(), meshletizedTriangleIndices.end(), std::back_inserter(m_classicIndices));
 
 		std::cout << "Lod Mesh :" << lodIndex << std::endl;
 		std::cout << "Sub Mesh :" << subMeshCount << std::endl;

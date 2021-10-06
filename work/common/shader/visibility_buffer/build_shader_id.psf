@@ -9,8 +9,9 @@ struct Constant
 };
 
 ConstantBuffer<Constant> _constant : register(b0);
-Texture2D<uint2> _triangleId : register(t0);
-RWStructuredBuffer<uint2> _shaderRange : register(u0);
+Texture2D<uint> _shaderId : register(t0);
+RWByteAddressBuffer _shaderRangeMin : register(u0);
+RWByteAddressBuffer _shaderRangeMax : register(u1);
 
 struct PSInput {
     float4 _position : SV_Position;
@@ -18,12 +19,15 @@ struct PSInput {
 
 float main(PSInput input) : SV_Depth
 {
-    uint shaderIndex = 0;
-    uint dummy = 0;
-    float2 shaderRangeUv = input._position.xy / float2(_constant._resolution);
-    uint shaderRangeIndex = _constant._resolution.x * shaderRangeUv.y + shaderRangeUv.x;
-    InterlockedMin(_shaderRange[shaderRangeIndex].r, shaderIndex, dummy);
-    InterlockedMax(_shaderRange[shaderRangeIndex].g, shaderIndex, dummy);
+    uint shaderIndex = _shaderId[input._position.xy];
+    if (shaderIndex != 0xff)
+    {
+        uint dummy = 0;
+        uint2 shaderRangeUv = uint2(input._position.xy / float2(64, 64));
+        uint shaderRangeIndex = _constant._resolution.x * shaderRangeUv.y + shaderRangeUv.x;
+        _shaderRangeMin.InterlockedMin(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndex, dummy);
+        _shaderRangeMax.InterlockedMax(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndex, dummy);
+    }
     
     float shaderIndexUnorm = float(shaderIndex) / float(UINT16_MAX);
     return shaderIndexUnorm;

@@ -2,6 +2,7 @@
 struct StandardIndirectArgument {
     uint _meshInstanceIndex;
     uint _materialIndex;
+    uint _triangleOffset;
     uint _indexCountPerInstance;
     uint _instanceCount;
     uint _startIndexLocation;
@@ -101,6 +102,7 @@ void addIndirectArgument(uint meshInstanceIndex) {
         StandardIndirectArgument arguments;
         arguments._meshInstanceIndex = meshInstanceIndex;
         arguments._materialIndex = materialInstanceIndex;
+        arguments._triangleOffset = subMeshDrawInfo._indexOffset / 3;
         arguments._indexCountPerInstance = subMeshDrawInfo._indexCount;
         arguments._startIndexLocation = subMeshDrawInfo._indexOffset;
         arguments._instanceCount = 1;

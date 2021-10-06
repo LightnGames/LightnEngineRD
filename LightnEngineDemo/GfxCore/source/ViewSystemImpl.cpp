@@ -281,13 +281,13 @@ void ViewInfo::initialize() {
 
 	// hdr texture
 	{
-		ClearValue depthOptimizedClearValue = {};
-		depthOptimizedClearValue._format = BACK_BUFFER_FORMAT;
+		ClearValue optimizedClearValue = {};
+		optimizedClearValue._format = BACK_BUFFER_FORMAT;
 
 		GpuTextureDesc desc = {};
 		desc._device = device;
 		desc._format = BACK_BUFFER_FORMAT;
-		desc._optimizedClearValue = &depthOptimizedClearValue;
+		desc._optimizedClearValue = &optimizedClearValue;
 		desc._width = screenWidth;
 		desc._height = screenHeight;
 		desc._flags = RESOURCE_FLAG_ALLOW_RENDER_TARGET;

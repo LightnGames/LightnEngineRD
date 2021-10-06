@@ -9,10 +9,10 @@ struct OutputPS
     uint _shaderId : SV_Target1;
 };
 
-OutputPS main(VertexOut input)
+OutputPS main(VertexOut input, uint primitiveId : SV_PrimitiveID)
 {
     OutputPS output;
-    output._triangleId = uint2(0, 0);
-    output._shaderId = 0;
+    output._triangleId = uint2(input._triangleOffset + primitiveId, input._meshInstanceIndex);
+    output._shaderId = 1;
     return output;
 }

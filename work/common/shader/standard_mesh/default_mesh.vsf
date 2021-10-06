@@ -11,6 +11,7 @@ struct VSInput{
 struct MeshInstanceInfo {
     uint _meshInstanceIndex;
     uint _materialIndex;
+    uint _triangleOffset;
 };
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
@@ -18,7 +19,8 @@ ConstantBuffer<MeshInstanceInfo> _meshInstanceInfo : register(b1);
 
 StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t0);
 
-VertexOut main(VSInput input){
+VertexOut main(VSInput input)
+{
     float4x3 matrixWorld = _meshInstanceWorldMatrics[_meshInstanceInfo._meshInstanceIndex];
     float4 worldPos = float4(mul(float4(input._position, 1), matrixWorld), 1);
     
@@ -30,5 +32,6 @@ VertexOut main(VSInput input){
     vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
     vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
     vertexOut._worldPosition = worldPos.xyz;
+    vertexOut._triangleOffset = _meshInstanceInfo._triangleOffset;
     return vertexOut;
 }
