@@ -343,11 +343,12 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::ROOT_CONSTANT, 1, &pipelineStateIndex, 0);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, _triangleIdSrv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PRIMITIVE_INDICES, context._primitiveIndicesSrv);
-		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VERTEX_POSITION, context._vertexPositionSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VERTEX_RESOURCES, context._vertexResourceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_WORLD_MATRICES, context._meshInstanceWorldMatrixSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE, context._meshInstanceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESHES, context._meshesSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::LOD_LEVELS, context._currentLodLevelSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURES, context._textureSrv);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}

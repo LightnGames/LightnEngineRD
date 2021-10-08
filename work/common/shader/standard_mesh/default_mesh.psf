@@ -13,16 +13,18 @@ static const int SDF_GLOBAL_WIDTH = 8;
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
-Texture2D _textures[128] : register(t36);
+Texture2D _textures[128] : register(t38);
 SamplerState _sampler : register(s0);
 
 Texture2D<uint2> _triangleAttributes : register(t29);
 StructuredBuffer<uint> _primitiveIndices : register(t30);
 StructuredBuffer<float3> _vertexPositions : register(t31);
-StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t32);
-StructuredBuffer<Mesh> _meshes : register(t33);
-StructuredBuffer<LodMesh> _lodMeshes : register(t34);
-ByteAddressBuffer _currentLodLevels : register(t35);
+StructuredBuffer<uint> _vertexNormalTangents : register(t32);
+StructuredBuffer<uint> _vertexTexcoords : register(t33);
+StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t34);
+StructuredBuffer<Mesh> _meshes : register(t35);
+StructuredBuffer<LodMesh> _lodMeshes : register(t36);
+ByteAddressBuffer _currentLodLevels : register(t37);
 
 #if ENABLE_SDF
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
@@ -223,7 +225,7 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 
 #define ENABLE_VISIBILITY_BUFFER 1
 #if ENABLE_VISIBILITY_BUFFER
-struct FBarycentrics
+struct Barycentrics
 {
     float3 UVW;
     float3 UVW_dx;
@@ -231,9 +233,9 @@ struct FBarycentrics
 };
 
 /** Calculates perspective correct barycentric coordinates and partial derivatives using screen derivatives. */
-FBarycentrics CalculateTriangleBarycentrics(float2 PixelClip, float4 PointClip0, float4 PointClip1, float4 PointClip2, float2 ViewInvSize)
+Barycentrics CalculateTriangleBarycentrics(float2 PixelClip, float4 PointClip0, float4 PointClip1, float4 PointClip2, float2 ViewInvSize)
 {
-    FBarycentrics Result;
+    Barycentrics Result;
 
     float3 Pos0 = PointClip0.xyz / PointClip0.w;
     float3 Pos1 = PointClip1.xyz / PointClip1.w;
@@ -295,6 +297,10 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     const float3 PointLocal1 = _vertexPositions[primitiveIndices.y];
     const float3 PointLocal2 = _vertexPositions[primitiveIndices.z];
     
+    const float2 texcoords0 = unpackTexCoords(_vertexTexcoords[primitiveIndices.x]);
+    const float2 texcoords1 = unpackTexCoords(_vertexTexcoords[primitiveIndices.y]);
+    const float2 texcoords2 = unpackTexCoords(_vertexTexcoords[primitiveIndices.z]);
+    
     float4x3 matrixWorld = _meshInstanceWorldMatrics[meshInstanceIndex];
     float3 pointToWorld0 = mul(float4(PointLocal0, 1), matrixWorld);
     float3 pointToWorld1 = mul(float4(PointLocal1, 1), matrixWorld);
@@ -308,9 +314,21 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     const float2 PixelClip = (pixelPosition + 0.5) * viewInvSize * float2(2, -2) + float2(-1, 1);
     
     // Calculate perspective correct barycentric coordinates with screen derivatives
-    const FBarycentrics Barycentrics = CalculateTriangleBarycentrics(PixelClip, PointClip0, PointClip1, PointClip2, viewInvSize);
+    const Barycentrics Barycentrics = CalculateTriangleBarycentrics(PixelClip, PointClip0, PointClip1, PointClip2, viewInvSize);
     
     float3 worldPosition = Barycentrics.UVW.x * pointToWorld0 + Barycentrics.UVW.y * pointToWorld1 + Barycentrics.UVW.z * pointToWorld2;
+    float2 texcoords = Barycentrics.UVW.x * texcoords0 + Barycentrics.UVW.y * texcoords1 + Barycentrics.UVW.z * texcoords2;
+    
+    float2 TexCoord10 = texcoords1 - texcoords0;
+    float2 TexCoord20 = texcoords2 - texcoords0;
+
+    float2 TexCoord = texcoords0 + Barycentrics.UVW.y * TexCoord10 + Barycentrics.UVW.z * TexCoord20;
+    float2 ddx = Barycentrics.UVW_dx.y * TexCoord10 + Barycentrics.UVW_dx.z * TexCoord20;
+    float2 ddy = Barycentrics.UVW_dy.y * TexCoord10 + Barycentrics.UVW_dy.z * TexCoord20;
+    float3 baseColor = _textures[NonUniformResourceIndex(66)].SampleGrad(_sampler, texcoords, ddx, ddy).rgb;
+    
+    return float4(baseColor, 1);
+    return float4(texcoords, 0, 1);
     return float4(worldPosition/10.0, 1);
     //return float4(_position.xy / float2(1920, 1080), 0, 1);
 }

@@ -29,11 +29,12 @@ public:
 		PipelineStateGroup** _pipelineStates = nullptr;
 		const u32* _indirectArgmentCounts = nullptr;
 		GpuDescriptorHandle _primitiveIndicesSrv;
-		GpuDescriptorHandle _vertexPositionSrv;
+		GpuDescriptorHandle _vertexResourceSrv;
 		GpuDescriptorHandle _meshInstanceWorldMatrixSrv;
 		GpuDescriptorHandle _meshInstanceSrv;
 		GpuDescriptorHandle _meshesSrv;
 		GpuDescriptorHandle _currentLodLevelSrv;
+		GpuDescriptorHandle _textureSrv;
 	};
 
 	void initialize();

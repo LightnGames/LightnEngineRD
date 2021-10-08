@@ -230,13 +230,14 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._pipelineStates = pipelineStates;
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
 		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshesSrv = _resourceManager.getMeshSrv();
 		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
 		_visibilityBufferRenderer.shading(context);
 	}
 #endif
@@ -476,12 +477,13 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
 		context._pipelineStates = pipelineStates;
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
 		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
 		context._meshesSrv = _resourceManager.getMeshSrv();
 		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
 		_visibilityBufferRenderer.shading(context);
 	}
 #endif

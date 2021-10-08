@@ -433,8 +433,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	_parameterDatas = new u8[_parameterSizeInByte * MATERIAL_COUNT_MAX];
 
 	constexpr u32 GLOBAL_SDF_LAYER_COUNT = 4;
-	constexpr u32 TEXTURE_BASE_REGISTER = 36;
-	constexpr u32 MESH_INSTANCE_INV_BOUNDS_BASE_REGISTER = 164;
+	constexpr u32 TEXTURE_BASE_REGISTER = 38;
+	constexpr u32 MESH_INSTANCE_INV_BOUNDS_BASE_REGISTER = 166;
 	constexpr u32 SDF_GROUP_BASE_REGISTER = MESH_INSTANCE_INV_BOUNDS_BASE_REGISTER + 1;
 	Device* device = GraphicsSystemImpl::Get()->getDevice();
 	DescriptorRange cullingViewCbvRange(DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
@@ -648,10 +648,10 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		DescriptorRange shaderRangeSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
 		DescriptorRange triangleAttributeSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 29);
 		DescriptorRange primitiveIndicesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 30);
-		DescriptorRange vertexPositionSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 31);
-		DescriptorRange meshInstanceWorldMatricesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 32);
-		DescriptorRange meshesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 33);
-		DescriptorRange currentLodLevelSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 35);
+		DescriptorRange vertexPositionSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 3, 31);
+		DescriptorRange meshInstanceWorldMatricesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 34);
+		DescriptorRange meshesSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 2, 35);
+		DescriptorRange currentLodLevelSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 1, 37);
 
 		RootParameter rootParameters[ShadingRootParam::COUNT] = {};
 		rootParameters[ShadingRootParam::CONSTANT].initializeDescriptorTable(1, &constantCbvRange, SHADER_VISIBILITY_VERTEX);
@@ -664,7 +664,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ShadingRootParam::TEXTURES].initializeDescriptorTable(1, &textureDescriptorRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttributeSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::PRIMITIVE_INDICES].initializeDescriptorTable(1, &primitiveIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
-		rootParameters[ShadingRootParam::VERTEX_POSITION].initializeDescriptorTable(1, &vertexPositionSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::VERTEX_RESOURCES].initializeDescriptorTable(1, &vertexPositionSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::MESH_INSTANCE_WORLD_MATRICES].initializeDescriptorTable(1, &meshInstanceWorldMatricesSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::MESHES].initializeDescriptorTable(1, &meshesSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::LOD_LEVELS].initializeDescriptorTable(1, &currentLodLevelSrvRange, SHADER_VISIBILITY_PIXEL);
