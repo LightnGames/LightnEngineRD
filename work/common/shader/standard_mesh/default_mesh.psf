@@ -282,7 +282,8 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     uint2 pixelPosition = _position.xy;
     uint2 triangleAttributes = _triangleAttributes[pixelPosition];
     
-    uint meshInstanceIndex = triangleAttributes.y;
+    uint meshInstanceIndex = triangleAttributes.y & 0x0000ffff;
+    uint materialIndex = (triangleAttributes.y >> 18) & 0x0000ffff;
     uint currentLodLevel = _currentLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);
     MeshInstance meshInstance = _meshInstances[meshInstanceIndex];
     Mesh mesh = _meshes[meshInstance._meshIndex];
@@ -325,7 +326,11 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     float2 TexCoord = texcoords0 + Barycentrics.UVW.y * TexCoord10 + Barycentrics.UVW.z * TexCoord20;
     float2 ddx = Barycentrics.UVW_dx.y * TexCoord10 + Barycentrics.UVW_dx.z * TexCoord20;
     float2 ddy = Barycentrics.UVW_dy.y * TexCoord10 + Barycentrics.UVW_dy.z * TexCoord20;
-    float3 baseColor = _textures[NonUniformResourceIndex(66)].SampleGrad(_sampler, texcoords, ddx, ddy).rgb;
+    
+    CustomParameters materialParameter = _customParameters[materialIndex];
+    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
+    
+    float3 baseColor = albedoTexture.SampleGrad(_sampler, texcoords, ddx, ddy).rgb;
     
     return float4(baseColor, 1);
     return float4(texcoords, 0, 1);

@@ -349,6 +349,7 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESHES, context._meshesSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::LOD_LEVELS, context._currentLodLevelSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURES, context._textureSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}
