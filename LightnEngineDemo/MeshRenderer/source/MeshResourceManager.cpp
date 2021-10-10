@@ -190,6 +190,26 @@ void MeshResourceManager::initialize() {
 		_meshSdfUav = allocator->allocateDescriptors(MESH_COUNT_MAX);
 	}
 
+	// デフォルト SDF
+	{
+		GpuTextureDesc textureDesc = {};
+		textureDesc._device = device;
+		textureDesc._format = FORMAT_R8_SNORM;
+		textureDesc._dimension = RESOURCE_DIMENSION_TEXTURE3D;
+		textureDesc._width = 16;
+		textureDesc._height = 16;
+		textureDesc._depthOrArraySize = 16;
+		textureDesc._mipLevels = 1;
+		textureDesc._initialState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		_defaultSdfTexture.initialize(textureDesc);
+		_defaultSdfTexture.setDebugName("Default SDF");
+
+		u32 incSize = static_cast<u64>(GraphicsSystemImpl::Get()->getSrvCbvUavGpuDescriptorAllocator()->getIncrimentSize());
+		for (u32 i = 0; i < MESH_COUNT_MAX; ++i) {
+			device->createShaderResourceView(_defaultSdfTexture.getResource(), nullptr, _meshSdfSrv._cpuHandle + incSize * i);
+		}
+	}
+
 	MeshDesc desc = {};
 	desc._filePath = "common/box.mesh";
 	_defaultCube = createMesh(desc);
@@ -214,6 +234,7 @@ void MeshResourceManager::terminate() {
 	_meshLodLevelFeedbackBuffer.terminate();
 	_meshLodLevelFeedbackReadbackBuffer.terminate();
 	_meshBoundsSizeBuffer.terminate();
+	_defaultSdfTexture.terminate();
 
 #if ENABLE_CLASSIC_VERTEX
 	_classicIndexBuffer.terminate();

@@ -210,6 +210,7 @@ private:
 	GpuBuffer _meshLodLevelFeedbackReadbackBuffer;
 	GpuBuffer _meshBoundsSizeBuffer;
 	GpuTexture _meshSdfs[MESH_COUNT_MAX] = {};
+	GpuTexture _defaultSdfTexture;
 
 	DescriptorHandle _meshSrv;
 	DescriptorHandle _vertexSrv;

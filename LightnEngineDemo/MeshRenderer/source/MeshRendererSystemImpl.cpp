@@ -25,6 +25,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 	_gpuCullingResource.resetResultBuffers(commandList);
 
+	// SDF ¶¬
 	{
 		MeshSdfGenerator::ProcessContext context = {};
 		context._commandList = commandList;
@@ -336,6 +337,16 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 
 	MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 	_gpuCullingResource.resetResultBuffers(commandList);
+
+	// SDF ¶¬
+	{
+		MeshSdfGenerator::ProcessContext context = {};
+		context._commandList = commandList;
+		context._classicIndexSrv = _resourceManager.getClassicIndexSrv();
+		context._vertexPositionSrv = _resourceManager.getVertexPositionSrv();
+		context._meshSdfUav = _resourceManager.getMeshSdfUav();
+		_resourceManager.getMeshSdfGenerator()->processComputeMeshSdf(context);
+	}
 
 	// Lod level ŒvŽZ
 	{

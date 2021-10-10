@@ -137,7 +137,7 @@ uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
 bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 {
     float3 invLightDirection = -lightDirection;
-    uint WORLD_CELL_LOOP_COUNT_MAX = 12;
+    uint WORLD_CELL_LOOP_COUNT_MAX = 16;
     float cellDistance = 0.15;
     uint3 prevWorldPosition = uint3(0, 0, 0);
     

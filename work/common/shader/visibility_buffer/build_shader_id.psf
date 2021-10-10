@@ -25,8 +25,13 @@ float main(PSInput input) : SV_Depth
         uint dummy = 0;
         uint2 shaderRangeUv = uint2(input._position.xy / float2(64, 64));
         uint shaderRangeIndex = _constant._resolution.x * shaderRangeUv.y + shaderRangeUv.x;
-        _shaderRangeMin.InterlockedMin(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndex, dummy);
-        _shaderRangeMax.InterlockedMax(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndex, dummy);
+        if (WaveIsFirstLane())
+        {
+            uint shaderIndexMin = WaveActiveMin(shaderIndex);
+            uint shaderIndexMax = WaveActiveMax(shaderIndex);
+            _shaderRangeMin.InterlockedMin(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndexMin, dummy);
+            _shaderRangeMax.InterlockedMax(shaderRangeIndex * UINT32_SIZE_IN_BYTE, shaderIndexMax, dummy);
+        }
     }
     
     float shaderIndexUnorm = float(shaderIndex) / float(UINT16_MAX);
