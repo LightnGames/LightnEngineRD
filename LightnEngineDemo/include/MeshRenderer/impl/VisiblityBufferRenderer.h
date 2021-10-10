@@ -35,6 +35,12 @@ public:
 		GpuDescriptorHandle _meshesSrv;
 		GpuDescriptorHandle _currentLodLevelSrv;
 		GpuDescriptorHandle _textureSrv;
+
+		GpuDescriptorHandle _sdfMeshInstanceInvBoundsMatrixSrv;
+		GpuDescriptorHandle _sdfMeshInstanceOffsetSrv;
+		GpuDescriptorHandle _sdfMeshInstanceIndexSrv;
+		GpuDescriptorHandle _sdfMeshInstanceCountSrv;
+		GpuDescriptorHandle _sdfMeshTextureSrv;
 	};
 
 	void initialize();

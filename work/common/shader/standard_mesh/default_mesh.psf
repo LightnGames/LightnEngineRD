@@ -3,7 +3,7 @@
 #include "../gpu_driven.sfh"
 #include "../util.sfh"
 
-#define ENABLE_SDF 0
+#define ENABLE_SDF 1
 
 static const uint GLOBAL_SDF_LAYER_LEVEL = 4;
 static const float SDF_GLOBAL_CELL_HALF_SIZE = 25.6;
@@ -27,11 +27,11 @@ StructuredBuffer<LodMesh> _lodMeshes : register(t36);
 ByteAddressBuffer _currentLodLevels : register(t37);
 
 #if ENABLE_SDF
-StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t157);
-StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t158);
-StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t162);
-StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t166);
-Texture3D _sdfTextures[] : register(t170);
+StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t166);
+StructuredBuffer<uint> _sdfMeshInstanceIndexOffsets[GLOBAL_SDF_LAYER_LEVEL] : register(t167);
+StructuredBuffer<uint> _sdfMeshInstanceIndices[GLOBAL_SDF_LAYER_LEVEL] : register(t171);
+StructuredBuffer<uint> _sdfMeshInstanceCounts[GLOBAL_SDF_LAYER_LEVEL] : register(t175);
+Texture3D _sdfTextures[] : register(t179);
 
 SamplerState _linerSampler : register(s1);
 
@@ -137,7 +137,7 @@ uint getGlobalDistanceFieldLayerLevel(float3 worldPosition)
 bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 {
     float3 invLightDirection = -lightDirection;
-    uint WORLD_CELL_LOOP_COUNT_MAX = 4;
+    uint WORLD_CELL_LOOP_COUNT_MAX = 12;
     float cellDistance = 0.15;
     uint3 prevWorldPosition = uint3(0, 0, 0);
     
@@ -190,19 +190,14 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
                 float2 distances;
                 float3 uv3;
                 bool intersectBounds = intersectRayAABB(position, rayDirection, float3(-0.5, -0.5, -0.5), float3(0.5, 0.5, 0.5), distances, uv3);
-                #define SAMPLE_SDF 1
                 if (intersectBounds)
                 {
-                #if SAMPLE_SDF
                     // バウンディングOBBにヒットした場合、メッシュインスタンスに対してレイマーチする
                     MeshInstance meshInstance = _meshInstances[sdfMeshInstanceIndex];
                     if (intersectSdf(meshInstance._meshIndex, uv3, rayDirection))
                     {
                         return true;
                     }
-                #else
-                    return true;
-                #endif
                 }
             }
         }
@@ -332,6 +327,13 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     
     float3 baseColor = albedoTexture.SampleGrad(_sampler, texcoords, ddx, ddy).rgb;
     
+#if ENABLE_SDF    
+    bool shadow = raytraceShadow(worldPosition, normalize(float3(-1, -1, -1)));
+#else
+    bool shadow = false;
+#endif
+    
+    return float4(lerp(baseColor, float3(0, 0, 0), shadow ? 0.5 : 0), 1.0);
     return float4(baseColor, 1);
     return float4(texcoords, 0, 1);
     return float4(worldPosition/10.0, 1);

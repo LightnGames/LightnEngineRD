@@ -238,6 +238,11 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._meshesSrv = _resourceManager.getMeshSrv();
 		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
 		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
+		context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
+		context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
+		context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
+		context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
+		context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
 		_visibilityBufferRenderer.shading(context);
 	}
 #endif
@@ -484,6 +489,11 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._meshesSrv = _resourceManager.getMeshSrv();
 		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
 		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
+		context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
+		context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
+		context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
+		context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
+		context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
 		_visibilityBufferRenderer.shading(context);
 	}
 #endif

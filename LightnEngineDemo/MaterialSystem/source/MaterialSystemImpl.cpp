@@ -669,6 +669,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[ShadingRootParam::MESHES].initializeDescriptorTable(1, &meshesSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[ShadingRootParam::LOD_LEVELS].initializeDescriptorTable(1, &currentLodLevelSrvRange, SHADER_VISIBILITY_PIXEL);
 
+		rootParameters[ShadingRootParam::SDF_MESH_INSTANCE_INV_BOUNDS].initializeDescriptorTable(1, &sdfMeshInstanceInvBoundsSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::SDF_MESH_INSTANCE_OFFSET].initializeDescriptorTable(1, &sdfMeshInstanceIndexOffsetSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::SDF_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &sdfMeshInstanceIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::SDF_MESH_INSTANCE_COUNT].initializeDescriptorTable(1, &sdfMeshInstanceCountSrvRange, SHADER_VISIBILITY_PIXEL);
+		rootParameters[ShadingRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
+
 		RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);

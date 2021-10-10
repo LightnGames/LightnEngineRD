@@ -351,6 +351,13 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURES, context._textureSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIALS, vramShaderSet->getMaterialParametersSrv()._gpuHandle);
 
+		// sdf
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SDF_MESH_INSTANCE_INV_BOUNDS, context._sdfMeshInstanceInvBoundsMatrixSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SDF_MESH_INSTANCE_OFFSET, context._sdfMeshInstanceOffsetSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SDF_MESH_INSTANCE_COUNT, context._sdfMeshInstanceCountSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SDF_MESH_INSTANCE_INDEX, context._sdfMeshInstanceIndexSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SDF_MESH_TEXTURE, context._sdfMeshTextureSrv);
+
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}
 
