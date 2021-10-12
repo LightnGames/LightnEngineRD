@@ -75,6 +75,9 @@
     <ClInclude Include="..\include\MeshRenderer\impl\VisiblityBufferRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\MeshRenderer\impl\ForwardMeshShaderRenderer.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\SceneImpl.cpp">

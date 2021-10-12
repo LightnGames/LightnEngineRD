@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\MeshRenderer\GpuStruct.h" />
+    <ClInclude Include="..\include\MeshRenderer\impl\ForwardMeshShaderRenderer.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\GlobalDistanceField.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRenderer.h" />
     <ClInclude Include="..\include\MeshRenderer\impl\MeshRendererSystemImpl.h" />

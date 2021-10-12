@@ -457,16 +457,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	DescriptorRange sdfTextureSrvRange(DESCRIPTOR_RANGE_TYPE_SRV, 256, SDF_GROUP_BASE_REGISTER + GLOBAL_SDF_LAYER_COUNT * 3);
 	DescriptorRange cullingResultDescriptorRange(DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
-	constexpr u32 ROOT_FRUSTUM_COUNT = DefaultMeshRootParam::ROOT_DEFAULT_MESH_COUNT - 2;
-	RootParameter furstumCullingRootParameters[ROOT_FRUSTUM_COUNT] = {};
 	RootParameter furstumOcclusionCullingRootParameters[DefaultMeshRootParam::ROOT_DEFAULT_MESH_COUNT] = {};
-
-	RootSignatureDesc rootSignatureDescFurstumCulling = {};
 	RootSignatureDesc rootSignatureDescFurstumOcclusionCulling = {};
 
 	// メッシュレット　フラスタムカリングのみ
 	{
-		RootParameter* rootParameters = furstumCullingRootParameters;
+		RootParameter* rootParameters = furstumOcclusionCullingRootParameters;
 		rootParameters[DefaultMeshRootParam::CULLING_VIEW_CONSTANT].initializeDescriptorTable(1, &cullingViewCbvRange, SHADER_VISIBILITY_AMPLIFICATION);
 		rootParameters[DefaultMeshRootParam::VIEW_CONSTANT].initializeDescriptorTable(1, &viewCbvRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::MATERIALS].initializeDescriptorTable(1, &materialDescriptorRange, SHADER_VISIBILITY_ALL);
@@ -485,16 +481,6 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_INDEX].initializeDescriptorTable(1, &sdfMeshInstanceIndicesSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_INSTANCE_COUNT].initializeDescriptorTable(1, &sdfMeshInstanceCountSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
-
-		rootSignatureDescFurstumCulling._device = device;
-		rootSignatureDescFurstumCulling._numParameters = LTN_COUNTOF(furstumCullingRootParameters);
-		rootSignatureDescFurstumCulling._parameters = rootParameters;
-		memcpy(furstumOcclusionCullingRootParameters, rootParameters, sizeof(RootParameter)*ROOT_FRUSTUM_COUNT);
-	}
-
-	// メッシュレット　フラスタム + オクルージョンカリング
-	{
-		RootParameter* rootParameters = furstumOcclusionCullingRootParameters;
 		rootParameters[DefaultMeshRootParam::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
 
@@ -541,8 +527,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	// メッシュシェーダーのみ
 	{
 		MeshShaderPipelineStateGroupDesc pipelineStateDesc = sharedMeshShaderPipelineStateDesc;
-		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumCulling;
-		rootSignatureDesc._parameters = furstumCullingRootParameters;
+		RootSignatureDesc rootSignatureDesc = rootSignatureDescFurstumOcclusionCulling;
+		rootSignatureDesc._parameters = furstumOcclusionCullingRootParameters;
 
 		// Depth Only
 		pipelineStateDesc._meshShaderFilePath = msPrimitiveInstancingFilePath;

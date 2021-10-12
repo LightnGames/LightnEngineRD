@@ -50,7 +50,7 @@ struct ViewConstant {
 	u32 _viewPortSizeY;
 	u32 _padding2[2];
 	Float3 _upDirection;
-	u32 _padding4;
+	u32 _debugVisualizeType;
 	Float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
 };
 

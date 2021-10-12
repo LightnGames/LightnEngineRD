@@ -1,0 +1,100 @@
+#include "../shaderInput.sfh"
+#include "../constant_buffer.sfh"
+#include "../gpu_driven.sfh"
+#include "../util.sfh"
+
+#define TYPE_LOD 0
+#define TYPE_MESHLET 1
+#define TYPE_TEXCOORD 2
+#define TYPE_DEPTH 3
+#define TYPE_WIREFRAME 4
+#define TYPE_BASECOLOR 5
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+
+StructuredBuffer<CustomParameters> _customParameters : register(t0);
+StructuredBuffer<Mesh> _meshes : register(t1);
+StructuredBuffer<MeshInstance> _meshInstances : register(t6);
+ByteAddressBuffer _currentLodLevels : register(t16);
+Texture2D _textures[] : register(t29);
+SamplerState _sampler : register(s0);
+
+float3 heatMap(float unormValue) {
+    float redValue = min(unormValue * 2.0, 1.0);
+    float blueValue = max((unormValue - 0.5) * 2.0, 0.0);
+    return lerp(float3(1, 0, 0), lerp(float3(0, 1, 0), float3(0, 0, 1), blueValue), redValue);
+}
+
+float3 visualizeLod(VertexOut input)
+{
+    MeshInstance meshInstance = _meshInstances[input._meshInstanceIndex];
+    Mesh mesh = _meshes[meshInstance._meshIndex];
+    float lodPersentage = 0.0f;
+    if (mesh._lodMeshCount > 1)
+    {
+        uint currentLodLevel = _currentLodLevels.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE);
+        lodPersentage = currentLodLevel / (float) (mesh._lodMeshCount - 1);
+    }
+    
+    return lerp(heatMap(lodPersentage), float3(1, 1, 1), 0.2);
+}
+
+float3 visualizeMeshlet(VertexOut input)
+{
+    uint meshletIndex = input._meshletIndex;
+    float3 diffuseColor = float3(
+            float(meshletIndex & 1),
+            float(meshletIndex & 3) / 4,
+            float(meshletIndex & 7) / 8);
+    return diffuseColor;
+}
+
+float3 visualizeTexcoords(VertexOut input)
+{
+    return float3(input._texcoord, 0.0);
+}
+
+float3 visualizeDepth(VertexOut input)
+{
+    float depth = input._position.z / input._position.w;
+    return float3(depth, depth, depth);
+}
+
+float3 visualizeWireFrame(VertexOut input)
+{
+    return float3(0.5, 1.0, 0.5);
+}
+
+float3 visualizeBaseColor(VertexOut input)
+{
+    CustomParameters materialParameter = _customParameters[input._materialIndex];
+    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._albedoTextureIndex)];
+    return albedoTexture.Sample(_sampler, input._texcoord).rgb;
+}
+
+float4 main(VertexOut input) : SV_TARGET {
+    float3 color;
+    switch (_viewInfo._debugVisualizeType)
+    {
+        case TYPE_LOD:
+            color = visualizeLod(input);
+            break;
+        case TYPE_MESHLET:
+            color = visualizeMeshlet(input);
+            break;
+        case TYPE_TEXCOORD:
+            color = visualizeTexcoords(input);
+            break;
+        case TYPE_DEPTH:
+            color = visualizeDepth(input);
+            break;
+        case TYPE_WIREFRAME:
+            color = visualizeWireFrame(input);
+            break;
+        case TYPE_BASECOLOR:
+            color = visualizeBaseColor(input);
+            break;
+    }
+    
+    return float4(color, 1.0);
+}

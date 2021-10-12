@@ -235,5 +235,8 @@
     <None Include="..\..\work\common\shader\visibility_buffer\geometry_pass.psf">
       <Filter>shader\visibility_buffer</Filter>
     </None>
+    <None Include="..\..\work\common\shader\debug\debug_visualize.psf">
+      <Filter>shader\debug</Filter>
+    </None>
   </ItemGroup>
 </Project>

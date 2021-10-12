@@ -10,7 +10,7 @@ struct ViewInfo {
     uint2 _viewPortSize;
     uint2 _padding2;
     float3 _upDirection;
-    uint _padding4;
+    uint _debugVisualizeType;
     float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
 };
 
