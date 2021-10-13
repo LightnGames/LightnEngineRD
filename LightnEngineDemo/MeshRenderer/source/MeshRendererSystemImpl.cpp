@@ -177,15 +177,15 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		LTN_ASSERT(pipelineStates != nullptr);
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
 
-#if ENABLE_VISIBILITY_BUFFER
-		u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
-		f32 clearColor[4] = { UINT8_MAX };
-		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
-		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
-		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
-		pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
-		msPipelineStates = primPipelineStateSet->_triangleIdPipelineStateGroups;
-#endif
+		if (_enabledVisibilityBuffer) {
+			u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
+			f32 clearColor[4] = { UINT8_MAX };
+			DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
+			commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+			commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+			pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
+			msPipelineStates = primPipelineStateSet->_triangleIdPipelineStateGroups;
+		}
 
 		RenderContext context = {};
 		context._commandList = commandList;
@@ -211,43 +211,43 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_gpuCullingResource.resourceBarriersHizSrvToTexture(commandList);
 	}
 
-#if ENABLE_VISIBILITY_BUFFER
-	// シェーダーID 構築
-	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
-		VisiblityBufferRenderer::BuildShaderIdContext context = {};
-		context._commandList = commandList;
-		_visibilityBufferRenderer.buildShaderId(context);
-	}
+	if (_enabledVisibilityBuffer) {
+		// シェーダーID 構築
+		{
+			DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
+			VisiblityBufferRenderer::BuildShaderIdContext context = {};
+			context._commandList = commandList;
+			_visibilityBufferRenderer.buildShaderId(context);
+		}
 
-	// シェーディング
-	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
+		// シェーディング
+		{
+			DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
+			PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
+			PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
-		VisiblityBufferRenderer::ShadingContext context = {};
-		context._commandList = commandList;
-		context._viewInfo = viewInfo;
-		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
-		context._pipelineStates = pipelineStates;
-		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
-		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
-		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
-		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
-		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
-		context._meshesSrv = _resourceManager.getMeshSrv();
-		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
-		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
-		context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
-		context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
-		context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
-		context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
-		context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
-		_visibilityBufferRenderer.shading(context);
+			VisiblityBufferRenderer::ShadingContext context = {};
+			context._commandList = commandList;
+			context._viewInfo = viewInfo;
+			context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+			context._pipelineStates = pipelineStates;
+			context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+			context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
+			context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
+			context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+			context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+			context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+			context._meshesSrv = _resourceManager.getMeshSrv();
+			context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+			context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
+			context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
+			context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
+			context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
+			context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
+			context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
+			_visibilityBufferRenderer.shading(context);
+		}
 	}
-#endif
 
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Read back Culling Result");
@@ -448,14 +448,14 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
 		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
-#if ENABLE_VISIBILITY_BUFFER
-		u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
-		f32 clearColor[4] = { UINT8_MAX };
-		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
-		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
-		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
-		pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
-#endif
+		if (_enabledVisibilityBuffer) {
+			u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
+			f32 clearColor[4] = { UINT8_MAX };
+			DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
+			commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+			commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+			pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
+		}
 
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
@@ -474,42 +474,42 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		_meshRenderer.multiDrawRender(context);
 	}
 
-#if ENABLE_VISIBILITY_BUFFER
-	// シェーダーID 構築
-	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
-		VisiblityBufferRenderer::BuildShaderIdContext context = {};
-		context._commandList = commandList;
-		_visibilityBufferRenderer.buildShaderId(context);
-	}
+	if (_enabledVisibilityBuffer) {
+		// シェーダーID 構築
+		{
+			DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Build Shader ID");
+			VisiblityBufferRenderer::BuildShaderIdContext context = {};
+			context._commandList = commandList;
+			_visibilityBufferRenderer.buildShaderId(context);
+		}
 
-	// シェーディング
-	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
+		// シェーディング
+		{
+			DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
+			PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
+			PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
-		VisiblityBufferRenderer::ShadingContext context = {};
-		context._commandList = commandList;
-		context._viewInfo = viewInfo;
-		context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
-		context._pipelineStates = pipelineStates;
-		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
-		context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
-		context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
-		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
-		context._meshInstanceSrv = _scene.getMeshInstanceSrv();
-		context._meshesSrv = _resourceManager.getMeshSrv();
-		context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
-		context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
-		context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
-		context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
-		context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
-		context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
-		context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
-		_visibilityBufferRenderer.shading(context);
+			VisiblityBufferRenderer::ShadingContext context = {};
+			context._commandList = commandList;
+			context._viewInfo = viewInfo;
+			context._vramShaderSets = _vramShaderSetSystem.getShaderSet(0);
+			context._pipelineStates = pipelineStates;
+			context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
+			context._vertexResourceSrv = _resourceManager.getVertexPositionSrv();
+			context._primitiveIndicesSrv = _resourceManager.getClassicIndexSrv();
+			context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
+			context._meshInstanceSrv = _scene.getMeshInstanceSrv();
+			context._meshesSrv = _resourceManager.getMeshSrv();
+			context._currentLodLevelSrv = _gpuCullingResource.getCurrentLodLevelSrv();
+			context._textureSrv = TextureSystemImpl::Get()->getDescriptors()._gpuHandle;
+			context._sdfMeshInstanceInvBoundsMatrixSrv = _scene.getMeshInstanceBoundsInvMatrixSrv();
+			context._sdfMeshInstanceOffsetSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceOffsetSrv();
+			context._sdfMeshInstanceCountSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceCountSrv();
+			context._sdfMeshInstanceIndexSrv = _scene.getGlobalDistanceField()->getSdfGlobalMeshInstanceIndexSrv();
+			context._sdfMeshTextureSrv = _resourceManager.getMeshSdfSrv();
+			_visibilityBufferRenderer.shading(context);
+		}
 	}
-#endif
 
 	_gpuCullingResource.readbackCullingResultBuffer(commandList);
 }
@@ -1089,6 +1089,7 @@ void MeshRendererSystemImpl::update() {
 			bool _forceOnlyMeshShader = false;
 			bool _debugDrawSdfMeshes = false;
 			bool _drawGlobalSdfCells = false;
+			bool _enableVisibilityBuffer = true;
 			s32 _visibleHighPolygonMeshes = 0;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
 			s32 _packedMeshletCount = 0;
@@ -1102,6 +1103,7 @@ void MeshRendererSystemImpl::update() {
 		DebugGui::Checkbox("draw sdf global cells", &debug._drawGlobalSdfCells);
 		DebugGui::Checkbox("pass mesh culling", &debug._passMeshInstanceCulling);
 		DebugGui::Checkbox("pass meshlet culling", &debug._passMeshletInstanceCulling);
+		DebugGui::Checkbox("visibility buffer", &debug._enableVisibilityBuffer);
 		DebugGui::SliderInt("Packed Meshlet", &debug._packedMeshletCount, 0, 350);
 
 		const char* visibleTypes[] = { "None", "Middle", "High" };
@@ -1143,6 +1145,7 @@ void MeshRendererSystemImpl::update() {
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_debugDrawSdfMeshes = debug._debugDrawSdfMeshes;
 		_visible = debug._visible;
+		_enabledVisibilityBuffer = debug._enableVisibilityBuffer;
 
 		if (_geometryType != debug._geometryMode) {
 			isUpdatedGeometryType = true;

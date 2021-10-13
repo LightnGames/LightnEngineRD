@@ -719,12 +719,16 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		sharedDesc._rtvCount = LTN_COUNTOF(forwaradRtvFormats);
 		sharedDesc._rtvFormats = forwaradRtvFormats;
 		sharedDesc._vertexShaderFilePath = vertexShaderPath;
-		sharedDesc._pixelShaderFilePath = pixelShaderForwardPath;
 		sharedDesc._inputElements = inputElements;
 		sharedDesc._inputElementCount = LTN_COUNTOF(inputElements);
 		sharedDesc._depthComparisonFunc = COMPARISON_FUNC_LESS_EQUAL;
 		sharedDesc._dsvFormat = FORMAT_D32_FLOAT;
-		*classic._default = pipelineStateSystem->createPipelineStateGroup(sharedDesc, rootSignatureDesc);
+
+		{
+			ClassicPipelineStateGroupDesc desc = sharedDesc;
+			sharedDesc._pixelShaderFilePath = pixelShaderForwardPath;
+			*classic._default = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+		}
 
 		{
 			ClassicPipelineStateGroupDesc desc = sharedDesc;

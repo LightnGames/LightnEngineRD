@@ -50,6 +50,7 @@ private:
 
 private:
 	bool _visible = true;
+	bool _enabledVisibilityBuffer = false;
 	Scene _scene;
 	MeshResourceManager _resourceManager;
 	MeshRenderer _meshRenderer;

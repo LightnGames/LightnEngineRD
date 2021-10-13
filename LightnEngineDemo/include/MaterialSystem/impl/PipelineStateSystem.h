@@ -54,7 +54,6 @@ namespace ClassicMeshRootParam {
 	};
 };
 
-#define ENABLE_VISIBILITY_BUFFER 1
 namespace ShadingRootParam {
 	enum {
 		CONSTANT = 0,
