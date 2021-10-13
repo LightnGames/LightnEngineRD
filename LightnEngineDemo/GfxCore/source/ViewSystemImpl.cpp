@@ -27,6 +27,7 @@ void ViewSystemImpl::update() {
 		f32 fov = 1.0472f;
 		f32 depthPrePassDistance = 20.0f;
 		s32 _cameraMode = 0;
+		s32 _visualizeType = 0;
 	};
 
 	static bool autoTranslate = false;
@@ -41,6 +42,9 @@ void ViewSystemImpl::update() {
 
 	DebugGui::DragFloat3("position", &debug.position._x, 0.1f);
 	DebugGui::SliderAngle("fov", &debug.fov, 0.1f);
+
+	const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
+	DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._visualizeType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;
 	if (DebugGui::BeginTabBar("ViewSystemTabBar")) {
@@ -128,6 +132,7 @@ void ViewSystemImpl::update() {
 	}
 
 	_isEnabledDebugFixedView = debug._cameraMode != CAMERA_MODE_DEFAULT;
+	_mainView._debugVisualizeType = static_cast<ViewInfo::DebugVisualizeType>(debug._visualizeType);
 
 	// メインビュー用定数バッファ
 	f32 farClip = 300;
@@ -147,6 +152,7 @@ void ViewSystemImpl::update() {
 	viewConstant._viewPortSizeX = static_cast<u32>(_mainView._viewPort._width);
 	viewConstant._viewPortSizeY = static_cast<u32>(_mainView._viewPort._height);
 	viewConstant._upDirection = Matrix4::transformNormal(Vector3::Up, cameraRotate).getFloat3();
+	viewConstant._debugVisualizeType = debug._visualizeType;
 
 	// メインビュー用　フラスタム平面
 	Vector3 sideForward = Vector3::Forward * fovHalfTan * aspectRate;

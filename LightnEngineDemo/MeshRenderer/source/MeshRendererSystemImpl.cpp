@@ -1,6 +1,5 @@
 #include <MeshRenderer/impl/MeshRendererSystemImpl.h>
 #include <GfxCore/impl/GraphicsSystemImpl.h>
-#include <GfxCore/impl/ViewSystemImpl.h>
 #include <GfxCore/impl/QueryHeapSystem.h>
 #include <MaterialSystem/impl/MaterialSystemImpl.h>
 #include <TextureSystem/impl/TextureSystemImpl.h>
@@ -168,8 +167,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
 		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
-		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
+		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet, viewInfo->_debugVisualizeType);
 
 		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
 			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
@@ -184,6 +183,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
 		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
 		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+		pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
+		msPipelineStates = primPipelineStateSet->_triangleIdPipelineStateGroups;
 #endif
 
 		RenderContext context = {};
@@ -222,8 +223,8 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 	// シェーディング
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_SHADING);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
 		VisiblityBufferRenderer::ShadingContext context = {};
 		context._commandList = commandList;
@@ -295,8 +296,8 @@ void MeshRendererSystemImpl::renderMeshShaderDebugFixed(CommandList* commandList
 		MaterialSystemImpl* materialSystem = MaterialSystemImpl::Get();
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_AS_MESH_SHADER);
 		PipelineStateSet* primPipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_MESH_SHADER);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
-		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
+		PipelineStateGroup** msPipelineStates = getPipelineStateGroup(primPipelineStateSet, viewInfo->_debugVisualizeType);
 
 		if (_cullingDebugFlags & CULLING_DEBUG_TYPE_PASS_MESHLET_CULLING) {
 			pipelineStates = pipelineStateSet->_debugCullingPassPipelineStateGroups;
@@ -445,7 +446,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
 #if ENABLE_VISIBILITY_BUFFER
 		u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
@@ -453,6 +454,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
 		commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
 		commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+		pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
 #endif
 
 		MultiIndirectRenderContext context = {};
@@ -464,7 +466,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentOffsets = _multiDrawInstancingResource.getIndirectArgumentOffsets();
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
-		context._pipelineStates = pipelineStateSet->_pipelineStateGroups;
+		context._pipelineStates = pipelineStates;
 		context._commandSignatures = pipelineStateSet->_commandSignatures;
 		context._vertexBufferViews = _vertexBufferViews;
 		context._indexBufferView = &_indexBufferView;
@@ -484,8 +486,8 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 	// シェーディング
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Shading");
-		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_SHADING);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_VISIBILITY_BUFFER_SHADING);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
 		VisiblityBufferRenderer::ShadingContext context = {};
 		context._commandList = commandList;
@@ -539,7 +541,7 @@ void MeshRendererSystemImpl::renderMultiIndirectDebugFixed(CommandList* commandL
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
 
 		PipelineStateSet* pipelineStateSet = materialSystem->getPipelineStateSet(MaterialSystemImpl::TYPE_CLASSIC);
-		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet);
+		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
 		MultiIndirectRenderContext context = {};
 		context._commandList = commandList;
@@ -631,21 +633,17 @@ void MeshRendererSystemImpl::renderClassicVertex(CommandList* commandList, ViewI
 	commandList->transitionBarriers(toNonPixelShaderResourceBarriers, LTN_COUNTOF(toNonPixelShaderResourceBarriers));
 }
 
-PipelineStateGroup** MeshRendererSystemImpl::getPipelineStateGroup(PipelineStateSet* pipelineStateSet) {
-	switch (_debugPrimitiveType) {
-	case DEBUG_PRIMITIVE_TYPE_DEFAULT:
+PipelineStateGroup** MeshRendererSystemImpl::getPipelineStateGroup(PipelineStateSet* pipelineStateSet, ViewInfo::DebugVisualizeType debugVisualizeType) {
+	switch (debugVisualizeType) {
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_NONE:
 		return pipelineStateSet->_pipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_MESHLET:
-		return pipelineStateSet->_debugMeshletPipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_LODLEVEL:
-		return pipelineStateSet->_debugLodLevelPipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_OCCLUSION:
-		return pipelineStateSet->_debugOcclusionPipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_DEPTH:
-		return pipelineStateSet->_debugDepthPipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_TEXCOORDS:
-		return pipelineStateSet->_debugTexcoordsPipelineStateGroups;
-	case DEBUG_PRIMITIVE_TYPE_WIREFRAME:
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_LOD:
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_MESHLET:
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_TEXCOORD:
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_DEPTH:
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_BASECOLOR:
+		return pipelineStateSet->_debugVisualizePipelineStateGroups;
+	case ViewInfo::DEBUG_VISUALIZE_TYPE_WIREFRAME:
 		return pipelineStateSet->_debugWireFramePipelineStateGroups;
 	}
 	return nullptr;
@@ -1093,7 +1091,6 @@ void MeshRendererSystemImpl::update() {
 			bool _drawGlobalSdfCells = false;
 			s32 _visibleHighPolygonMeshes = 0;
 			GeometoryType _geometryMode = GEOMETORY_MODE_MESH_SHADER;
-			DebugPrimitiveType _primitiveType = DEBUG_PRIMITIVE_TYPE_DEFAULT;
 			s32 _packedMeshletCount = 0;
 		};
 
@@ -1113,8 +1110,6 @@ void MeshRendererSystemImpl::update() {
 		const char* geometryTypes[] = { "Mesh Shader", "Multi Indirect", "Vertex Shader" };
 		DebugGui::Combo("Geometry Type", reinterpret_cast<s32*>(&debug._geometryMode), geometryTypes, LTN_COUNTOF(visibleTypes));
 
-		const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
-		DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._primitiveType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 		DebugGui::Checkbox("force mesh shader", &debug._forceOnlyMeshShader);
 
 		if (debug._drawMeshInstanceBounds) {
@@ -1148,7 +1143,6 @@ void MeshRendererSystemImpl::update() {
 		_debugDrawMeshletBounds = debug._drawMeshletBounds;
 		_debugDrawSdfMeshes = debug._debugDrawSdfMeshes;
 		_visible = debug._visible;
-		_debugPrimitiveType = debug._primitiveType;
 
 		if (_geometryType != debug._geometryMode) {
 			isUpdatedGeometryType = true;

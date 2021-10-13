@@ -33,33 +33,37 @@ struct TempShaderParamGpu {
 };
 
 struct ShaderSetImplDesc {
-	PipelineStateGroup** _primPipelineStateGroup = nullptr;
-	PipelineStateGroup** _primDepthPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimCullingPassPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimOcclusionPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimMeshletPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimLodLevelPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimDepthPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimTexcoordsPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugPrimWireFramePipelineStateGroup = nullptr;
+	struct ForwardMeshShader {
+		PipelineStateGroup** _default = nullptr;
+		PipelineStateGroup** _depth = nullptr;
+		PipelineStateGroup** _cullingPass = nullptr;
+		PipelineStateGroup** _debugVisualize = nullptr;
+		PipelineStateGroup** _wireFrame = nullptr;
+		PipelineStateGroup** _triangleId = nullptr;
+		CommandSignature** _commandSignature = nullptr;
+	};
 
-	PipelineStateGroup** _pipelineStateGroup = nullptr;
-	PipelineStateGroup** _depthPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugCullingPassPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugOcclusionPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugMeshletPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugLodLevelPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugDepthPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugTexcoordsPipelineStateGroup = nullptr;
-	PipelineStateGroup** _debugWireFramePipelineStateGroup = nullptr;
-	PipelineStateGroup** _classicPipelineStateGroup = nullptr;
-	PipelineStateGroup** _classicDepthPipelineStateGroup = nullptr;
+	struct ForwardClassic {
+		PipelineStateGroup** _default = nullptr;
+		PipelineStateGroup** _depth = nullptr;
+		PipelineStateGroup** _triangleId = nullptr;
+		CommandSignature** _commandSignature = nullptr;
+	};
 
-	PipelineStateGroup** _shadingPipelineStateGroup = nullptr;
+	struct ForwardVisibilityBufferGeometry {
+		PipelineStateGroup** _default = nullptr;
+	};
 
-	CommandSignature** _commandSignature = nullptr;
-	CommandSignature** _msCommandSignature = nullptr;
-	CommandSignature** _multiDrawCommandSignature = nullptr;
+	struct ForwardVisibilityBufferShading {
+		PipelineStateGroup** _default = nullptr;
+		PipelineStateGroup** _debugVisualize = nullptr;
+	};
+
+	ForwardMeshShader _meshShader;
+	ForwardMeshShader _amplificationMeshShader;
+	ForwardClassic _multiDrawIndirect;
+	ForwardVisibilityBufferGeometry _visibilityBufferGeometry;
+	ForwardVisibilityBufferShading _visibilityBufferShading;
 };
 
 struct ShaderSetImpl :public ShaderSet {
@@ -120,16 +124,12 @@ public:
 
 public:
 	PipelineStateGroup* _pipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _triangleIdPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _depthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugCullingPassPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugOcclusionPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugMeshletPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugLodLevelPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugDepthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	PipelineStateGroup* _debugTexcoordsPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	PipelineStateGroup* _debugVisualizePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugWireFramePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	CommandSignature* _commandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	CommandSignature* _depthCommandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 };
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {
@@ -138,7 +138,7 @@ public:
 		TYPE_AS_MESH_SHADER = 0,
 		TYPE_MESH_SHADER,
 		TYPE_CLASSIC,
-		TYPE_SHADING,
+		TYPE_VISIBILITY_BUFFER_SHADING,
 		TYPE_COUNT
 	};
 

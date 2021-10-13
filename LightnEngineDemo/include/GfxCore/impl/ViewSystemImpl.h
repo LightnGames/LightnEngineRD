@@ -15,6 +15,16 @@ struct ViewConstantInfo {
 };
 
 struct ViewInfo {
+	enum DebugVisualizeType {
+		DEBUG_VISUALIZE_TYPE_NONE = 0,
+		DEBUG_VISUALIZE_TYPE_LOD,
+		DEBUG_VISUALIZE_TYPE_MESHLET,
+		DEBUG_VISUALIZE_TYPE_TEXCOORD,
+		DEBUG_VISUALIZE_TYPE_DEPTH,
+		DEBUG_VISUALIZE_TYPE_WIREFRAME,
+		DEBUG_VISUALIZE_TYPE_BASECOLOR,
+	};
+
 	void initialize();
 	void terminate();
 	void debugDrawDepth();
@@ -35,6 +45,7 @@ struct ViewInfo {
 	GpuTexture _depthTexture;
 	ViewConstantInfo _mainViewConstantInfo;
 	ViewConstantInfo _cullingViewConstantInfo;
+	DebugVisualizeType _debugVisualizeType = DEBUG_VISUALIZE_TYPE_NONE;
 };
 
 struct ViewConstant {

@@ -1,4 +1,5 @@
 #pragma once
+#include <GfxCore/impl/ViewSystemImpl.h>
 #include <MeshRenderer/MeshRendererSystem.h>
 #include <MeshRenderer/GpuStruct.h>
 #include <MeshRenderer/impl/SceneImpl.h>
@@ -41,7 +42,7 @@ private:
 	void renderClassicVertex(CommandList* commandList, ViewInfo* viewInfo);
 #endif
 private:
-	PipelineStateGroup** getPipelineStateGroup(PipelineStateSet* pipelineStateSet);
+	PipelineStateGroup** getPipelineStateGroup(PipelineStateSet* pipelineStateSet, ViewInfo::DebugVisualizeType debugVisualizeType);
 	void setupDraw(CommandList* commandList, ViewInfo* viewInfo);
 	void debugDrawGpuCullingResult();
 	void debugDrawAmplificationCullingResult();
@@ -73,16 +74,6 @@ private:
 		GEOMETORY_MODE_CLASSIC_VERTEX,
 	};
 
-	enum DebugPrimitiveType {
-		DEBUG_PRIMITIVE_TYPE_DEFAULT = 0,
-		DEBUG_PRIMITIVE_TYPE_MESHLET,
-		DEBUG_PRIMITIVE_TYPE_LODLEVEL,
-		DEBUG_PRIMITIVE_TYPE_OCCLUSION,
-		DEBUG_PRIMITIVE_TYPE_DEPTH,
-		DEBUG_PRIMITIVE_TYPE_TEXCOORDS,
-		DEBUG_PRIMITIVE_TYPE_WIREFRAME,
-	};
-
 	enum CullingDebugMenuType {
 		CULLING_DEBUG_TYPE_NONE = 0,
 		CULLING_DEBUG_TYPE_PASS_MESH_CULLING = 1 << 0,
@@ -97,6 +88,5 @@ private:
 	bool _debugDrawMeshletBounds = false;
 	bool _debugDrawSdfMeshes = false;
 	GeometoryType _geometryType;
-	DebugPrimitiveType _debugPrimitiveType;
 	u8 _cullingDebugFlags = CULLING_DEBUG_TYPE_NONE;
 };

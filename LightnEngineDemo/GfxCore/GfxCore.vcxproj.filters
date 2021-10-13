@@ -43,6 +43,9 @@
     <Filter Include="shader\visibility_buffer">
       <UniqueIdentifier>{b7a02962-2bfa-4f5f-bbbf-5362834f28ef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shader\shading">
+      <UniqueIdentifier>{d4a9bcdf-91c1-471f-b420-4127ebc79f28}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\GfxCore\GraphicsSystem.h">
@@ -166,9 +169,6 @@
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh.msf">
       <Filter>shader\standard_mesh</Filter>
     </None>
-    <None Include="..\..\work\common\shader\standard_mesh\default_mesh.psf">
-      <Filter>shader\standard_mesh</Filter>
-    </None>
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh.vsf">
       <Filter>shader\standard_mesh</Filter>
     </None>
@@ -237,6 +237,15 @@
     </None>
     <None Include="..\..\work\common\shader\debug\debug_visualize.psf">
       <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\shading\default_forward.psf">
+      <Filter>shader\shading</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\shading\default_uber.sfh">
+      <Filter>shader\shading</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\shading\default_visibility_buffer.psf">
+      <Filter>shader\shading</Filter>
     </None>
   </ItemGroup>
 </Project>

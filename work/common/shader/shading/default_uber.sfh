@@ -16,6 +16,7 @@ StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 Texture2D _textures[128] : register(t38);
 SamplerState _sampler : register(s0);
 
+#if VISIBILITY_BUFFER_PASS
 Texture2D<uint2> _triangleAttributes : register(t29);
 StructuredBuffer<uint> _primitiveIndices : register(t30);
 StructuredBuffer<float3> _vertexPositions : register(t31);
@@ -25,6 +26,7 @@ StructuredBuffer<float4x3> _meshInstanceWorldMatrics : register(t34);
 StructuredBuffer<Mesh> _meshes : register(t35);
 StructuredBuffer<LodMesh> _lodMeshes : register(t36);
 ByteAddressBuffer _currentLodLevels : register(t37);
+#endif
 
 #if ENABLE_SDF
 StructuredBuffer<float4x3> _meshInstanceBoundsInvMatrices : register(t166);
@@ -218,8 +220,7 @@ bool raytraceShadow(float3 rayOrigin, float3 lightDirection)
 }
 #endif
 
-#define ENABLE_VISIBILITY_BUFFER 1
-#if ENABLE_VISIBILITY_BUFFER
+#if VISIBILITY_BUFFER_PASS
 struct Barycentrics
 {
     float3 UVW;
@@ -339,7 +340,9 @@ float4 main(float4 _position : SV_Position) : SV_TARGET
     return float4(worldPosition/10.0, 1);
     //return float4(_position.xy / float2(1920, 1080), 0, 1);
 }
-#else
+#endif
+
+#if FORWARD_PASS
 float4 main(VertexOut input) : SV_TARGET
 {
     CustomParameters materialParameter = _customParameters[input._materialIndex];

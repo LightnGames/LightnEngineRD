@@ -203,12 +203,14 @@
     <None Include="..\..\work\common\shader\mesh_shader_gpu_driven\mesh_culling_pass.csf" />
     <None Include="..\..\work\common\shader\sdf\compute_mesh_sdf.csf" />
     <None Include="..\..\work\common\shader\shaderInput.sfh" />
+    <None Include="..\..\work\common\shader\shading\default_forward.psf" />
+    <None Include="..\..\work\common\shader\shading\default_uber.sfh" />
+    <None Include="..\..\work\common\shader\shading\default_visibility_buffer.psf" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum.csf" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_frustum_occlusion.csf" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\standard_mesh_culling_uber.sfh" />
     <None Include="..\..\work\common\shader\standard_gpu_driven\mesh_culling_pass.csf" />
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh.msf" />
-    <None Include="..\..\work\common\shader\standard_mesh\default_mesh.psf" />
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh.vsf" />
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh_primitive_instancing.msf" />
     <None Include="..\..\work\common\shader\standard_mesh\default_mesh_uber.sfh" />

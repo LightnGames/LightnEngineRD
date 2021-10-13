@@ -3,12 +3,12 @@
 #include "../gpu_driven.sfh"
 #include "../util.sfh"
 
-#define TYPE_LOD 0
-#define TYPE_MESHLET 1
-#define TYPE_TEXCOORD 2
-#define TYPE_DEPTH 3
-#define TYPE_WIREFRAME 4
-#define TYPE_BASECOLOR 5
+#define TYPE_LOD 1
+#define TYPE_MESHLET 2
+#define TYPE_TEXCOORD 3
+#define TYPE_DEPTH 4
+#define TYPE_WIREFRAME 5
+#define TYPE_BASECOLOR 6
 
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 
@@ -16,7 +16,7 @@ StructuredBuffer<CustomParameters> _customParameters : register(t0);
 StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t16);
-Texture2D _textures[] : register(t29);
+Texture2D _textures[128] : register(t38);
 SamplerState _sampler : register(s0);
 
 float3 heatMap(float unormValue) {
