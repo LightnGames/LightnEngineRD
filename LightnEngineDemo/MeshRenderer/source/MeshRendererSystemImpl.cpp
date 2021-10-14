@@ -108,8 +108,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
 		context._primInstancingPipelineStates = primPipelineStateSet->_depthPipelineStateGroups;
-		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getMeshShaderCommandSignatures();
 		context._instancingResource = &_instancingResource;
 		context._gpuCullingResource = &_gpuCullingResource;
 		context._scene = &_scene;
@@ -159,6 +158,10 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_meshRenderer.buildIndirectArgument(context);
 	}
 
+	if (_enabledVisibilityBuffer) {
+		_visibilityBufferRenderer.clearTriangleId(commandList, viewInfo);
+	}
+
 	// •`‰æ
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
@@ -178,11 +181,6 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		_gpuCullingResource.resourceBarriersHizTextureToSrv(commandList);
 
 		if (_enabledVisibilityBuffer) {
-			u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
-			f32 clearColor[4] = { UINT8_MAX };
-			DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
-			commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
-			commandList->clearRenderTargetView(rtvs + incSize, clearColor);
 			pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
 			msPipelineStates = primPipelineStateSet->_triangleIdPipelineStateGroups;
 		}
@@ -200,8 +198,7 @@ void MeshRendererSystemImpl::renderMeshShader(CommandList* commandList, ViewInfo
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStates;
 		context._primInstancingPipelineStates = msPipelineStates;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getMeshShaderCommandSignatures();
 		context._scene = &_scene;
 		context._globalDistanceField = _scene.getGlobalDistanceField();
 		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
@@ -319,8 +316,7 @@ void MeshRendererSystemImpl::renderMeshShaderDebugFixed(CommandList* commandList
 		context._vertexResourceDescriptors = _resourceManager.getVertexSrv();
 		context._pipelineStates = pipelineStates;
 		context._primInstancingPipelineStates = msPipelineStates;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
-		context._primCommandSignatures = primPipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getMeshShaderCommandSignatures();
 		context._scene = &_scene;
 		context._globalDistanceField = _scene.getGlobalDistanceField();
 		context._meshSdfSrv = _resourceManager.getMeshSdfSrv();
@@ -406,7 +402,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStateSet->_depthPipelineStateGroups;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getClassicCommandSignatures();
 		context._vertexBufferViews = _vertexBufferViews;
 		context._indexBufferView = &_indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
@@ -441,6 +437,10 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		_meshRenderer.multiDrawMainCulling(context);
 	}
 
+	if (_enabledVisibilityBuffer) {
+		_visibilityBufferRenderer.clearTriangleId(commandList, viewInfo);
+	}
+
 	// •`‰æ
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_RED, "Main Pass");
@@ -449,11 +449,6 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		PipelineStateGroup** pipelineStates = getPipelineStateGroup(pipelineStateSet, viewInfo->_debugVisualizeType);
 
 		if (_enabledVisibilityBuffer) {
-			u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
-			f32 clearColor[4] = { UINT8_MAX };
-			DescriptorHandle rtvs = _visibilityBufferRenderer.getTriangleIdRtvs();
-			commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
-			commandList->clearRenderTargetView(rtvs + incSize, clearColor);
 			pipelineStates = pipelineStateSet->_triangleIdPipelineStateGroups;
 		}
 
@@ -467,7 +462,7 @@ void MeshRendererSystemImpl::renderMultiIndirect(CommandList* commandList, ViewI
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStates;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getClassicCommandSignatures();
 		context._vertexBufferViews = _vertexBufferViews;
 		context._indexBufferView = &_indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);
@@ -553,7 +548,7 @@ void MeshRendererSystemImpl::renderMultiIndirectDebugFixed(CommandList* commandL
 		context._indirectArgmentCounts = _multiDrawInstancingResource.getIndirectArgumentCounts();
 		context._meshInstanceWorldMatrixSrv = _scene.getMeshInstanceWorldMatrixSrv();
 		context._pipelineStates = pipelineStateSet->_pipelineStateGroups;
-		context._commandSignatures = pipelineStateSet->_commandSignatures;
+		context._commandSignatures = materialSystem->getClassicCommandSignatures();
 		context._vertexBufferViews = _vertexBufferViews;
 		context._indexBufferView = &_indexBufferView;
 		context._numVertexBufferView = LTN_COUNTOF(_vertexBufferViews);

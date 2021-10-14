@@ -368,3 +368,11 @@ void VisiblityBufferRenderer::shading(const ShadingContext& context) {
 		commandList->transitionBarriers(barriers, LTN_COUNTOF(barriers));
 	}
 }
+
+void VisiblityBufferRenderer::clearTriangleId(CommandList* commandList, ViewInfo* viewInfo) {
+	u64 incSize = GraphicsSystemImpl::Get()->getRtvGpuDescriptorAllocator()->getIncrimentSize();
+	f32 clearColor[4] = { UINT8_MAX };
+	DescriptorHandle rtvs = getTriangleIdRtvs();
+	commandList->setRenderTargets(2, rtvs._cpuHandle, &viewInfo->_depthDsv);
+	commandList->clearRenderTargetView(rtvs + incSize, clearColor);
+}

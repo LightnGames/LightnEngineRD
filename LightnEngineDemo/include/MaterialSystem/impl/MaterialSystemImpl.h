@@ -40,18 +40,12 @@ struct ShaderSetImplDesc {
 		PipelineStateGroup** _debugVisualize = nullptr;
 		PipelineStateGroup** _wireFrame = nullptr;
 		PipelineStateGroup** _triangleId = nullptr;
-		CommandSignature** _commandSignature = nullptr;
 	};
 
 	struct ForwardClassic {
 		PipelineStateGroup** _default = nullptr;
 		PipelineStateGroup** _depth = nullptr;
 		PipelineStateGroup** _triangleId = nullptr;
-		CommandSignature** _commandSignature = nullptr;
-	};
-
-	struct ForwardVisibilityBufferGeometry {
-		PipelineStateGroup** _default = nullptr;
 	};
 
 	struct ForwardVisibilityBufferShading {
@@ -62,8 +56,9 @@ struct ShaderSetImplDesc {
 	ForwardMeshShader _meshShader;
 	ForwardMeshShader _amplificationMeshShader;
 	ForwardClassic _multiDrawIndirect;
-	ForwardVisibilityBufferGeometry _visibilityBufferGeometry;
 	ForwardVisibilityBufferShading _visibilityBufferShading;
+	CommandSignature** _meshShaderCommandSignature = nullptr;
+	CommandSignature** _classicCommandSignature = nullptr;
 };
 
 struct ShaderSetImpl :public ShaderSet {
@@ -118,18 +113,13 @@ private:
 	u8* _parameterData = nullptr;
 };
 
-class PipelineStateSet {
-public:
-	void requestDelete(u32 shaderSetIndex);
-
-public:
+struct PipelineStateSet {
 	PipelineStateGroup* _pipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _triangleIdPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _depthPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugCullingPassPipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugVisualizePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 	PipelineStateGroup* _debugWireFramePipelineStateGroups[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
-	CommandSignature* _commandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 };
 
 class LTN_MATERIAL_SYSTEM_API MaterialSystemImpl :public MaterialSystem {
@@ -160,6 +150,8 @@ public:
 	bool isEnabledShaderSet(const ShaderSetImpl* shaderSet) const;
 
 	PipelineStateSet* getPipelineStateSet(Type type) { return &_pipelineStateSets[type]; }
+	CommandSignature** getMeshShaderCommandSignatures() { return _meshShaderCommandSignatures; }
+	CommandSignature** getClassicCommandSignatures() { return _classicCommandSignatures; }
 	GpuDescriptorHandle getScreenAreaFeedbackUav() const { return _screenAreaFeedbackUav._gpuHandle; }
 	CpuDescriptorHandle getScreenAreaFeedbackCpuUav() const { return _screenAreaFeedbackCpuUav._cpuHandle; }
 	GpuBuffer* getScreenAreaFeedbackBuffer() { return &_screenAreaFeedbackBuffer; }
@@ -169,6 +161,9 @@ public:
 	virtual Material* createMaterial(const MaterialDesc& desc) override;
 	virtual Material* findMaterial(u64 filePathHash) override;
 	static MaterialSystemImpl* Get();
+
+private:
+	void requestToDeletePipelineStateSet(PipelineStateSet* pipelineStateSet, u32 shaderSetIndex);
 
 private:
 	DynamicQueue<MaterialImpl> _materials;
@@ -186,4 +181,6 @@ private:
 	u32 _screenAreas[MATERIAL_COUNT_MAX] = {}; // u16 unorm
 
 	PipelineStateSet _pipelineStateSets[TYPE_COUNT] = {};
+	CommandSignature* _meshShaderCommandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
+	CommandSignature* _classicCommandSignatures[MaterialSystem::SHADER_SET_COUNT_MAX] = {};
 };

@@ -2,6 +2,7 @@
 #include <GfxCore/impl/GpuResourceImpl.h>
 
 struct ViewInfo;
+struct CommandList;
 class VramShaderSet;
 class PipelineStateGroup;
 
@@ -47,6 +48,7 @@ public:
 	void terminate();
 	void buildShaderId(const BuildShaderIdContext& context);
 	void shading(const ShadingContext& context);
+	void clearTriangleId(CommandList* commandList, ViewInfo* viewInfo);
 
 	DescriptorHandle getTriangleIdRtvs() const { return _triangleIdRtv; }
 

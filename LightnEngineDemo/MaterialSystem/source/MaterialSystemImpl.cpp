@@ -134,9 +134,10 @@ void MaterialSystemImpl::processDeletion() {
 		if (_shaderSetStateFlags[shaderSetIndex] & SHADER_SET_STATE_FLAG_REQEST_DESTROY) {
 			_shaderSetStateFlags[shaderSetIndex] = SHADER_SET_STATE_FLAG_NONE;
 			_shaderSets[shaderSetIndex].terminate();
-			_pipelineStateSets[TYPE_AS_MESH_SHADER].requestDelete(shaderSetIndex);
-			_pipelineStateSets[TYPE_MESH_SHADER].requestDelete(shaderSetIndex);
-			_pipelineStateSets[TYPE_CLASSIC].requestDelete(shaderSetIndex);
+			requestToDeletePipelineStateSet(&_pipelineStateSets[TYPE_AS_MESH_SHADER], shaderSetIndex);
+			requestToDeletePipelineStateSet(&_pipelineStateSets[TYPE_MESH_SHADER], shaderSetIndex);
+			requestToDeletePipelineStateSet(&_pipelineStateSets[TYPE_CLASSIC], shaderSetIndex);
+			requestToDeletePipelineStateSet(&_pipelineStateSets[TYPE_VISIBILITY_BUFFER_SHADING], shaderSetIndex);
 
 			_shaderSetFileHashes[shaderSetIndex] = 0;
 			_shaderSets[shaderSetIndex] = ShaderSetImpl();
@@ -187,7 +188,6 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 			implDesc._triangleId = &pipelineStateSet._triangleIdPipelineStateGroups[findIndex];
 			implDesc._depth = &pipelineStateSet._depthPipelineStateGroups[findIndex];
 			implDesc._default = &pipelineStateSet._pipelineStateGroups[findIndex];
-			implDesc._commandSignature = &pipelineStateSet._commandSignatures[findIndex];
 		}
 
 		// メッシュシェーダー
@@ -200,7 +200,6 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 			implDesc._triangleId = &pipelineStateSet._triangleIdPipelineStateGroups[findIndex];
 			implDesc._depth = &pipelineStateSet._depthPipelineStateGroups[findIndex];
 			implDesc._default = &pipelineStateSet._pipelineStateGroups[findIndex];
-			implDesc._commandSignature = &pipelineStateSet._commandSignatures[findIndex];
 		}
 
 		// クラシック
@@ -210,7 +209,6 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 			implDesc._triangleId = &pipelineStateSet._triangleIdPipelineStateGroups[findIndex];
 			implDesc._depth = &pipelineStateSet._depthPipelineStateGroups[findIndex];
 			implDesc._default = &pipelineStateSet._pipelineStateGroups[findIndex];
-			implDesc._commandSignature = &pipelineStateSet._commandSignatures[findIndex];
 		}
 
 		// Visibility Buffer シェーディング
@@ -220,6 +218,10 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 			implDesc._default = &pipelineStateSet._pipelineStateGroups[findIndex];
 			implDesc._debugVisualize = &pipelineStateSet._debugVisualizePipelineStateGroups[findIndex];
 		}
+
+		// コマンドシグネチャ
+		shaderSetDesc._meshShaderCommandSignature = &_meshShaderCommandSignatures[findIndex];
+		shaderSetDesc._classicCommandSignature = &_classicCommandSignatures[findIndex];
 
 		ShaderSetImpl& shaderSet = _shaderSets[findIndex];
 		shaderSet.initialize(desc, shaderSetDesc);
@@ -291,6 +293,29 @@ Material* MaterialSystemImpl::findMaterial(u64 filePathHash) {
 
 MaterialSystemImpl* MaterialSystemImpl::Get() {
 	return &_materialSystem;
+}
+
+void MaterialSystemImpl::requestToDeletePipelineStateSet(PipelineStateSet* pipelineStateSet, u32 shaderSetIndex) {
+	if (pipelineStateSet->_pipelineStateGroups[shaderSetIndex]) {
+		pipelineStateSet->_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	}
+
+	if (pipelineStateSet->_depthPipelineStateGroups[shaderSetIndex]) {
+		pipelineStateSet->_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	}
+
+	if (pipelineStateSet->_debugCullingPassPipelineStateGroups[shaderSetIndex]) {
+		pipelineStateSet->_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	}
+
+	if (pipelineStateSet->_debugVisualizePipelineStateGroups[shaderSetIndex]) {
+		pipelineStateSet->_debugVisualizePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	}
+
+	if (pipelineStateSet->_debugWireFramePipelineStateGroups[shaderSetIndex]) {
+		pipelineStateSet->_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
+	}
+	*pipelineStateSet = PipelineStateSet();
 }
 
 MaterialSystem* MaterialSystem::Get() {
@@ -547,16 +572,14 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	{
 		ShaderSetImplDesc::ForwardMeshShader& meshShader = implDesc._meshShader;
 		MeshShaderPipelineStateGroupDesc pipelineStateDesc = sharedMeshShaderPipelineStateDesc;
-		RootSignatureDesc rootSignatureDesc = sharedRootSignatureDesc;
-		rootSignatureDesc._parameters = sharedRootParameters;
 
 		// Depth Only
 		pipelineStateDesc._meshShaderFilePath = msPrimitiveInstancingFilePath;
-		*meshShader._depth = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+		*meshShader._depth = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, sharedRootSignatureDesc);
 
 		// フラスタム ＋ オクルージョンカリング
 		pipelineStateDesc._pixelShaderFilePath = pixelShaderForwardPath;
-		*meshShader._default = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+		*meshShader._default = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, sharedRootSignatureDesc);
 
 		// Triangle Id
 		{
@@ -564,18 +587,18 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 			pipelineStateDesc._pixelShaderFilePath = psTriangleIdFilePath;
 			pipelineStateDesc._rtvCount = LTN_COUNTOF(visibilityBufferGeometryRtvFormats);
 			pipelineStateDesc._rtvFormats = visibilityBufferGeometryRtvFormats;
-			*meshShader._triangleId = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+			*meshShader._triangleId = pipelineStateSystem->createPipelineStateGroup(desc, sharedRootSignatureDesc);
 		}
 
 		// デバッグ表示
 		pipelineStateDesc._pixelShaderFilePath = psDebugVisualizeFilePath;
-		*meshShader._debugVisualize = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, rootSignatureDesc);
+		*meshShader._debugVisualize = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, sharedRootSignatureDesc);
 
 		// ワイヤーフレーム表示
 		{
 			MeshShaderPipelineStateGroupDesc desc = pipelineStateDesc;
 			desc._fillMode = FILL_MODE_WIREFRAME;
-			*meshShader._wireFrame = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+			*meshShader._wireFrame = pipelineStateSystem->createPipelineStateGroup(desc, sharedRootSignatureDesc);
 		}
 	}
 
@@ -726,7 +749,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		{
 			ClassicPipelineStateGroupDesc desc = sharedDesc;
-			sharedDesc._pixelShaderFilePath = pixelShaderForwardPath;
+			desc._pixelShaderFilePath = pixelShaderForwardPath;
 			*classic._default = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 		}
 
@@ -747,11 +770,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 	// コマンドシグネチャ
 	{
-		ShaderSetImplDesc::ForwardMeshShader& amplificationMeshShader = implDesc._amplificationMeshShader;
-		ShaderSetImplDesc::ForwardMeshShader& meshShader = implDesc._meshShader;
 		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
-		*amplificationMeshShader._commandSignature = allocator->allocateCommandSignature();
-		*meshShader._commandSignature = allocator->allocateCommandSignature();
+		*implDesc._meshShaderCommandSignature = allocator->allocateCommandSignature();
 
 		IndirectArgumentDesc argumentDescs[2] = {};
 		argumentDescs[0]._type = INDIRECT_ARGUMENT_TYPE_CONSTANT;
@@ -765,16 +785,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 
 		desc._argumentDescs = argumentDescs;
 		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-		desc._rootSignature = (*amplificationMeshShader._default)->getRootSignature();
-		(*amplificationMeshShader._commandSignature)->initialize(desc);
-
-		desc._rootSignature = (*meshShader._default)->getRootSignature();
-		(*meshShader._commandSignature)->initialize(desc);
+		desc._rootSignature = (*implDesc._meshShader._default)->getRootSignature();
+		(*implDesc._meshShaderCommandSignature)->initialize(desc);
 	}
 
 #if ENABLE_MULTI_INDIRECT_DRAW
 	{
-		ShaderSetImplDesc::ForwardClassic& classic = implDesc._multiDrawIndirect;
 		GraphicsApiInstanceAllocator* allocator = GraphicsApiInstanceAllocator::Get();
 
 		IndirectArgumentDesc argumentDescs[2] = {};
@@ -788,9 +804,9 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		desc._byteStride = sizeof(gpu::StarndardMeshIndirectArguments);
 		desc._argumentDescs = argumentDescs;
 		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
-		desc._rootSignature = (*classic._default)->getRootSignature();
-		(*classic._commandSignature) = allocator->allocateCommandSignature();
-		(*classic._commandSignature)->initialize(desc);
+		desc._rootSignature = (*implDesc._multiDrawIndirect._default)->getRootSignature();
+		(*implDesc._classicCommandSignature) = allocator->allocateCommandSignature();
+		(*implDesc._classicCommandSignature)->initialize(desc);
 	}
 #endif
 }
@@ -799,36 +815,4 @@ void ShaderSetImpl::terminate() {
 	_shaderParamInstances.terminate();
 	delete[] _parameterDatas;
 	_parameterDatas = nullptr;
-}
-
-void PipelineStateSet::requestDelete(u32 shaderSetIndex) {
-	if (_pipelineStateGroups[shaderSetIndex]) {
-		_pipelineStateGroups[shaderSetIndex]->requestToDestroy();
-		_pipelineStateGroups[shaderSetIndex] = nullptr;
-	}
-
-	if (_depthPipelineStateGroups[shaderSetIndex]) {
-		_depthPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-		_depthPipelineStateGroups[shaderSetIndex] = nullptr;
-	}
-
-	if (_debugCullingPassPipelineStateGroups[shaderSetIndex]) {
-		_debugCullingPassPipelineStateGroups[shaderSetIndex]->requestToDestroy();
-		_debugCullingPassPipelineStateGroups[shaderSetIndex] = nullptr;
-	}
-
-	if (_debugVisualizePipelineStateGroups[shaderSetIndex]) {
-		_debugVisualizePipelineStateGroups[shaderSetIndex]->requestToDestroy();
-		_debugVisualizePipelineStateGroups[shaderSetIndex] = nullptr;
-	}
-
-	if (_debugWireFramePipelineStateGroups[shaderSetIndex]) {
-		_debugWireFramePipelineStateGroups[shaderSetIndex]->requestToDestroy();
-		_debugWireFramePipelineStateGroups[shaderSetIndex] = nullptr;
-	}
-
-	if (_commandSignatures[shaderSetIndex]) {
-		_commandSignatures[shaderSetIndex]->terminate();
-		_commandSignatures[shaderSetIndex] = nullptr;
-	}
 }

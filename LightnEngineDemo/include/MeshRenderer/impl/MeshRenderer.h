@@ -22,7 +22,6 @@ struct RenderContext {
 	GpuCullingResource* _gpuCullingResource = nullptr;
 	PipelineStateGroup** _primInstancingPipelineStates = nullptr;
 	PipelineStateGroup** _pipelineStates = nullptr;
-	CommandSignature** _primCommandSignatures = nullptr;
 	CommandSignature** _commandSignatures = nullptr;
 	GpuDescriptorHandle _meshSrv;
 	GpuDescriptorHandle _vertexResourceDescriptors;

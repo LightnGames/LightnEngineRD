@@ -9,7 +9,7 @@
 #include <MeshRenderer/impl/VramShaderSetSystem.h>
 
 class PipelineStateGroup;
-class PipelineStateSet;
+struct PipelineStateSet;
 struct MeshRenderDesc {
 	CommandList* _commandList = nullptr;
 };

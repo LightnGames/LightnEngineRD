@@ -410,6 +410,7 @@ void MeshRenderer::render(const RenderContext& context) const {
 			continue;
 		}
 
+		CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
 		VramShaderSet* vramShaderSet = &context._vramShaderSets[pipelineStateIndex];
 		u32 countBufferOffset = pipelineStateIndex * sizeof(u32);
 		u32 indirectArgumentOffset = pipelineStateIndex * InstancingResource::INSTANCING_PER_SHADER_COUNT_MAX;
@@ -427,7 +428,6 @@ void MeshRenderer::render(const RenderContext& context) const {
 				context._gpuCullingResource->setDrawResultDescriptorTable(commandList);
 			}
 
-			CommandSignature* commandSignature = context._commandSignatures[pipelineStateIndex];
 			indirectArgumentResource->executeIndirect(commandList, commandSignature, asMsCommandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 
@@ -438,7 +438,6 @@ void MeshRenderer::render(const RenderContext& context) const {
 			commandList->setPipelineState(pipelineState->getPipelineState());
 			setMeshShaderResources(context, vramShaderSet);
 
-			CommandSignature* commandSignature = context._primCommandSignatures[pipelineStateIndex];
 			primIndirectArgumentResource->executeIndirect(commandList, commandSignature, msCommandCountMax, indirectArgumentOffsetSizeInByte, countBufferOffset);
 		}
 	}
