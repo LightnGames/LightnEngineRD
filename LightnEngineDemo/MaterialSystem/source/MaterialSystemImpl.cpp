@@ -209,6 +209,7 @@ ShaderSet* MaterialSystemImpl::createShaderSet(const ShaderSetDesc& desc) {
 			implDesc._triangleId = &pipelineStateSet._triangleIdPipelineStateGroups[findIndex];
 			implDesc._depth = &pipelineStateSet._depthPipelineStateGroups[findIndex];
 			implDesc._default = &pipelineStateSet._pipelineStateGroups[findIndex];
+			implDesc._debugVisualize = &pipelineStateSet._debugVisualizePipelineStateGroups[findIndex];
 		}
 
 		// Visibility Buffer シェーディング
@@ -532,7 +533,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootParameters[DefaultMeshRootParam::SDF_MESH_TEXTURE].initializeDescriptorTable(1, &sdfTextureSrvRange, SHADER_VISIBILITY_PIXEL);
 		rootParameters[DefaultMeshRootParam::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultDescriptorRange, SHADER_VISIBILITY_ALL);
 		rootParameters[DefaultMeshRootParam::HIZ].initializeDescriptorTable(1, &hizRange, SHADER_VISIBILITY_ALL);
-		
+
 		sharedRootSignatureDesc._device = device;
 		sharedRootSignatureDesc._numParameters = LTN_COUNTOF(sharedRootParameters);
 		sharedRootSignatureDesc._parameters = rootParameters;
@@ -553,7 +554,8 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 	constexpr char asMeshletCullingFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_pass.aso";
 	constexpr char asMeshletCullingFrustumOcclusionFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum_occlusion.aso";
 	constexpr char asMeshletCullingFrustumFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\meshlet\\meshlet_culling_frustum.aso";
-	constexpr char psDebugVisualizeFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_visualize.pso";
+	constexpr char psDebugVisualizeForwardFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_visualize_forward.pso";
+	constexpr char psDebugVisualizeVisibilityBufferFilePath[] = "L:\\LightnEngine\\resource\\common\\shader\\debug\\debug_visualize_visibility_buffer.pso";
 	constexpr char psTriangleIdFilePath[] = "L://LightnEngine//resource//common//shader//visibility_buffer//geometry_pass.pso";
 
 	Format visibilityBufferGeometryRtvFormats[2];
@@ -591,7 +593,7 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		}
 
 		// デバッグ表示
-		pipelineStateDesc._pixelShaderFilePath = psDebugVisualizeFilePath;
+		pipelineStateDesc._pixelShaderFilePath = psDebugVisualizeForwardFilePath;
 		*meshShader._debugVisualize = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, sharedRootSignatureDesc);
 
 		// ワイヤーフレーム表示
@@ -627,14 +629,14 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		}
 
 		// デバッグ表示
-		pipelineStateDesc._pixelShaderFilePath = psDebugVisualizeFilePath;
+		pipelineStateDesc._pixelShaderFilePath = psDebugVisualizeForwardFilePath;
 		*amplificationMeshShader._debugVisualize = pipelineStateSystem->createPipelineStateGroup(pipelineStateDesc, sharedRootSignatureDesc);
 
 		// ワイヤーフレーム表示
 		{
 			MeshShaderPipelineStateGroupDesc desc = pipelineStateDesc;
 			desc._fillMode = FILL_MODE_WIREFRAME;
-			desc._pixelShaderFilePath = psDebugVisualizeFilePath;
+			desc._pixelShaderFilePath = psDebugVisualizeForwardFilePath;
 			*amplificationMeshShader._wireFrame = pipelineStateSystem->createPipelineStateGroup(desc, sharedRootSignatureDesc);
 		}
 
@@ -684,15 +686,25 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 		rootSignatureDesc._parameters = rootParameters;
 
-		ClassicPipelineStateGroupDesc desc = {};
-		desc._vertexShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\visibility_buffer\\shading_quad.vso";
-		desc._pixelShaderFilePath = pixelShaderVisibilityBufferPath;
-		desc._depthComparisonFunc = COMPARISON_FUNC_EQUAL;
-		desc._rtvCount = LTN_COUNTOF(forwaradRtvFormats);
-		desc._rtvFormats = forwaradRtvFormats;
-		desc._dsvFormat = FORMAT_D16_UNORM;
-		desc._depthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		*shading._default = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+		ClassicPipelineStateGroupDesc sharedDesc = {};
+		sharedDesc._vertexShaderFilePath = "L:\\LightnEngine\\resource\\common\\shader\\visibility_buffer\\shading_quad.vso";
+		sharedDesc._depthComparisonFunc = COMPARISON_FUNC_EQUAL;
+		sharedDesc._rtvCount = LTN_COUNTOF(forwaradRtvFormats);
+		sharedDesc._rtvFormats = forwaradRtvFormats;
+		sharedDesc._dsvFormat = FORMAT_D16_UNORM;
+		sharedDesc._depthWriteMask = DEPTH_WRITE_MASK_ZERO;
+
+		{
+			ClassicPipelineStateGroupDesc desc = sharedDesc;
+			desc._pixelShaderFilePath = pixelShaderVisibilityBufferPath;
+			*shading._default = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+		}
+
+		{
+			ClassicPipelineStateGroupDesc desc = sharedDesc;
+			desc._pixelShaderFilePath = psDebugVisualizeVisibilityBufferFilePath;
+			*shading._debugVisualize = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+		}
 	}
 
 	// classic
@@ -765,6 +777,12 @@ void ShaderSetImpl::initialize(const ShaderSetDesc& desc, ShaderSetImplDesc& imp
 			desc._rtvCount = LTN_COUNTOF(visibilityBufferGeometryRtvFormats);
 			desc._rtvFormats = visibilityBufferGeometryRtvFormats;
 			*classic._triangleId = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
+		}
+
+		{
+			ClassicPipelineStateGroupDesc desc = sharedDesc;
+			desc._pixelShaderFilePath = psDebugVisualizeForwardFilePath;
+			*classic._debugVisualize = pipelineStateSystem->createPipelineStateGroup(desc, rootSignatureDesc);
 		}
 	}
 

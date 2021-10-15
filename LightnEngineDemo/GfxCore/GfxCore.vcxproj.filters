@@ -235,9 +235,6 @@
     <None Include="..\..\work\common\shader\visibility_buffer\geometry_pass.psf">
       <Filter>shader\visibility_buffer</Filter>
     </None>
-    <None Include="..\..\work\common\shader\debug\debug_visualize.psf">
-      <Filter>shader\debug</Filter>
-    </None>
     <None Include="..\..\work\common\shader\shading\default_forward.psf">
       <Filter>shader\shading</Filter>
     </None>
@@ -246,6 +243,15 @@
     </None>
     <None Include="..\..\work\common\shader\shading\default_visibility_buffer.psf">
       <Filter>shader\shading</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\debug\debug_visualize_forward.psf">
+      <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\debug\debug_visualize_uber.sfh">
+      <Filter>shader\debug</Filter>
+    </None>
+    <None Include="..\..\work\common\shader\debug\debug_visualize_visibility_buffer.psf">
+      <Filter>shader\debug</Filter>
     </None>
   </ItemGroup>
 </Project>

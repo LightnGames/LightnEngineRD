@@ -43,7 +43,7 @@ void ViewSystemImpl::update() {
 	DebugGui::DragFloat3("position", &debug.position._x, 0.1f);
 	DebugGui::SliderAngle("fov", &debug.fov, 0.1f);
 
-	const char* primitiveTypes[] = { "Default", "Meshlet", "LodLevel", "Occlusion", "Depth", "Texcoords", "Wire Frame" };
+	const char* primitiveTypes[] = { "Default", "LodLevel", "Meshlet", "Texcoords", "Depth", "Wire Frame", "Occlusion" };
 	DebugGui::Combo("Primitive Type", reinterpret_cast<s32*>(&debug._visualizeType), primitiveTypes, LTN_COUNTOF(primitiveTypes));
 
 	f32 aspectRate = _mainView._viewPort._width / _mainView._viewPort._height;

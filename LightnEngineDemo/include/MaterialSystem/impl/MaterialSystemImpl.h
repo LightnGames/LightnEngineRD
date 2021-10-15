@@ -46,6 +46,7 @@ struct ShaderSetImplDesc {
 		PipelineStateGroup** _default = nullptr;
 		PipelineStateGroup** _depth = nullptr;
 		PipelineStateGroup** _triangleId = nullptr;
+		PipelineStateGroup** _debugVisualize = nullptr;
 	};
 
 	struct ForwardVisibilityBufferShading {

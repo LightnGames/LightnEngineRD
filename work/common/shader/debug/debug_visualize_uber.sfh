@@ -13,7 +13,6 @@
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 
 StructuredBuffer<CustomParameters> _customParameters : register(t0);
-StructuredBuffer<Mesh> _meshes : register(t1);
 StructuredBuffer<MeshInstance> _meshInstances : register(t6);
 ByteAddressBuffer _currentLodLevels : register(t16);
 Texture2D _textures[128] : register(t38);
@@ -27,16 +26,17 @@ float3 heatMap(float unormValue) {
 
 float3 visualizeLod(VertexOut input)
 {
-    MeshInstance meshInstance = _meshInstances[input._meshInstanceIndex];
-    Mesh mesh = _meshes[meshInstance._meshIndex];
-    float lodPersentage = 0.0f;
-    if (mesh._lodMeshCount > 1)
-    {
-        uint currentLodLevel = _currentLodLevels.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE);
-        lodPersentage = currentLodLevel / (float) (mesh._lodMeshCount - 1);
-    }
+    return float3(0.2, 0.2, 0.2);
+    //MeshInstance meshInstance = _meshInstances[input._meshInstanceIndex];
+    //Mesh mesh = _meshes[meshInstance._meshIndex];
+    //float lodPersentage = 0.0f;
+    //if (mesh._lodMeshCount > 1)
+    //{
+    //    uint currentLodLevel = _currentLodLevels.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE);
+    //    lodPersentage = currentLodLevel / (float) (mesh._lodMeshCount - 1);
+    //}
     
-    return lerp(heatMap(lodPersentage), float3(1, 1, 1), 0.2);
+    //return lerp(heatMap(lodPersentage), float3(1, 1, 1), 0.2);
 }
 
 float3 visualizeMeshlet(VertexOut input)
@@ -72,6 +72,14 @@ float3 visualizeBaseColor(VertexOut input)
     return albedoTexture.Sample(_sampler, input._texcoord).rgb;
 }
 
+#if VISIBILITY_BUFFER_PASS
+float4 main(float4 _position : SV_Position) : SV_TARGET
+{
+    return float4(_position.xy,0,1);
+}
+#endif
+
+#if FORWARD_PASS
 float4 main(VertexOut input) : SV_TARGET {
     float3 color;
     switch (_viewInfo._debugVisualizeType)
@@ -98,3 +106,4 @@ float4 main(VertexOut input) : SV_TARGET {
     
     return float4(color, 1.0);
 }
+#endif

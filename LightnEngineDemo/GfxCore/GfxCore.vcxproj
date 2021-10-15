@@ -188,7 +188,9 @@
     <None Include="..\..\work\common\shader\debug\debug_occlusion_culling.psf" />
     <None Include="..\..\work\common\shader\debug\debug_sdf.psf" />
     <None Include="..\..\work\common\shader\debug\debug_sdf.vsf" />
-    <None Include="..\..\work\common\shader\debug\debug_visualize.psf" />
+    <None Include="..\..\work\common\shader\debug\debug_visualize_forward.psf" />
+    <None Include="..\..\work\common\shader\debug\debug_visualize_uber.sfh" />
+    <None Include="..\..\work\common\shader\debug\debug_visualize_visibility_buffer.psf" />
     <None Include="..\..\work\common\shader\debug\imgui.psf" />
     <None Include="..\..\work\common\shader\debug\imgui.vsf" />
     <None Include="..\..\work\common\shader\gpu_culling_function.sfh" />
