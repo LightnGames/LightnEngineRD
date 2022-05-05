@@ -1,0 +1,30 @@
+#pragma once
+#include <Core/Type.h>
+
+namespace D3D12MA {
+	class VirtualBlock;
+}
+
+namespace ltn {
+// D3D12MA ÇÃ VirtualAllocator ÇÃÉâÉbÉpÅ[
+class VirtualArray {
+public:
+	struct Desc {
+		u64 _size = 0;
+	};
+
+	struct AllocationInfo {
+		u64 _handle = 0;
+		u64 _offset = 0;
+	};
+
+	void initialize(const Desc& desc);
+	void terminate();
+
+	AllocationInfo allocation(u32 size);
+	void freeAllocation(AllocationInfo allocationInfo);
+
+private:
+	D3D12MA::VirtualBlock* _virtualBlock = nullptr;
+};
+}
