@@ -25,6 +25,7 @@
     <ClInclude Include="source\Core\Type.h" />
     <ClInclude Include="source\Core\Utility.h" />
     <ClInclude Include="source\Core\VirturalArray.h" />
+    <ClInclude Include="source\Renderer\AssetReloader\PipelineStateReloader.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHI.h" />
     <ClInclude Include="source\Renderer\RenderCore\CommandListPool.h" />
     <ClInclude Include="source\Renderer\RenderCore\DescriptorAllocator.h" />
@@ -52,6 +53,7 @@
     <ClCompile Include="source\Application\Application.cpp" />
     <ClCompile Include="source\Application\EngineModule.cpp" />
     <ClCompile Include="source\Core\VirturalArray.cpp" />
+    <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHI.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\CommandListPool.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\DescriptorAllocator.cpp" />
@@ -177,7 +179,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -195,7 +197,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

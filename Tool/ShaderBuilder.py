@@ -1,5 +1,5 @@
 import sys, os.path, subprocess, struct, xxhash, glob
-import AssetDevelopmentConfig
+import AssetDevelopmentConfig, RruntimeMessageSender
 
 DXC_PATH = "%s\\dxc\\dxc.exe" % AssetDevelopmentConfig.TOOL_ROOT
 ENTRY_POINT = 'main'
@@ -73,6 +73,9 @@ def convert(shader_file_path):
         print("shader build completed!")
     else:
         print("shader build failed!")
+
+    # ランタイムが起動していたら再リロードするためにメッセージを送る
+    RruntimeMessageSender.SendMessage(shader_output_path)
 
 
 if __name__ == "__main__":

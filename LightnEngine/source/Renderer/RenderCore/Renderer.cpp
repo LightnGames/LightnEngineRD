@@ -66,6 +66,8 @@ void Renderer::initialize() {
 	imguiSystemDesc._windowHandle = app->getWindowHandle();
 	_imguiSystem.initialize(imguiSystemDesc);
 
+	_pipelineStateReloader.initialize();
+
 	{
 		AssetPath vertexShaderPath("EngineComponent/Shader/ScreenTriangle.vso");
 		AssetPath pixelShaderPath("EngineComponent/Shader/ScreenTriangle.pso");
@@ -110,6 +112,7 @@ void Renderer::terminate() {
 	}
 	_descriptorAllocatorGroup.getRtvAllocator()->free(_rtvDescriptors);
 
+	_pipelineStateReloader.terminate();
 	_imguiSystem.terminate();
 
 	_pipelineState.terminate();
@@ -124,6 +127,7 @@ void Renderer::terminate() {
 }
 
 void Renderer::update() {
+	_pipelineStateReloader.update();
 	_imguiSystem.beginFrame();
 }
 

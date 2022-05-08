@@ -4,6 +4,7 @@
 #include <Renderer/RenderCore/CommandListPool.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
+#include <Renderer/AssetReloader/PipelineStateReloader.h>
 
 namespace ltn {
 class Renderer {
@@ -30,6 +31,7 @@ private:
 	CommandListPool _commandListPool;
 	DescriptorAllocatorGroup _descriptorAllocatorGroup;
 	ImGuiSystem _imguiSystem;
+	PipelineStateReloader _pipelineStateReloader;
 
 	u64 _fenceValues[rhi::BACK_BUFFER_COUNT] = {};
 	GpuTexture _backBuffers[rhi::BACK_BUFFER_COUNT] = {};
