@@ -32,6 +32,7 @@
     <ClInclude Include="source\Renderer\RenderCore\GpuResource.h" />
     <ClInclude Include="source\Renderer\RenderCore\GpuTexture.h" />
     <ClInclude Include="source\Renderer\RenderCore\ImGuiSystem.h" />
+    <ClInclude Include="source\Renderer\RenderCore\ReleaseQueue.h" />
     <ClInclude Include="source\Renderer\RenderCore\Renderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\RendererUtility.h" />
     <ClInclude Include="source\Renderer\RHI\Rhi.h" />
@@ -52,6 +53,7 @@
   <ItemGroup>
     <ClCompile Include="source\Application\Application.cpp" />
     <ClCompile Include="source\Application\EngineModule.cpp" />
+    <ClCompile Include="source\Core\Utility.cpp" />
     <ClCompile Include="source\Core\VirturalArray.cpp" />
     <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHI.cpp" />
@@ -59,6 +61,7 @@
     <ClCompile Include="source\Renderer\RenderCore\DescriptorAllocator.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GpuTexture.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\ImGuiSystem.cpp" />
+    <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\Renderer.cpp" />
     <ClCompile Include="source\ThiredParty\D3D12MemoryAllocator\D3D12MemAlloc.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui.cpp" />

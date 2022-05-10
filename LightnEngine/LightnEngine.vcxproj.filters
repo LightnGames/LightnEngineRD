@@ -102,6 +102,9 @@
     <ClInclude Include="source\Renderer\AssetReloader\PipelineStateReloader.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="source\Renderer\RenderCore\ReleaseQueue.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Win64Application\Win64Application.cpp">
@@ -162,6 +165,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Core\Utility.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

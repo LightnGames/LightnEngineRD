@@ -2,6 +2,7 @@
 #include <Core/Utility.h>
 #include <Application/Application.h>
 #include <Renderer/RenderCore/RendererUtility.h>
+#include <Renderer/RenderCore/ReleaseQueue.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -69,8 +70,8 @@ void Renderer::initialize() {
 	_pipelineStateReloader.initialize();
 
 	{
-		AssetPath vertexShaderPath("EngineComponent/Shader/ScreenTriangle.vso");
-		AssetPath pixelShaderPath("EngineComponent/Shader/ScreenTriangle.pso");
+		AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
+		AssetPath pixelShaderPath("EngineComponent\\Shader\\ScreenTriangle.pso");
 		rhi::ShaderBlob vertexShader;
 		rhi::ShaderBlob pixelShader;
 		vertexShader.initialize(vertexShaderPath.get());
@@ -90,6 +91,12 @@ void Renderer::initialize() {
 		pipelineStateDesc._rootSignature = &_rootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
 		_pipelineState.iniaitlize(pipelineStateDesc);
+
+		PipelineStateReloader::GraphicsPipelineStateRegisterDesc reloaderDesc = {};
+		reloaderDesc._desc = pipelineStateDesc;
+		reloaderDesc._shaderPaths[0] = vertexShaderPath.get();
+		reloaderDesc._shaderPaths[1] = pixelShaderPath.get();
+		_pipelineStateReloader.registerPipelineState(&_pipelineState,reloaderDesc);
 
 		vertexShader.terminate();
 		pixelShader.terminate();
@@ -112,11 +119,13 @@ void Renderer::terminate() {
 	}
 	_descriptorAllocatorGroup.getRtvAllocator()->free(_rtvDescriptors);
 
+	_pipelineStateReloader.unregisterPipelineState(&_pipelineState);
+	_pipelineState.terminate();
+	_rootSignature.terminate();
+
 	_pipelineStateReloader.terminate();
 	_imguiSystem.terminate();
 
-	_pipelineState.terminate();
-	_rootSignature.terminate();
 	_descriptorAllocatorGroup.terminate();
 	_commandListPool.terminate();
 	_commandQueue.terminate();
@@ -173,6 +182,8 @@ void Renderer::moveToNextFrame() {
 	u64 currentFenceValue = _fenceValues[_frameIndex];
 	_commandQueue.waitForFence(currentFenceValue);
 	_frameIndex = _swapChain.getCurrentBackBufferIndex();
+
+	ReleaseQueue::Get()->update();
 
 	u64 fenceValue = _commandQueue.incrimentFence();
 	_fenceValues[_frameIndex] = fenceValue;
