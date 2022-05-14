@@ -169,6 +169,14 @@ namespace {
 DXGI_FORMAT toD3d12(Format format) {
 	return static_cast<DXGI_FORMAT>(format);
 }
+D3D12_RESOURCE_STATES toD3d12(ResourceStates states) {
+	return static_cast<D3D12_RESOURCE_STATES>(states);
+}
+D3D12_RESOURCE_DESC toD3d12(ResourceDesc desc) {
+	D3D12_RESOURCE_DESC result = {};
+	memcpy(&result, &desc, sizeof(result));
+	return result;
+}
 }
 }
 }

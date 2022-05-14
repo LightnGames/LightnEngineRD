@@ -46,6 +46,7 @@ if (!(x)) { \
 #define LTN_COUNTOF(x) _countof(x)
 
 namespace ltn {
+using FilePtr = FILE*;
 constexpr u32 FILE_PATH_COUNT_MAX = 128;
 u32 StrLength(const char* str);
 u64 StrHash(const char* str);
@@ -88,7 +89,19 @@ public:
 	const char* get() {
 		return _path;
 	}
+
+	void openFile(){
+		fopen_s(&_filePtr, _path, "rb");
+	}
+
+	void closeFile(){
+		fclose(_filePtr);
+	}
+
+	FilePtr getFilePtr() { return _filePtr; }
+
 private:
 	char _path[FILE_PATH_COUNT_MAX];
+	FilePtr _filePtr;
 };
 }

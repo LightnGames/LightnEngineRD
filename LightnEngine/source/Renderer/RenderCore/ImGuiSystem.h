@@ -18,6 +18,8 @@ public:
 	bool translateWndProc(HWND hWnd, UINT message, WPARAM wParam,
 		LPARAM lParam);
 
+	static ImGuiSystem* Get();
+
 private:
 	rhi::DescriptorHeap _descriptorHeap;
 };

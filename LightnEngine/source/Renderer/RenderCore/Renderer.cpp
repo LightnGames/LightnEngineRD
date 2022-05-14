@@ -3,32 +3,29 @@
 #include <Application/Application.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
+#include <Renderer/RenderCore/CommandListPool.h>
+#include <Renderer/RenderCore/ImGuiSystem.h>
+#include <Renderer/AssetReloader/PipelineStateReloader.h>
+#include <Renderer/RenderCore/DeviceManager.h>
+#include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
 rhi::RootSignature _rootSignature;
 void Renderer::initialize() {
-	rhi::HardwareFactoryDesc factoryDesc = {};
-	factoryDesc._flags = rhi::HardwareFactoryDesc::FACTROY_FLGA_DEVICE_DEBUG;
-	_factory.initialize(factoryDesc);
+	DeviceManager* deviceManager = DeviceManager::Get();
+	deviceManager->initialize();
 
-	rhi::HardwareAdapterDesc adapterDesc = {};
-	adapterDesc._factory = &_factory;
-	_adapter.initialize(adapterDesc);
-
-	rhi::DeviceDesc deviceDesc = {};
-	deviceDesc._adapter = &_adapter;
-	_device.initialize(deviceDesc);
-
+	rhi::Device* device = deviceManager->getDevice();
 	rhi::CommandQueueDesc commandQueueDesc = {};
-	commandQueueDesc._device = &_device;
+	commandQueueDesc._device = device;
 	commandQueueDesc._type = rhi::COMMAND_LIST_TYPE_DIRECT;
 	_commandQueue.initialize(commandQueueDesc);
 
 	CommandListPool::Desc commandListPoolDesc = {};
-	commandListPoolDesc._device = &_device;
+	commandListPoolDesc._device = device;
 	commandListPoolDesc._type = rhi::COMMAND_LIST_TYPE_DIRECT;
-	_commandListPool.initialize(commandListPoolDesc);
+	CommandListPool::Get()->initialize(commandListPoolDesc);
 
 	Application* app = ApplicationSysytem::Get()->getApplication();
 	rhi::SwapChainDesc swapChainDesc = {};
@@ -38,17 +35,17 @@ void Renderer::initialize() {
 	swapChainDesc._height = app->getScreenHeight();
 	swapChainDesc._commandQueue = &_commandQueue;
 	swapChainDesc._hWnd = app->getWindowHandle();
-	swapChainDesc._factory = &_factory;
+	swapChainDesc._factory = deviceManager->getHardwareFactory();
 	_swapChain.initialize(swapChainDesc);
 
 	// デスクリプタアロケーター初期化
 	DescriptorAllocatorGroup::Desc descriptorAllocatorDesc = {};
-	descriptorAllocatorDesc._device = &_device;
+	descriptorAllocatorDesc._device = device;
 	descriptorAllocatorDesc._rtvCount = 16;
 	descriptorAllocatorDesc._dsvCount = 16;
 	descriptorAllocatorDesc._srvCbvUavCpuCount = 128;
 	descriptorAllocatorDesc._srvCbvUavGpuCount = 1024;
-	_descriptorAllocatorGroup.initialize(descriptorAllocatorDesc);
+	DescriptorAllocatorGroup::Get()->initialize(descriptorAllocatorDesc);
 
 	// スワップチェーンのバックバッファを取得
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
@@ -56,18 +53,24 @@ void Renderer::initialize() {
 		rtvTexture.initializeFromBackbuffer(&_swapChain, backBufferIndex);
 	}
 
-	_rtvDescriptors = _descriptorAllocatorGroup.getRtvAllocator()->allocate(rhi::BACK_BUFFER_COUNT);
+	_rtvDescriptors = DescriptorAllocatorGroup::Get()->getRtvAllocator()->allocate(rhi::BACK_BUFFER_COUNT);
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
-		_device.createRenderTargetView(_backBuffers[backBufferIndex].getResource(), _rtvDescriptors.get(backBufferIndex)._cpuHandle);
+		device->createRenderTargetView(_backBuffers[backBufferIndex].getResource(), _rtvDescriptors.get(backBufferIndex)._cpuHandle);
 	}
 
+	// グローバルビデオメモリアロケーター
+	rhi::VideoMemoryAllocatorDesc videoMemoryAllocatorDesc = {};
+	videoMemoryAllocatorDesc._device = device;
+	videoMemoryAllocatorDesc._hardwareAdapter = deviceManager->getHardwareAdapter();
+	GlobalVideoMemoryAllocator::Get()->initialize(videoMemoryAllocatorDesc);
+
 	ImGuiSystem::Desc imguiSystemDesc = {};
-	imguiSystemDesc._device = &_device;
+	imguiSystemDesc._device = device;
 	imguiSystemDesc._descriptorCount = 256;
 	imguiSystemDesc._windowHandle = app->getWindowHandle();
-	_imguiSystem.initialize(imguiSystemDesc);
+	ImGuiSystem::Get()->initialize(imguiSystemDesc);
 
-	_pipelineStateReloader.initialize();
+	PipelineStateReloader::Get()->initialize();
 
 	{
 		AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
@@ -78,11 +81,11 @@ void Renderer::initialize() {
 		pixelShader.initialize(pixelShaderPath.get());
 
 		rhi::RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = &_device;
+		rootSignatureDesc._device = device;
 		_rootSignature.iniaitlize(rootSignatureDesc);
 
 		rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = &_device;
+		pipelineStateDesc._device = device;
 		pipelineStateDesc._vs = vertexShader.getShaderByteCode();
 		pipelineStateDesc._ps = pixelShader.getShaderByteCode();
 		pipelineStateDesc._numRenderTarget = 1;
@@ -96,7 +99,7 @@ void Renderer::initialize() {
 		reloaderDesc._desc = pipelineStateDesc;
 		reloaderDesc._shaderPaths[0] = vertexShaderPath.get();
 		reloaderDesc._shaderPaths[1] = pixelShaderPath.get();
-		_pipelineStateReloader.registerPipelineState(&_pipelineState,reloaderDesc);
+		PipelineStateReloader::Get()->registerPipelineState(&_pipelineState,reloaderDesc);
 
 		vertexShader.terminate();
 		pixelShader.terminate();
@@ -117,39 +120,39 @@ void Renderer::terminate() {
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
-	_descriptorAllocatorGroup.getRtvAllocator()->free(_rtvDescriptors);
+	DescriptorAllocatorGroup::Get()->getRtvAllocator()->free(_rtvDescriptors);
 
-	_pipelineStateReloader.unregisterPipelineState(&_pipelineState);
+	PipelineStateReloader::Get()->unregisterPipelineState(&_pipelineState);
 	_pipelineState.terminate();
 	_rootSignature.terminate();
 
-	_pipelineStateReloader.terminate();
-	_imguiSystem.terminate();
+	PipelineStateReloader::Get()->terminate();
+	ImGuiSystem::Get()->terminate();
 
-	_descriptorAllocatorGroup.terminate();
-	_commandListPool.terminate();
+	DescriptorAllocatorGroup::Get()->terminate();
+	CommandListPool::Get()->terminate();
 	_commandQueue.terminate();
 	_swapChain.terminate();
-	_adapter.terminate();
-	_factory.terminate();
-	_device.terminate();
+
+	GlobalVideoMemoryAllocator::Get()->terminate();
+	DeviceManager::Get()->terminate();
 }
 
 void Renderer::update() {
-	_pipelineStateReloader.update();
-	_imguiSystem.beginFrame();
+	PipelineStateReloader::Get()->update();
+	ImGuiSystem::Get()->beginFrame();
 }
 
 void Renderer::render() {
 	u64 completedFenceValue = _commandQueue.getCompletedValue();
-	rhi::CommandList* commandList = _commandListPool.allocateCommandList(completedFenceValue);
+	rhi::CommandList* commandList = CommandListPool::Get()->allocateCommandList(completedFenceValue);
 
 	f32 clearColor[4] = {};
 	rhi::CpuDescriptorHandle rtvDescriptor = _rtvDescriptors.get(_frameIndex)._cpuHandle;
 
 	commandList->reset();
 
-	rhi::DescriptorHeap* descriptorHeaps[] = { _descriptorAllocatorGroup.getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
+	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 
 	{
@@ -169,7 +172,7 @@ void Renderer::render() {
 		commandList->setScissorRects(1, &scissorRect);
 		commandList->drawInstanced(3, 1, 0, 0);
 
-		_imguiSystem.render(commandList);
+		ImGuiSystem::Get()->render(commandList);
 	}
 
 	_commandQueue.executeCommandLists(1, &commandList);

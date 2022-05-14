@@ -1,5 +1,8 @@
 #include "CommandListPool.h"
 namespace ltn {
+namespace {
+CommandListPool g_commandListPool;
+}
 void CommandListPool::initialize(const Desc& desc) {
 	rhi::CommandListDesc commandListDesc = {};
 	commandListDesc._device = desc._device;
@@ -23,5 +26,8 @@ rhi::CommandList* CommandListPool::allocateCommandList(u64 fenceValue) {
 	}
 
 	return nullptr;
+}
+CommandListPool* CommandListPool::Get() {
+	return &g_commandListPool;
 }
 }

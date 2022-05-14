@@ -1,12 +1,15 @@
 #include "DescriptorAllocator.h"
 
 namespace ltn {
+namespace {
+DescriptorAllocatorGroup g_descriptorAllocatorGroup;
+}
 void DescriptorAllocator::initialize(const rhi::DescriptorHeapDesc& desc) {
 	_descriptorHeap.initialize(desc);
 
 	VirtualArray::Desc handleDesc = {};
 	handleDesc._size = desc._numDescriptors;
-	_handles.initialize(handleDesc);
+	_allocationInfo.initialize(handleDesc);
 
 	_incrementSize = desc._device->getDescriptorHandleIncrementSize(desc._type);
 	_cpuHandleStart = _descriptorHeap.getCPUDescriptorHandleForHeapStart();
@@ -17,10 +20,10 @@ void DescriptorAllocator::initialize(const rhi::DescriptorHeapDesc& desc) {
 }
 void DescriptorAllocator::terminate() {
 	_descriptorHeap.terminate();
-	_handles.terminate();
+	_allocationInfo.terminate();
 }
 DescriptorHandle DescriptorAllocator::allocate() {
-	VirtualArray::AllocationInfo allocationInfo = _handles.allocation(1);
+	VirtualArray::AllocationInfo allocationInfo = _allocationInfo.allocation(1);
 	DescriptorHandle descriptor = {};
 	descriptor._allocationInfo = allocationInfo;
 	descriptor._cpuHandle = _cpuHandleStart + allocationInfo._offset;
@@ -28,7 +31,7 @@ DescriptorHandle DescriptorAllocator::allocate() {
 	return descriptor;
 }
 DescriptorHandles DescriptorAllocator::allocate(u32 count) {
-	VirtualArray::AllocationInfo allocationInfo = _handles.allocation(count);
+	VirtualArray::AllocationInfo allocationInfo = _allocationInfo.allocation(count);
 	DescriptorHandles descriptors = {};
 	descriptors._descriptorCount = count;
 	descriptors._incrementSize = _incrementSize;
@@ -38,10 +41,10 @@ DescriptorHandles DescriptorAllocator::allocate(u32 count) {
 	return descriptors;
 }
 void DescriptorAllocator::free(DescriptorHandle& descriptorHandle) {
-	_handles.freeAllocation(descriptorHandle._allocationInfo);
+	_allocationInfo.freeAllocation(descriptorHandle._allocationInfo);
 }
 void DescriptorAllocator::free(DescriptorHandles& descriptorHandles) {
-	_handles.freeAllocation(descriptorHandles._firstHandle._allocationInfo);
+	_allocationInfo.freeAllocation(descriptorHandles._firstHandle._allocationInfo);
 }
 void DescriptorAllocatorGroup::initialize(const Desc& desc) {
 	rhi::DescriptorHeapDesc allocatorDesc = {};
@@ -67,5 +70,8 @@ void DescriptorAllocatorGroup::terminate() {
 	_dsvAllocator.terminate();
 	_srvCbvUavCpuAllocator.terminate();
 	_srvCbvUavGpuAllocator.terminate();
+}
+DescriptorAllocatorGroup* DescriptorAllocatorGroup::Get() {
+	return &g_descriptorAllocatorGroup;
 }
 }

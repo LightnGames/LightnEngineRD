@@ -47,7 +47,7 @@ private:
 	rhi::DescriptorHeap _descriptorHeap;
 	rhi::CpuDescriptorHandle _cpuHandleStart;
 	rhi::GpuDescriptorHandle _gpuHandleStart;
-	VirtualArray _handles;
+	VirtualArray _allocationInfo;
 	u32 _incrementSize = 0;
 };
 
@@ -68,6 +68,8 @@ public:
 	DescriptorAllocator* getSrvCbvUavGpuAllocator() { return &_srvCbvUavGpuAllocator; }
 	DescriptorAllocator* getRtvAllocator() { return &_rtvAllocator; }
 	DescriptorAllocator* getDsvAllocator() { return &_dsvAllocator; }
+
+	static DescriptorAllocatorGroup* Get();
 
 private:
 	DescriptorAllocator _srvCbvUavCpuAllocator;

@@ -1,10 +1,16 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
+#include <Renderer/RHI/RhiVideoMemory.h>
 
 namespace ltn {
 class GpuResource {
 public:
-	void terminate() { _resource.terminate(); }
+	void terminate() {
+		_resource.terminate();
+		if (_allocation.isAllocated()) {
+			_allocation.terminate();
+		}
+	}
 
 	rhi::ResourceTransitionBarrier getTransitionBarrier(rhi::ResourceStates stateAfter) {
 		rhi::ResourceTransitionBarrier barrier = {};
@@ -22,7 +28,9 @@ public:
 	rhi::ResourceStates getResourceState() const { return _currentState; }
 
 protected:
+	rhi::ResourceDesc _desc;
 	rhi::ResourceStates _currentState;
 	rhi::Resource _resource;
+	rhi::VideoMemoryAllocation _allocation;
 };
 }

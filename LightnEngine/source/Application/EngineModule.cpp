@@ -2,6 +2,7 @@
 #include <Application/Application.h>
 #include <Win64Application/Win64Application.h>
 #include <Renderer/RenderCore/Renderer.h>
+#include <RendererScene/Mesh.h>
 
 namespace ltn {
 void EngineModuleManager::run() {
@@ -11,6 +12,9 @@ void EngineModuleManager::run() {
 	ltn::ApplicationSysytem* appSystem = ltn::ApplicationSysytem::Get();
 	appSystem->setApplication(&app);
 
+	MeshScene* meshScene = MeshScene::Get();
+	meshScene->initialize();
+
 	Renderer* renderer = Renderer::Get();
 	renderer->initialize();
 
@@ -18,6 +22,7 @@ void EngineModuleManager::run() {
 
 	app.terminate();
 	renderer->terminate();
+	meshScene->terminate();
 }
 
 namespace {

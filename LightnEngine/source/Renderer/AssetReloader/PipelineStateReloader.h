@@ -66,6 +66,8 @@ public:
 	// Pipeline State ‚ğƒŠƒ[ƒ_[‚©‚çíœ‚µ‚Ü‚·
 	void unregisterPipelineState(rhi::PipelineState* pipelineState);
 
+	static PipelineStateReloader* Get();
+
 private:
 	static constexpr u32 RELOAD_RREQUEST_COUNT_MAX = 32;
 

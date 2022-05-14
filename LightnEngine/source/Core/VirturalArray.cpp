@@ -9,6 +9,7 @@ void VirtualArray::initialize(const Desc& desc) {
 	LTN_SUCCEEDED(CreateVirtualBlock(&blockDesc, &_virtualBlock));
 }
 void VirtualArray::terminate() {
+	LTN_ASSERT(_virtualBlock->IsEmpty());
 	_virtualBlock->Release();
 }
 VirtualArray::AllocationInfo VirtualArray::allocation(u32 size) {

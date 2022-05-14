@@ -3,6 +3,8 @@
 
 namespace ltn {
 namespace {
+PipelineStateReloader g_pipelineStateReloader;
+
 void reloadPipelineState(rhi::PipelineState* pipelineState, const PipelineStateReloader::GraphicsPipelineStateInfos& info) {
 	rhi::PipelineState oldPipelineState = *pipelineState;
 	ReleaseQueue::Get()->enqueue(oldPipelineState);
@@ -161,6 +163,10 @@ void PipelineStateReloader::unregisterPipelineState(rhi::PipelineState* pipeline
 	_computePipelineStateContainer.removePipelineState(pipelineState);
 }
 
+PipelineStateReloader* PipelineStateReloader::Get() {
+	return &g_pipelineStateReloader;
+}
+
 u32 PipelineStateShaderPathContainer::findEmptyPipelineStateIndex() const {
 	u32 findIndex = -1;
 	for (u32 i = 0; i < _count; ++i) {
@@ -190,6 +196,10 @@ bool PipelineStateShaderPathContainer::removePipelineState(rhi::PipelineState* p
 	}
 
 	_pipelineStates[findIndex] = nullptr;
+	if (_count == findIndex + 1) {
+		--_count;
+	}
+
 	return true;
 }
 

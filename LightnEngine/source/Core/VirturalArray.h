@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/Type.h>
+#include <Core/ModuleSettings.h>
 
 namespace D3D12MA {
 	class VirtualBlock;
@@ -7,7 +8,7 @@ namespace D3D12MA {
 
 namespace ltn {
 // D3D12MA ‚Ì VirtualAllocator ‚Ìƒ‰ƒbƒp[
-class VirtualArray {
+class LTN_API VirtualArray {
 public:
 	struct Desc {
 		u64 _size = 0;

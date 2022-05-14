@@ -1,9 +1,7 @@
 #pragma once
-
-#define RHI_D3D12 1
+#include <Renderer/RHI/RhiConfig.h>
 #if RHI_D3D12
 #include <Renderer/D3D12RHI/D3D12RHI.h>
-#define RhiBase(x) x##D3D12
 #endif
 
 namespace ltn {

@@ -6,6 +6,9 @@
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace ltn {
+namespace{
+ImGuiSystem g_imGuiSystem;
+}
 void ImGuiSystem::initialize(const Desc& desc) {
 	IMGUI_CHECKVERSION();
 
@@ -79,5 +82,8 @@ void ImGuiSystem::render(rhi::CommandList* commandList) {
 }
 bool ImGuiSystem::translateWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	return ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam);
+}
+ImGuiSystem* ImGuiSystem::Get() {
+	return &g_imGuiSystem;
 }
 }

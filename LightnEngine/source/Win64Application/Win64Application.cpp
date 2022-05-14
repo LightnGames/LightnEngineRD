@@ -8,7 +8,7 @@ namespace win64app {
 namespace {
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 	LPARAM lParam) {
-	if (Renderer::Get()->getImGuiSystem()->translateWndProc(hWnd, message, wParam, lParam)) {
+	if (ImGuiSystem::Get()->translateWndProc(hWnd, message, wParam, lParam)) {
 		return true;
 	}
 
