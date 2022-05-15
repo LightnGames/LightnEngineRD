@@ -1,7 +1,10 @@
 #pragma once
 #include <RendererScene/Mesh.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
+#include <Core/Math.h>
 namespace ltn {
+using VertexPosition = Float3;
+
 struct GpuMesh {
 	u32 _stateFlags = 0;
 	u32 _lodMeshOffset = 0;
@@ -24,6 +27,8 @@ struct GpuSubMesh {
 
 class GpuMeshResourceManager {
 public:
+	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 1024;
+
 	void initialize();
 	void terminate();
 	void update();
@@ -32,5 +37,8 @@ private:
 	GpuBuffer _meshGpuBuffer;
 	GpuBuffer _lodMeshGpuBuffer;
 	GpuBuffer _subMeshGpuBuffer;
+
+	GpuBuffer _vertexPositionGpuBuffer;
+	GpuBuffer _indexBuffer;
 };
 }

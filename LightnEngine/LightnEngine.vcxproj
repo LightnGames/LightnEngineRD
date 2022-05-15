@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="source\Application\Application.h" />
     <ClInclude Include="source\Application\EngineModule.h" />
+    <ClInclude Include="source\Core\Math.h" />
     <ClInclude Include="source\Core\Memory.h" />
     <ClInclude Include="source\Core\ModuleSettings.h" />
     <ClInclude Include="source\Core\Type.h" />

@@ -138,6 +138,9 @@
     <ClInclude Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="source\Core\Math.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Win64Application\Win64Application.cpp">

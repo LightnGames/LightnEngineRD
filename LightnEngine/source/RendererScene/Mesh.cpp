@@ -8,9 +8,9 @@ MeshScene g_meshScene;
 }
 void MeshScene::initialize() {
 	MeshContainer::InitializetionDesc desc = {};
-	desc._meshCount = 1024;
-	desc._lodMeshCount = 1024 * 2;
-	desc._subMeshCount = 1024 * 4;
+	desc._meshCount = MESH_COUNT_MAX;
+	desc._lodMeshCount = LOD_MESH_COUNT_MAX;
+	desc._subMeshCount = SUB_MESH_COUNT_MAX;
 	_meshContainer.initialize(desc);
 }
 
