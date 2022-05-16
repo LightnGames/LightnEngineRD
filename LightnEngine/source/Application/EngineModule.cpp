@@ -2,6 +2,7 @@
 #include <Application/Application.h>
 #include <Win64Application/Win64Application.h>
 #include <Renderer/RenderCore/Renderer.h>
+#include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
 #include <RendererScene/Mesh.h>
 
 namespace ltn {
@@ -18,9 +19,13 @@ void EngineModuleManager::run() {
 	Renderer* renderer = Renderer::Get();
 	renderer->initialize();
 
+	GpuMeshResourceManager* gpuMeshResourceManager = GpuMeshResourceManager::Get();
+	gpuMeshResourceManager->initialize();
+
 	app.run();
 
 	app.terminate();
+	gpuMeshResourceManager->terminate();
 	renderer->terminate();
 	meshScene->terminate();
 }

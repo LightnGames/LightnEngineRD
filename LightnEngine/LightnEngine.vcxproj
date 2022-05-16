@@ -44,6 +44,7 @@
     <ClInclude Include="source\Renderer\RenderCore\Renderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\RendererUtility.h" />
     <ClInclude Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.h" />
+    <ClInclude Include="source\Renderer\RenderCore\VramUpdater.h" />
     <ClInclude Include="source\Renderer\RHI\Rhi.h" />
     <ClInclude Include="source\Renderer\RHI\RhiConfig.h" />
     <ClInclude Include="source\Renderer\RHI\RhiDef.h" />
@@ -81,6 +82,7 @@
     <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\Renderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.cpp" />
+    <ClCompile Include="source\Renderer\RenderCore\VramUpdater.cpp" />
     <ClCompile Include="source\ThiredParty\D3D12MemoryAllocator\D3D12MemAlloc.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui_demo.cpp" />

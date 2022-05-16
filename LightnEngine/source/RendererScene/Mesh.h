@@ -2,9 +2,12 @@
 #include <Core/VirturalArray.h>
 #include <Core/ModuleSettings.h>
 #include <Core/Utility.h>
+#include <Core/Math.h>
+
 namespace ltn {
 class SubMesh {
 public:
+	u32 _materialSlotIndex = 0;
 	u32 _indexOffset = 0;
 	u32 _indexCount = 0;
 };
@@ -19,15 +22,16 @@ public:
 	VirtualArray::AllocationInfo _meshAllocationInfo;
 	VirtualArray::AllocationInfo _lodMeshAllocationInfo;
 	VirtualArray::AllocationInfo _subMeshAllocationInfo;
-	const SubMesh* _subMeshes = nullptr;
-	const LodMesh* _lodMeshes = nullptr;
+	SubMesh* _subMeshes = nullptr;
+	LodMesh* _lodMeshes = nullptr;
 	u32 _lodMeshCount = 0;
 	u32 _subMeshCount = 0;
 	u32 _vertexCount = 0;
 	u32 _indexCount = 0;
 };
 
-class LTN_API MeshContainer {
+// メッシュインスタンスの実データを管理するクラス
+class LTN_API MeshPool {
 public:
 	struct InitializetionDesc {
 		u32 _meshCount = 0;
@@ -49,15 +53,16 @@ public:
 	Mesh* getMesh(u32 index) { return &_meshes[index]; }
 
 private:
-	VirtualArray _meshAllocationInfo;
-	VirtualArray _lodMeshAllocationInfo;
-	VirtualArray _subMeshAllocationInfo;
+	VirtualArray _meshAllocations;
+	VirtualArray _lodMeshAllocations;
+	VirtualArray _subMeshAllocations;
 	Mesh* _meshes = nullptr;
 	LodMesh* _lodMeshes = nullptr;
 	SubMesh* _subMeshes = nullptr;
 };
 
-class LTN_API MeshObserver {
+// メッシュの更新情報を管理するクラス
+class LTN_API MeshUpdateInfos {
 public:
 	Mesh** getCreatedMeshes() { return _createdMeshes; }
 	Mesh** getDeletedMeshes() { return _deletedMeshes; }
@@ -80,13 +85,14 @@ public:
 	}
 
 private:
-	static constexpr u32 STACK_COUNT_MAX = 256;
+	static constexpr u32 STACK_COUNT_MAX = 128;
 	Mesh* _createdMeshes[STACK_COUNT_MAX];
 	Mesh* _deletedMeshes[STACK_COUNT_MAX];
 	u32 _createdMeshCount = 0;
 	u32 _deletedMeshCount = 0;
 };
 
+// メッシュ総合管理するクラス
 class LTN_API MeshScene {
 public:
 	static constexpr u32 MESH_COUNT_MAX = 1024;
@@ -100,14 +106,16 @@ public:
 	void initialize();
 	void terminate();
 
+	void lateUpdate();
+
 	Mesh* createMesh(const MeshCreatationDesc& desc);
 	void destroyMesh(Mesh* mesh);
 
-	MeshObserver* getMeshObserver() { return &_meshObserver; }
+	MeshUpdateInfos* getMeshUpdateInfos() { return &_meshUpdateInfos; }
 
 	static MeshScene* Get();
 private:
-	MeshContainer _meshContainer;
-	MeshObserver _meshObserver;
+	MeshPool _meshPool;
+	MeshUpdateInfos _meshUpdateInfos;
 };
 }

@@ -2,6 +2,8 @@
 #include <Core/Type.h>
 #include <Renderer/RenderCore/Renderer.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
+#include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
+#include <RendererScene/Mesh.h>
 #include <Windows.h>
 namespace ltn {
 namespace win64app {
@@ -14,8 +16,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 
 	switch (message) {
 	case WM_PAINT:
-		ltn::Renderer::Get()->update();
-		ltn::Renderer::Get()->render();
+		GpuMeshResourceManager::Get()->update();
+		Renderer::Get()->update();
+		MeshScene::Get()->lateUpdate();
+		Renderer::Get()->render();
 		return false;
 	case WM_MOUSEMOVE:
 		return false;

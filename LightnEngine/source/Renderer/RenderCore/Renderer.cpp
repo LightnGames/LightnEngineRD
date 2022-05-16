@@ -8,6 +8,7 @@
 #include <Renderer/AssetReloader/PipelineStateReloader.h>
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/VramUpdater.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -58,12 +59,15 @@ void Renderer::initialize() {
 		device->createRenderTargetView(_backBuffers[backBufferIndex].getResource(), _rtvDescriptors.get(backBufferIndex)._cpuHandle);
 	}
 
-	// グローバルビデオメモリアロケーター
+	// グローバル ビデオメモリアロケーター
 	rhi::VideoMemoryAllocatorDesc videoMemoryAllocatorDesc = {};
 	videoMemoryAllocatorDesc._device = device;
 	videoMemoryAllocatorDesc._hardwareAdapter = deviceManager->getHardwareAdapter();
 	GlobalVideoMemoryAllocator::Get()->initialize(videoMemoryAllocatorDesc);
 
+	VramUpdater::Get()->initialize();
+
+	// ImGui
 	ImGuiSystem::Desc imguiSystemDesc = {};
 	imguiSystemDesc._device = device;
 	imguiSystemDesc._descriptorCount = 256;
@@ -134,6 +138,7 @@ void Renderer::terminate() {
 	_commandQueue.terminate();
 	_swapChain.terminate();
 
+	VramUpdater::Get()->terminate();
 	GlobalVideoMemoryAllocator::Get()->terminate();
 	DeviceManager::Get()->terminate();
 }

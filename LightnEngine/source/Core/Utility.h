@@ -98,6 +98,10 @@ public:
 		fclose(_filePtr);
 	}
 
+	void readFile(void* ptr, u32 readSize){
+		fread_s(ptr, readSize, readSize, 1, _filePtr);
+	}
+
 	FilePtr getFilePtr() { return _filePtr; }
 
 private:

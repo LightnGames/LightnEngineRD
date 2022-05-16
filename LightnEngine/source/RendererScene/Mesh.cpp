@@ -7,15 +7,31 @@ namespace {
 MeshScene g_meshScene;
 }
 void MeshScene::initialize() {
-	MeshContainer::InitializetionDesc desc = {};
+	MeshPool::InitializetionDesc desc = {};
 	desc._meshCount = MESH_COUNT_MAX;
 	desc._lodMeshCount = LOD_MESH_COUNT_MAX;
 	desc._subMeshCount = SUB_MESH_COUNT_MAX;
-	_meshContainer.initialize(desc);
+	_meshPool.initialize(desc);
 }
 
 void MeshScene::terminate() {
-	_meshContainer.terminate();
+	_meshPool.terminate();
+}
+
+void MeshScene::lateUpdate() {
+	u32 deletedMeshCount = _meshUpdateInfos.getDeletedMeshCount();
+	Mesh** deletedMeshes = _meshUpdateInfos.getDeletedMeshes();
+	for (u32 i = 0; i < deletedMeshCount; ++i) {
+		_meshPool.freeMeshObjects(deletedMeshes[i]);
+#define ENABLE_ZERO_CLEAR 1
+#if ENABLE_ZERO_CLEAR
+		Mesh* mesh = deletedMeshes[i];
+		memset(mesh->_lodMeshes, 0, sizeof(LodMesh) * mesh->_lodMeshCount);
+		memset(mesh->_subMeshes, 0, sizeof(SubMesh) * mesh->_subMeshCount);
+		memset(mesh, 0, sizeof(Mesh));
+#endif
+	}
+	_meshUpdateInfos.reset();
 }
 
 Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
@@ -23,6 +39,10 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 	meshAsset.openFile();
 
 	// 以下はメッシュエクスポーターと同一の定義にする
+	constexpr u32 LOD_PER_MESH_COUNT_MAX = 8;
+	constexpr u32 SUBMESH_PER_MESH_COUNT_MAX = 64;
+	constexpr u32 MATERIAL_SLOT_COUNT_MAX = 16;
+
 	struct SubMeshInfo {
 		u32 _materialSlotIndex = 0;
 		u32 _meshletCount = 0;
@@ -42,56 +62,83 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 		u32 _vertexIndexCount = 0;
 		u32 _primitiveCount = 0;
 	};
+
+	struct MeshHeader {
+		u32 materialSlotCount = 0;
+		u32 totalSubMeshCount = 0;
+		u32 totalLodMeshCount = 0;
+		u32 totalMeshletCount = 0;
+		u32 totalVertexCount = 0;
+		u32 totalVertexIndexCount = 0;
+		u32 totalPrimitiveCount = 0;
+		Float3 boundsMin;
+		Float3 boundsMax;
+		u32 classicIndexCount = 0;
+	};
 	// =========================================
 
-	//u32 totalLodMeshCount = 0;
-	//u32 totalSubMeshCount = 0;
-	//u32 totalMeshletCount = 0;
-	//u32 totalVertexCount = 0;
-	//u32 totalVertexIndexCount = 0;
-	//u32 totalPrimitiveCount = 0;
-	//u32 materialSlotCount = 0;
-	//u32 classicIndexCount = 0;
-	//Vector3 boundsMin;
-	//Vector3 boundsMax;
-	//SubMeshInfoE inputSubMeshInfos[SUBMESH_PER_MESH_COUNT_MAX] = {};
-	//LodInfo lodInfos[LOD_PER_MESH_COUNT_MAX] = {};
-	//u64 materialNameHashes[MATERIAL_SLOT_COUNT_MAX] = {};
+	MeshHeader meshHeader;
+	SubMeshInfo subMeshInfos[SUBMESH_PER_MESH_COUNT_MAX] = {};
+	LodInfo lodInfos[LOD_PER_MESH_COUNT_MAX] = {};
+	u64 materialNameHashes[MATERIAL_SLOT_COUNT_MAX] = {};
 
-	//// load header
-	//{
-	//	fread_s(&materialSlotCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalSubMeshCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalLodMeshCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalMeshletCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalVertexCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalVertexIndexCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&totalPrimitiveCount, sizeof(u32), sizeof(u32), 1, fin);
-	//	fread_s(&boundsMin, sizeof(Vector3), sizeof(Vector3), 1, fin);
-	//	fread_s(&boundsMax, sizeof(Vector3), sizeof(Vector3), 1, fin);
-	//	fread_s(&classicIndexCount, sizeof(u32), sizeof(u32), 1, fin);
-	//}
+	meshAsset.readFile(&meshHeader, sizeof(MeshHeader));
+	meshAsset.readFile(materialNameHashes, sizeof(u64) * meshHeader.materialSlotCount);
+	meshAsset.readFile(subMeshInfos, sizeof(SubMeshInfo) * meshHeader.totalSubMeshCount);
+	meshAsset.readFile(lodInfos, sizeof(LodInfo) * meshHeader.totalLodMeshCount);
+
+	MeshPool::MeshAllocationDesc allocationDesc;
+	allocationDesc._lodMeshCount = meshHeader.totalLodMeshCount;
+	allocationDesc._subMeshCount = meshHeader.totalSubMeshCount;
+	Mesh* mesh = _meshPool.allocateMesh(allocationDesc);
+
+	mesh->_lodMeshCount = meshHeader.totalLodMeshCount;
+	mesh->_subMeshCount = meshHeader.totalSubMeshCount;
+	mesh->_vertexCount = meshHeader.totalVertexCount;
+	mesh->_indexCount = meshHeader.classicIndexCount;
+
+	LodMesh* lodMeshes = mesh->_lodMeshes;
+	for (u32 i = 0; i < meshHeader.totalLodMeshCount; ++i) {
+		LodInfo& lodInfo = lodInfos[i];
+		LodMesh& lodMesh = lodMeshes[i];
+		lodMesh._subMeshCount = lodInfo._subMeshCount;
+		lodMesh._subMeshOffset = lodInfo._subMeshOffset;
+	}
+
+	SubMesh* subMeshes = mesh->_subMeshes;
+	for (u32 i = 0; i < meshHeader.totalSubMeshCount; ++i) {
+		SubMeshInfo& subMeshInfo = subMeshInfos[i];
+		SubMesh& subMesh = subMeshes[i];
+		subMesh._materialSlotIndex = subMeshInfo._materialSlotIndex;
+		subMesh._indexCount = subMeshInfo._triangleStripIndexCount;
+		subMesh._indexOffset = subMeshInfo._triangleStripIndexOffset;
+	}
+
+	_meshUpdateInfos.pushCreatedMesh(mesh);
 
 	meshAsset.closeFile();
-	return nullptr;
+	return mesh;
 }
 
 void MeshScene::destroyMesh(Mesh* mesh) {
+	_meshUpdateInfos.pushDeletedMesh(mesh);
 }
+
 MeshScene* MeshScene::Get() {
 	return &g_meshScene;
 }
-void MeshContainer::initialize(const InitializetionDesc& desc) {
+
+void MeshPool::initialize(const InitializetionDesc& desc) {
 	{
 		VirtualArray::Desc handleDesc = {};
 		handleDesc._size = desc._meshCount;
-		_meshAllocationInfo.initialize(handleDesc);
+		_meshAllocations.initialize(handleDesc);
 
 		handleDesc._size = desc._lodMeshCount;
-		_lodMeshAllocationInfo.initialize(handleDesc);
+		_lodMeshAllocations.initialize(handleDesc);
 
 		handleDesc._size = desc._subMeshCount;
-		_subMeshAllocationInfo.initialize(handleDesc);
+		_subMeshAllocations.initialize(handleDesc);
 	}
 
 	{
@@ -100,19 +147,19 @@ void MeshContainer::initialize(const InitializetionDesc& desc) {
 		_subMeshes = Memory::allocObjects<SubMesh>(desc._subMeshCount);
 	}
 }
-void MeshContainer::terminate() {
-	_meshAllocationInfo.terminate();
-	_lodMeshAllocationInfo.terminate();
-	_subMeshAllocationInfo.terminate();
+void MeshPool::terminate() {
+	_meshAllocations.terminate();
+	_lodMeshAllocations.terminate();
+	_subMeshAllocations.terminate();
 
 	Memory::freeObjects(_meshes);
 	Memory::freeObjects(_lodMeshes);
 	Memory::freeObjects(_subMeshes);
 }
-Mesh* MeshContainer::allocateMesh(const MeshAllocationDesc& desc) {
-	VirtualArray::AllocationInfo meshAllocationInfo = _meshAllocationInfo.allocation(1);
-	VirtualArray::AllocationInfo lodMeshAllocationInfo = _lodMeshAllocationInfo.allocation(desc._lodMeshCount);
-	VirtualArray::AllocationInfo subMeshAllocationInfo = _subMeshAllocationInfo.allocation(desc._subMeshCount);
+Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
+	VirtualArray::AllocationInfo meshAllocationInfo = _meshAllocations.allocation(1);
+	VirtualArray::AllocationInfo lodMeshAllocationInfo = _lodMeshAllocations.allocation(desc._lodMeshCount);
+	VirtualArray::AllocationInfo subMeshAllocationInfo = _subMeshAllocations.allocation(desc._subMeshCount);
 
 	Mesh* mesh = &_meshes[meshAllocationInfo._offset];
 	mesh->_meshAllocationInfo = meshAllocationInfo;
@@ -124,10 +171,9 @@ Mesh* MeshContainer::allocateMesh(const MeshAllocationDesc& desc) {
 	mesh->_subMeshCount = desc._subMeshCount;
 	return mesh;
 }
-void MeshContainer::freeMeshObjects(Mesh* mesh) {
-	_meshAllocationInfo.freeAllocation(mesh->_meshAllocationInfo);
-	_lodMeshAllocationInfo.freeAllocation(mesh->_lodMeshAllocationInfo);
-	_subMeshAllocationInfo.freeAllocation(mesh->_subMeshAllocationInfo);
-	*mesh = Mesh();
+void MeshPool::freeMeshObjects(Mesh* mesh) {
+	_meshAllocations.freeAllocation(mesh->_meshAllocationInfo);
+	_lodMeshAllocations.freeAllocation(mesh->_lodMeshAllocationInfo);
+	_subMeshAllocations.freeAllocation(mesh->_subMeshAllocationInfo);
 }
 }
