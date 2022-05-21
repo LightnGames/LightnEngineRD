@@ -1,11 +1,11 @@
 #pragma once
 #include <RendererScene/Mesh.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
+#include <Renderer/RenderCore/DescriptorAllocator.h>
 #include <Core/Math.h>
 #include <Core/VirturalArray.h>
-namespace ltn {
-using VertexPosition = Float3;
 
+namespace ltn {
 // 以下の定義は Compute Shader で利用するものと同一にします
 namespace gpu {
 struct Mesh {
@@ -33,12 +33,11 @@ struct SubMesh {
 // メッシュ情報の Gpu データを管理するクラス
 class GpuMeshResourceManager {
 public:
-	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 1024;
-	static constexpr u32 INDEX_COUNT_MAX = 1024 * 1024 * 4;
-
 	void initialize();
 	void terminate();
 	void update();
+
+	rhi::GpuDescriptorHandle getGpuDescriptorHandles() const { return _meshDescriptors._firstHandle._gpuHandle; }
 
 	static GpuMeshResourceManager* Get();
 
@@ -46,8 +45,6 @@ private:
 	GpuBuffer _meshGpuBuffer;
 	GpuBuffer _lodMeshGpuBuffer;
 	GpuBuffer _subMeshGpuBuffer;
-
-	GpuBuffer _vertexPositionGpuBuffer;
-	GpuBuffer _indexBuffer;
+	DescriptorHandles _meshDescriptors;
 };
 }

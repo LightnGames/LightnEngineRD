@@ -22,9 +22,10 @@ struct DescriptorHandle {
 };
 
 struct DescriptorHandles {
-	DescriptorHandle get(u32 index){
+	DescriptorHandle get(u32 index) {
 		return _firstHandle + index * _incrementSize;
 	}
+
 	u32 _descriptorCount = 0;
 	u32 _incrementSize = 0;
 	DescriptorHandle _firstHandle;

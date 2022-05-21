@@ -7,6 +7,8 @@ public:
 	void initialize(const rhi::VideoMemoryAllocatorDesc& desc);
 	void terminate();
 
+	rhi::VideoMemoryAllocator* getAllocator() { return &_allocator; }
+
 	static GlobalVideoMemoryAllocator* Get();
 private:
 	rhi::VideoMemoryAllocator _allocator;

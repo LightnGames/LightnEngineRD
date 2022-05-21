@@ -29,10 +29,13 @@
     <ClInclude Include="source\Core\VirturalArray.h" />
     <ClInclude Include="source\Engine.h" />
     <ClInclude Include="source\RendererScene\Mesh.h" />
+    <ClInclude Include="source\RendererScene\View.h" />
     <ClInclude Include="source\Renderer\AssetReloader\PipelineStateReloader.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHI.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHIVideoMemory.h" />
+    <ClInclude Include="source\Renderer\MeshRenderer\GeometryResourceManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.h" />
+    <ClInclude Include="source\Renderer\MeshRenderer\MeshRenderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\CommandListPool.h" />
     <ClInclude Include="source\Renderer\RenderCore\DescriptorAllocator.h" />
     <ClInclude Include="source\Renderer\RenderCore\DeviceManager.h" />
@@ -44,6 +47,7 @@
     <ClInclude Include="source\Renderer\RenderCore\Renderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\RendererUtility.h" />
     <ClInclude Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.h" />
+    <ClInclude Include="source\Renderer\RenderCore\RenderView.h" />
     <ClInclude Include="source\Renderer\RenderCore\VramUpdater.h" />
     <ClInclude Include="source\Renderer\RHI\Rhi.h" />
     <ClInclude Include="source\Renderer\RHI\RhiConfig.h" />
@@ -69,10 +73,13 @@
     <ClCompile Include="source\Core\Utility.cpp" />
     <ClCompile Include="source\Core\VirturalArray.cpp" />
     <ClCompile Include="source\RendererScene\Mesh.cpp" />
+    <ClCompile Include="source\RendererScene\View.cpp" />
     <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHI.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHIVideoMemory.cpp" />
+    <ClCompile Include="source\Renderer\MeshRenderer\GeometryResourceManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.cpp" />
+    <ClCompile Include="source\Renderer\MeshRenderer\MeshRenderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\CommandListPool.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\DescriptorAllocator.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\DeviceManager.cpp" />
@@ -82,6 +89,7 @@
     <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\Renderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.cpp" />
+    <ClCompile Include="source\Renderer\RenderCore\RenderView.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\VramUpdater.cpp" />
     <ClCompile Include="source\ThiredParty\D3D12MemoryAllocator\D3D12MemAlloc.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui.cpp" />
@@ -198,6 +206,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;LTN_DEBUG;LTN_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)$(MSBuildProjectName)\source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -214,6 +223,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;LTN_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)$(MSBuildProjectName)\source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

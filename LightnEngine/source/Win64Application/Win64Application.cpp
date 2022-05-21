@@ -3,7 +3,10 @@
 #include <Renderer/RenderCore/Renderer.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
+#include <Renderer/MeshRenderer/GeometryResourceManager.h>
+#include <Renderer/RenderCore/RenderView.h>
 #include <RendererScene/Mesh.h>
+#include <RendererScene/View.h>
 #include <Windows.h>
 namespace ltn {
 namespace win64app {
@@ -16,9 +19,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 
 	switch (message) {
 	case WM_PAINT:
+		RenderViewScene::Get()->update();
 		GpuMeshResourceManager::Get()->update();
+		GeometryResourceManager::Get()->update();
 		Renderer::Get()->update();
 		MeshScene::Get()->lateUpdate();
+		ViewScene::Get()->lateUpdate();
 		Renderer::Get()->render();
 		return false;
 	case WM_MOUSEMOVE:
@@ -30,7 +36,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
-
 }
 
 void Win64Application::initialize() {

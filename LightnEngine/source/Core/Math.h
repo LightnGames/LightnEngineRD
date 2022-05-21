@@ -8,4 +8,8 @@ using Float4 = DirectX::XMFLOAT4;
 
 using Vector = DirectX::XMVECTOR;
 using Matrix = DirectX::XMMATRIX;
+
+struct Float4x4 {
+	Float4 _m[4];
+};
 }

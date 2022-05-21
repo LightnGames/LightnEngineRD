@@ -144,6 +144,7 @@ void Renderer::terminate() {
 }
 
 void Renderer::update() {
+	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();
 	ImGuiSystem::Get()->beginFrame();
 }
@@ -157,8 +158,11 @@ void Renderer::render() {
 
 	commandList->reset();
 
+	VramUpdater::Get()->populateCommandList(commandList);
+
 	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
+
 
 	{
 		ScopedBarrierDesc barriers[1] = {

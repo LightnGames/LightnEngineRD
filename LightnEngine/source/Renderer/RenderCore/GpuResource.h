@@ -26,8 +26,12 @@ public:
 
 	rhi::Resource* getResource() { return &_resource; }
 	rhi::ResourceStates getResourceState() const { return _currentState; }
+	rhi::ResourceDesc getResourceDesc() const { return _desc; }
+	u32 getSizeInByte() const { return _sizeInByte; }
+	u64 getGpuVirtualAddress() const { return _resource.getGpuVirtualAddress(); }
 
 protected:
+	u32 _sizeInByte = 0;
 	rhi::ResourceDesc _desc;
 	rhi::ResourceStates _currentState;
 	rhi::Resource _resource;

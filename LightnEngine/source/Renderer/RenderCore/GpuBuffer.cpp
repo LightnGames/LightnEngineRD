@@ -14,6 +14,7 @@ void GpuBuffer::initialize(const GpuBufferDesc& desc) {
 	bufferDesc._layout = rhi::TEXTURE_LAYOUT_ROW_MAJOR;
 	_desc = bufferDesc;
 	_currentState = desc._initialState;
+	_sizeInByte = desc._sizeInByte;
 
 	if (desc._allocator != nullptr) {
 		desc._allocator->createResource(bufferDesc, desc._initialState, &_allocation, &_resource);
@@ -34,5 +35,6 @@ void GpuBuffer::initialize(const GpuDynamicBufferDesc& desc) {
 	desc._device->createCommittedResource(rhi::HEAP_TYPE_UPLOAD, rhi::HEAP_FLAG_NONE, bufferDesc, rhi::RESOURCE_STATE_GENERIC_READ, nullptr, &_resource);
 	_desc = bufferDesc;
 	_currentState = rhi::RESOURCE_STATE_GENERIC_READ;
+	_sizeInByte = desc._sizeInByte;
 }
 }

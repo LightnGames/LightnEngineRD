@@ -877,7 +877,7 @@ struct HardwareFactoryDesc {
 		FACTROY_FLGA_DEVICE_DEBUG = 1 << 0,
 	};
 
-	u8 _flags;
+	u8 _flags = FACTROY_FLAG_NONE;
 };
 
 struct HardwareAdapterDesc {
@@ -959,8 +959,8 @@ struct MemoryRange {
 };
 
 struct ConstantBufferViewDesc {
-	u64 _bufferLocation;
-	u32 _sizeInBytes;
+	u64 _bufferLocation = 0;
+	u32 _sizeInBytes = 0;
 };
 
 struct ShaderResourceViewDesc {

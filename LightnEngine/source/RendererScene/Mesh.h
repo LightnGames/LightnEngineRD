@@ -17,6 +17,7 @@ public:
 	u32 _subMeshOffset = 0;
 	u32 _subMeshCount = 0;
 };
+
 class Mesh {
 public:
 	VirtualArray::AllocationInfo _meshAllocationInfo;
@@ -50,6 +51,9 @@ public:
 	Mesh* allocateMesh(const MeshAllocationDesc& desc);
 	void freeMeshObjects(Mesh* mesh);
 
+	u32 getMeshIndex(const Mesh* mesh) const { return static_cast<u32>(mesh - _meshes); }
+	u32 getLodMeshIndex(const LodMesh* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshes); }
+	u32 getSubMeshIndex(const SubMesh* subMesh) const { return static_cast<u32>(subMesh - _subMeshes); }
 	Mesh* getMesh(u32 index) { return &_meshes[index]; }
 
 private:
@@ -111,6 +115,7 @@ public:
 	Mesh* createMesh(const MeshCreatationDesc& desc);
 	void destroyMesh(Mesh* mesh);
 
+	MeshPool* getMeshPool() { return &_meshPool; }
 	MeshUpdateInfos* getMeshUpdateInfos() { return &_meshUpdateInfos; }
 
 	static MeshScene* Get();
