@@ -18,6 +18,8 @@ public:
 	void terminate();
 	void update();
 
+	rhi::GpuDescriptorHandle getViewConstantGpuDescriptor(u32 index) const { return _viewDescriptors.get(index)._gpuHandle; }
+
 	static RenderViewScene* Get();
 
 private:

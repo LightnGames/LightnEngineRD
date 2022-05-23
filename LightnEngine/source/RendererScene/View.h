@@ -27,6 +27,7 @@ public:
 
 	const View* getView(u32 index) const { return &_views[index]; }
 	const u8* getViewUpdateFlags() const { return _viewUpdatedFlags; }
+	const u8* getViewEnabledFlags() const { return _viewEnabledFlags; }
 
 	static ViewScene* Get();
 
@@ -36,5 +37,6 @@ private:
 private:
 	View* _views = nullptr;
 	u8* _viewUpdatedFlags = nullptr;
+	u8* _viewEnabledFlags = nullptr;
 };
 }

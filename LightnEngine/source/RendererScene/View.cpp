@@ -10,16 +10,19 @@ ViewScene g_viewScene;
 void ViewScene::initialize() {
 	_views = Memory::allocObjects<View>(VIEW_COUNT_MAX);
 	_viewUpdatedFlags = Memory::allocObjects<u8>(VIEW_COUNT_MAX);
+	_viewEnabledFlags = Memory::allocObjects<u8>(VIEW_COUNT_MAX);
 	for (u32 i = 0; i < VIEW_COUNT_MAX; ++i) {
 		_views[i].initialize(&_viewUpdatedFlags[i]);
 	}
 
+	memset(_viewEnabledFlags, 0, sizeof(u8) * VIEW_COUNT_MAX);
 	resetUpdateFlags();
 }
 
 void ViewScene::terminate() {
 	Memory::freeObjects(_views);
 	Memory::freeObjects(_viewUpdatedFlags);
+	Memory::freeObjects(_viewEnabledFlags);
 }
 
 void ViewScene::lateUpdate() {

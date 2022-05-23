@@ -109,7 +109,6 @@ public:
 
 	void initialize();
 	void terminate();
-
 	void lateUpdate();
 
 	Mesh* createMesh(const MeshCreatationDesc& desc);

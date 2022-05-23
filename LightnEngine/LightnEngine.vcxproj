@@ -28,12 +28,14 @@
     <ClInclude Include="source\Core\Utility.h" />
     <ClInclude Include="source\Core\VirturalArray.h" />
     <ClInclude Include="source\Engine.h" />
+    <ClInclude Include="source\RendererScene\Material.h" />
     <ClInclude Include="source\RendererScene\Mesh.h" />
     <ClInclude Include="source\RendererScene\View.h" />
     <ClInclude Include="source\Renderer\AssetReloader\PipelineStateReloader.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHI.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHIVideoMemory.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\GeometryResourceManager.h" />
+    <ClInclude Include="source\Renderer\MeshRenderer\GpuMaterialManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\MeshRenderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\CommandListPool.h" />
@@ -44,6 +46,7 @@
     <ClInclude Include="source\Renderer\RenderCore\GpuTexture.h" />
     <ClInclude Include="source\Renderer\RenderCore\ImGuiSystem.h" />
     <ClInclude Include="source\Renderer\RenderCore\ReleaseQueue.h" />
+    <ClInclude Include="source\Renderer\RenderCore\RenderDirector.h" />
     <ClInclude Include="source\Renderer\RenderCore\Renderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\RendererUtility.h" />
     <ClInclude Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.h" />
@@ -72,12 +75,14 @@
     <ClCompile Include="source\Application\EngineModule.cpp" />
     <ClCompile Include="source\Core\Utility.cpp" />
     <ClCompile Include="source\Core\VirturalArray.cpp" />
+    <ClCompile Include="source\RendererScene\Material.cpp" />
     <ClCompile Include="source\RendererScene\Mesh.cpp" />
     <ClCompile Include="source\RendererScene\View.cpp" />
     <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHI.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHIVideoMemory.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\GeometryResourceManager.cpp" />
+    <ClCompile Include="source\Renderer\MeshRenderer\GpuMaterialManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\MeshRenderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\CommandListPool.cpp" />
@@ -87,6 +92,7 @@
     <ClCompile Include="source\Renderer\RenderCore\GpuTexture.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\ImGuiSystem.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp" />
+    <ClCompile Include="source\Renderer\RenderCore\RenderDirector.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\Renderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GlobalVideoMemoryAllocator.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\RenderView.cpp" />
