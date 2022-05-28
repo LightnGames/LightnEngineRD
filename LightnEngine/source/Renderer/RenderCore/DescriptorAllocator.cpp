@@ -25,12 +25,7 @@ void DescriptorAllocator::terminate() {
 }
 
 DescriptorHandle DescriptorAllocator::allocate() {
-	VirtualArray::AllocationInfo allocationInfo = _allocationInfo.allocation(1);
-	DescriptorHandle descriptor = {};
-	descriptor._allocationInfo = allocationInfo;
-	descriptor._cpuHandle = _cpuHandleStart + allocationInfo._offset;
-	descriptor._gpuHandle = _gpuHandleStart + allocationInfo._offset;
-	return descriptor;
+	return allocate(1)._firstHandle;
 }
 
 DescriptorHandles DescriptorAllocator::allocate(u32 count) {
@@ -53,24 +48,32 @@ void DescriptorAllocator::free(DescriptorHandles& descriptorHandles) {
 	_allocationInfo.freeAllocation(descriptorHandles._firstHandle._allocationInfo);
 }
 
+void DescriptorAllocator::setName(const char* name) {
+	_descriptorHeap.setName(name);
+}
+
 void DescriptorAllocatorGroup::initialize(const Desc& desc) {
 	rhi::DescriptorHeapDesc allocatorDesc = {};
 	allocatorDesc._device = desc._device;
 	allocatorDesc._numDescriptors = desc._rtvCount;
 	allocatorDesc._type = rhi::DESCRIPTOR_HEAP_TYPE_RTV;
 	_rtvAllocator.initialize(allocatorDesc);
+	_rtvAllocator.setName("DescriptorHeapRtv");
 
 	allocatorDesc._numDescriptors = desc._dsvCount;
 	allocatorDesc._type = rhi::DESCRIPTOR_HEAP_TYPE_DSV;
 	_dsvAllocator.initialize(allocatorDesc);
+	_dsvAllocator.setName("DescriptorHeapDsv");
 
 	allocatorDesc._numDescriptors = desc._srvCbvUavCpuCount;
 	allocatorDesc._type = rhi::DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	_srvCbvUavCpuAllocator.initialize(allocatorDesc);
+	_srvCbvUavCpuAllocator.setName("DescriptorHeapSrvCbvUavCPU");
 
 	allocatorDesc._numDescriptors = desc._srvCbvUavGpuCount;
 	allocatorDesc._flags = rhi::DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	_srvCbvUavGpuAllocator.initialize(allocatorDesc);
+	_srvCbvUavGpuAllocator.setName("DescriptorHeapSrvCbvUavGPU");
 }
 
 void DescriptorAllocatorGroup::terminate() {

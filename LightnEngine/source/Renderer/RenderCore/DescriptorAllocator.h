@@ -40,6 +40,7 @@ public:
 	DescriptorHandles allocate(u32 count);
 	void free(DescriptorHandle& descriptorHandle);
 	void free(DescriptorHandles& descriptorHandles);
+	void setName(const char* name);
 
 	rhi::DescriptorHeap* getDescriptorHeap() { return &_descriptorHeap; }
 	u32 getIncrementSize() const { return _incrementSize; }

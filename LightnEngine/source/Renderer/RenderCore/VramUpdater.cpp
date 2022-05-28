@@ -10,7 +10,7 @@ void VramUpdater::initialize() {
 	desc._device = DeviceManager::Get()->getDevice();
 	desc._sizeInByte = STAGING_BUFFER_SIZE_IN_BYTE;
 	_stagingBuffer.initialize(desc);
-	//_stagingBuffer.setDebugName("Vram Updater Staging");
+	_stagingBuffer.setName("VramUpdaterStaging");
 	_stagingMapPtr = _stagingBuffer.map<u8>();
 
 	// 範囲外アクセス検知用マーカーを最初に挿入

@@ -1,6 +1,5 @@
 #pragma once
-#include <Renderer/RHI/RhiDef.h>
-#include <Renderer/RHI/RhiVideoMemoryDef.h>
+#include <Renderer/RHI/RhiVideoMemoryBase.h>
 
 namespace D3D12MA {
 class Allocator;
@@ -9,20 +8,20 @@ class Allocation;
 
 namespace ltn {
 namespace rhi {
-class VideoMemoryAllocationD3D12 {
+class VideoMemoryAllocation :public VideoMemoryAllocationBase {
 public:
-	virtual void terminate() = 0;
-	virtual	bool isAllocated() const = 0;
+	void terminate()  override;
+	virtual	bool isAllocated() const  override;
 
 	D3D12MA::Allocation* _allocation = nullptr;
 };
 
-class VideoMemoryAllocatorD3D12 {
+class VideoMemoryAllocator :public VideoMemoryAllocatorBase {
 public:
-	virtual void initialize(const VideoMemoryAllocatorDesc& desc) = 0;
-	virtual void terminate() = 0;
+	void initialize(const VideoMemoryAllocatorDesc& desc)  override;
+	void terminate()  override;
 
-	virtual void createResource(ResourceDesc desc, ResourceStates initialState, VideoMemoryAllocation* allocation, Resource* resource) = 0;
+	void createResource(ResourceDesc desc, ResourceStates initialState, VideoMemoryAllocation* allocation, Resource* resource)  override;
 
 	D3D12MA::Allocator* _allocator = nullptr;
 };

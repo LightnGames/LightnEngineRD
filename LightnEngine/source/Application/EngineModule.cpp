@@ -6,10 +6,12 @@
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/MeshRenderer.h>
+#include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
 #include <RendererScene/Material.h>
+#include <RendererScene/MeshInstance.h>
 
 namespace ltn {
 void EngineModuleManager::run() {
@@ -25,6 +27,9 @@ void EngineModuleManager::run() {
 	MeshScene* meshScene = MeshScene::Get();
 	meshScene->initialize();
 
+	MeshInstanceScene* meshInstanceScene = MeshInstanceScene::Get();
+	meshInstanceScene->initialize();
+
 	ViewScene* viewScene = ViewScene::Get();
 	viewScene->initialize();
 
@@ -33,6 +38,9 @@ void EngineModuleManager::run() {
 
 	RenderViewScene* renderViewScene = RenderViewScene::Get();
 	renderViewScene->initialize();
+
+	GpuMeshInstanceManager* gpuMeshInstanceManager = GpuMeshInstanceManager::Get();
+	gpuMeshInstanceManager->initialize();
 
 	GpuMeshResourceManager* gpuMeshResourceManager = GpuMeshResourceManager::Get();
 	gpuMeshResourceManager->initialize();
@@ -50,10 +58,12 @@ void EngineModuleManager::run() {
 
 	app.terminate();
 	gpuMaterialManager->terminate();
+	gpuMeshInstanceManager->terminate();
 	meshRenderer->terminate();
 	renderViewScene->terminate();
 	materialScene->terminate();
 	viewScene->terminate();
+	meshInstanceScene->terminate();
 	meshScene->terminate();
 	geometryResourceManager->terminate();
 	gpuMeshResourceManager->terminate();

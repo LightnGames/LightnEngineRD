@@ -52,6 +52,7 @@ void Renderer::initialize() {
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
 		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
 		rtvTexture.initializeFromBackbuffer(&_swapChain, backBufferIndex);
+		rtvTexture.setName("SwapChainBackBuffer[%d]", backBufferIndex);
 	}
 
 	_rtvDescriptors = DescriptorAllocatorGroup::Get()->getRtvAllocator()->allocate(rhi::BACK_BUFFER_COUNT);
@@ -87,6 +88,7 @@ void Renderer::initialize() {
 		rhi::RootSignatureDesc rootSignatureDesc = {};
 		rootSignatureDesc._device = device;
 		_rootSignature.iniaitlize(rootSignatureDesc);
+		_rootSignature.setName("RootSigScreenTriangle");
 
 		rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
 		pipelineStateDesc._device = device;
@@ -98,6 +100,7 @@ void Renderer::initialize() {
 		pipelineStateDesc._rootSignature = &_rootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
 		_pipelineState.iniaitlize(pipelineStateDesc);
+		_pipelineState.setName("PsoScreenTriangle");
 
 		PipelineStateReloader::GraphicsPipelineStateRegisterDesc reloaderDesc = {};
 		reloaderDesc._desc = pipelineStateDesc;

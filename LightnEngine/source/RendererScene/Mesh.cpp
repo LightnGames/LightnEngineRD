@@ -8,9 +8,9 @@ MeshScene g_meshScene;
 }
 void MeshScene::initialize() {
 	MeshPool::InitializetionDesc desc = {};
-	desc._meshCount = MESH_COUNT_MAX;
-	desc._lodMeshCount = LOD_MESH_COUNT_MAX;
-	desc._subMeshCount = SUB_MESH_COUNT_MAX;
+	desc._meshCount = MESH_CAPACITY;
+	desc._lodMeshCount = LOD_MESH_CAPACITY;
+	desc._subMeshCount = SUB_MESH_CAPACITY;
 	_meshPool.initialize(desc);
 }
 
@@ -22,7 +22,7 @@ void MeshScene::lateUpdate() {
 	u32 deletedMeshCount = _meshUpdateInfos.getDeletedMeshCount();
 	Mesh** deletedMeshes = _meshUpdateInfos.getDeletedMeshes();
 	for (u32 i = 0; i < deletedMeshCount; ++i) {
-		_meshPool.freeMeshObjects(deletedMeshes[i]);
+		_meshPool.freeMesh(deletedMeshes[i]);
 #define ENABLE_ZERO_CLEAR 1
 #if ENABLE_ZERO_CLEAR
 		Mesh* mesh = deletedMeshes[i];
@@ -99,7 +99,7 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 
 	LodMesh* lodMeshes = mesh->_lodMeshes;
 	for (u32 i = 0; i < meshHeader.totalLodMeshCount; ++i) {
-		LodInfo& lodInfo = lodInfos[i];
+		const LodInfo& lodInfo = lodInfos[i];
 		LodMesh& lodMesh = lodMeshes[i];
 		lodMesh._subMeshCount = lodInfo._subMeshCount;
 		lodMesh._subMeshOffset = lodInfo._subMeshOffset;
@@ -107,7 +107,7 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 
 	SubMesh* subMeshes = mesh->_subMeshes;
 	for (u32 i = 0; i < meshHeader.totalSubMeshCount; ++i) {
-		SubMeshInfo& subMeshInfo = subMeshInfos[i];
+		const SubMeshInfo& subMeshInfo = subMeshInfos[i];
 		SubMesh& subMesh = subMeshes[i];
 		subMesh._materialSlotIndex = subMeshInfo._materialSlotIndex;
 		subMesh._indexCount = subMeshInfo._triangleStripIndexCount;
@@ -171,7 +171,7 @@ Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
 	mesh->_subMeshCount = desc._subMeshCount;
 	return mesh;
 }
-void MeshPool::freeMeshObjects(Mesh* mesh) {
+void MeshPool::freeMesh(Mesh* mesh) {
 	_meshAllocations.freeAllocation(mesh->_meshAllocationInfo);
 	_lodMeshAllocations.freeAllocation(mesh->_lodMeshAllocationInfo);
 	_subMeshAllocations.freeAllocation(mesh->_subMeshAllocationInfo);

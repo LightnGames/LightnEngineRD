@@ -3,7 +3,7 @@
 #include <Core/Type.h>
 namespace ltn {
 struct Camera {
-	Matrix _worldMatrix;
+	Vector3 _position;
 };
 
 class View {
@@ -12,8 +12,12 @@ public:
 		_updateFlags = updateFlags;
 	}
 
+	u32 getWidth() const { return _width; }
+	u32 getHeight() const { return _height; }
+
 private:
-	Matrix _projectionMatrix;
+	u32 _width = 0;
+	u32 _height = 0;
 	u8* _updateFlags = nullptr;
 };
 

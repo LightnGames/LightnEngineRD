@@ -77,7 +77,6 @@ def convert(shader_file_path):
     # ランタイムが起動していたら再リロードするためにメッセージを送る
     RruntimeMessageSender.SendMessage(shader_output_path)
 
-
 if __name__ == "__main__":
     if len(sys.argv) == 1 :
         glob_dirs = "%s\\**\\*.*" % AssetDevelopmentConfig.WORK_ROOT

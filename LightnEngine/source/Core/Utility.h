@@ -69,7 +69,7 @@ const T& Min(const T& a, const T& b) {
 }
 
 template <class T>
-T RoundUp(const T& value, const T& divideValue) {
+T RoundDivUp(const T& value, const T& divideValue) {
 	return (value / divideValue) + 1;
 }
 

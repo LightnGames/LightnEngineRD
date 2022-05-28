@@ -138,7 +138,7 @@ void PipelineStateReloader::registerPipelineState(rhi::PipelineState* pipelineSt
 void PipelineStateReloader::registerPipelineState(rhi::PipelineState* pipelineState, ComputePipelineStateRegisterDesc& desc) {
 	u32 findIndex = _computePipelineStateContainer.findEmptyPipelineStateIndex();
 	if (findIndex == -1) {
-		findIndex = _graphicsPipelineStateContainer._count++;
+		findIndex = _computePipelineStateContainer._count++;
 	}
 
 	{
@@ -148,7 +148,7 @@ void PipelineStateReloader::registerPipelineState(rhi::PipelineState* pipelineSt
 	}
 
 	{
-		auto& info = _graphicsPipelineStateContainer._shaderPathInfos[findIndex];
+		auto& info = _computePipelineStateContainer._shaderPathInfos[findIndex];
 		info._count = 1;
 		info._shaderPathHashs[0] = StrHash64(desc._shaderPath);
 	}

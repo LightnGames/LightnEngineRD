@@ -9,7 +9,6 @@ namespace ltn {
 // ˆÈ‰º‚Ì’è‹`‚Í Compute Shader ‚Å—˜—p‚·‚é‚à‚Ì‚Æ“¯ˆê‚É‚µ‚Ü‚·
 namespace gpu {
 struct Mesh {
-	u32 _stateFlags = 0;
 	u32 _lodMeshOffset = 0;
 	u32 _lodMeshCount = 0;
 	u32 _streamedLodLevel = 0;
@@ -17,8 +16,6 @@ struct Mesh {
 
 struct LodMesh {
 	u32 _vertexOffset = 0;
-	u32 _vertexIndexOffset = 0;
-	u32 _primitiveOffset = 0;
 	u32 _subMeshOffset = 0;
 	u32 _subMeshCount = 0;
 };
@@ -37,7 +34,7 @@ public:
 	void terminate();
 	void update();
 
-	rhi::GpuDescriptorHandle getGpuDescriptorHandles() const { return _meshDescriptors._firstHandle._gpuHandle; }
+	rhi::GpuDescriptorHandle getMeshGpuDescriptors() const { return _meshSrv._firstHandle._gpuHandle; }
 
 	static GpuMeshResourceManager* Get();
 
@@ -45,6 +42,6 @@ private:
 	GpuBuffer _meshGpuBuffer;
 	GpuBuffer _lodMeshGpuBuffer;
 	GpuBuffer _subMeshGpuBuffer;
-	DescriptorHandles _meshDescriptors;
+	DescriptorHandles _meshSrv;
 };
 }

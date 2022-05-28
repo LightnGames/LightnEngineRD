@@ -19,9 +19,11 @@ void GeometryResourceManager::initialize() {
 		desc._sizeInByte = VERTEX_COUNT_MAX * sizeof(VertexPosition);
 		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		_vertexPositionGpuBuffer.initialize(desc);
+		_vertexPositionGpuBuffer.setName("VertexPositions");
 
 		desc._sizeInByte = INDEX_COUNT_MAX * sizeof(VertexIndex);
 		_indexGpuBuffer.initialize(desc);
+		_indexGpuBuffer.setName("VertexIndices");
 	}
 
 
@@ -34,7 +36,7 @@ void GeometryResourceManager::initialize() {
 		handleDesc._size = INDEX_COUNT_MAX;
 		_indexAllocations.initialize(handleDesc);
 
-		_meshInfos = Memory::allocObjects<MeshGeometryInfo>(MeshScene::MESH_COUNT_MAX);
+		_meshInfos = Memory::allocObjects<MeshGeometryInfo>(MeshScene::MESH_CAPACITY);
 	}
 }
 
@@ -49,12 +51,12 @@ void GeometryResourceManager::terminate() {
 void GeometryResourceManager::update() {
 	MeshScene* meshScene = MeshScene::Get();
 	MeshUpdateInfos* meshUpdateInfos = meshScene->getMeshUpdateInfos();
+	const MeshPool* meshPool = meshScene->getMeshPool();
 
 	u32 createdMeshCount = meshUpdateInfos->getCreatedMeshCount();
 	Mesh** createdMeshes = meshUpdateInfos->getCreatedMeshes();
 	for (u32 i = 0; i < createdMeshCount; ++i) {
 		VramUpdater* vramUpdater = VramUpdater::Get();
-		MeshPool* meshPool = meshScene->getMeshPool();
 		const Mesh* mesh = createdMeshes[i];
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
 		MeshGeometryInfo& info = _meshInfos[meshIndex];
@@ -65,8 +67,7 @@ void GeometryResourceManager::update() {
 	u32 deletedMeshCount = meshUpdateInfos->getDeletedMeshCount();
 	Mesh** deletedMeshes = meshUpdateInfos->getDeletedMeshes();
 	for (u32 i = 0; i < deletedMeshCount; ++i) {
-		MeshPool* meshPool = meshScene->getMeshPool();
-		const Mesh* mesh = createdMeshes[i];
+		const Mesh* mesh = deletedMeshes[i];
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
 		MeshGeometryInfo& info = _meshInfos[meshIndex];
 		_vertexPositionAllocations.freeAllocation(info._vertexAllocationInfo);

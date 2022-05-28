@@ -1,18 +1,45 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
+#include <Renderer/RenderCore/DescriptorAllocator.h>
 
 namespace ltn {
 namespace gpu {
 using IndirectArgument = rhi::DrawIndexedArguments;
+constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
+
+struct CullingInfo {
+	u32 _meshInstanceReserveCount;
+};
 }
+
+struct GpuCullingRootParam {
+enum {
+	CULLING_INFO = 0,
+	VIEW_INFO,
+	MESH,
+	MESH_INSTANCE,
+	SUB_MESH_INFO,
+	INDIRECT_ARGUMENT_OFFSETS,
+	INDIRECT_ARGUMENTS,
+	LOD_LEVEL,
+	CULLING_RESULT,
+	HIZ,
+	COUNT
+};
+};
+
 class MeshRenderer {
 public:
-	struct CullingDesc {
-		rhi::CommandList* _commandList = nullptr;
-	};
+	static constexpr u32 INDIRECT_ARGUMENT_CAPACITY = 1024 * 64;
 
-	struct BuildIndirectArgumentDesc {
+	struct CullingDesc {
+		u32 _meshInstanceReserveCount = 0;
+		rhi::GpuDescriptorHandle _sceneCbv;
+		rhi::GpuDescriptorHandle _viewCbv;
+		rhi::GpuDescriptorHandle _meshSrv;
+		rhi::GpuDescriptorHandle _meshInstanceSrv;
+		rhi::GpuDescriptorHandle _indirectArgumentOffsetSrv;
 		rhi::CommandList* _commandList = nullptr;
 	};
 
@@ -30,14 +57,17 @@ public:
 	void terminate();
 
 	void culling(const CullingDesc& desc);
-	void buildIndirectArgument(const BuildIndirectArgumentDesc& desc);
 	void render(const RenderDesc& desc);
 
 	static MeshRenderer* Get();
 
 private:
+	GpuBuffer _cullingInfoGpuBuffer;
 	GpuBuffer _indirectArgumentGpuBuffer;
-	GpuBuffer _indirectArgumentCountBuffer;
+	GpuBuffer _indirectArgumentCountGpuBuffer;
+	DescriptorHandles _indirectArgumentUav;
+	DescriptorHandle _indirectArgumentCountCpuUav;
+	DescriptorHandle _cullingInfoCbv;
 
 	rhi::CommandSignature _commandSignature;
 	rhi::RootSignature _gpuCullingRootSignature;

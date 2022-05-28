@@ -5,10 +5,12 @@
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
+#include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
 #include <RendererScene/Material.h>
+#include <RendererScene/MeshInstance.h>
 #include <Windows.h>
 namespace ltn {
 namespace win64app {
@@ -22,11 +24,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 	switch (message) {
 	case WM_PAINT:
 		RenderViewScene::Get()->update();
+		GpuMeshInstanceManager::Get()->update();
 		GpuMeshResourceManager::Get()->update();
 		GeometryResourceManager::Get()->update();
 		GpuMaterialManager::Get()->update();
 		Renderer::Get()->update();
 		MaterialScene::Get()->lateUpdate();
+		MeshInstanceScene::Get()->lateUpdate();
 		MeshScene::Get()->lateUpdate();
 		ViewScene::Get()->lateUpdate();
 		Renderer::Get()->render();

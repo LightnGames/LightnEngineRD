@@ -35,13 +35,6 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			meshRenderer->culling(desc);
 		}
 
-		// Indirect Argument ƒrƒ‹ƒh
-		{
-			MeshRenderer::BuildIndirectArgumentDesc desc;
-			desc._commandList = commandList;
-			meshRenderer->buildIndirectArgument(desc);
-		}
-
 		// •`‰æ
 		{
 			MeshRenderer::RenderDesc desc;

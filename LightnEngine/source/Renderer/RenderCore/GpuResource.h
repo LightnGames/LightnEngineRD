@@ -24,6 +24,17 @@ public:
 		_currentState = stateAfter;
 	}
 
+	void setName(const char* format, ...) {
+		constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 64;
+		char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
+		va_list va;
+		va_start(va, format);
+		vsprintf_s(nameBuffer, format, va);
+		va_end(va);
+
+		_resource.setName(nameBuffer);
+	}
+
 	rhi::Resource* getResource() { return &_resource; }
 	rhi::ResourceStates getResourceState() const { return _currentState; }
 	rhi::ResourceDesc getResourceDesc() const { return _desc; }

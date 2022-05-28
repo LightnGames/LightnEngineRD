@@ -1,17 +1,21 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
+#include <Renderer/RHI/RhiMarker.h>
 #include <Renderer/RenderCore/GpuResource.h>
 namespace ltn {
 struct ScopedBarrierDesc {
 	ScopedBarrierDesc(GpuResource* resource, rhi::ResourceStates stateAfter)
-		:_resources(resource), _stateAfter(stateAfter) {}
+		:_resources(resource), _stateAfter(stateAfter) {
+	}
 	GpuResource* _resources = nullptr;
 	rhi::ResourceStates _stateAfter;
 };
 
+// 定義された行でリソースバリアを発行し、破棄時にリソースステートを戻すクラス
 class ScopedBarrier {
 public:
 	static constexpr u32 SCOPED_BARRIER_COUNT_MAX = 8;
+
 	ScopedBarrier(rhi::CommandList* commandList, ScopedBarrierDesc* barrierDescs, u32 barrierCount) {
 		LTN_ASSERT(barrierCount < SCOPED_BARRIER_COUNT_MAX);
 		_commandList = commandList;
@@ -22,7 +26,7 @@ public:
 			_beforeResourceStates[i] = barrierDescs[i]._resources->getResourceState();
 		}
 
-		rhi::ResourceTransitionBarrier barriers[16];
+		rhi::ResourceTransitionBarrier barriers[SCOPED_BARRIER_COUNT_MAX];
 		for (u32 i = 0; i < barrierCount; ++i) {
 			ScopedBarrierDesc& desc = barrierDescs[i];
 			barriers[i] = desc._resources->getTransitionBarrier(desc._stateAfter);
@@ -55,4 +59,80 @@ private:
 	ScopedBarrierDesc* _barrierDescs = nullptr;
 	u32 _barrierCount = 0;
 };
+
+class GpuScopedEvent {
+public:
+	GpuScopedEvent(rhi::CommandList* commandList, const Color4& color, const char* format, ...) {
+		_commandList = commandList;
+		va_list va;
+		va_start(va, format);
+		vsprintf_s(_name, format, va);
+		//_gpuMarker.setEvent(commandList, color, name, va);
+		va_end(va);
+
+		rhi::BeginMarker(commandList, color, _name);
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//_markerIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
+	}
+	~GpuScopedEvent() {
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//queryHeapSystem->popGpuMarker(_commandList, _markerIndex);
+	}
+private:
+	//u32 _markerIndex = 0;
+	rhi::CommandList* _commandList = nullptr;
+	char _name[64] = {};
+};
+
+class CpuScopedEvent {
+public:
+	CpuScopedEvent(const char* name, ...) {
+		va_list va;
+		va_start(va, name);
+		vsprintf_s(_name, name, va);
+		va_end(va);
+
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
+	}
+	~CpuScopedEvent() {
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
+	}
+private:
+	//u32 _cpuTickIndex = 0;
+	char _name[64] = {};
+};
+
+class CpuGpuScopedEvent {
+public:
+	CpuGpuScopedEvent(rhi::CommandList* commandList, const Color4& color, const char* name, ...) {
+		_commandList = commandList;
+		va_list va;
+		va_start(va, name);
+		vsprintf_s(_name, name, va);
+		//_gpuMarker.setEvent(commandList, color, name, va);
+		va_end(va);
+
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//_gpuTickIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
+		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
+		rhi::BeginMarker(commandList, color, _name);
+	}
+	~CpuGpuScopedEvent() {
+		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
+		//queryHeapSystem->popGpuMarker(_commandList, _gpuTickIndex);
+		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
+		rhi::EndMarker();
+	}
+private:
+	rhi::CommandList* _commandList = nullptr;
+	u32 _gpuTickIndex = 0;
+	u32 _cpuTickIndex = 0;
+	char _name[64] = {};
+};
+
+#define DEBUG_MARKER_CPU_SCOPED_EVENT(...) CpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_GPU_SCOPED_EVENT(...) GpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(...) CpuGpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
 }

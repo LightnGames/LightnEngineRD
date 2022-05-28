@@ -30,7 +30,7 @@
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHI.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="source\Renderer\RHI\Rhi.h">
+    <ClInclude Include="source\Renderer\RHI\RhiBase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\Renderer\RHI\RhiDef.h">
@@ -123,7 +123,7 @@
     <ClInclude Include="source\Renderer\RenderCore\GpuBuffer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="source\Renderer\RHI\RhiVideoMemory.h">
+    <ClInclude Include="source\Renderer\RHI\RhiVideoMemoryBase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\Renderer\RHI\RhiConfig.h">
@@ -163,6 +163,24 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\Renderer\RenderCore\RenderDirector.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\MeshRenderer\GpuMeshInstanceManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RendererScene\MeshInstance.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\RHI\Rhi.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\RHI\RhiVideoMemory.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\RHI\RhiMarker.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHIMarker.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -273,6 +291,15 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\Renderer\RenderCore\RenderDirector.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer\MeshRenderer\GpuMeshInstanceManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RendererScene\MeshInstance.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHIMarker.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

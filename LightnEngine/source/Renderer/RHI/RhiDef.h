@@ -13,12 +13,10 @@ struct CommandList;
 struct PipelineState;
 struct RootSignature;
 struct CommandSignature;
-class QueryHeap;
+struct QueryHeap;
 
 constexpr u32 DESCRIPTOR_RANGE_OFFSET_APPEND = 0xffffffff;
 constexpr u64 INVAILD_FENCE_VALUE = static_cast<u64>(-1);
-
-#define RhiBase(x) x##D3D12
 
 #define SHADER_COMPONENT_MAPPING_MASK 0x7 
 #define SHADER_COMPONENT_MAPPING_SHIFT 3 

@@ -31,7 +31,7 @@ public:
 	u32 _indexCount = 0;
 };
 
-// メッシュインスタンスの実データを管理するクラス
+// メッシュの実データを管理するプール
 class LTN_API MeshPool {
 public:
 	struct InitializetionDesc {
@@ -49,7 +49,7 @@ public:
 	void terminate();
 
 	Mesh* allocateMesh(const MeshAllocationDesc& desc);
-	void freeMeshObjects(Mesh* mesh);
+	void freeMesh(Mesh* mesh);
 
 	u32 getMeshIndex(const Mesh* mesh) const { return static_cast<u32>(mesh - _meshes); }
 	u32 getLodMeshIndex(const LodMesh* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshes); }
@@ -99,9 +99,9 @@ private:
 // メッシュ総合管理するクラス
 class LTN_API MeshScene {
 public:
-	static constexpr u32 MESH_COUNT_MAX = 1024;
-	static constexpr u32 LOD_MESH_COUNT_MAX = 1024 * 2;
-	static constexpr u32 SUB_MESH_COUNT_MAX = 1024 * 4;
+	static constexpr u32 MESH_CAPACITY = 1024;
+	static constexpr u32 LOD_MESH_CAPACITY = 1024 * 2;
+	static constexpr u32 SUB_MESH_CAPACITY = 1024 * 4;
 
 	struct MeshCreatationDesc {
 		const char* _assetPath = nullptr;
@@ -114,7 +114,7 @@ public:
 	Mesh* createMesh(const MeshCreatationDesc& desc);
 	void destroyMesh(Mesh* mesh);
 
-	MeshPool* getMeshPool() { return &_meshPool; }
+	const MeshPool* getMeshPool() const { return &_meshPool; }
 	MeshUpdateInfos* getMeshUpdateInfos() { return &_meshUpdateInfos; }
 
 	static MeshScene* Get();

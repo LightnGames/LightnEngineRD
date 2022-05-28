@@ -1,6 +1,5 @@
 #include "D3D12RHI.h"
 #include <Core/Utility.h>
-#include <Renderer/RHI/Rhi.h>
 #include <dxgidebug.h>
 #include <D3Dcompiler.h>
 #include <stdio.h>
@@ -144,7 +143,7 @@ D3D12_DEPTH_WRITE_MASK toD3d12(DepthWriteMask mask) {
 }
 
 ID3D12DescriptorHeap* toD3d12(DescriptorHeap* descriptorHeap) {
-	return static_cast<DescriptorHeapD3D12*>(descriptorHeap)->_descriptorHeap;
+	return descriptorHeap->_descriptorHeap;
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE toD3d12(CpuDescriptorHandle handle) {
@@ -158,18 +157,18 @@ D3D12_GPU_DESCRIPTOR_HANDLE toD3d12(GpuDescriptorHandle handle) {
 }
 
 ID3D12GraphicsCommandList* toD3d12(CommandList* commandList) {
-	return static_cast<CommandListD3D12*>(commandList)->_commandList;
+	return commandList->_commandList;
 }
 
 ID3D12RootSignature* toD3d12(RootSignature* rootSignature) {
-	return static_cast<RootSignatureD3D12*>(rootSignature)->_rootSignature;
+	return rootSignature->_rootSignature;
 }
 
 ID3D12Resource* toD3d12(Resource* resource) {
 	if (resource == nullptr) {
 		return nullptr;
 	}
-	return static_cast<ResourceD3D12*>(resource)->_resource;
+	return resource->_resource;
 }
 
 D3D12_SHADER_BYTECODE toD3d12(ShaderByteCode byteCode) {
@@ -180,7 +179,7 @@ D3D12_SHADER_BYTECODE toD3d12(ShaderByteCode byteCode) {
 }
 
 ID3D12Device2* toD3d12(Device* device) {
-	return static_cast<DeviceD3D12*>(device)->_device;
+	return device->_device;
 }
 
 D3D12_HEAP_TYPE toD3d12(HeapType type) {
@@ -216,7 +215,7 @@ D3D12_COMMAND_SIGNATURE_DESC toD3d12(CommandSignatureDesc desc) {
 }
 
 ID3D12CommandSignature* toD3d12(CommandSignature* commandSignature) {
-	return static_cast<CommandSignatureD3D12*>(commandSignature)->_commandSignature;
+	return commandSignature->_commandSignature;
 }
 
 D3D12_PIPELINE_STATE_FLAGS toD3d12(PipelineStateFlags flags) {
@@ -279,7 +278,7 @@ D3D12_LOGIC_OP toD3d12(const LogicOp& blend) {
 }
 
 ID3D12QueryHeap* toD3d12(QueryHeap* queryHeap) {
-	return static_cast<QueryHeapD3D12*>(queryHeap)->_queryHeap;
+	return queryHeap->_queryHeap;
 }
 
 D3D12_RENDER_TARGET_BLEND_DESC toD3d12(const RenderTargetBlendDesc& desc) {
@@ -308,17 +307,11 @@ D3D12_BLEND_DESC toD3d12(const BlendDesc& desc) {
 }
 
 template<class T>
-void SetDebugName(T* resource, const char* name, ...) {
-	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 128;
-	char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
-	va_list va;
-	va_start(va, name);
-	vsprintf_s(nameBuffer, name, va);
-	va_end(va);
-
+void SetDebugName(T* resource, const char* name) {
+	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 64;
 	WCHAR wName[SET_NAME_LENGTH_COUNT_MAX] = {};
 	size_t wLength = 0;
-	mbstowcs_s(&wLength, wName, SET_NAME_LENGTH_COUNT_MAX, nameBuffer, _TRUNCATE);
+	mbstowcs_s(&wLength, wName, SET_NAME_LENGTH_COUNT_MAX, name, _TRUNCATE);
 	resource->SetName(wName);
 }
 
@@ -356,7 +349,7 @@ void HardwareFactory::terminate() {
 }
 
 void HardwareAdapter::initialize(const HardwareAdapterDesc& desc) {
-	IDXGIFactory4* factory = static_cast<HardwareFactoryD3D12*>(desc._factory)->_factory;
+	IDXGIFactory4* factory = desc._factory->_factory;
 	for (u32 adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters(adapterIndex, reinterpret_cast<IDXGIAdapter**>(&_adapter)); ++adapterIndex) {
 		DXGI_ADAPTER_DESC1 desc;
 		_adapter->GetDesc1(&desc);
@@ -389,7 +382,7 @@ QueryVideoMemoryInfo HardwareAdapter::queryVideoMemoryInfo() {
 }
 
 void Device::initialize(const DeviceDesc& desc) {
-	IDXGIAdapter1* adapter = static_cast<HardwareAdapterD3D12*>(desc._adapter)->_adapter;
+	IDXGIAdapter1* adapter = desc._adapter->_adapter;
 	LTN_SUCCEEDED(D3D12CreateDevice(
 		adapter,
 		D3D_FEATURE_LEVEL_12_0,
@@ -449,7 +442,7 @@ void Device::createCommittedResource(HeapType heapType, HeapFlags heapFlags, con
 
 	HRESULT hr = _device->CreateCommittedResource(&heapProperties, toD3d12(heapFlags), &resourceDesc, toD3d12(initialResourceState), toD3d12(optimizedClearValue), IID_PPV_ARGS(&resource));
 	LTN_SUCCEEDED(hr);
-	static_cast<ResourceD3D12*>(dstResource)->initialize(resource);
+	dstResource->initialize(resource);
 }
 
 void Device::createConstantBufferView(const ConstantBufferViewDesc& desc, CpuDescriptorHandle destDescriptor) {
@@ -492,7 +485,7 @@ u8 Device::getFormatPlaneCount(Format format) {
 
 void SwapChain::initialize(const SwapChainDesc& desc) {
 	IDXGIFactory4* factory = desc._factory->_factory;
-	ID3D12CommandQueue* commandQueue = static_cast<CommandQueueD3D12*>(desc._commandQueue)->_commandQueue;
+	ID3D12CommandQueue* commandQueue = desc._commandQueue->_commandQueue;
 
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.BufferCount = desc._bufferingCount;
@@ -586,7 +579,7 @@ void CommandQueue::getTimestampFrequency(u64* frequency) {
 	_commandQueue->GetTimestampFrequency(frequency);
 }
 
-bool CommandQueueD3D12::isFenceComplete(u64 fenceValue) {
+bool CommandQueue::isFenceComplete(u64 fenceValue) {
 	if (fenceValue > _lastFenceValue) {
 		_lastFenceValue = Max(_lastFenceValue, _fence->GetCompletedValue());
 	}
@@ -594,12 +587,12 @@ bool CommandQueueD3D12::isFenceComplete(u64 fenceValue) {
 	return fenceValue <= _lastFenceValue;
 }
 
-void CommandQueueD3D12::waitForIdle() {
+void CommandQueue::waitForIdle() {
 	u64 fenceValue = incrimentFence();
 	waitForFence(fenceValue);
 }
 
-void CommandQueueD3D12::waitForFence(u64 fenceValue) {
+void CommandQueue::waitForFence(u64 fenceValue) {
 	//引数のフェンス値が最新のフェンス値以下であればすでに終了している
 	if (isFenceComplete(fenceValue)) {
 		return;
@@ -611,12 +604,12 @@ void CommandQueueD3D12::waitForFence(u64 fenceValue) {
 	_lastFenceValue = fenceValue;
 }
 
-u64 CommandQueueD3D12::incrimentFence() {
+u64 CommandQueue::incrimentFence() {
 	_commandQueue->Signal(_fence, _nextFenceValue);
 	return _nextFenceValue++;
 }
 
-u64 CommandQueueD3D12::getCompletedValue() const {
+u64 CommandQueue::getCompletedValue() const {
 	return _fence->GetCompletedValue();
 }
 
@@ -631,6 +624,10 @@ void DescriptorHeap::initialize(const DescriptorHeapDesc& desc) {
 
 void DescriptorHeap::terminate() {
 	_descriptorHeap->Release();
+}
+
+void DescriptorHeap::setName(const char* name) {
+	SetDebugName(_descriptorHeap, name);
 }
 
 CpuDescriptorHandle DescriptorHeap::getCPUDescriptorHandleForHeapStart() const {
@@ -778,7 +775,7 @@ void CommandList::clearDepthStencilView(CpuDescriptorHandle depthStencilView, Cl
 }
 
 void CommandList::setPipelineState(PipelineState* pipelineState) {
-	ID3D12PipelineState* pipelineStateD3d12 = static_cast<PipelineStateD3D12*>(pipelineState)->_pipelineState;
+	ID3D12PipelineState* pipelineStateD3d12 = pipelineState->_pipelineState;
 	_commandList->SetPipelineState(pipelineStateD3d12);
 }
 
@@ -857,6 +854,10 @@ void CommandSignature::terminate() {
 	_commandSignature->Release();
 }
 
+void CommandSignature::setName(const char* name) {
+	SetDebugName(_commandSignature, name);
+}
+
 void Resource::terminate() {
 	_resource->Release();
 }
@@ -876,6 +877,10 @@ void* Resource::map(const MemoryRange* range) {
 	HRESULT hr = _resource->Map(0, memoryRange, &ptr);
 	LTN_SUCCEEDED(hr);
 	return ptr;
+}
+
+void Resource::setName(const char* name) {
+	SetDebugName(_resource, name);
 }
 
 u32 GetConstantBufferAligned(u32 sizeInByte) {
@@ -931,6 +936,10 @@ void PipelineState::iniaitlize(const ComputePipelineStateDesc& desc) {
 
 void PipelineState::terminate() {
 	_pipelineState->Release();
+}
+
+void PipelineState::setName(const char* name) {
+	SetDebugName(_pipelineState, name);
 }
 
 void RootSignature::iniaitlize(const RootSignatureDesc& desc) {
@@ -1026,6 +1035,10 @@ void RootSignature::terminate() {
 	_rootSignature->Release();
 }
 
+void RootSignature::setName(const char* name) {
+	SetDebugName(_rootSignature, name);
+}
+
 void ShaderBlob::initialize(const char* filePath) {
 	constexpr u32 SET_NAME_LENGTH_COUNT_MAX = 256;
 	WCHAR wName[SET_NAME_LENGTH_COUNT_MAX] = {};
@@ -1057,66 +1070,5 @@ void QueryHeap::initialize(const QueryHeapDesc& desc) {
 void QueryHeap::terminate() {
 	_queryHeap->Release();
 }
-
-//void setMarker(CommandList* commandList, const Color4& color, const char* name, va_list va) {
-//	char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
-//	vsprintf_s(nameBuffer, name, va);
-//
-//	u8 r = static_cast<u8>(color._r * 255);
-//	u8 g = static_cast<u8>(color._g * 255);
-//	u8 b = static_cast<u8>(color._b * 255);
-//	u64 pixColor = PIX_COLOR(r, g, b);
-//	PIXSetMarker(toD3d12(commandList), pixColor, nameBuffer);
-//}
-//
-//void pushMarker(CommandList* commandList, const Color4& color, const char* name, va_list va) {
-//	char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
-//	vsprintf_s(nameBuffer, name, va);
-//
-//	u8 r = static_cast<u8>(color._r * 255);
-//	u8 g = static_cast<u8>(color._g * 255);
-//	u8 b = static_cast<u8>(color._b * 255);
-//	u64 pixColor = PIX_COLOR(r, g, b);
-//	PIXBeginEvent(toD3d12(commandList), pixColor, nameBuffer);
-//}
-//
-//ScopedEvent::ScopedEvent(CommandList* commandList, const Color4& color, const char* name, ...) {
-//	va_list va;
-//	va_start(va, name);
-//	setEvent(commandList, color, name, va);
-//	va_end(va);
-//}
-//
-//ScopedEvent::~ScopedEvent() {
-//	popMarker(_commandList);
-//}
-//
-//void ScopedEvent::setEvent(CommandList* commandList, const Color4& color, const char* name, va_list va) {
-//	_commandList = commandList;
-//	pushMarker(commandList, color, name, va);
-//}
-//
-//void setMarker(CommandList* commandList, const Color4& color, const char* name, ...) {
-//	va_list va;
-//	va_start(va, name);
-//	setMarker(commandList, color, name, va);
-//	va_end(va);
-//}
-//void pushMarker(CommandList* commandList, const Color4& color, const char* name, ...) {
-//	char nameBuffer[SET_NAME_LENGTH_COUNT_MAX] = {};
-//	va_list va;
-//	va_start(va, name);
-//	vsprintf_s(nameBuffer, name, va);
-//	va_end(va);
-//
-//	u8 r = static_cast<u8>(color._r * 255);
-//	u8 g = static_cast<u8>(color._g * 255);
-//	u8 b = static_cast<u8>(color._b * 255);
-//	u64 pixColor = PIX_COLOR(r, g, b);
-//	PIXBeginEvent(toD3d12(commandList), pixColor, nameBuffer);
-//}
-//void popMarker(CommandList* commandList) {
-//	PIXEndEvent(toD3d12(commandList));
-//}
 }
 }

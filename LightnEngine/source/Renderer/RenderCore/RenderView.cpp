@@ -37,14 +37,37 @@ void RenderViewScene::terminate() {
 
 void RenderViewScene::update() {
 	ViewScene* viewScene = ViewScene::Get();
+	const View* views = viewScene->getView(0);
 	const u8* updateFlags = viewScene->getViewUpdateFlags();
 	for (u32 i = 0; i < ViewScene::VIEW_COUNT_MAX; ++i) {
 		if (updateFlags[i] == 0) {
 			continue;
 		}
 
+		const View& view = views[i];
+		f32 farClip = 300;
+		f32 nearClip = 0.1f;
+		f32 fov = 1.0472f;
+		f32 fovHalfTan = tanf(fov / 2.0f);
+		f32 aspectRate = 1.0f;
+		Vector3 cameraPosition(0, 0, 0);
+		Matrix4 cameraRotateMatrix;
+		Matrix4 cameraWorldMatrix = cameraRotateMatrix * Matrix4::translationFromVector(cameraPosition);
+		Matrix4 viewMatrix;
+		Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(fov, aspectRate, nearClip, farClip);
+		Matrix4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 		gpu::View* gpuView = VramUpdater::Get()->enqueueUpdate<gpu::View>(&_viewConstantBuffer);
-		gpuView->_viewMatrix;
+		gpuView->_matrixView = viewMatrix.transpose().getFloat4x4();
+		gpuView->_matrixProj = projectionMatrix.transpose().getFloat4x4();
+		gpuView->_matrixViewProj = viewProjectionMatrix.transpose().getFloat4x4();
+		gpuView->_cameraPosition = cameraPosition.getFloat3();
+		gpuView->_nearAndFarClip.x = nearClip;
+		gpuView->_nearAndFarClip.y = farClip;
+		gpuView->_halfFovTan.x = fovHalfTan * aspectRate;
+		gpuView->_halfFovTan.y = fovHalfTan;
+		gpuView->_viewPortSize[0] = view.getWidth();
+		gpuView->_viewPortSize[1] = view.getHeight();
+		gpuView->_upDirection = cameraRotateMatrix.getCol(1).getFloat3();
 	}
 }
 
