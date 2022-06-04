@@ -49,7 +49,7 @@ MeshInstance* MeshInstancePool::allocateMeshInstance(const MeshAllocationDesc& d
 	return meshInstance;
 }
 
-void MeshInstancePool::freeMeshInstance(MeshInstance* meshInstance) {
+void MeshInstancePool::freeMeshInstance(const MeshInstance* meshInstance) {
 	_meshAllocations.freeAllocation(meshInstance->_meshAllocationInfo);
 	_lodMeshAllocations.freeAllocation(meshInstance->_lodMeshAllocationInfo);
 	_subMeshAllocations.freeAllocation(meshInstance->_subMeshAllocationInfo);
@@ -64,17 +64,19 @@ void MeshInstanceScene::initialize() {
 }
 
 void MeshInstanceScene::terminate() {
+	lateUpdate();
 	_meshInstancePool.terminate();
 }
 
 void MeshInstanceScene::lateUpdate() {
 #define ENABLE_ZERO_CLEAR 1
 	u32 destroyMeshCount = _meshInstanceDestroyInfos.getUpdateCount();
-	MeshInstance** destroyMeshInstances = _meshInstanceDestroyInfos.getMeshes();
+	auto destroyMeshInstances = _meshInstanceDestroyInfos.getObjects();
 	for (u32 i = 0; i < destroyMeshCount; ++i) {
 		_meshInstancePool.freeMeshInstance(destroyMeshInstances[i]);
 #if ENABLE_ZERO_CLEAR
-		MeshInstance* meshInstance = destroyMeshInstances[i];
+		u32 meshInstanceIndex = _meshInstancePool.getMeshInstanceIndex(destroyMeshInstances[i]);
+		MeshInstance* meshInstance = _meshInstancePool.getMeshInstance(meshInstanceIndex);
 		const Mesh* mesh = meshInstance->_mesh;
 		memset(meshInstance->_lodMeshInstances, 0, sizeof(LodMeshInstance) * mesh->_lodMeshCount);
 		memset(meshInstance->_subMeshInstances, 0, sizeof(SubMeshInstance) * mesh->_subMeshCount);
@@ -92,10 +94,11 @@ MeshInstance* MeshInstanceScene::createMeshInstance(const MeshInstanceCreatation
 	MeshInstancePool::MeshAllocationDesc allocationDesc;
 	allocationDesc._mesh = desc._mesh;
 	MeshInstance* meshInstance = _meshInstancePool.allocateMeshInstance(allocationDesc);
+	meshInstance->_mesh = desc._mesh;
 	_meshInstanceCreateInfos.push(meshInstance);
 	return meshInstance;
 }
-void MeshInstanceScene::destroyMeshInstance(MeshInstance* meshInstance, u32 instanceCount) {
+void MeshInstanceScene::destroyMeshInstance(MeshInstance* meshInstance) {
 	_meshInstanceDestroyInfos.push(meshInstance);
 }
 MeshInstanceScene* MeshInstanceScene::Get() {

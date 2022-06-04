@@ -37,29 +37,29 @@ constexpr char LOG_COLOR_GREEN[] = "";
 constexpr char LOG_COLOR_END[] = "";
 
 namespace Octahedron {
-	uint16 EncodeUnorm(FbxVector2 vector) {
-		uint16 result = 0;
-		uint8* v1 = reinterpret_cast<uint8*>(&result);
-		v1[0] = static_cast<uint8>(UINT8_MAX * vector[0]);
-		v1[1] = static_cast<uint8>(UINT8_MAX * vector[1]);
-		return result;
-	}
+uint16 EncodeUnorm(FbxVector2 vector) {
+	uint16 result = 0;
+	uint8* v1 = reinterpret_cast<uint8*>(&result);
+	v1[0] = static_cast<uint8>(UINT8_MAX * vector[0]);
+	v1[1] = static_cast<uint8>(UINT8_MAX * vector[1]);
+	return result;
+}
 
-	FbxVector2 OctWrap(FbxVector2 v) {
-		FbxVector2 signedV(v[0] >= 0.0f ? 1.0 : -1.0, v[1] >= 0.0f ? 1.0 : -1.0);
-		return (FbxVector2(1.0f - abs(v[0]), 1.0f - abs(v[1]))) * signedV;
-		//return (1.0 - abs(v.yx)) * (v.xy >= 0.0 ? 1.0 : -1.0);
-	}
+FbxVector2 OctWrap(FbxVector2 v) {
+	FbxVector2 signedV(v[0] >= 0.0f ? 1.0 : -1.0, v[1] >= 0.0f ? 1.0 : -1.0);
+	return (FbxVector2(1.0f - abs(v[0]), 1.0f - abs(v[1]))) * signedV;
+	//return (1.0 - abs(v.yx)) * (v.xy >= 0.0 ? 1.0 : -1.0);
+}
 
-	FbxVector2 Encode(FbxVector4 n) {
-		n /= (abs(n[0]) + abs(n[1]) + abs(n[2]));
-		FbxVector2 xy(n[0], n[1]);
-		xy = n[3] >= 0.0 ? xy : OctWrap(xy);
-		xy = xy * 0.5 + 0.5;;
-		//n.xy = n.z >= 0.0 ? n.xy : OctWrap(n.xy);
-		//n.xy = n.xy * 0.5 + 0.5;
-		return xy;
-	}
+FbxVector2 Encode(FbxVector4 n) {
+	n /= (abs(n[0]) + abs(n[1]) + abs(n[2]));
+	FbxVector2 xy(n[0], n[1]);
+	xy = n[3] >= 0.0 ? xy : OctWrap(xy);
+	xy = xy * 0.5 + 0.5;;
+	//n.xy = n.z >= 0.0 ? n.xy : OctWrap(n.xy);
+	//n.xy = n.xy * 0.5 + 0.5;
+	return xy;
+}
 }
 
 uint32 packNormalAndTangentOctahedron(Float3 normal, Float3 tangent) {
@@ -73,848 +73,848 @@ uint32 packNormalAndTangentOctahedron(Float3 normal, Float3 tangent) {
 }
 
 namespace {
-	struct EdgeEntry {
-		uint32   i0;
-		uint32   i1;
-		uint32   i2;
+struct EdgeEntry {
+	uint32   i0;
+	uint32   i1;
+	uint32   i2;
 
-		uint32   Face;
-		EdgeEntry* Next;
+	uint32   Face;
+	EdgeEntry* Next;
+};
+
+union PackedTriangle {
+	struct {
+		uint32 i0 : 8;
+		uint32 i1 : 8;
+		uint32 i2 : 8;
+		uint32 _unused : 8;
+	} indices;
+	uint32 packed;
+};
+
+struct InlineMeshlet {
+	struct PackedTriangle {
+		uint32 i0 : 8;
+		uint32 i1 : 8;
+		uint32 i2 : 8;
+		uint32 spare : 8;
 	};
 
-	union PackedTriangle {
-		struct {
-			uint32 i0 : 8;
-			uint32 i1 : 8;
-			uint32 i2 : 8;
-			uint32 _unused : 8;
-		} indices;
-		uint32 packed;
-	};
+	std::vector<uint32>         UniqueVertexIndices;
+	std::vector<PackedTriangle> PrimitiveIndices;
+};
 
-	struct InlineMeshlet {
-		struct PackedTriangle {
-			uint32 i0 : 8;
-			uint32 i1 : 8;
-			uint32 i2 : 8;
-			uint32 spare : 8;
-		};
+enum Flags : uint32_t {
+	CNORM_DEFAULT = 0x0,
+	CNORM_WIND_CW = 0x4
+};
 
-		std::vector<uint32>         UniqueVertexIndices;
-		std::vector<PackedTriangle> PrimitiveIndices;
-	};
+struct Subset {
+	uint32_t Offset;
+	uint32_t Count;
+};
 
-	enum Flags : uint32_t {
-		CNORM_DEFAULT = 0x0,
-		CNORM_WIND_CW = 0x4
-	};
+struct Meshlet {
+	uint32_t VertCount;
+	uint32_t VertOffset;
+	uint32_t PrimCount;
+	uint32_t PrimOffset;
+};
 
-	struct Subset {
-		uint32_t Offset;
-		uint32_t Count;
-	};
+struct CullData {
+	DirectX::XMFLOAT3 BoundingBoxMin; // xyz = corner
+	DirectX::XMFLOAT3 BoundingBoxMax; // xyz = corner
+	uint8_t           NormalCone[4];  // xyz = axis, w = sin(a + 90)
+	float             ApexOffset;     // apex = center - axis * offset
+};
 
-	struct Meshlet {
-		uint32_t VertCount;
-		uint32_t VertOffset;
-		uint32_t PrimCount;
-		uint32_t PrimOffset;
-	};
+inline XMVECTOR QuantizeSNorm(XMVECTOR value) {
+	return (XMVectorClamp(value, g_XMNegativeOne, g_XMOne) * 0.5f + XMVectorReplicate(0.5f)) * 255.0f;
+}
 
-	struct CullData {
-		DirectX::XMFLOAT3 BoundingBoxMin; // xyz = corner
-		DirectX::XMFLOAT3 BoundingBoxMax; // xyz = corner
-		uint8_t           NormalCone[4];  // xyz = axis, w = sin(a + 90)
-		float             ApexOffset;     // apex = center - axis * offset
-	};
+inline XMVECTOR QuantizeUNorm(XMVECTOR value) {
+	return (XMVectorClamp(value, g_XMZero, g_XMOne)) * 255.0f;
+}
 
-	inline XMVECTOR QuantizeSNorm(XMVECTOR value) {
-		return (XMVectorClamp(value, g_XMNegativeOne, g_XMOne) * 0.5f + XMVectorReplicate(0.5f)) * 255.0f;
-	}
+// Determines whether a candidate triangle can be added to a specific meshlet; if it can, does so.
+bool AddToMeshlet(uint32_t maxVerts, uint32_t maxPrims, InlineMeshlet& meshlet, uint32(&tri)[3]) {
+	// Are we already full of vertices?
+	if (meshlet.UniqueVertexIndices.size() == maxVerts)
+		return false;
 
-	inline XMVECTOR QuantizeUNorm(XMVECTOR value) {
-		return (XMVectorClamp(value, g_XMZero, g_XMOne)) * 255.0f;
-	}
+	// Are we full, or can we store an additional primitive?
+	if (meshlet.PrimitiveIndices.size() == maxPrims)
+		return false;
 
-	// Determines whether a candidate triangle can be added to a specific meshlet; if it can, does so.
-	bool AddToMeshlet(uint32_t maxVerts, uint32_t maxPrims, InlineMeshlet& meshlet, uint32(&tri)[3]) {
-		// Are we already full of vertices?
-		if (meshlet.UniqueVertexIndices.size() == maxVerts)
-			return false;
+	static const uint32_t Undef = uint32_t(-1);
+	uint32_t indices[3] = { Undef, Undef, Undef };
+	uint32_t newCount = 3;
 
-		// Are we full, or can we store an additional primitive?
-		if (meshlet.PrimitiveIndices.size() == maxPrims)
-			return false;
-
-		static const uint32_t Undef = uint32_t(-1);
-		uint32_t indices[3] = { Undef, Undef, Undef };
-		uint32_t newCount = 3;
-
-		for (uint32_t i = 0; i < meshlet.UniqueVertexIndices.size(); ++i) {
-			for (uint32_t j = 0; j < 3; ++j) {
-				if (meshlet.UniqueVertexIndices[i] == tri[j]) {
-					indices[j] = i;
-					--newCount;
-				}
-			}
-		}
-
-		// Will this triangle fit?
-		if (meshlet.UniqueVertexIndices.size() + newCount > maxVerts)
-			return false;
-
-		// Add unique vertex indices to unique vertex index list
+	for (uint32_t i = 0; i < meshlet.UniqueVertexIndices.size(); ++i) {
 		for (uint32_t j = 0; j < 3; ++j) {
-			if (indices[j] == Undef) {
-				indices[j] = static_cast<uint32_t>(meshlet.UniqueVertexIndices.size());
-				meshlet.UniqueVertexIndices.push_back(tri[j]);
+			if (meshlet.UniqueVertexIndices[i] == tri[j]) {
+				indices[j] = i;
+				--newCount;
 			}
 		}
-
-		// Add the new primitive 
-		typename InlineMeshlet::PackedTriangle prim = {};
-		prim.i0 = indices[0];
-		prim.i1 = indices[1];
-		prim.i2 = indices[2];
-
-		meshlet.PrimitiveIndices.push_back(prim);
-
-		return true;
 	}
 
-	void MinMaxBoundingBox(XMFLOAT3* points, uint32_t count, XMVECTOR& outBoundsMin, XMVECTOR& outBoundsMax) {
-		assert(points != nullptr && count != 0);
+	// Will this triangle fit?
+	if (meshlet.UniqueVertexIndices.size() + newCount > maxVerts)
+		return false;
 
-		XMVECTOR boundsMin = XMVectorSet(FLT_MIN, FLT_MAX, FLT_MAX, 1);
-		XMVECTOR boundsMax = XMVectorSet(-FLT_MIN, -FLT_MAX, -FLT_MAX, 1);
-		for (uint32 i = 0; i < count; ++i) {
-			XMVECTOR point = XMLoadFloat3(&points[i]);
-			boundsMin = XMVectorMin(boundsMin, point);
-			boundsMax = XMVectorMax(boundsMax, point);
+	// Add unique vertex indices to unique vertex index list
+	for (uint32_t j = 0; j < 3; ++j) {
+		if (indices[j] == Undef) {
+			indices[j] = static_cast<uint32_t>(meshlet.UniqueVertexIndices.size());
+			meshlet.UniqueVertexIndices.push_back(tri[j]);
 		}
-
-		outBoundsMin = boundsMin;
-		outBoundsMax = boundsMax;
 	}
 
-	XMVECTOR MinimumBoundingSphere(XMFLOAT3* points, uint32_t count) {
-		assert(points != nullptr && count != 0);
+	// Add the new primitive 
+	typename InlineMeshlet::PackedTriangle prim = {};
+	prim.i0 = indices[0];
+	prim.i1 = indices[1];
+	prim.i2 = indices[2];
 
-		// Find the min & max points indices along each axis.
-		uint32_t minAxis[3] = { 0, 0, 0 };
-		uint32_t maxAxis[3] = { 0, 0, 0 };
+	meshlet.PrimitiveIndices.push_back(prim);
 
-		for (uint32_t i = 1; i < count; ++i) {
-			float* point = (float*)(points + i);
+	return true;
+}
 
-			for (uint32_t j = 0; j < 3; ++j) {
-				float* min = (float*)(&points[minAxis[j]]);
-				float* max = (float*)(&points[maxAxis[j]]);
+void MinMaxBoundingBox(XMFLOAT3* points, uint32_t count, XMVECTOR& outBoundsMin, XMVECTOR& outBoundsMax) {
+	assert(points != nullptr && count != 0);
 
-				minAxis[j] = point[j] < min[j] ? i : minAxis[j];
-				maxAxis[j] = point[j] > max[j] ? i : maxAxis[j];
+	XMVECTOR boundsMin = XMVectorSet(FLT_MIN, FLT_MAX, FLT_MAX, 1);
+	XMVECTOR boundsMax = XMVectorSet(-FLT_MIN, -FLT_MAX, -FLT_MAX, 1);
+	for (uint32 i = 0; i < count; ++i) {
+		XMVECTOR point = XMLoadFloat3(&points[i]);
+		boundsMin = XMVectorMin(boundsMin, point);
+		boundsMax = XMVectorMax(boundsMax, point);
+	}
+
+	outBoundsMin = boundsMin;
+	outBoundsMax = boundsMax;
+}
+
+XMVECTOR MinimumBoundingSphere(XMFLOAT3* points, uint32_t count) {
+	assert(points != nullptr && count != 0);
+
+	// Find the min & max points indices along each axis.
+	uint32_t minAxis[3] = { 0, 0, 0 };
+	uint32_t maxAxis[3] = { 0, 0, 0 };
+
+	for (uint32_t i = 1; i < count; ++i) {
+		float* point = (float*)(points + i);
+
+		for (uint32_t j = 0; j < 3; ++j) {
+			float* min = (float*)(&points[minAxis[j]]);
+			float* max = (float*)(&points[maxAxis[j]]);
+
+			minAxis[j] = point[j] < min[j] ? i : minAxis[j];
+			maxAxis[j] = point[j] > max[j] ? i : maxAxis[j];
+		}
+	}
+
+	// Find axis with maximum span.
+	XMVECTOR distSqMax = g_XMZero;
+	uint32_t axis = 0;
+
+	for (uint32_t i = 0; i < 3u; ++i) {
+		XMVECTOR min = XMLoadFloat3(&points[minAxis[i]]);
+		XMVECTOR max = XMLoadFloat3(&points[maxAxis[i]]);
+
+		XMVECTOR distSq = XMVector3LengthSq(max - min);
+		if (XMVector3Greater(distSq, distSqMax)) {
+			distSqMax = distSq;
+			axis = i;
+		}
+	}
+
+	// Calculate an initial starting center point & radius.
+	XMVECTOR p1 = XMLoadFloat3(&points[minAxis[axis]]);
+	XMVECTOR p2 = XMLoadFloat3(&points[maxAxis[axis]]);
+
+	XMVECTOR center = (p1 + p2) * 0.5f;
+	XMVECTOR radius = XMVector3Length(p2 - p1) * 0.5f;
+	XMVECTOR radiusSq = radius * radius;
+
+	// Add all our points to bounding sphere expanding radius & recalculating center point as necessary.
+	for (uint32_t i = 0; i < count; ++i) {
+		XMVECTOR point = XMLoadFloat3(points + i);
+		XMVECTOR distSq = XMVector3LengthSq(point - center);
+
+		if (XMVector3Greater(distSq, radiusSq)) {
+			XMVECTOR dist = XMVectorSqrt(distSq);
+			XMVECTOR k = (radius / dist) * 0.5f + XMVectorReplicate(0.5f);
+
+			center = center * k + point * (g_XMOne - k);
+			radius = (radius + dist) * 0.5f;
+		}
+	}
+
+	// Populate a single XMVECTOR with center & radius data.
+	XMVECTOR select0001 = XMVectorSelectControl(0, 0, 0, 1);
+	return XMVectorSelect(center, radius, select0001);
+}
+
+bool IsMeshletFull(uint32_t maxVerts, uint32_t maxPrims, const InlineMeshlet& meshlet) {
+	assert(meshlet.UniqueVertexIndices.size() <= maxVerts);
+	assert(meshlet.PrimitiveIndices.size() <= maxPrims);
+
+	return meshlet.UniqueVertexIndices.size() == maxVerts
+		|| meshlet.PrimitiveIndices.size() == maxPrims;
+}
+
+// Compute number of triangle vertices already exist in the meshlet
+uint32_t ComputeReuse(const InlineMeshlet& meshlet, uint32(&triIndices)[3]) {
+	uint32_t count = 0;
+
+	for (uint32_t i = 0; i < static_cast<uint32_t>(meshlet.UniqueVertexIndices.size()); ++i) {
+		for (uint32_t j = 0; j < 3u; ++j) {
+			if (meshlet.UniqueVertexIndices[i] == triIndices[j]) {
+				++count;
 			}
 		}
-
-		// Find axis with maximum span.
-		XMVECTOR distSqMax = g_XMZero;
-		uint32_t axis = 0;
-
-		for (uint32_t i = 0; i < 3u; ++i) {
-			XMVECTOR min = XMLoadFloat3(&points[minAxis[i]]);
-			XMVECTOR max = XMLoadFloat3(&points[maxAxis[i]]);
-
-			XMVECTOR distSq = XMVector3LengthSq(max - min);
-			if (XMVector3Greater(distSq, distSqMax)) {
-				distSqMax = distSq;
-				axis = i;
-			}
-		}
-
-		// Calculate an initial starting center point & radius.
-		XMVECTOR p1 = XMLoadFloat3(&points[minAxis[axis]]);
-		XMVECTOR p2 = XMLoadFloat3(&points[maxAxis[axis]]);
-
-		XMVECTOR center = (p1 + p2) * 0.5f;
-		XMVECTOR radius = XMVector3Length(p2 - p1) * 0.5f;
-		XMVECTOR radiusSq = radius * radius;
-
-		// Add all our points to bounding sphere expanding radius & recalculating center point as necessary.
-		for (uint32_t i = 0; i < count; ++i) {
-			XMVECTOR point = XMLoadFloat3(points + i);
-			XMVECTOR distSq = XMVector3LengthSq(point - center);
-
-			if (XMVector3Greater(distSq, radiusSq)) {
-				XMVECTOR dist = XMVectorSqrt(distSq);
-				XMVECTOR k = (radius / dist) * 0.5f + XMVectorReplicate(0.5f);
-
-				center = center * k + point * (g_XMOne - k);
-				radius = (radius + dist) * 0.5f;
-			}
-		}
-
-		// Populate a single XMVECTOR with center & radius data.
-		XMVECTOR select0001 = XMVectorSelectControl(0, 0, 0, 1);
-		return XMVectorSelect(center, radius, select0001);
 	}
 
-	bool IsMeshletFull(uint32_t maxVerts, uint32_t maxPrims, const InlineMeshlet& meshlet) {
-		assert(meshlet.UniqueVertexIndices.size() <= maxVerts);
-		assert(meshlet.PrimitiveIndices.size() <= maxPrims);
+	return count;
+}
 
-		return meshlet.UniqueVertexIndices.size() == maxVerts
-			|| meshlet.PrimitiveIndices.size() == maxPrims;
+// Sort in reverse order to use vector as a queue with pop_back.
+bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b) {
+	return a.second > b.second;
+}
+
+XMVECTOR ComputeNormal(XMFLOAT3* tri) {
+	XMVECTOR p0 = XMLoadFloat3(&tri[0]);
+	XMVECTOR p1 = XMLoadFloat3(&tri[1]);
+	XMVECTOR p2 = XMLoadFloat3(&tri[2]);
+
+	XMVECTOR v01 = p0 - p1;
+	XMVECTOR v02 = p0 - p2;
+
+	return XMVector3Normalize(XMVector3Cross(v01, v02));
+}
+
+// Computes a candidacy score based on spatial locality, orientational coherence, and vertex re-use within a meshlet.
+float ComputeScore(const InlineMeshlet& meshlet, XMVECTOR sphere, XMVECTOR normal, uint32(&triIndices)[3], XMFLOAT3* triVerts) {
+	const float reuseWeight = 0.334f;
+	const float locWeight = 0.333f;
+	const float oriWeight = 0.333f;
+
+	// Vertex reuse
+	uint32_t reuse = ComputeReuse(meshlet, triIndices);
+	XMVECTOR reuseScore = g_XMOne - (XMVectorReplicate(float(reuse)) / 3.0f);
+
+	// Distance from center point
+	XMVECTOR maxSq = g_XMZero;
+	for (uint32_t i = 0; i < 3u; ++i) {
+		XMVECTOR v = sphere - XMLoadFloat3(&triVerts[i]);
+		maxSq = XMVectorMax(maxSq, XMVector3Dot(v, v));
+	}
+	XMVECTOR r = XMVectorSplatW(sphere);
+	XMVECTOR r2 = r * r;
+	XMVECTOR locScore = XMVectorLog(maxSq / r2 + g_XMOne);
+
+	// Angle between normal and meshlet cone axis
+	XMVECTOR n = ComputeNormal(triVerts);
+	XMVECTOR d = XMVector3Dot(n, normal);
+	XMVECTOR oriScore = (-d + g_XMOne) / 2.0f;
+
+	XMVECTOR b = reuseWeight * reuseScore + locWeight * locScore + oriWeight * oriScore;
+
+	return XMVectorGetX(b);
+}
+
+size_t CRCHash(const uint32_t* dwords, uint32_t dwordCount) {
+	size_t h = 0;
+
+	for (uint32_t i = 0; i < dwordCount; ++i) {
+		uint32_t highOrd = h & 0xf8000000;
+		h = h << 5;
+		h = h ^ (highOrd >> 27);
+		h = h ^ size_t(dwords[i]);
 	}
 
-	// Compute number of triangle vertices already exist in the meshlet
-	uint32_t ComputeReuse(const InlineMeshlet& meshlet, uint32(&triIndices)[3]) {
-		uint32_t count = 0;
+	return h;
+}
 
-		for (uint32_t i = 0; i < static_cast<uint32_t>(meshlet.UniqueVertexIndices.size()); ++i) {
-			for (uint32_t j = 0; j < 3u; ++j) {
-				if (meshlet.UniqueVertexIndices[i] == triIndices[j]) {
-					++count;
-				}
-			}
-		}
-
-		return count;
-	}
-
-	// Sort in reverse order to use vector as a queue with pop_back.
-	bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b) {
-		return a.second > b.second;
-	}
-
-	XMVECTOR ComputeNormal(XMFLOAT3* tri) {
-		XMVECTOR p0 = XMLoadFloat3(&tri[0]);
-		XMVECTOR p1 = XMLoadFloat3(&tri[1]);
-		XMVECTOR p2 = XMLoadFloat3(&tri[2]);
-
-		XMVECTOR v01 = p0 - p1;
-		XMVECTOR v02 = p0 - p2;
-
-		return XMVector3Normalize(XMVector3Cross(v01, v02));
-	}
-
-	// Computes a candidacy score based on spatial locality, orientational coherence, and vertex re-use within a meshlet.
-	float ComputeScore(const InlineMeshlet& meshlet, XMVECTOR sphere, XMVECTOR normal, uint32(&triIndices)[3], XMFLOAT3* triVerts) {
-		const float reuseWeight = 0.334f;
-		const float locWeight = 0.333f;
-		const float oriWeight = 0.333f;
-
-		// Vertex reuse
-		uint32_t reuse = ComputeReuse(meshlet, triIndices);
-		XMVECTOR reuseScore = g_XMOne - (XMVectorReplicate(float(reuse)) / 3.0f);
-
-		// Distance from center point
-		XMVECTOR maxSq = g_XMZero;
-		for (uint32_t i = 0; i < 3u; ++i) {
-			XMVECTOR v = sphere - XMLoadFloat3(&triVerts[i]);
-			maxSq = XMVectorMax(maxSq, XMVector3Dot(v, v));
-		}
-		XMVECTOR r = XMVectorSplatW(sphere);
-		XMVECTOR r2 = r * r;
-		XMVECTOR locScore = XMVectorLog(maxSq / r2 + g_XMOne);
-
-		// Angle between normal and meshlet cone axis
-		XMVECTOR n = ComputeNormal(triVerts);
-		XMVECTOR d = XMVector3Dot(n, normal);
-		XMVECTOR oriScore = (-d + g_XMOne) / 2.0f;
-
-		XMVECTOR b = reuseWeight * reuseScore + locWeight * locScore + oriWeight * oriScore;
-
-		return XMVectorGetX(b);
-	}
-
-	size_t CRCHash(const uint32_t* dwords, uint32_t dwordCount) {
-		size_t h = 0;
-
-		for (uint32_t i = 0; i < dwordCount; ++i) {
-			uint32_t highOrd = h & 0xf8000000;
-			h = h << 5;
-			h = h ^ (highOrd >> 27);
-			h = h ^ size_t(dwords[i]);
-		}
-
-		return h;
-	}
-
-	template <typename T>
-	inline size_t Hash(const T& val) {
-		return std::hash<T>()(val);
-	}
+template <typename T>
+inline size_t Hash(const T& val) {
+	return std::hash<T>()(val);
+}
 }
 
 namespace std {
-	template <> struct hash<XMFLOAT3> { size_t operator()(const XMFLOAT3& v) const { return CRCHash(reinterpret_cast<const uint32_t*>(&v), sizeof(v) / 4); } };
+template <> struct hash<XMFLOAT3> { size_t operator()(const XMFLOAT3& v) const { return CRCHash(reinterpret_cast<const uint32_t*>(&v), sizeof(v) / 4); } };
 }
 
 namespace {
-	void BuildAdjacencyList(
-		const uint32* indices, uint32_t indexCount,
-		const XMFLOAT3* positions, uint32_t vertexCount,
-		uint32_t* adjacency
-	) {
-		const uint32_t triCount = indexCount / 3;
-		// Find point reps (unique positions) in the position stream
-		// Create a mapping of non-unique vertex indices to point reps
-		std::vector<uint32> pointRep;
-		pointRep.resize(vertexCount);
+void BuildAdjacencyList(
+	const uint32* indices, uint32_t indexCount,
+	const XMFLOAT3* positions, uint32_t vertexCount,
+	uint32_t* adjacency
+) {
+	const uint32_t triCount = indexCount / 3;
+	// Find point reps (unique positions) in the position stream
+	// Create a mapping of non-unique vertex indices to point reps
+	std::vector<uint32> pointRep;
+	pointRep.resize(vertexCount);
 
-		std::unordered_map<size_t, uint32> uniquePositionMap;
-		uniquePositionMap.reserve(vertexCount);
+	std::unordered_map<size_t, uint32> uniquePositionMap;
+	uniquePositionMap.reserve(vertexCount);
 
-		for (uint32_t i = 0; i < vertexCount; ++i) {
-			XMFLOAT3 position = *(positions + i);
-			size_t hash = Hash(position);
+	for (uint32_t i = 0; i < vertexCount; ++i) {
+		XMFLOAT3 position = *(positions + i);
+		size_t hash = Hash(position);
 
-			auto it = uniquePositionMap.find(hash);
-			if (it != uniquePositionMap.end()) {
-				// Position already encountered - reference previous index
-				pointRep[i] = it->second;
-			}
-			else {
-				// New position found - add to hash table and LUT
-				uniquePositionMap.insert(std::make_pair(hash, static_cast<uint32>(i)));
-				pointRep[i] = static_cast<uint32>(i);
-			}
+		auto it = uniquePositionMap.find(hash);
+		if (it != uniquePositionMap.end()) {
+			// Position already encountered - reference previous index
+			pointRep[i] = it->second;
 		}
-
-		// Create a linked list of edges for each vertex to determine adjacency
-		const uint32_t hashSize = vertexCount / 3;
-
-		std::unique_ptr<EdgeEntry* []> hashTable(new EdgeEntry * [hashSize]);
-		std::unique_ptr<EdgeEntry[]> entries(new EdgeEntry[triCount * 3]);
-
-		std::memset(hashTable.get(), 0, sizeof(EdgeEntry*) * hashSize);
-		uint32_t entryIndex = 0;
-
-		for (uint32_t iFace = 0; iFace < triCount; ++iFace) {
-			uint32_t index = iFace * 3;
-
-			// Create a hash entry in the hash table for each each.
-			for (uint32_t iEdge = 0; iEdge < 3; ++iEdge) {
-				uint32 i0 = pointRep[indices[index + (iEdge % 3)]];
-				uint32 i1 = pointRep[indices[index + ((iEdge + 1) % 3)]];
-				uint32 i2 = pointRep[indices[index + ((iEdge + 2) % 3)]];
-
-				auto& entry = entries[entryIndex++];
-				entry.i0 = i0;
-				entry.i1 = i1;
-				entry.i2 = i2;
-
-				uint32_t key = entry.i0 % hashSize;
-
-				entry.Next = hashTable[key];
-				entry.Face = iFace;
-
-				hashTable[key] = &entry;
-			}
+		else {
+			// New position found - add to hash table and LUT
+			uniquePositionMap.insert(std::make_pair(hash, static_cast<uint32>(i)));
+			pointRep[i] = static_cast<uint32>(i);
 		}
+	}
+
+	// Create a linked list of edges for each vertex to determine adjacency
+	const uint32_t hashSize = vertexCount / 3;
+
+	std::unique_ptr<EdgeEntry* []> hashTable(new EdgeEntry * [hashSize]);
+	std::unique_ptr<EdgeEntry[]> entries(new EdgeEntry[triCount * 3]);
+
+	std::memset(hashTable.get(), 0, sizeof(EdgeEntry*) * hashSize);
+	uint32_t entryIndex = 0;
+
+	for (uint32_t iFace = 0; iFace < triCount; ++iFace) {
+		uint32_t index = iFace * 3;
+
+		// Create a hash entry in the hash table for each each.
+		for (uint32_t iEdge = 0; iEdge < 3; ++iEdge) {
+			uint32 i0 = pointRep[indices[index + (iEdge % 3)]];
+			uint32 i1 = pointRep[indices[index + ((iEdge + 1) % 3)]];
+			uint32 i2 = pointRep[indices[index + ((iEdge + 2) % 3)]];
+
+			auto& entry = entries[entryIndex++];
+			entry.i0 = i0;
+			entry.i1 = i1;
+			entry.i2 = i2;
+
+			uint32_t key = entry.i0 % hashSize;
+
+			entry.Next = hashTable[key];
+			entry.Face = iFace;
+
+			hashTable[key] = &entry;
+		}
+	}
 
 
-		// Initialize the adjacency list
-		std::memset(adjacency, uint32_t(-1), indexCount * sizeof(uint32_t));
+	// Initialize the adjacency list
+	std::memset(adjacency, uint32_t(-1), indexCount * sizeof(uint32_t));
 
-		for (uint32_t iFace = 0; iFace < triCount; ++iFace) {
-			uint32_t index = iFace * 3;
+	for (uint32_t iFace = 0; iFace < triCount; ++iFace) {
+		uint32_t index = iFace * 3;
 
-			for (uint32_t point = 0; point < 3; ++point) {
-				if (adjacency[iFace * 3 + point] != uint32_t(-1))
-					continue;
+		for (uint32_t point = 0; point < 3; ++point) {
+			if (adjacency[iFace * 3 + point] != uint32_t(-1))
+				continue;
 
-				// Look for edges directed in the opposite direction.
-				uint32 i0 = pointRep[indices[index + ((point + 1) % 3)]];
-				uint32 i1 = pointRep[indices[index + (point % 3)]];
-				uint32 i2 = pointRep[indices[index + ((point + 2) % 3)]];
+			// Look for edges directed in the opposite direction.
+			uint32 i0 = pointRep[indices[index + ((point + 1) % 3)]];
+			uint32 i1 = pointRep[indices[index + (point % 3)]];
+			uint32 i2 = pointRep[indices[index + ((point + 2) % 3)]];
 
-				// Find a face sharing this edge
-				uint32_t key = i0 % hashSize;
+			// Find a face sharing this edge
+			uint32_t key = i0 % hashSize;
 
-				EdgeEntry* found = nullptr;
-				EdgeEntry* foundPrev = nullptr;
+			EdgeEntry* found = nullptr;
+			EdgeEntry* foundPrev = nullptr;
 
-				for (EdgeEntry* current = hashTable[key], *prev = nullptr; current != nullptr; prev = current, current = current->Next) {
-					if (current->i1 == i1 && current->i0 == i0) {
-						found = current;
-						foundPrev = prev;
-						break;
-					}
+			for (EdgeEntry* current = hashTable[key], *prev = nullptr; current != nullptr; prev = current, current = current->Next) {
+				if (current->i1 == i1 && current->i0 == i0) {
+					found = current;
+					foundPrev = prev;
+					break;
 				}
+			}
 
-				// Cache this face's normal
-				XMVECTOR n0;
-				{
-					XMVECTOR p0 = XMLoadFloat3(&positions[i1]);
-					XMVECTOR p1 = XMLoadFloat3(&positions[i0]);
-					XMVECTOR p2 = XMLoadFloat3(&positions[i2]);
+			// Cache this face's normal
+			XMVECTOR n0;
+			{
+				XMVECTOR p0 = XMLoadFloat3(&positions[i1]);
+				XMVECTOR p1 = XMLoadFloat3(&positions[i0]);
+				XMVECTOR p2 = XMLoadFloat3(&positions[i2]);
+
+				XMVECTOR e0 = p0 - p1;
+				XMVECTOR e1 = p1 - p2;
+
+				n0 = XMVector3Normalize(XMVector3Cross(e0, e1));
+			}
+
+			// Use face normal dot product to determine best edge-sharing candidate.
+			float bestDot = -2.0f;
+			for (EdgeEntry* current = found, *prev = foundPrev; current != nullptr; prev = current, current = current->Next) {
+				if (bestDot == -2.0f || (current->i1 == i1 && current->i0 == i0)) {
+					XMVECTOR p0 = XMLoadFloat3(&positions[current->i0]);
+					XMVECTOR p1 = XMLoadFloat3(&positions[current->i1]);
+					XMVECTOR p2 = XMLoadFloat3(&positions[current->i2]);
 
 					XMVECTOR e0 = p0 - p1;
 					XMVECTOR e1 = p1 - p2;
 
-					n0 = XMVector3Normalize(XMVector3Cross(e0, e1));
-				}
+					XMVECTOR n1 = XMVector3Normalize(XMVector3Cross(e0, e1));
 
-				// Use face normal dot product to determine best edge-sharing candidate.
-				float bestDot = -2.0f;
-				for (EdgeEntry* current = found, *prev = foundPrev; current != nullptr; prev = current, current = current->Next) {
-					if (bestDot == -2.0f || (current->i1 == i1 && current->i0 == i0)) {
-						XMVECTOR p0 = XMLoadFloat3(&positions[current->i0]);
-						XMVECTOR p1 = XMLoadFloat3(&positions[current->i1]);
-						XMVECTOR p2 = XMLoadFloat3(&positions[current->i2]);
+					float dot = XMVectorGetX(XMVector3Dot(n0, n1));
 
-						XMVECTOR e0 = p0 - p1;
-						XMVECTOR e1 = p1 - p2;
-
-						XMVECTOR n1 = XMVector3Normalize(XMVector3Cross(e0, e1));
-
-						float dot = XMVectorGetX(XMVector3Dot(n0, n1));
-
-						if (dot > bestDot) {
-							found = current;
-							foundPrev = prev;
-							bestDot = dot;
-						}
-					}
-				}
-
-				// Update hash table and adjacency list
-				if (found && found->Face != uint32_t(-1)) {
-					// Erase the found from the hash table linked list.
-					if (foundPrev != nullptr) {
-						foundPrev->Next = found->Next;
-					}
-					else {
-						hashTable[key] = found->Next;
-					}
-
-					// Update adjacency information
-					adjacency[iFace * 3 + point] = found->Face;
-
-					// Search & remove this face from the table linked list
-					uint32_t key2 = i1 % hashSize;
-
-					for (EdgeEntry* current = hashTable[key2], *prev = nullptr; current != nullptr; prev = current, current = current->Next) {
-						if (current->Face == iFace && current->i1 == i0 && current->i0 == i1) {
-							if (prev != nullptr) {
-								prev->Next = current->Next;
-							}
-							else {
-								hashTable[key2] = current->Next;
-							}
-
-							break;
-						}
-					}
-
-					bool linked = false;
-					for (uint32_t point2 = 0; point2 < point; ++point2) {
-						if (found->Face == adjacency[iFace * 3 + point2]) {
-							linked = true;
-							adjacency[iFace * 3 + point] = uint32_t(-1);
-							break;
-						}
-					}
-
-					if (!linked) {
-						uint32_t edge2 = 0;
-						for (; edge2 < 3; ++edge2) {
-							uint32 k = indices[found->Face * 3 + edge2];
-							if (k == uint32_t(-1))
-								continue;
-
-							if (pointRep[k] == i0)
-								break;
-						}
-
-						if (edge2 < 3) {
-							adjacency[found->Face * 3 + edge2] = iFace;
-						}
+					if (dot > bestDot) {
+						found = current;
+						foundPrev = prev;
+						bestDot = dot;
 					}
 				}
 			}
-		}
-	}
 
-	void Meshletize(
-		uint32_t maxVerts, uint32_t maxPrims,
-		const uint32* indices, uint32_t indexCount,
-		const XMFLOAT3* positions, uint32_t vertexCount,
-		std::vector<InlineMeshlet>& output
-	) {
-		const uint32_t triCount = indexCount / 3;
-
-		// Build a primitive adjacency list
-		std::vector<uint32_t> adjacency;
-		adjacency.resize(indexCount);
-
-		BuildAdjacencyList(indices, indexCount, positions, vertexCount, adjacency.data());
-
-		// Rest our outputs
-		output.clear();
-		output.emplace_back();
-		auto* curr = &output.back();
-
-		// Bitmask of all triangles in mesh to determine whether a specific one has been added.
-		std::vector<bool> checklist;
-		checklist.resize(triCount);
-
-		std::vector<XMFLOAT3> m_positions;
-		std::vector<XMFLOAT3> normals;
-		std::vector<std::pair<uint32_t, float>> candidates;
-		std::unordered_set<uint32_t> candidateCheck;
-
-		XMVECTOR psphere, normal;
-
-		// Arbitrarily start at triangle zero.
-		uint32_t triIndex = 0;
-		candidates.push_back(std::make_pair(triIndex, 0.0f));
-		candidateCheck.insert(triIndex);
-
-		// Continue adding triangles until 
-		while (!candidates.empty()) {
-			uint32_t index = candidates.back().first;
-			candidates.pop_back();
-
-			uint32 tri[3] =
-			{
-				indices[index * 3],
-				indices[index * 3 + 1],
-				indices[index * 3 + 2],
-			};
-
-			assert(tri[0] < vertexCount);
-			assert(tri[1] < vertexCount);
-			assert(tri[2] < vertexCount);
-
-			// Try to add triangle to meshlet
-			if (AddToMeshlet(maxVerts, maxPrims, *curr, tri)) {
-				// Success! Mark as added.
-				checklist[index] = true;
-
-				// Add m_positions & normal to list
-				XMFLOAT3 points[3] =
-				{
-					positions[tri[0]],
-					positions[tri[1]],
-					positions[tri[2]],
-				};
-
-				m_positions.push_back(points[0]);
-				m_positions.push_back(points[1]);
-				m_positions.push_back(points[2]);
-
-				XMFLOAT3 Normal;
-				XMStoreFloat3(&Normal, ComputeNormal(points));
-				normals.push_back(Normal);
-
-				// Compute new bounding sphere & normal axis
-				psphere = MinimumBoundingSphere(m_positions.data(), static_cast<uint32_t>(m_positions.size()));
-
-				XMVECTOR nsphere = MinimumBoundingSphere(normals.data(), static_cast<uint32_t>(normals.size()));
-				normal = XMVector3Normalize(nsphere);
-
-				// Find and add all applicable adjacent triangles to candidate list
-				const uint32_t adjIndex = index * 3;
-
-				uint32_t adj[3] =
-				{
-					adjacency[adjIndex],
-					adjacency[adjIndex + 1],
-					adjacency[adjIndex + 2],
-				};
-
-				for (uint32_t i = 0; i < 3u; ++i) {
-					// Invalid triangle in adjacency slot
-					if (adj[i] == -1)
-						continue;
-
-					// Already processed triangle
-					if (checklist[adj[i]])
-						continue;
-
-					// Triangle already in the candidate list
-					if (candidateCheck.count(adj[i]))
-						continue;
-
-					candidates.push_back(std::make_pair(adj[i], FLT_MAX));
-					candidateCheck.insert(adj[i]);
-				}
-
-				// Re-score remaining candidate triangles
-				for (uint32_t i = 0; i < static_cast<uint32_t>(candidates.size()); ++i) {
-					uint32_t candidate = candidates[i].first;
-
-					uint32 triIndices[3] =
-					{
-						indices[candidate * 3],
-						indices[candidate * 3 + 1],
-						indices[candidate * 3 + 2],
-					};
-
-					assert(triIndices[0] < vertexCount);
-					assert(triIndices[1] < vertexCount);
-					assert(triIndices[2] < vertexCount);
-
-					XMFLOAT3 triVerts[3] =
-					{
-						positions[triIndices[0]],
-						positions[triIndices[1]],
-						positions[triIndices[2]],
-					};
-
-					candidates[i].second = ComputeScore(*curr, psphere, normal, triIndices, triVerts);
-				}
-
-				// Determine whether we need to move to the next meshlet.
-				if (IsMeshletFull(maxVerts, maxPrims, *curr)) {
-					m_positions.clear();
-					normals.clear();
-					candidateCheck.clear();
-
-					// Use one of our existing candidates as the next meshlet seed.
-					if (!candidates.empty()) {
-						candidates[0] = candidates.back();
-						candidates.resize(1);
-						candidateCheck.insert(candidates[0].first);
-					}
-
-					output.emplace_back();
-					curr = &output.back();
+			// Update hash table and adjacency list
+			if (found && found->Face != uint32_t(-1)) {
+				// Erase the found from the hash table linked list.
+				if (foundPrev != nullptr) {
+					foundPrev->Next = found->Next;
 				}
 				else {
-					std::sort(candidates.begin(), candidates.end(), &CompareScores);
+					hashTable[key] = found->Next;
 				}
+
+				// Update adjacency information
+				adjacency[iFace * 3 + point] = found->Face;
+
+				// Search & remove this face from the table linked list
+				uint32_t key2 = i1 % hashSize;
+
+				for (EdgeEntry* current = hashTable[key2], *prev = nullptr; current != nullptr; prev = current, current = current->Next) {
+					if (current->Face == iFace && current->i1 == i0 && current->i0 == i1) {
+						if (prev != nullptr) {
+							prev->Next = current->Next;
+						}
+						else {
+							hashTable[key2] = current->Next;
+						}
+
+						break;
+					}
+				}
+
+				bool linked = false;
+				for (uint32_t point2 = 0; point2 < point; ++point2) {
+					if (found->Face == adjacency[iFace * 3 + point2]) {
+						linked = true;
+						adjacency[iFace * 3 + point] = uint32_t(-1);
+						break;
+					}
+				}
+
+				if (!linked) {
+					uint32_t edge2 = 0;
+					for (; edge2 < 3; ++edge2) {
+						uint32 k = indices[found->Face * 3 + edge2];
+						if (k == uint32_t(-1))
+							continue;
+
+						if (pointRep[k] == i0)
+							break;
+					}
+
+					if (edge2 < 3) {
+						adjacency[found->Face * 3 + edge2] = iFace;
+					}
+				}
+			}
+		}
+	}
+}
+
+void Meshletize(
+	uint32_t maxVerts, uint32_t maxPrims,
+	const uint32* indices, uint32_t indexCount,
+	const XMFLOAT3* positions, uint32_t vertexCount,
+	std::vector<InlineMeshlet>& output
+) {
+	const uint32_t triCount = indexCount / 3;
+
+	// Build a primitive adjacency list
+	std::vector<uint32_t> adjacency;
+	adjacency.resize(indexCount);
+
+	BuildAdjacencyList(indices, indexCount, positions, vertexCount, adjacency.data());
+
+	// Rest our outputs
+	output.clear();
+	output.emplace_back();
+	auto* curr = &output.back();
+
+	// Bitmask of all triangles in mesh to determine whether a specific one has been added.
+	std::vector<bool> checklist;
+	checklist.resize(triCount);
+
+	std::vector<XMFLOAT3> m_positions;
+	std::vector<XMFLOAT3> normals;
+	std::vector<std::pair<uint32_t, float>> candidates;
+	std::unordered_set<uint32_t> candidateCheck;
+
+	XMVECTOR psphere, normal;
+
+	// Arbitrarily start at triangle zero.
+	uint32_t triIndex = 0;
+	candidates.push_back(std::make_pair(triIndex, 0.0f));
+	candidateCheck.insert(triIndex);
+
+	// Continue adding triangles until 
+	while (!candidates.empty()) {
+		uint32_t index = candidates.back().first;
+		candidates.pop_back();
+
+		uint32 tri[3] =
+		{
+			indices[index * 3],
+			indices[index * 3 + 1],
+			indices[index * 3 + 2],
+		};
+
+		assert(tri[0] < vertexCount);
+		assert(tri[1] < vertexCount);
+		assert(tri[2] < vertexCount);
+
+		// Try to add triangle to meshlet
+		if (AddToMeshlet(maxVerts, maxPrims, *curr, tri)) {
+			// Success! Mark as added.
+			checklist[index] = true;
+
+			// Add m_positions & normal to list
+			XMFLOAT3 points[3] =
+			{
+				positions[tri[0]],
+				positions[tri[1]],
+				positions[tri[2]],
+			};
+
+			m_positions.push_back(points[0]);
+			m_positions.push_back(points[1]);
+			m_positions.push_back(points[2]);
+
+			XMFLOAT3 Normal;
+			XMStoreFloat3(&Normal, ComputeNormal(points));
+			normals.push_back(Normal);
+
+			// Compute new bounding sphere & normal axis
+			psphere = MinimumBoundingSphere(m_positions.data(), static_cast<uint32_t>(m_positions.size()));
+
+			XMVECTOR nsphere = MinimumBoundingSphere(normals.data(), static_cast<uint32_t>(normals.size()));
+			normal = XMVector3Normalize(nsphere);
+
+			// Find and add all applicable adjacent triangles to candidate list
+			const uint32_t adjIndex = index * 3;
+
+			uint32_t adj[3] =
+			{
+				adjacency[adjIndex],
+				adjacency[adjIndex + 1],
+				adjacency[adjIndex + 2],
+			};
+
+			for (uint32_t i = 0; i < 3u; ++i) {
+				// Invalid triangle in adjacency slot
+				if (adj[i] == -1)
+					continue;
+
+				// Already processed triangle
+				if (checklist[adj[i]])
+					continue;
+
+				// Triangle already in the candidate list
+				if (candidateCheck.count(adj[i]))
+					continue;
+
+				candidates.push_back(std::make_pair(adj[i], FLT_MAX));
+				candidateCheck.insert(adj[i]);
+			}
+
+			// Re-score remaining candidate triangles
+			for (uint32_t i = 0; i < static_cast<uint32_t>(candidates.size()); ++i) {
+				uint32_t candidate = candidates[i].first;
+
+				uint32 triIndices[3] =
+				{
+					indices[candidate * 3],
+					indices[candidate * 3 + 1],
+					indices[candidate * 3 + 2],
+				};
+
+				assert(triIndices[0] < vertexCount);
+				assert(triIndices[1] < vertexCount);
+				assert(triIndices[2] < vertexCount);
+
+				XMFLOAT3 triVerts[3] =
+				{
+					positions[triIndices[0]],
+					positions[triIndices[1]],
+					positions[triIndices[2]],
+				};
+
+				candidates[i].second = ComputeScore(*curr, psphere, normal, triIndices, triVerts);
+			}
+
+			// Determine whether we need to move to the next meshlet.
+			if (IsMeshletFull(maxVerts, maxPrims, *curr)) {
+				m_positions.clear();
+				normals.clear();
+				candidateCheck.clear();
+
+				// Use one of our existing candidates as the next meshlet seed.
+				if (!candidates.empty()) {
+					candidates[0] = candidates.back();
+					candidates.resize(1);
+					candidateCheck.insert(candidates[0].first);
+				}
+
+				output.emplace_back();
+				curr = &output.back();
 			}
 			else {
-				if (candidates.empty()) {
-					m_positions.clear();
-					normals.clear();
-					candidateCheck.clear();
-
-					output.emplace_back();
-					curr = &output.back();
-				}
+				std::sort(candidates.begin(), candidates.end(), &CompareScores);
 			}
-
-			// Ran out of candidates; add a new seed candidate to start the next meshlet.
+		}
+		else {
 			if (candidates.empty()) {
-				while (triIndex < triCount && checklist[triIndex])
-					++triIndex;
+				m_positions.clear();
+				normals.clear();
+				candidateCheck.clear();
 
-				if (triIndex == triCount)
-					break;
-
-				candidates.push_back(std::make_pair(triIndex, 0.0f));
-				candidateCheck.insert(triIndex);
+				output.emplace_back();
+				curr = &output.back();
 			}
 		}
 
-		// The last meshlet may have never had any primitives added to it - in which case we want to remove it.
-		if (output.back().PrimitiveIndices.empty()) {
-			output.pop_back();
+		// Ran out of candidates; add a new seed candidate to start the next meshlet.
+		if (candidates.empty()) {
+			while (triIndex < triCount && checklist[triIndex])
+				++triIndex;
+
+			if (triIndex == triCount)
+				break;
+
+			candidates.push_back(std::make_pair(triIndex, 0.0f));
+			candidateCheck.insert(triIndex);
 		}
 	}
 
-	HRESULT ComputeMeshlets(
-		uint32_t maxVerts, uint32_t maxPrims,
-		const uint32* indices, uint32_t indexCount,
-		const Subset* indexSubsets, uint32_t subsetCount,
-		const DirectX::XMFLOAT3* positions, uint32_t vertexCount,
-		std::vector<Subset>& meshletSubsets,
-		std::vector<Meshlet>& meshlets,
-		std::vector<uint32>& uniqueVertexIndices,
-		std::vector<PackedTriangle>& primitiveIndices) {
-		UNREFERENCED_PARAMETER(indexCount);
+	// The last meshlet may have never had any primitives added to it - in which case we want to remove it.
+	if (output.back().PrimitiveIndices.empty()) {
+		output.pop_back();
+	}
+}
 
-		for (uint32_t i = 0; i < subsetCount; ++i) {
-			Subset s = indexSubsets[i];
+HRESULT ComputeMeshlets(
+	uint32_t maxVerts, uint32_t maxPrims,
+	const uint32* indices, uint32_t indexCount,
+	const Subset* indexSubsets, uint32_t subsetCount,
+	const DirectX::XMFLOAT3* positions, uint32_t vertexCount,
+	std::vector<Subset>& meshletSubsets,
+	std::vector<Meshlet>& meshlets,
+	std::vector<uint32>& uniqueVertexIndices,
+	std::vector<PackedTriangle>& primitiveIndices) {
+	UNREFERENCED_PARAMETER(indexCount);
 
-			assert(s.Offset + s.Count <= indexCount);
+	for (uint32_t i = 0; i < subsetCount; ++i) {
+		Subset s = indexSubsets[i];
 
-			std::vector<InlineMeshlet> builtMeshlets;
-			Meshletize(maxVerts, maxPrims, indices + s.Offset, s.Count, positions, vertexCount, builtMeshlets);
+		assert(s.Offset + s.Count <= indexCount);
 
-			Subset meshletSubset;
-			meshletSubset.Offset = static_cast<uint32_t>(meshlets.size());
-			meshletSubset.Count = static_cast<uint32_t>(builtMeshlets.size());
-			meshletSubsets.push_back(meshletSubset);
+		std::vector<InlineMeshlet> builtMeshlets;
+		Meshletize(maxVerts, maxPrims, indices + s.Offset, s.Count, positions, vertexCount, builtMeshlets);
 
-			// Determine final unique vertex index and primitive index counts & offsets.
-			uint32_t startVertCount = static_cast<uint32_t>(uniqueVertexIndices.size());
-			uint32_t startPrimCount = static_cast<uint32_t>(primitiveIndices.size());
+		Subset meshletSubset;
+		meshletSubset.Offset = static_cast<uint32_t>(meshlets.size());
+		meshletSubset.Count = static_cast<uint32_t>(builtMeshlets.size());
+		meshletSubsets.push_back(meshletSubset);
 
-			uint32_t uniqueVertexIndexCount = startVertCount;
-			uint32_t primitiveIndexCount = startPrimCount;
+		// Determine final unique vertex index and primitive index counts & offsets.
+		uint32_t startVertCount = static_cast<uint32_t>(uniqueVertexIndices.size());
+		uint32_t startPrimCount = static_cast<uint32_t>(primitiveIndices.size());
 
-			// Resize the meshlet output array to hold the newly formed meshlets.
-			uint32_t meshletCount = static_cast<uint32_t>(meshlets.size());
-			meshlets.resize(meshletCount + builtMeshlets.size());
+		uint32_t uniqueVertexIndexCount = startVertCount;
+		uint32_t primitiveIndexCount = startPrimCount;
 
-			for (uint32_t j = 0, dest = meshletCount; j < static_cast<uint32_t>(builtMeshlets.size()); ++j, ++dest) {
-				meshlets[dest].VertOffset = uniqueVertexIndexCount;
-				meshlets[dest].VertCount = static_cast<uint32_t>(builtMeshlets[j].UniqueVertexIndices.size());
-				uniqueVertexIndexCount += static_cast<uint32_t>(builtMeshlets[j].UniqueVertexIndices.size());
+		// Resize the meshlet output array to hold the newly formed meshlets.
+		uint32_t meshletCount = static_cast<uint32_t>(meshlets.size());
+		meshlets.resize(meshletCount + builtMeshlets.size());
 
-				meshlets[dest].PrimOffset = primitiveIndexCount;
-				meshlets[dest].PrimCount = static_cast<uint32_t>(builtMeshlets[j].PrimitiveIndices.size());
-				primitiveIndexCount += static_cast<uint32_t>(builtMeshlets[j].PrimitiveIndices.size());
-			}
+		for (uint32_t j = 0, dest = meshletCount; j < static_cast<uint32_t>(builtMeshlets.size()); ++j, ++dest) {
+			meshlets[dest].VertOffset = uniqueVertexIndexCount;
+			meshlets[dest].VertCount = static_cast<uint32_t>(builtMeshlets[j].UniqueVertexIndices.size());
+			uniqueVertexIndexCount += static_cast<uint32_t>(builtMeshlets[j].UniqueVertexIndices.size());
 
-			// Allocate space for the new data.
-			uniqueVertexIndices.resize(uniqueVertexIndexCount);
-			primitiveIndices.resize(primitiveIndexCount);
-
-			// Copy data from the freshly built meshlets into the output buffers.
-			auto vertDest = reinterpret_cast<uint32*>(uniqueVertexIndices.data()) + startVertCount;
-			auto primDest = reinterpret_cast<uint32*>(primitiveIndices.data()) + startPrimCount;
-
-			for (uint32_t j = 0; j < static_cast<uint32>(builtMeshlets.size()); ++j) {
-				std::memcpy(vertDest, builtMeshlets[j].UniqueVertexIndices.data(), builtMeshlets[j].UniqueVertexIndices.size() * sizeof(uint32));
-				std::memcpy(primDest, builtMeshlets[j].PrimitiveIndices.data(), builtMeshlets[j].PrimitiveIndices.size() * sizeof(uint32_t));
-
-				vertDest += builtMeshlets[j].UniqueVertexIndices.size();
-				primDest += builtMeshlets[j].PrimitiveIndices.size();
-			}
+			meshlets[dest].PrimOffset = primitiveIndexCount;
+			meshlets[dest].PrimCount = static_cast<uint32_t>(builtMeshlets[j].PrimitiveIndices.size());
+			primitiveIndexCount += static_cast<uint32_t>(builtMeshlets[j].PrimitiveIndices.size());
 		}
 
-		return S_OK;
+		// Allocate space for the new data.
+		uniqueVertexIndices.resize(uniqueVertexIndexCount);
+		primitiveIndices.resize(primitiveIndexCount);
+
+		// Copy data from the freshly built meshlets into the output buffers.
+		auto vertDest = reinterpret_cast<uint32*>(uniqueVertexIndices.data()) + startVertCount;
+		auto primDest = reinterpret_cast<uint32*>(primitiveIndices.data()) + startPrimCount;
+
+		for (uint32_t j = 0; j < static_cast<uint32>(builtMeshlets.size()); ++j) {
+			std::memcpy(vertDest, builtMeshlets[j].UniqueVertexIndices.data(), builtMeshlets[j].UniqueVertexIndices.size() * sizeof(uint32));
+			std::memcpy(primDest, builtMeshlets[j].PrimitiveIndices.data(), builtMeshlets[j].PrimitiveIndices.size() * sizeof(uint32_t));
+
+			vertDest += builtMeshlets[j].UniqueVertexIndices.size();
+			primDest += builtMeshlets[j].PrimitiveIndices.size();
+		}
 	}
 
+	return S_OK;
+}
 
-	//
-	// Strongly influenced by https://github.com/zeux/meshoptimizer - Thanks amigo!
-	//
-	HRESULT ComputeCullData(
-		const XMFLOAT3* positions, uint32_t vertexCount,
-		const Meshlet* meshlets, uint32_t meshletCount,
-		const uint32* uniqueVertexIndices,
-		const PackedTriangle* primitiveIndices,
-		DWORD flags,
-		CullData* cullData
-	) {
-		UNREFERENCED_PARAMETER(vertexCount);
 
-		XMFLOAT3 vertices[256];
-		XMFLOAT3 normals[256];
+//
+// Strongly influenced by https://github.com/zeux/meshoptimizer - Thanks amigo!
+//
+HRESULT ComputeCullData(
+	const XMFLOAT3* positions, uint32_t vertexCount,
+	const Meshlet* meshlets, uint32_t meshletCount,
+	const uint32* uniqueVertexIndices,
+	const PackedTriangle* primitiveIndices,
+	DWORD flags,
+	CullData* cullData
+) {
+	UNREFERENCED_PARAMETER(vertexCount);
 
-		for (uint32_t mi = 0; mi < meshletCount; ++mi) {
-			auto& m = meshlets[mi];
-			auto& c = cullData[mi];
+	XMFLOAT3 vertices[256];
+	XMFLOAT3 normals[256];
 
-			// Cache vertices
-			for (uint32_t i = 0; i < m.VertCount; ++i) {
-				uint32_t vIndex = uniqueVertexIndices[m.VertOffset + i];
+	for (uint32_t mi = 0; mi < meshletCount; ++mi) {
+		auto& m = meshlets[mi];
+		auto& c = cullData[mi];
 
-				assert(vIndex < vertexCount);
-				vertices[i] = positions[vIndex];
-			}
+		// Cache vertices
+		for (uint32_t i = 0; i < m.VertCount; ++i) {
+			uint32_t vIndex = uniqueVertexIndices[m.VertOffset + i];
 
-			// Generate primitive normals & cache
-			for (uint32_t i = 0; i < m.PrimCount; ++i) {
-				auto primitive = primitiveIndices[m.PrimOffset + i];
-
-				XMVECTOR triangle[3]
-				{
-					XMLoadFloat3(&vertices[primitive.indices.i0]),
-					XMLoadFloat3(&vertices[primitive.indices.i1]),
-					XMLoadFloat3(&vertices[primitive.indices.i2]),
-				};
-
-				XMVECTOR p10 = triangle[1] - triangle[0];
-				XMVECTOR p20 = triangle[2] - triangle[0];
-				XMVECTOR n = XMVector3Normalize(XMVector3Cross(p10, p20));
-
-				XMStoreFloat3(&normals[i], (flags & CNORM_WIND_CW) != 0 ? -n : n);
-			}
-
-			// Calculate spatial bounds
-			XMVECTOR positionBounds = MinimumBoundingSphere(vertices, m.VertCount);
-			XMVECTOR boundsMin;
-			XMVECTOR boundsMax;
-			MinMaxBoundingBox(vertices, m.VertCount, boundsMin, boundsMax);
-			XMStoreFloat3(&c.BoundingBoxMin, boundsMin);
-			XMStoreFloat3(&c.BoundingBoxMax, boundsMax);
-
-			// Calculate the normal cone
-			// 1. Normalized center point of minimum bounding sphere of unit normals == conic axis
-			XMVECTOR normalBounds = MinimumBoundingSphere(normals, m.PrimCount);
-
-			// 2. Calculate dot product of all normals to conic axis, selecting minimum
-			XMVECTOR axis = XMVectorSetW(XMVector3Normalize(normalBounds), 0);
-
-			XMVECTOR minDot = g_XMOne;
-			for (uint32_t i = 0; i < m.PrimCount; ++i) {
-				XMVECTOR dot = XMVector3Dot(axis, XMLoadFloat3(&normals[i]));
-				minDot = XMVectorMin(minDot, dot);
-			}
-
-			if (XMVector4Less(minDot, XMVectorReplicate(0.1f))) {
-				// Degenerate cone
-				c.NormalCone[0] = 127;
-				c.NormalCone[1] = 127;
-				c.NormalCone[2] = 127;
-				c.NormalCone[3] = 255;
-				continue;
-			}
-
-			// Find the point on center-t*axis ray that lies in negative half-space of all triangles
-			float maxt = 0;
-
-			for (uint32_t i = 0; i < m.PrimCount; ++i) {
-				auto primitive = primitiveIndices[m.PrimOffset + i];
-
-				uint32_t indices[3]
-				{
-					primitive.indices.i0,
-					primitive.indices.i1,
-					primitive.indices.i2,
-				};
-
-				XMVECTOR triangle[3]
-				{
-					XMLoadFloat3(&vertices[indices[0]]),
-					XMLoadFloat3(&vertices[indices[1]]),
-					XMLoadFloat3(&vertices[indices[2]]),
-				};
-
-				XMVECTOR c = positionBounds - triangle[0];
-
-				XMVECTOR n = XMLoadFloat3(&normals[i]);
-				float dc = XMVectorGetX(XMVector3Dot(c, n));
-				float dn = XMVectorGetX(XMVector3Dot(axis, n));
-
-				// dn should be larger than mindp cutoff above
-				assert(dn > 0.0f);
-				float t = dc / dn;
-
-				maxt = (t > maxt) ? t : maxt;
-			}
-
-			// cone apex should be in the negative half-space of all cluster triangles by construction
-			c.ApexOffset = maxt;
-
-			// cos(a) for normal cone is minDot; we need to add 90 degrees on both sides and invert the cone
-			// which gives us -cos(a+90) = -(-sin(a)) = sin(a) = sqrt(1 - cos^2(a))
-			XMVECTOR coneCutoff = XMVectorSqrt(g_XMOne - minDot * minDot);
-
-			// 3. Quantize to uint8
-			XMVECTOR quantized = QuantizeSNorm(axis);
-			c.NormalCone[0] = (uint8_t)XMVectorGetX(quantized);
-			c.NormalCone[1] = (uint8_t)XMVectorGetY(quantized);
-			c.NormalCone[2] = (uint8_t)XMVectorGetZ(quantized);
-
-			XMVECTOR error = ((quantized / 255.0f) * 2.0f - g_XMOne) - axis;
-			error = XMVectorSum(XMVectorAbs(error));
-
-			quantized = QuantizeUNorm(coneCutoff + error);
-			quantized = XMVectorMin(quantized + g_XMOne, XMVectorReplicate(255.0f));
-			c.NormalCone[3] = (uint8_t)XMVectorGetX(quantized);
+			assert(vIndex < vertexCount);
+			vertices[i] = positions[vIndex];
 		}
 
-		return S_OK;
+		// Generate primitive normals & cache
+		for (uint32_t i = 0; i < m.PrimCount; ++i) {
+			auto primitive = primitiveIndices[m.PrimOffset + i];
+
+			XMVECTOR triangle[3]
+			{
+				XMLoadFloat3(&vertices[primitive.indices.i0]),
+				XMLoadFloat3(&vertices[primitive.indices.i1]),
+				XMLoadFloat3(&vertices[primitive.indices.i2]),
+			};
+
+			XMVECTOR p10 = triangle[1] - triangle[0];
+			XMVECTOR p20 = triangle[2] - triangle[0];
+			XMVECTOR n = XMVector3Normalize(XMVector3Cross(p10, p20));
+
+			XMStoreFloat3(&normals[i], (flags & CNORM_WIND_CW) != 0 ? -n : n);
+		}
+
+		// Calculate spatial bounds
+		XMVECTOR positionBounds = MinimumBoundingSphere(vertices, m.VertCount);
+		XMVECTOR boundsMin;
+		XMVECTOR boundsMax;
+		MinMaxBoundingBox(vertices, m.VertCount, boundsMin, boundsMax);
+		XMStoreFloat3(&c.BoundingBoxMin, boundsMin);
+		XMStoreFloat3(&c.BoundingBoxMax, boundsMax);
+
+		// Calculate the normal cone
+		// 1. Normalized center point of minimum bounding sphere of unit normals == conic axis
+		XMVECTOR normalBounds = MinimumBoundingSphere(normals, m.PrimCount);
+
+		// 2. Calculate dot product of all normals to conic axis, selecting minimum
+		XMVECTOR axis = XMVectorSetW(XMVector3Normalize(normalBounds), 0);
+
+		XMVECTOR minDot = g_XMOne;
+		for (uint32_t i = 0; i < m.PrimCount; ++i) {
+			XMVECTOR dot = XMVector3Dot(axis, XMLoadFloat3(&normals[i]));
+			minDot = XMVectorMin(minDot, dot);
+		}
+
+		if (XMVector4Less(minDot, XMVectorReplicate(0.1f))) {
+			// Degenerate cone
+			c.NormalCone[0] = 127;
+			c.NormalCone[1] = 127;
+			c.NormalCone[2] = 127;
+			c.NormalCone[3] = 255;
+			continue;
+		}
+
+		// Find the point on center-t*axis ray that lies in negative half-space of all triangles
+		float maxt = 0;
+
+		for (uint32_t i = 0; i < m.PrimCount; ++i) {
+			auto primitive = primitiveIndices[m.PrimOffset + i];
+
+			uint32_t indices[3]
+			{
+				primitive.indices.i0,
+				primitive.indices.i1,
+				primitive.indices.i2,
+			};
+
+			XMVECTOR triangle[3]
+			{
+				XMLoadFloat3(&vertices[indices[0]]),
+				XMLoadFloat3(&vertices[indices[1]]),
+				XMLoadFloat3(&vertices[indices[2]]),
+			};
+
+			XMVECTOR c = positionBounds - triangle[0];
+
+			XMVECTOR n = XMLoadFloat3(&normals[i]);
+			float dc = XMVectorGetX(XMVector3Dot(c, n));
+			float dn = XMVectorGetX(XMVector3Dot(axis, n));
+
+			// dn should be larger than mindp cutoff above
+			assert(dn > 0.0f);
+			float t = dc / dn;
+
+			maxt = (t > maxt) ? t : maxt;
+		}
+
+		// cone apex should be in the negative half-space of all cluster triangles by construction
+		c.ApexOffset = maxt;
+
+		// cos(a) for normal cone is minDot; we need to add 90 degrees on both sides and invert the cone
+		// which gives us -cos(a+90) = -(-sin(a)) = sin(a) = sqrt(1 - cos^2(a))
+		XMVECTOR coneCutoff = XMVectorSqrt(g_XMOne - minDot * minDot);
+
+		// 3. Quantize to uint8
+		XMVECTOR quantized = QuantizeSNorm(axis);
+		c.NormalCone[0] = (uint8_t)XMVectorGetX(quantized);
+		c.NormalCone[1] = (uint8_t)XMVectorGetY(quantized);
+		c.NormalCone[2] = (uint8_t)XMVectorGetZ(quantized);
+
+		XMVECTOR error = ((quantized / 255.0f) * 2.0f - g_XMOne) - axis;
+		error = XMVectorSum(XMVectorAbs(error));
+
+		quantized = QuantizeUNorm(coneCutoff + error);
+		quantized = XMVectorMin(quantized + g_XMOne, XMVectorReplicate(255.0f));
+		c.NormalCone[3] = (uint8_t)XMVectorGetX(quantized);
 	}
+
+	return S_OK;
+}
 }
 
 
@@ -1018,24 +1018,24 @@ struct PolygonInfo {
 #define HashCombine(hash,seed) hash + 0x9e3779b9 + (seed << 6) + (seed >> 2)
 
 namespace std {
-	template<>
-	class hash<RawVertex> {
-	public:
+template<>
+class hash<RawVertex> {
+public:
 
-		size_t operator () (const RawVertex& p) const {
-			size_t seed = 0;
+	size_t operator () (const RawVertex& p) const {
+		size_t seed = 0;
 
-			seed ^= HashCombine(hash<float>()(p.position.x), seed);
-			seed ^= HashCombine(hash<float>()(p.position.y), seed);
-			seed ^= HashCombine(hash<float>()(p.position.z), seed);
-			seed ^= HashCombine(hash<float>()(p.normal.x), seed);
-			seed ^= HashCombine(hash<float>()(p.normal.y), seed);
-			seed ^= HashCombine(hash<float>()(p.normal.z), seed);
-			seed ^= HashCombine(hash<float>()(p.texcoord.x), seed);
-			seed ^= HashCombine(hash<float>()(p.texcoord.y), seed);
-			return seed;
-		}
-	};
+		seed ^= HashCombine(hash<float>()(p.position.x), seed);
+		seed ^= HashCombine(hash<float>()(p.position.y), seed);
+		seed ^= HashCombine(hash<float>()(p.position.z), seed);
+		seed ^= HashCombine(hash<float>()(p.normal.x), seed);
+		seed ^= HashCombine(hash<float>()(p.normal.y), seed);
+		seed ^= HashCombine(hash<float>()(p.normal.z), seed);
+		seed ^= HashCombine(hash<float>()(p.texcoord.x), seed);
+		seed ^= HashCombine(hash<float>()(p.texcoord.y), seed);
+		return seed;
+	}
+};
 }
 
 uint32 packTexCoords(Float2 coords) {
@@ -1081,8 +1081,7 @@ void probeNode(FbxNode* node, std::vector<FbxMesh*>& meshes) {
 	}
 }
 
-FbxAMatrix GetGeometryTransformation(FbxNode* Node)
-{
+FbxAMatrix GetGeometryTransformation(FbxNode* Node) {
 	if (!Node)
 	{
 		throw std::exception("Null for mesh geometry");
@@ -1543,14 +1542,24 @@ void exportMesh(const char* fileName) {
 	uint32 materialNameHashesSize = sizeof(ullong64) * materialCount;
 	uint32 classicIndexSize = sizeof(uint32) * classicIndexCount;
 
-	std::string filePath(fileName);
-	constexpr char WORK_FOLDER_PATH[] = "L:\\LightnEngine\\work";
-	constexpr char RESOURCE_FOLDER_PATH[] = "L:\\LightnEngine\\resource";
-	constexpr uint32 WORK_FILDER_PATH_LENGTH = _countof(WORK_FOLDER_PATH);
+	constexpr char ENV_NAME[] = "LTN_ROOT";
+	size_t size;
+	errno_t error = getenv_s(&size, nullptr, 0, ENV_NAME);
+	char envPath[128];
+	getenv_s(&size, envPath, size, ENV_NAME);
+
+	char WORK_FOLDER_PATH[128];
+	char RESOURCE_FOLDER_PATH[128];
+	sprintf_s(WORK_FOLDER_PATH, _countof(WORK_FOLDER_PATH), "%s\\Work", envPath);
+	sprintf_s(RESOURCE_FOLDER_PATH, _countof(RESOURCE_FOLDER_PATH), "%s\\Resource", envPath);
+
+	uint32 WORK_FILDER_PATH_LENGTH = strlen(WORK_FOLDER_PATH);
 	constexpr uint32 EXT_STRING_SIZE = 4; // .fbx
+	std::string filePath(fileName);
 	size_t fileNameSplitPoint = filePath.find_last_of("\\");
 	std::string outputLocalPath = fullPath.substr(WORK_FILDER_PATH_LENGTH, fullPath.size() - WORK_FILDER_PATH_LENGTH - EXT_STRING_SIZE);
 
+	// 出力先フォルダがなければ作成
 	{
 		size_t folderSplitPoint = outputLocalPath.find_last_of("\\");
 		std::string outputLocalFolder = outputLocalPath.substr(0, folderSplitPoint);
@@ -1567,38 +1576,74 @@ void exportMesh(const char* fileName) {
 
 	char exportPath[128] = {};
 	sprintf_s(exportPath, "%s\\%s", RESOURCE_FOLDER_PATH, outputLocalPath.c_str());
-	std::string exportFilePath = std::string(exportPath);
-	exportFilePath.append(".mesh");
 
-	std::ofstream fout;
-	fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
+	// メッシュヘッダー出力
+	{
+		std::string exportFilePath = std::string(exportPath);
+		exportFilePath.append(".mesh");
+		std::ofstream fout;
+		fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
 
-	fout.write(reinterpret_cast<const char*>(&materialCount), 4);
-	fout.write(reinterpret_cast<const char*>(&subMeshCount), 4);
-	fout.write(reinterpret_cast<const char*>(&lodCount), 4);
-	fout.write(reinterpret_cast<const char*>(&meshletCount), 4);
-	fout.write(reinterpret_cast<const char*>(&verticesCount), 4);
-	fout.write(reinterpret_cast<const char*>(&meshletVertexIndexCount), 4);
-	fout.write(reinterpret_cast<const char*>(&meshletPrimitiveCount), 4);
-	fout.write(reinterpret_cast<const char*>(&aabbMin), 12);
-	fout.write(reinterpret_cast<const char*>(&aabbMax), 12);
-	fout.write(reinterpret_cast<const char*>(&classicIndexCount), 4);
-	fout.write(reinterpret_cast<const char*>(materialNameHashes.data()), materialNameHashesSize);
-	fout.write(reinterpret_cast<const char*>(subMeshInfos.data()), subMeshSize);
-	fout.write(reinterpret_cast<const char*>(lodInfos.data()), lodInfoSize);
-	fout.write(reinterpret_cast<const char*>(meshletPrimitiveL.data()), meshletPrimitiveSize);
-	fout.write(reinterpret_cast<const char*>(meshletsL.data()), meshletCullSize);
-	fout.write(reinterpret_cast<const char*>(m_primitiveIndices.data()), primitiveSize);
-	fout.write(reinterpret_cast<const char*>(m_uniqueVertexIndices.data()), indicesSize);
-	fout.write(reinterpret_cast<const char*>(positionsL.data()), positionVerticesSize);
-	fout.write(reinterpret_cast<const char*>(normalsAndTangentsL.data()), normalAndTangentVerticesSize);
-	fout.write(reinterpret_cast<const char*>(texcoordsL.data()), texcoordVerticesSize);
-	fout.write(reinterpret_cast<const char*>(m_classicIndices.data()), classicIndexSize);
+		struct MeshHeader {
+			uint32 materialSlotCount = 0;
+			uint32 totalSubMeshCount = 0;
+			uint32 totalLodMeshCount = 0;
+			uint32 totalVertexCount = 0;
+			uint32 totalIndexCount = 0;
+			Float3 boundsMin;
+			Float3 boundsMax;
+		};
 
-	fout.close();
+		MeshHeader meshHeader;
+		meshHeader.materialSlotCount = materialCount;
+		meshHeader.totalSubMeshCount = subMeshCount;
+		meshHeader.totalLodMeshCount = lodCount;
+		meshHeader.totalVertexCount = verticesCount;
+		meshHeader.totalIndexCount = classicIndexCount;
+		meshHeader.boundsMin = aabbMin;
+		meshHeader.boundsMax = aabbMax;
+		fout.write(reinterpret_cast<const char*>(&meshHeader), sizeof(meshHeader));
+
+		//fout.write(reinterpret_cast<const char*>(&materialCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&subMeshCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&lodCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&meshletCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&verticesCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&meshletVertexIndexCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&meshletPrimitiveCount), 4);
+		//fout.write(reinterpret_cast<const char*>(&aabbMin), 12);
+		//fout.write(reinterpret_cast<const char*>(&aabbMax), 12);
+		//fout.write(reinterpret_cast<const char*>(&classicIndexCount), 4);
+		fout.write(reinterpret_cast<const char*>(materialNameHashes.data()), materialNameHashesSize);
+		fout.write(reinterpret_cast<const char*>(subMeshInfos.data()), subMeshSize);
+		fout.write(reinterpret_cast<const char*>(lodInfos.data()), lodInfoSize);
+
+		fout.close();
+		std::cout << LOG_COLOR_GREEN << "Sucsessed export " << exportFilePath << LOG_COLOR_END << std::endl;
+	}
+
+	// メッシュ頂点データ出力
+	{
+		std::string exportFilePath = std::string(exportPath);
+		exportFilePath.append(".meshg");
+		std::ofstream fout;
+		fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
+
+		//fout.write(reinterpret_cast<const char*>(meshletPrimitiveL.data()), meshletPrimitiveSize);
+		//fout.write(reinterpret_cast<const char*>(meshletsL.data()), meshletCullSize);
+		//fout.write(reinterpret_cast<const char*>(m_primitiveIndices.data()), primitiveSize);
+		//fout.write(reinterpret_cast<const char*>(m_uniqueVertexIndices.data()), indicesSize);
+		fout.write(reinterpret_cast<const char*>(positionsL.data()), positionVerticesSize);
+		fout.write(reinterpret_cast<const char*>(normalsAndTangentsL.data()), normalAndTangentVerticesSize);
+		fout.write(reinterpret_cast<const char*>(texcoordsL.data()), texcoordVerticesSize);
+		fout.write(reinterpret_cast<const char*>(m_classicIndices.data()), classicIndexSize);
+
+		fout.close();
+		std::cout << LOG_COLOR_GREEN << "Sucsessed export " << exportFilePath << LOG_COLOR_END << std::endl;
+	}
+
 	std::cout << "Vertex Count: " << verticesCount << std::endl;
 	std::cout << "Vertex Index Count: " << meshletVertexIndexCount << std::endl;
-	std::cout << LOG_COLOR_GREEN << "Sucsessed convert " << exportFilePath << LOG_COLOR_END << std::endl;
 }
 
 int main(int argc, char* argv[]) {

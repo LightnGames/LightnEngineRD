@@ -10,6 +10,7 @@ public:
 	void terminate();
 	void update();
 	void render();
+	void waitForIdle();
 
 	static Renderer* Get();
 

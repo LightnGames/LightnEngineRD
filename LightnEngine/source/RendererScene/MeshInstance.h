@@ -2,6 +2,7 @@
 #include <Core/Type.h>
 #include <Core/Utility.h>
 #include <Core/VirturalArray.h>
+#include "RenderSceneUtility.h"
 
 namespace ltn {
 class Mesh;
@@ -27,28 +28,6 @@ public:
 	const Mesh* _mesh = nullptr;
 };
 
-template <class T>
-class UpdateInfos {
-public:
-	T** getMeshes() { return _meshInstances; }
-	u32 getUpdateCount() const { return _updateCount; }
-
-	void push(T* mesh) {
-		LTN_ASSERT(_updateCount < STACK_COUNT_MAX);
-		_meshInstances[_updateCount++] = mesh;
-	}
-
-	T** getMeshInstances() { return _meshInstances; }
-
-	void reset() {
-		_updateCount = 0;
-	}
-
-	static constexpr u32 STACK_COUNT_MAX = 256;
-	T* _meshInstances[STACK_COUNT_MAX];
-	u32 _updateCount = 0;
-};
-
 // メッシュインスタンスの実データを管理するクラス
 class MeshInstancePool {
 public:
@@ -66,7 +45,7 @@ public:
 	void terminate();
 
 	MeshInstance* allocateMeshInstance(const MeshAllocationDesc& desc);
-	void freeMeshInstance(MeshInstance* meshInstance);
+	void freeMeshInstance(const MeshInstance* meshInstance);
 
 	u32 getMeshInstanceIndex(const MeshInstance* mesh) const { return static_cast<u32>(mesh - _meshInstances); }
 	u32 getLodMeshInstanceIndex(const LodMeshInstance* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshInstances); }
@@ -97,7 +76,7 @@ public:
 	void lateUpdate();
 
 	MeshInstance* createMeshInstance(const MeshInstanceCreatationDesc& desc);
-	void destroyMeshInstance(MeshInstance* meshInstance, u32 instanceCount);
+	void destroyMeshInstance(MeshInstance* meshInstance);
 
 	const MeshInstancePool* getMeshInstancePool() const { return &_meshInstancePool; }
 

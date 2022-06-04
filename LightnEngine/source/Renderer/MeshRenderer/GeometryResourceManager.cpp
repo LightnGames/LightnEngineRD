@@ -50,24 +50,25 @@ void GeometryResourceManager::terminate() {
 
 void GeometryResourceManager::update() {
 	MeshScene* meshScene = MeshScene::Get();
-	MeshUpdateInfos* meshUpdateInfos = meshScene->getMeshUpdateInfos();
 	const MeshPool* meshPool = meshScene->getMeshPool();
 
-	u32 createdMeshCount = meshUpdateInfos->getCreatedMeshCount();
-	Mesh** createdMeshes = meshUpdateInfos->getCreatedMeshes();
-	for (u32 i = 0; i < createdMeshCount; ++i) {
+	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->geCreateInfos();
+	u32 createMeshCount = meshCreateInfos->getUpdateCount();
+	auto createMeshes = meshCreateInfos->getObjects();
+	for (u32 i = 0; i < createMeshCount; ++i) {
 		VramUpdater* vramUpdater = VramUpdater::Get();
-		const Mesh* mesh = createdMeshes[i];
+		const Mesh* mesh = createMeshes[i];
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
 		MeshGeometryInfo& info = _meshInfos[meshIndex];
 		info._vertexAllocationInfo = _vertexPositionAllocations.allocation(mesh->_vertexCount);
 		info._indexAllocationInfo = _indexAllocations.allocation(mesh->_indexCount);
 	}
 
-	u32 deletedMeshCount = meshUpdateInfos->getDeletedMeshCount();
-	Mesh** deletedMeshes = meshUpdateInfos->getDeletedMeshes();
-	for (u32 i = 0; i < deletedMeshCount; ++i) {
-		const Mesh* mesh = deletedMeshes[i];
+	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->geCreateInfos();
+	u32 destroyMeshCount = meshDestroyInfos->getUpdateCount();
+	auto destroyMeshes = meshDestroyInfos->getObjects();
+	for (u32 i = 0; i < destroyMeshCount; ++i) {
+		const Mesh* mesh = destroyMeshes[i];
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
 		MeshGeometryInfo& info = _meshInfos[meshIndex];
 		_vertexPositionAllocations.freeAllocation(info._vertexAllocationInfo);

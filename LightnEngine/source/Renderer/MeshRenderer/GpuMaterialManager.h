@@ -10,9 +10,9 @@ public:
 	void terminate();
 	void update();
 
-	rhi::RootSignature* getRootSignatures() { return _defaultRootSignatures; }
-	rhi::PipelineState* getPipelineStates() { return _defaultPipelineStates; }
-	DescriptorHandles getParameterDescriptors() { return _parameterDescriptors; }
+	rhi::RootSignature* getDefaultRootSignatures() { return _defaultRootSignatures; }
+	rhi::PipelineState* getDefaultPipelineStates() { return _defaultPipelineStates; }
+	rhi::GpuDescriptorHandle getParameterGpuSrv(u32 index) { return _parameterSrv.get(index)._gpuHandle; }
 
 	static GpuMaterialManager* Get();
 
@@ -21,6 +21,6 @@ private:
 	rhi::PipelineState* _defaultPipelineStates = nullptr;
 
 	GpuBuffer* _parameterGpuBuffers = nullptr;
-	DescriptorHandles _parameterDescriptors;
+	DescriptorHandles _parameterSrv;
 };
 }

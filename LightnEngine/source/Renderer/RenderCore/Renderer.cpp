@@ -1,14 +1,16 @@
 #include "Renderer.h"
 #include <Core/Utility.h>
 #include <Application/Application.h>
+#include <Renderer/AssetReloader/PipelineStateReloader.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
 #include <Renderer/RenderCore/CommandListPool.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
-#include <Renderer/AssetReloader/PipelineStateReloader.h>
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/VramUpdater.h>
+#include <Renderer/RenderCore/RenderDirector.h>
+#include <Renderer/RenderCore/RenderView.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -112,6 +114,8 @@ void Renderer::initialize() {
 		pixelShader.terminate();
 	}
 
+	RenderDirector::Get()->initialize();
+
 	//QueryHeapSystem::Get()->initialize();
 	//ViewSystemImpl::Get()->initialize();
 
@@ -124,6 +128,8 @@ void Renderer::initialize() {
 }
 
 void Renderer::terminate() {
+	RenderDirector::Get()->terminate();
+
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
@@ -156,7 +162,6 @@ void Renderer::render() {
 	u64 completedFenceValue = _commandQueue.getCompletedValue();
 	rhi::CommandList* commandList = CommandListPool::Get()->allocateCommandList(completedFenceValue);
 
-	f32 clearColor[4] = {};
 	rhi::CpuDescriptorHandle rtvDescriptor = _rtvDescriptors.get(_frameIndex)._cpuHandle;
 
 	commandList->reset();
@@ -166,25 +171,33 @@ void Renderer::render() {
 	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 
-
 	{
-		ScopedBarrierDesc barriers[1] = {
-			ScopedBarrierDesc(&_backBuffers[_frameIndex], rhi::RESOURCE_STATE_RENDER_TARGET)
+
+		RenderDirector::Get()->render(commandList);
+		ImGuiSystem::Get()->render(commandList);
+
+		RenderViewScene* renderViewScene = RenderViewScene::Get();
+		GpuTexture* mainViewTexture = renderViewScene->getViewColorTexture(0);
+		GpuTexture* backBuffer = &_backBuffers[_frameIndex];
+
+		ScopedBarrierDesc barriers[2] = {
+			ScopedBarrierDesc(backBuffer, rhi::RESOURCE_STATE_COPY_DEST),
+			ScopedBarrierDesc(mainViewTexture, rhi::RESOURCE_STATE_COPY_SOURCE)
 		};
 		ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
+		commandList->copyResource(backBuffer->getResource(), mainViewTexture->getResource());
 
-		rhi::ViewPort viewPort = { 0,0,1920,1080,0,1 };
-		rhi::Rect scissorRect = { 0,0,1920,1080 };
-		commandList->setRenderTargets(1, &rtvDescriptor, nullptr);
-		commandList->clearRenderTargetView(rtvDescriptor, clearColor);
-		commandList->setGraphicsRootSignature(&_rootSignature);
-		commandList->setPipelineState(&_pipelineState);
-		commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->setViewports(1, &viewPort);
-		commandList->setScissorRects(1, &scissorRect);
-		commandList->drawInstanced(3, 1, 0, 0);
-
-		ImGuiSystem::Get()->render(commandList);
+		//f32 clearColor[4] = {};
+		//rhi::ViewPort viewPort = { 0,0,1920,1080,0,1 };
+		//rhi::Rect scissorRect = { 0,0,1920,1080 };
+		//commandList->setRenderTargets(1, &rtvDescriptor, nullptr);
+		//commandList->clearRenderTargetView(rtvDescriptor, clearColor);
+		//commandList->setGraphicsRootSignature(&_rootSignature);
+		//commandList->setPipelineState(&_pipelineState);
+		//commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//commandList->setViewports(1, &viewPort);
+		//commandList->setScissorRects(1, &scissorRect);
+		//commandList->drawInstanced(3, 1, 0, 0);
 	}
 
 	_commandQueue.executeCommandLists(1, &commandList);
@@ -193,9 +206,12 @@ void Renderer::render() {
 	moveToNextFrame();
 }
 
+void Renderer::waitForIdle() {
+	_commandQueue.waitForIdle();
+}
+
 void Renderer::moveToNextFrame() {
-	u64 currentFenceValue = _fenceValues[_frameIndex];
-	_commandQueue.waitForFence(currentFenceValue);
+	_commandQueue.waitForFence(_fenceValues[_frameIndex]);
 	_frameIndex = _swapChain.getCurrentBackBufferIndex();
 
 	ReleaseQueue::Get()->update();

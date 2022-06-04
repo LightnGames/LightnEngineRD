@@ -7,11 +7,14 @@
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
 #include <Renderer/RenderCore/RenderView.h>
+#include <Renderer/RenderCore/GpuShader.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
 #include <RendererScene/Material.h>
 #include <RendererScene/MeshInstance.h>
+#include <RendererScene/Shader.h>
 #include <Windows.h>
+
 namespace ltn {
 namespace win64app {
 namespace {
@@ -23,17 +26,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 
 	switch (message) {
 	case WM_PAINT:
-		RenderViewScene::Get()->update();
-		GpuMeshInstanceManager::Get()->update();
-		GpuMeshResourceManager::Get()->update();
-		GeometryResourceManager::Get()->update();
-		GpuMaterialManager::Get()->update();
-		Renderer::Get()->update();
-		MaterialScene::Get()->lateUpdate();
-		MeshInstanceScene::Get()->lateUpdate();
-		MeshScene::Get()->lateUpdate();
-		ViewScene::Get()->lateUpdate();
-		Renderer::Get()->render();
 		return false;
 	case WM_MOUSEMOVE:
 		return false;
@@ -43,6 +35,25 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 	}
 
 	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+void update(){
+	GpuShaderScene::Get()->update();
+	RenderViewScene::Get()->update();
+	GpuMeshInstanceManager::Get()->update();
+	GpuMeshResourceManager::Get()->update();
+	GeometryResourceManager::Get()->update();
+	GpuMaterialManager::Get()->update();
+	Renderer::Get()->update();
+	MaterialScene::Get()->lateUpdate();
+	MeshInstanceScene::Get()->lateUpdate();
+	MeshScene::Get()->lateUpdate();
+	ShaderScene::Get()->lateUpdate();
+	ViewScene::Get()->lateUpdate();
+}
+
+void render(){
+	Renderer::Get()->render();
 }
 }
 
@@ -80,16 +91,28 @@ void Win64Application::initialize() {
 	_screenHeight = height;
 }
 
-void Win64Application::terminate() {}
+void Win64Application::terminate() {
+	Renderer::Get()->waitForIdle();
+	update();
+}
 
 void Win64Application::run() {
+	EditorCamera editorCamera;
+	editorCamera.initialize();
+
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+
+		editorCamera.update();
+		update();
+		render();
 	}
+
+	editorCamera.terminate();
 }
 }
 }

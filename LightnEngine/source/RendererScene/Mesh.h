@@ -3,6 +3,7 @@
 #include <Core/ModuleSettings.h>
 #include <Core/Utility.h>
 #include <Core/Math.h>
+#include "RenderSceneUtility.h"
 
 namespace ltn {
 class SubMesh {
@@ -29,6 +30,7 @@ public:
 	u32 _subMeshCount = 0;
 	u32 _vertexCount = 0;
 	u32 _indexCount = 0;
+	u64* _assetPathHash = nullptr;
 };
 
 // メッシュの実データを管理するプール
@@ -49,12 +51,13 @@ public:
 	void terminate();
 
 	Mesh* allocateMesh(const MeshAllocationDesc& desc);
-	void freeMesh(Mesh* mesh);
+	void freeMesh(const Mesh* mesh);
 
 	u32 getMeshIndex(const Mesh* mesh) const { return static_cast<u32>(mesh - _meshes); }
 	u32 getLodMeshIndex(const LodMesh* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshes); }
 	u32 getSubMeshIndex(const SubMesh* subMesh) const { return static_cast<u32>(subMesh - _subMeshes); }
 	Mesh* getMesh(u32 index) { return &_meshes[index]; }
+	Mesh* findMesh(u64 assetPathHash);
 
 private:
 	VirtualArray _meshAllocations;
@@ -63,37 +66,7 @@ private:
 	Mesh* _meshes = nullptr;
 	LodMesh* _lodMeshes = nullptr;
 	SubMesh* _subMeshes = nullptr;
-};
-
-// メッシュの更新情報を管理するクラス
-class LTN_API MeshUpdateInfos {
-public:
-	Mesh** getCreatedMeshes() { return _createdMeshes; }
-	Mesh** getDeletedMeshes() { return _deletedMeshes; }
-	u32 getCreatedMeshCount() const { return _createdMeshCount; }
-	u32 getDeletedMeshCount() const { return _deletedMeshCount; }
-
-	void pushCreatedMesh(Mesh* mesh){
-		LTN_ASSERT(_createdMeshCount < STACK_COUNT_MAX);
-		_createdMeshes[_createdMeshCount++] = mesh;
-	}
-
-	void pushDeletedMesh(Mesh* mesh) {
-		LTN_ASSERT(_deletedMeshCount < STACK_COUNT_MAX);
-		_deletedMeshes[_deletedMeshCount++] = mesh;
-	}
-
-	void reset(){
-		_createdMeshCount = 0;
-		_deletedMeshCount = 0;
-	}
-
-private:
-	static constexpr u32 STACK_COUNT_MAX = 128;
-	Mesh* _createdMeshes[STACK_COUNT_MAX];
-	Mesh* _deletedMeshes[STACK_COUNT_MAX];
-	u32 _createdMeshCount = 0;
-	u32 _deletedMeshCount = 0;
+	u64* _meshAssetPathHashes = nullptr;
 };
 
 // メッシュ総合管理するクラス
@@ -103,7 +76,7 @@ public:
 	static constexpr u32 LOD_MESH_CAPACITY = 1024 * 2;
 	static constexpr u32 SUB_MESH_CAPACITY = 1024 * 4;
 
-	struct MeshCreatationDesc {
+	struct CreatationDesc {
 		const char* _assetPath = nullptr;
 	};
 
@@ -111,15 +84,18 @@ public:
 	void terminate();
 	void lateUpdate();
 
-	Mesh* createMesh(const MeshCreatationDesc& desc);
+	Mesh* createMesh(const CreatationDesc& desc);
 	void destroyMesh(Mesh* mesh);
 
 	const MeshPool* getMeshPool() const { return &_meshPool; }
-	MeshUpdateInfos* getMeshUpdateInfos() { return &_meshUpdateInfos; }
+	const UpdateInfos<Mesh>* geCreateInfos() { return &_meshCreateInfos; }
+	const UpdateInfos<Mesh>* getDestroyInfos() { return &_meshDestroyInfos; }
+	Mesh* findMesh(u64 assetPathHash) { return _meshPool.findMesh(assetPathHash); }
 
 	static MeshScene* Get();
 private:
 	MeshPool _meshPool;
-	MeshUpdateInfos _meshUpdateInfos;
+	UpdateInfos<Mesh> _meshCreateInfos;
+	UpdateInfos<Mesh> _meshDestroyInfos;
 };
 }

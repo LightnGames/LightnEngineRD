@@ -66,13 +66,13 @@ void GpuMeshResourceManager::update() {
 	VramUpdater* vramUpdater = VramUpdater::Get();
 	MeshScene* meshScene = MeshScene::Get();
 	const MeshPool* meshPool = meshScene->getMeshPool();
-	MeshUpdateInfos* meshUpdateInfos = meshScene->getMeshUpdateInfos();
 
 	// 新規作成されたメッシュをGPUに追加
-	u32 createdMeshCount = meshUpdateInfos->getCreatedMeshCount();
-	Mesh** createdMeshes = meshUpdateInfos->getCreatedMeshes();
-	for (u32 i = 0; i < createdMeshCount; ++i) {
-		const Mesh* mesh = createdMeshes[i];
+	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->geCreateInfos();
+	u32 createMeshCount = meshCreateInfos->getUpdateCount();
+	auto createMeshes = meshCreateInfos->getObjects();
+	for (u32 i = 0; i < createMeshCount; ++i) {
+		const Mesh* mesh = createMeshes[i];
 		u32 lodMeshCount = mesh->_lodMeshCount;
 		u32 subMeshCount = mesh->_subMeshCount;
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
@@ -103,10 +103,11 @@ void GpuMeshResourceManager::update() {
 	}
 
 	// 削除されたメッシュをGPUから削除
-	u32 deletedMeshCount = meshUpdateInfos->getDeletedMeshCount();
-	Mesh** deletedMeshes = meshUpdateInfos->getDeletedMeshes();
-	for (u32 i = 0; i < deletedMeshCount; ++i) {
-		const Mesh* mesh = createdMeshes[i];
+	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->geCreateInfos();
+	u32 destroyMeshCount = meshDestroyInfos->getUpdateCount();
+	auto destroyMeshes = meshDestroyInfos->getObjects();
+	for (u32 i = 0; i < destroyMeshCount; ++i) {
+		const Mesh* mesh = createMeshes[i];
 		u32 lodMeshCount = mesh->_lodMeshCount;
 		u32 subMeshCount = mesh->_subMeshCount;
 		u32 meshIndex = meshPool->getMeshIndex(mesh);

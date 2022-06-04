@@ -1,0 +1,3 @@
+Mesh : EngineComponent\BasicShape\Quad.mesh
+Materials :
+    Lambert1 : EngineComponent\Material\White.mtoi

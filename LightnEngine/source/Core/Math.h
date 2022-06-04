@@ -13,29 +13,6 @@ using Color4 = Float4;
 using Vector = DirectX::XMVECTOR;
 using Matrix = DirectX::XMMATRIX;
 
-struct Vector4 {
-	Vector4() :_v(DirectX::XMVectorZero()) {}
-	Vector4(DirectX::XMVECTOR v) :_v(v) {}
-
-	Vector4(f32 x, f32 y, f32 z, f32 w) {
-		_v = DirectX::XMVectorSet(x, y, z, w);
-	}
-
-	Float3 getFloat3() const {
-		Float3 result;
-		DirectX::XMStoreFloat3(&result, _v);
-		return result;
-	}
-
-	Float4 getFloat4() const {
-		Float4 result;
-		DirectX::XMStoreFloat4(&result, _v);
-		return result;
-	}
-
-	Vector _v;
-};
-
 struct Vector3 {
 	Vector3() :_v(DirectX::XMVectorZero()) {}
 	Vector3(DirectX::XMVECTOR v) :_v(v) {}
@@ -47,6 +24,33 @@ struct Vector3 {
 	Float3 getFloat3() const {
 		Float3 result;
 		DirectX::XMStoreFloat3(&result, _v);
+		return result;
+	}
+
+	Vector _v;
+};
+
+struct Vector4 {
+	Vector4() :_v(DirectX::XMVectorZero()) {}
+	Vector4(DirectX::XMVECTOR v) :_v(v) {}
+
+	Vector4(f32 x, f32 y, f32 z, f32 w) {
+		_v = DirectX::XMVectorSet(x, y, z, w);
+	}
+
+	Vector3 getVector3() const {
+		return _v;
+	}
+
+	Float3 getFloat3() const {
+		Float3 result;
+		DirectX::XMStoreFloat3(&result, _v);
+		return result;
+	}
+
+	Float4 getFloat4() const {
+		Float4 result;
+		DirectX::XMStoreFloat4(&result, _v);
 		return result;
 	}
 

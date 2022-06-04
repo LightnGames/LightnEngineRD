@@ -47,10 +47,9 @@ public:
 		rhi::CommandList* _commandList = nullptr;
 		rhi::RootSignature* _rootSignatures = nullptr;
 		rhi::PipelineState* _pipelineStates = nullptr;
-		rhi::GpuDescriptorHandle _viewConstantDescriptor;
-		const u8* _enabledFlags = nullptr;
-		const u32* _indirectArgumentCounts = nullptr;
+		rhi::GpuDescriptorHandle _viewCbv;
 		u32 _pipelineStateCount = 0;
+		const u8* _enabledFlags = nullptr;
 	};
 
 	void initialize();

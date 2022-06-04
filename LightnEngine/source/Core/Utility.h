@@ -11,6 +11,7 @@
 
 #if TARGET_WIN64
 #include <Windows.h>
+#include <stdio.h>
 #define DEBUG_PRINT(x) OutputDebugStringA(x)
 #endif
 
@@ -18,7 +19,6 @@
 #include <cassert>
 #include <type_traits>
 #include <wchar.h>
-#include <stdio.h>
 #define LTN_INFO( str, ... )			 \
       {									 \
         char c[256];				 \
@@ -52,7 +52,7 @@ u32 StrLength(const char* str);
 u64 StrHash(const char* str);
 u32 StrHash32(const char* str);
 u64 StrHash64(const char* str);
-u64 BinHash(const void* bin, u32 length);
+u64 BinHash64(const void* bin, u32 length);
 
 constexpr u32 GetAligned(u32 size, u32 alignSize) {
 	return size + (alignSize - (size % alignSize));
@@ -91,7 +91,8 @@ public:
 	}
 
 	void openFile(){
-		fopen_s(&_filePtr, _path, "rb");
+		errno_t error = fopen_s(&_filePtr, _path, "rb");
+		LTN_ASSERT(error == 0);
 	}
 
 	void closeFile(){

@@ -15,26 +15,28 @@ void MeshScene::initialize() {
 }
 
 void MeshScene::terminate() {
+	lateUpdate();
 	_meshPool.terminate();
 }
 
 void MeshScene::lateUpdate() {
-	u32 deletedMeshCount = _meshUpdateInfos.getDeletedMeshCount();
-	Mesh** deletedMeshes = _meshUpdateInfos.getDeletedMeshes();
-	for (u32 i = 0; i < deletedMeshCount; ++i) {
-		_meshPool.freeMesh(deletedMeshes[i]);
+	u32 destroyMeshCount = _meshDestroyInfos.getUpdateCount();
+	auto destroyMeshes = _meshDestroyInfos.getObjects();
+	for (u32 i = 0; i < destroyMeshCount; ++i) {
+		_meshPool.freeMesh(destroyMeshes[i]);
 #define ENABLE_ZERO_CLEAR 1
 #if ENABLE_ZERO_CLEAR
-		Mesh* mesh = deletedMeshes[i];
+		Mesh* mesh = _meshPool.getMesh(_meshPool.getMeshIndex(destroyMeshes[i]));
 		memset(mesh->_lodMeshes, 0, sizeof(LodMesh) * mesh->_lodMeshCount);
 		memset(mesh->_subMeshes, 0, sizeof(SubMesh) * mesh->_subMeshCount);
 		memset(mesh, 0, sizeof(Mesh));
 #endif
 	}
-	_meshUpdateInfos.reset();
+	_meshCreateInfos.reset();
+	_meshDestroyInfos.reset();
 }
 
-Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
+Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	AssetPath meshAsset(desc._assetPath);
 	meshAsset.openFile();
 
@@ -67,13 +69,10 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 		u32 materialSlotCount = 0;
 		u32 totalSubMeshCount = 0;
 		u32 totalLodMeshCount = 0;
-		u32 totalMeshletCount = 0;
 		u32 totalVertexCount = 0;
-		u32 totalVertexIndexCount = 0;
-		u32 totalPrimitiveCount = 0;
+		u32 totalIndexCount = 0;
 		Float3 boundsMin;
 		Float3 boundsMax;
-		u32 classicIndexCount = 0;
 	};
 	// =========================================
 
@@ -95,7 +94,8 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 	mesh->_lodMeshCount = meshHeader.totalLodMeshCount;
 	mesh->_subMeshCount = meshHeader.totalSubMeshCount;
 	mesh->_vertexCount = meshHeader.totalVertexCount;
-	mesh->_indexCount = meshHeader.classicIndexCount;
+	mesh->_indexCount = meshHeader.totalIndexCount;
+	*mesh->_assetPathHash = StrHash64(desc._assetPath);
 
 	LodMesh* lodMeshes = mesh->_lodMeshes;
 	for (u32 i = 0; i < meshHeader.totalLodMeshCount; ++i) {
@@ -114,14 +114,14 @@ Mesh* MeshScene::createMesh(const MeshCreatationDesc& desc) {
 		subMesh._indexOffset = subMeshInfo._triangleStripIndexOffset;
 	}
 
-	_meshUpdateInfos.pushCreatedMesh(mesh);
+	_meshCreateInfos.push(mesh);
 
 	meshAsset.closeFile();
 	return mesh;
 }
 
 void MeshScene::destroyMesh(Mesh* mesh) {
-	_meshUpdateInfos.pushDeletedMesh(mesh);
+	_meshDestroyInfos.push(mesh);
 }
 
 MeshScene* MeshScene::Get() {
@@ -145,8 +145,10 @@ void MeshPool::initialize(const InitializetionDesc& desc) {
 		_meshes = Memory::allocObjects<Mesh>(desc._meshCount);
 		_lodMeshes = Memory::allocObjects<LodMesh>(desc._lodMeshCount);
 		_subMeshes = Memory::allocObjects<SubMesh>(desc._subMeshCount);
+		_meshAssetPathHashes = Memory::allocObjects<u64>(desc._meshCount);
 	}
 }
+
 void MeshPool::terminate() {
 	_meshAllocations.terminate();
 	_lodMeshAllocations.terminate();
@@ -156,6 +158,7 @@ void MeshPool::terminate() {
 	Memory::freeObjects(_lodMeshes);
 	Memory::freeObjects(_subMeshes);
 }
+
 Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
 	VirtualArray::AllocationInfo meshAllocationInfo = _meshAllocations.allocation(1);
 	VirtualArray::AllocationInfo lodMeshAllocationInfo = _lodMeshAllocations.allocation(desc._lodMeshCount);
@@ -169,11 +172,21 @@ Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
 	mesh->_subMeshes = &_subMeshes[subMeshAllocationInfo._offset];
 	mesh->_lodMeshCount = desc._lodMeshCount;
 	mesh->_subMeshCount = desc._subMeshCount;
+	mesh->_assetPathHash = &_meshAssetPathHashes[meshAllocationInfo._offset];
 	return mesh;
 }
-void MeshPool::freeMesh(Mesh* mesh) {
+
+void MeshPool::freeMesh(const Mesh* mesh) {
 	_meshAllocations.freeAllocation(mesh->_meshAllocationInfo);
 	_lodMeshAllocations.freeAllocation(mesh->_lodMeshAllocationInfo);
 	_subMeshAllocations.freeAllocation(mesh->_subMeshAllocationInfo);
+}
+Mesh* MeshPool::findMesh(u64 assetPathHash) {
+	for (u32 i = 0; i < MeshScene::MESH_CAPACITY; ++i) {
+		if (_meshAssetPathHashes[i] == assetPathHash) {
+			return &_meshes[i];
+		}
+	}
+	return nullptr;
 }
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <Core/Type.h>
 #include <Core/ModuleSettings.h>
-
+#include <Editor/EditorCamera.h>
 namespace ltn {
 class Application {
 public:

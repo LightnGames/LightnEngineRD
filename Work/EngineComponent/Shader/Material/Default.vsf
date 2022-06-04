@@ -1,0 +1,16 @@
+struct VSInput {
+    uint _vertexId : SV_VertexId;
+};
+
+struct PSInput {
+    float4 _position : SV_Position;
+};
+
+PSInput main(VSInput input) {
+    PSInput result;
+    float x = input._vertexId % 3 == 0 ?  3 : -1;
+    float y = input._vertexId % 3 == 2 ?  3 : -1;
+    result._position = float4(x, y, 0, 1);
+
+    return result;
+}

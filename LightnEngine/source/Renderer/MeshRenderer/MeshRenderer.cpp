@@ -85,6 +85,7 @@ void MeshRenderer::initialize() {
 		desc._device = device;
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgument);
 		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		_indirectArgumentGpuBuffer.initialize(desc);
 		_indirectArgumentGpuBuffer.setName("IndirectArguments");
 
@@ -92,6 +93,7 @@ void MeshRenderer::initialize() {
 		_indirectArgumentCountGpuBuffer.initialize(desc);
 		_indirectArgumentCountGpuBuffer.setName("IndirectArgumentCounts");
 
+		desc._flags = rhi::RESOURCE_FLAG_NONE;
 		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(gpu::CullingInfo));
 		_cullingInfoGpuBuffer.initialize(desc);
@@ -194,21 +196,26 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 void MeshRenderer::render(const RenderDesc& desc) {
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 
+	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
 	rhi::VertexBufferView vertexBufferViews[1];
 	vertexBufferViews[0] = geometryResourceManager->getPositionVertexBufferView();
-	
-	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
 
+	const u32* indirectArgumentCounts = GpuMeshInstanceManager::Get()->getSubMeshInstanceCounts();
 	const u32* indirectArgumentOffsets = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsets();
 	rhi::CommandList* commandList = desc._commandList;
+	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	for (u32 i = 0; i < desc._pipelineStateCount; ++i) {
+		if (desc._enabledFlags[i] == 0) {
+			continue;
+		}
+
 		commandList->setComputeRootSignature(&desc._rootSignatures[i]);
 		commandList->setPipelineState(&desc._pipelineStates[i]);
 
 		commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 		commandList->setIndexBuffer(&indexBufferView);
 
-		u32 count = desc._indirectArgumentCounts[i];
+		u32 count = indirectArgumentCounts[i];
 		u32 offset = sizeof(gpu::IndirectArgument) * indirectArgumentOffsets[i];
 		commandList->executeIndirect(&_commandSignature, count, _indirectArgumentGpuBuffer.getResource(), offset, _indirectArgumentCountGpuBuffer.getResource(), 0);
 	}

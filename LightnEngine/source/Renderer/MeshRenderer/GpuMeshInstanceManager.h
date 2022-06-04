@@ -33,6 +33,7 @@ public:
 	rhi::GpuDescriptorHandle getMeshInstanceGpuDescriptors() const { return _meshInstanceSrv._firstHandle._gpuHandle; }
 	rhi::GpuDescriptorHandle getSubMeshInstanceOffsetsGpuDescriptor() const { return _subMeshInstanceOffsetsSrv._gpuHandle; }
 
+	const u32* getSubMeshInstanceCounts() const { return _subMeshInstanceCounts; }
 	const u32* getSubMeshInstanceOffsets() const { return _subMeshInstanceOffsets; }
 
 	static GpuMeshInstanceManager* Get();
@@ -45,5 +46,6 @@ private:
 	DescriptorHandles _meshInstanceSrv;
 	DescriptorHandle _subMeshInstanceOffsetsSrv;
 	u32* _subMeshInstanceOffsets = nullptr;
+	u32* _subMeshInstanceCounts = nullptr;
 };
 }

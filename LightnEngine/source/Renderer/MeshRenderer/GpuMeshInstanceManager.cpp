@@ -1,4 +1,5 @@
 #include "GpuMeshInstanceManager.h"
+#include <Core/Memory.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Mesh.h>
 #include <Renderer/RenderCore/DeviceManager.h>
@@ -63,6 +64,13 @@ void GpuMeshInstanceManager::initialize() {
 		desc._buffer._structureByteStride = 0;
 		device->createShaderResourceView(_subMeshInstanceOffsetsGpuBuffer.getResource(), &desc, _subMeshInstanceOffsetsSrv._cpuHandle);
 	}
+
+	{
+		_subMeshInstanceCounts = Memory::allocObjects<u32>(MeshScene::SUB_MESH_CAPACITY);
+		_subMeshInstanceOffsets = Memory::allocObjects<u32>(MeshScene::SUB_MESH_CAPACITY);
+		memset(_subMeshInstanceCounts, 0, MeshScene::SUB_MESH_CAPACITY);
+		memset(_subMeshInstanceOffsets, 0, MeshScene::SUB_MESH_CAPACITY);
+	}
 }
 void GpuMeshInstanceManager::terminate() {
 	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
@@ -72,6 +80,9 @@ void GpuMeshInstanceManager::terminate() {
 	_lodMeshInstanceGpuBuffer.terminate();
 	_subMeshInstanceGpuBuffer.terminate();
 	_subMeshInstanceOffsetsGpuBuffer.terminate();
+
+	Memory::freeObjects(_subMeshInstanceCounts);
+	Memory::freeObjects(_subMeshInstanceOffsets);
 }
 
 void GpuMeshInstanceManager::update() {
@@ -84,7 +95,7 @@ void GpuMeshInstanceManager::update() {
 	// 新規作成されたメッシュをGPUに追加
 	UpdateInfos<MeshInstance>* createdMeshInstanceInfos = meshInstanceScene->getMeshInstanceCreateInfos();
 	u32 createdMeshCount = createdMeshInstanceInfos->getUpdateCount();
-	MeshInstance** createdMeshes = createdMeshInstanceInfos->getMeshInstances();
+	auto createdMeshes = createdMeshInstanceInfos->getObjects();
 	for (u32 i = 0; i < createdMeshCount; ++i) {
 		const MeshInstance* meshInstance = createdMeshes[i];
 		const Mesh* mesh = meshInstance->_mesh;
@@ -119,7 +130,7 @@ void GpuMeshInstanceManager::update() {
 	// 削除されたメッシュをGPUから削除
 	UpdateInfos<MeshInstance>* destroyMeshInstanceInfos = meshInstanceScene->getMeshInstanceDestroyInfos();
 	u32 destroyMeshCount = destroyMeshInstanceInfos->getUpdateCount();
-	MeshInstance** destroyMeshes = destroyMeshInstanceInfos->getMeshInstances();
+	auto destroyMeshes = destroyMeshInstanceInfos->getObjects();
 	for (u32 i = 0; i < destroyMeshCount; ++i) {
 		const MeshInstance* meshInstance = createdMeshes[i];
 		const Mesh* mesh = meshInstance->_mesh;
