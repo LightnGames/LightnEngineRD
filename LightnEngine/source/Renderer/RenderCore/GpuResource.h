@@ -35,6 +35,8 @@ public:
 		_resource.setName(nameBuffer);
 	}
 
+	u32 getU32ElementCount() const { return _sizeInByte / sizeof(u32); }
+
 	rhi::Resource* getResource() { return &_resource; }
 	rhi::ResourceStates getResourceState() const { return _currentState; }
 	rhi::ResourceDesc getResourceDesc() const { return _desc; }

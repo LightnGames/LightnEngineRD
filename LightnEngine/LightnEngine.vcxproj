@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,12 +21,14 @@
   <ItemGroup>
     <ClInclude Include="source\Application\Application.h" />
     <ClInclude Include="source\Application\EngineModule.h" />
+    <ClInclude Include="source\Core\ChunkAllocator.h" />
     <ClInclude Include="source\Core\Math.h" />
     <ClInclude Include="source\Core\Memory.h" />
     <ClInclude Include="source\Core\ModuleSettings.h" />
     <ClInclude Include="source\Core\Type.h" />
     <ClInclude Include="source\Core\Utility.h" />
     <ClInclude Include="source\Core\VirturalArray.h" />
+    <ClInclude Include="source\Editor\DebugSerializedStructure.h" />
     <ClInclude Include="source\Editor\EditorCamera.h" />
     <ClInclude Include="source\Engine.h" />
     <ClInclude Include="source\RendererScene\Material.h" />
@@ -34,7 +36,8 @@
     <ClInclude Include="source\RendererScene\MeshInstance.h" />
     <ClInclude Include="source\RendererScene\RenderSceneUtility.h" />
     <ClInclude Include="source\RendererScene\Shader.h" />
-    <ClInclude Include="source\RendererScene\StaticMesh.h" />
+    <ClInclude Include="source\RendererScene\Model.h" />
+    <ClInclude Include="source\RendererScene\Texture.h" />
     <ClInclude Include="source\RendererScene\View.h" />
     <ClInclude Include="source\Renderer\AssetReloader\PipelineStateReloader.h" />
     <ClInclude Include="source\Renderer\D3D12RHI\D3D12RHI.h" />
@@ -44,6 +47,7 @@
     <ClInclude Include="source\Renderer\MeshRenderer\GpuMaterialManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\GpuMeshInstanceManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.h" />
+    <ClInclude Include="source\Renderer\MeshRenderer\GpuTextureManager.h" />
     <ClInclude Include="source\Renderer\MeshRenderer\MeshRenderer.h" />
     <ClInclude Include="source\Renderer\RenderCore\CommandListPool.h" />
     <ClInclude Include="source\Renderer\RenderCore\DescriptorAllocator.h" />
@@ -69,6 +73,7 @@
     <ClInclude Include="source\Renderer\RHI\RhiVideoMemoryBase.h" />
     <ClInclude Include="source\Renderer\RHI\RhiVideoMemoryDef.h" />
     <ClInclude Include="source\ThiredParty\D3D12MemoryAllocator\D3D12MemAlloc.h" />
+    <ClInclude Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.h" />
     <ClInclude Include="source\ThiredParty\ImGui\imconfig.h" />
     <ClInclude Include="source\ThiredParty\ImGui\imgui.h" />
     <ClInclude Include="source\ThiredParty\ImGui\imgui_impl_dx12.h" />
@@ -91,7 +96,8 @@
     <ClCompile Include="source\RendererScene\Mesh.cpp" />
     <ClCompile Include="source\RendererScene\MeshInstance.cpp" />
     <ClCompile Include="source\RendererScene\Shader.cpp" />
-    <ClCompile Include="source\RendererScene\StaticMesh.cpp" />
+    <ClCompile Include="source\RendererScene\Model.cpp" />
+    <ClCompile Include="source\RendererScene\Texture.cpp" />
     <ClCompile Include="source\RendererScene\View.cpp" />
     <ClCompile Include="source\Renderer\AssetReloader\PipelineStateReloader.cpp" />
     <ClCompile Include="source\Renderer\D3D12RHI\D3D12RHI.cpp" />
@@ -101,6 +107,7 @@
     <ClCompile Include="source\Renderer\MeshRenderer\GpuMaterialManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\GpuMeshInstanceManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\GpuMeshResourceManager.cpp" />
+    <ClCompile Include="source\Renderer\MeshRenderer\GpuTextureManager.cpp" />
     <ClCompile Include="source\Renderer\MeshRenderer\MeshRenderer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\CommandListPool.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\DescriptorAllocator.cpp" />
@@ -116,6 +123,7 @@
     <ClCompile Include="source\Renderer\RenderCore\RenderView.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\VramUpdater.cpp" />
     <ClCompile Include="source\ThiredParty\D3D12MemoryAllocator\D3D12MemAlloc.cpp" />
+    <ClCompile Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui_demo.cpp" />
     <ClCompile Include="source\ThiredParty\ImGui\imgui_draw.cpp" />

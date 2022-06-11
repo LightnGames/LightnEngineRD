@@ -34,7 +34,7 @@ public:
 	void terminate();
 	void update();
 
-	rhi::GpuDescriptorHandle getMeshGpuDescriptors() const { return _meshSrv._firstHandle._gpuHandle; }
+	rhi::GpuDescriptorHandle getMeshGpuSrv() const { return _meshSrv._firstHandle._gpuHandle; }
 
 	static GpuMeshResourceManager* Get();
 

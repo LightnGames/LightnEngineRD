@@ -43,6 +43,9 @@ public:
 	static RenderViewScene* Get();
 
 private:
+    void updateGpuView(const View& view);
+
+private:
     GpuTexture _viewColorTextures[ViewScene::VIEW_COUNT_MAX];
     GpuTexture _viewDepthTextures[ViewScene::VIEW_COUNT_MAX];
 	GpuBuffer _viewConstantBuffer;

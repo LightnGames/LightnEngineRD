@@ -1,5 +1,5 @@
 import sys, yaml, os.path, subprocess, struct, xxhash, glob
-import AssetDevelopmentConfig, RruntimeMessageSender
+import AssetDevelopmentConfig
 
 MAT_EXT = ".mto"
 

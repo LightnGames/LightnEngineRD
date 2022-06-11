@@ -1,16 +1,28 @@
-struct VSInput {
-    uint _vertexId : SV_VertexId;
-};
+#include "../ViewInfo.sfh"
+#include "../MeshRenderer/MeshType.sfh"
+#include "ShaderInput.sfh"
 
-struct PSInput {
-    float4 _position : SV_Position;
-};
+ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+ByteAddressBuffer _meshInstances : register(t0);
+ByteAddressBuffer _materialParameters : register(t1);
+ByteAddressBuffer _indirectArgumentSubInfos : register(t2);
 
-PSInput main(VSInput input) {
-    PSInput result;
-    float x = input._vertexId % 3 == 0 ?  3 : -1;
-    float y = input._vertexId % 3 == 2 ?  3 : -1;
-    result._position = float4(x, y, 0, 1);
-
-    return result;
+VertexOut main(VSInput input)
+{
+    IndirectArgumentSubInfo subInfo = _indirectArgumentSubInfos.Load<IndirectArgumentSubInfo>(sizeof(IndirectArgumentSubInfo) * input._instanceIndex);
+    MeshInstance meshInstance = _meshInstances.Load<MeshInstance>(sizeof(MeshInstance) * subInfo._meshInstanceIndex);
+    float4 worldPos = float4(mul(float4(input._position, 1), meshInstance._worldMatrix), 1);
+    //float4 worldPos = float4(input._position, 1);
+    
+    VertexOut vertexOut;
+    vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
+    vertexOut._positionNdc = float4(input._position, 1);
+    //vertexOut._texcoord = unpackTexCoords(input._texcoord);
+    //vertexOut._meshletIndex = 0;
+    //vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
+    //vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
+    vertexOut._worldPosition = worldPos.xyz;
+    //vertexOut._triangleOffset = _meshInstanceInfo._triangleOffset;
+    vertexOut._materialParameterOffset = subInfo._materialParameterOffset;
+    return vertexOut;
 }

@@ -186,7 +186,7 @@
     <ClInclude Include="source\Editor\EditorCamera.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="source\RendererScene\StaticMesh.h">
+    <ClInclude Include="source\RendererScene\Model.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\RendererScene\RenderSceneUtility.h">
@@ -196,6 +196,21 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\Renderer\RenderCore\GpuShader.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Editor\DebugSerializedStructure.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RendererScene\Texture.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer\MeshRenderer\GpuTextureManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Core\ChunkAllocator.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -320,13 +335,22 @@
     <ClCompile Include="source\Editor\EditorCamera.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="source\RendererScene\StaticMesh.cpp">
+    <ClCompile Include="source\RendererScene\Model.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\RendererScene\Shader.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\Renderer\RenderCore\GpuShader.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RendererScene\Texture.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer\MeshRenderer\GpuTextureManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

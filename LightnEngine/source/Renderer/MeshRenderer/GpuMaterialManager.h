@@ -1,9 +1,19 @@
 #pragma once
-#include <Renderer/RHI/Rhi.h>
+#include <Renderer/RenderCore/GpuBuffer.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 
 namespace ltn {
-class GpuBuffer;
+struct DefaultRootParam {
+	enum {
+		VIEW_INFO,
+		MESH_INSTANCE,
+		MATERIAL_PARAMETER,
+		INDIRECT_ARGUMENT_SUB_INFO,
+		TEXTURE,
+		COUNT
+	};
+};
+
 class GpuMaterialManager {
 public:
 	void initialize();
@@ -12,15 +22,18 @@ public:
 
 	rhi::RootSignature* getDefaultRootSignatures() { return _defaultRootSignatures; }
 	rhi::PipelineState* getDefaultPipelineStates() { return _defaultPipelineStates; }
-	rhi::GpuDescriptorHandle getParameterGpuSrv(u32 index) { return _parameterSrv.get(index)._gpuHandle; }
+	rhi::GpuDescriptorHandle getParameterGpuSrv() { return _parameterSrv._gpuHandle; }
 
 	static GpuMaterialManager* Get();
+
+private:
+	void updateMaterialInstances();
 
 private:
 	rhi::RootSignature* _defaultRootSignatures = nullptr;
 	rhi::PipelineState* _defaultPipelineStates = nullptr;
 
-	GpuBuffer* _parameterGpuBuffers = nullptr;
-	DescriptorHandles _parameterSrv;
+	GpuBuffer _parameterGpuBuffer;
+	DescriptorHandle _parameterSrv;
 };
 }

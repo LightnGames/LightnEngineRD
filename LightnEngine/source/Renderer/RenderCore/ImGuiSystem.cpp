@@ -1,6 +1,7 @@
 #include "ImGuiSystem.h"
 #include <ThiredParty/ImGui/imgui_impl_dx12.h>
 #include <ThiredParty/ImGui/imgui_impl_win32.h>
+#include <Renderer/RenderCore/RendererUtility.h>
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -9,6 +10,7 @@ namespace ltn {
 namespace{
 ImGuiSystem g_imGuiSystem;
 }
+
 void ImGuiSystem::initialize(const Desc& desc) {
 	IMGUI_CHECKVERSION();
 
@@ -44,7 +46,10 @@ void ImGuiSystem::initialize(const Desc& desc) {
 		rhi::toD3d12(rhi::BACK_BUFFER_FORMAT), _descriptorHeap._descriptorHeap,
 		_descriptorHeap._descriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 		_descriptorHeap._descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+	beginFrame();
 }
+
 void ImGuiSystem::terminate() {
 	_descriptorHeap.terminate();
 
@@ -52,6 +57,7 @@ void ImGuiSystem::terminate() {
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 }
+
 void ImGuiSystem::beginFrame() {
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
@@ -67,7 +73,9 @@ void ImGuiSystem::beginFrame() {
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::End();
 }
+
 void ImGuiSystem::render(rhi::CommandList* commandList) {
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "ImGui");
 	ImGui::Render();
 
 	rhi::DescriptorHeap* descriptorHeaps[] = { &_descriptorHeap };
@@ -79,10 +87,14 @@ void ImGuiSystem::render(rhi::CommandList* commandList) {
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault(nullptr, commandList->_commandList);
 	}
+
+	ImGuiSystem::Get()->beginFrame();
 }
+
 bool ImGuiSystem::translateWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	return ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam);
 }
+
 ImGuiSystem* ImGuiSystem::Get() {
 	return &g_imGuiSystem;
 }

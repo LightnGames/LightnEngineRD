@@ -11,22 +11,27 @@ constexpr u32 HIERACHICAL_DEPTH_COUNT = 8;
 struct CullingInfo {
 	u32 _meshInstanceReserveCount;
 };
+
+struct IndirectArgumentSubInfo {
+	u32 _meshInstanceIndex;
+	u32 _materialParameterOffset;
+};
 }
 
 struct GpuCullingRootParam {
-enum {
-	CULLING_INFO = 0,
-	VIEW_INFO,
-	MESH,
-	MESH_INSTANCE,
-	SUB_MESH_INFO,
-	INDIRECT_ARGUMENT_OFFSETS,
-	INDIRECT_ARGUMENTS,
-	LOD_LEVEL,
-	CULLING_RESULT,
-	HIZ,
-	COUNT
-};
+	enum {
+		CULLING_INFO = 0,
+		VIEW_INFO,
+		MESH,
+		MESH_INSTANCE,
+		SUB_MESH_INFO,
+		INDIRECT_ARGUMENT_OFFSETS,
+		INDIRECT_ARGUMENTS,
+		LOD_LEVEL,
+		CULLING_RESULT,
+		HIZ,
+		COUNT
+	};
 };
 
 class MeshRenderer {
@@ -55,6 +60,7 @@ public:
 	void initialize();
 	void terminate();
 
+	void update();
 	void culling(const CullingDesc& desc);
 	void render(const RenderDesc& desc);
 
@@ -64,9 +70,11 @@ private:
 	GpuBuffer _cullingInfoGpuBuffer;
 	GpuBuffer _indirectArgumentGpuBuffer;
 	GpuBuffer _indirectArgumentCountGpuBuffer;
+	GpuBuffer _indirectArgumentSubInfoGpuBuffer;
 	DescriptorHandles _indirectArgumentUav;
 	DescriptorHandle _indirectArgumentCountCpuUav;
 	DescriptorHandle _cullingInfoCbv;
+	DescriptorHandle _indirectArgumentSubInfoSrv;
 
 	rhi::CommandSignature _commandSignature;
 	rhi::RootSignature _gpuCullingRootSignature;

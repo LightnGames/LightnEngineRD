@@ -21,16 +21,49 @@ public:
 
 class Mesh {
 public:
-	VirtualArray::AllocationInfo _meshAllocationInfo;
-	VirtualArray::AllocationInfo _lodMeshAllocationInfo;
-	VirtualArray::AllocationInfo _subMeshAllocationInfo;
-	SubMesh* _subMeshes = nullptr;
+	static constexpr u16 MATERIAL_SLOT_COUNT_MAX = 16;
+	static constexpr u16 INVALID_MATERIAL_SLOT_INDEX = 0xffff;
+
+	void setLodMeshes(LodMesh* lodMeshes) { _lodMeshes = lodMeshes; }
+	void setSubMeshes(SubMesh* subMeshes) { _subMeshes = subMeshes; }
+	void setLodMeshCount(u32 lodMeshCount) { _lodMeshCount = lodMeshCount; }
+	void setSubMeshCount(u32 subMeshCount) { _subMeshCount = subMeshCount; }
+	void setVertexCount(u32 vertexCount) { _vertexCount = vertexCount; }
+	void setIndexCount(u32 indexCount) { _indexCount = indexCount; }
+	void setMaterialSlotCount(u16 materialSlotCount) { _materialSlotCount = materialSlotCount; }
+	void setAssetPathHashPtr(u64* assetPathHash) { _assetPathHash = assetPathHash; }
+	void setAssetPathPtr(char** assetPath) { _assetPath = assetPath; }
+	void setAssetPathHash(u64 assetPathHash) { *_assetPathHash = assetPathHash; }
+	void setAssetPath(char* assetPath) { *_assetPath = assetPath; }
+
+	u16 findMaterialSlotIndex(u64 slotNameHash) const;
+	u32 getLodMeshCount() const { return _lodMeshCount; }
+	u32 getSubMeshCount() const { return _subMeshCount; }
+	u32 getVertexCount() const { return _vertexCount; }
+	u32 getIndexCount() const { return _indexCount; }
+	u16 getMaterialSlotCount() const { return _materialSlotCount; }
+	u64 getAssetPathHash() const { return *_assetPathHash; }
+
+	const char* getAssetPath() const { return *_assetPath; }
+	const u64* getMaterialSlotNameHashes() const { return _materialSlotNameHashes; }
+	const LodMesh* getLodMesh(u32 index = 0) const { return &_lodMeshes[index]; }
+	const SubMesh* getSubMesh(u32 index = 0) const { return &_subMeshes[index]; }
+	char* getAssetPath() { return *_assetPath; }
+	u64* getMaterialSlotNameHashes() { return _materialSlotNameHashes; }
+	LodMesh* getLodMesh(u32 index = 0) { return &_lodMeshes[index]; }
+	SubMesh* getSubMesh(u32 index = 0) { return &_subMeshes[index]; }
+
+private:
 	LodMesh* _lodMeshes = nullptr;
+	SubMesh* _subMeshes = nullptr;
 	u32 _lodMeshCount = 0;
 	u32 _subMeshCount = 0;
 	u32 _vertexCount = 0;
 	u32 _indexCount = 0;
+	u16 _materialSlotCount;
+	u64 _materialSlotNameHashes[MATERIAL_SLOT_COUNT_MAX];
 	u64* _assetPathHash = nullptr;
+	char** _assetPath = nullptr;
 };
 
 // メッシュの実データを管理するプール
@@ -63,10 +96,15 @@ private:
 	VirtualArray _meshAllocations;
 	VirtualArray _lodMeshAllocations;
 	VirtualArray _subMeshAllocations;
+	VirtualArray::AllocationInfo* _meshAllocationInfos = nullptr;
+	VirtualArray::AllocationInfo* _lodMeshAllocationInfos = nullptr;
+	VirtualArray::AllocationInfo* _subMeshAllocationInfos = nullptr;
+
 	Mesh* _meshes = nullptr;
 	LodMesh* _lodMeshes = nullptr;
 	SubMesh* _subMeshes = nullptr;
 	u64* _meshAssetPathHashes = nullptr;
+	char** _meshAssetPaths = nullptr;
 };
 
 // メッシュ総合管理するクラス
@@ -88,7 +126,7 @@ public:
 	void destroyMesh(Mesh* mesh);
 
 	const MeshPool* getMeshPool() const { return &_meshPool; }
-	const UpdateInfos<Mesh>* geCreateInfos() { return &_meshCreateInfos; }
+	const UpdateInfos<Mesh>* getCreateInfos() { return &_meshCreateInfos; }
 	const UpdateInfos<Mesh>* getDestroyInfos() { return &_meshDestroyInfos; }
 	Mesh* findMesh(u64 assetPathHash) { return _meshPool.findMesh(assetPathHash); }
 

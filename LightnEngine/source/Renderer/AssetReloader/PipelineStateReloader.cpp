@@ -1,40 +1,46 @@
 #include "PipelineStateReloader.h"
 #include <Renderer/RenderCore/ReleaseQueue.h>
+#include <Renderer/RenderCore/GpuShader.h>
+#include <RendererScene/Shader.h>
 
 namespace ltn {
 namespace {
 PipelineStateReloader g_pipelineStateReloader;
 
-void reloadPipelineState(rhi::PipelineState* pipelineState, const PipelineStateReloader::GraphicsPipelineStateInfos& info) {
+void reloadPipelineState(rhi::PipelineState* pipelineState, const PipelineStateReloader::GraphicsPipelineStateRegisterDesc& info) {
 	rhi::PipelineState oldPipelineState = *pipelineState;
 	ReleaseQueue::Get()->enqueue(oldPipelineState);
 
-	rhi::ShaderBlob vertexShader;
-	rhi::ShaderBlob pixelShader;
-	vertexShader.initialize(info._shaderPaths[0]);
-	pixelShader.initialize(info._shaderPaths[1]);
+	ShaderScene* shaderScene = ShaderScene::Get();
+	Shader* vertexShader = shaderScene->findShader(info._shaderPathHashes[0]);
+	Shader* pixelShader = shaderScene->findShader(info._shaderPathHashes[1]);
+
+	GpuShaderScene* gpuShaderScene = GpuShaderScene::Get();
+	gpuShaderScene->terminateShader(vertexShader);
+	gpuShaderScene->terminateShader(pixelShader);
+	gpuShaderScene->initializeShader(vertexShader);
+	gpuShaderScene->initializeShader(pixelShader);
 
 	rhi::GraphicsPipelineStateDesc psoDesc = info._desc;
-	psoDesc._vs = vertexShader.getShaderByteCode();
-	psoDesc._ps = pixelShader.getShaderByteCode();
+	psoDesc._vs = gpuShaderScene->getShader(shaderScene->getShaderIndex(vertexShader))->getShaderByteCode();
+	psoDesc._ps = gpuShaderScene->getShader(shaderScene->getShaderIndex(pixelShader))->getShaderByteCode();
 	pipelineState->iniaitlize(psoDesc);
-
-	vertexShader.terminate();
-	pixelShader.terminate();
 }
 
-void reloadPipelineState(rhi::PipelineState* pipelineState, const PipelineStateReloader::ComputePipelineStateInfos& info) {
+void reloadPipelineState(rhi::PipelineState* pipelineState, const PipelineStateReloader::ComputePipelineStateRegisterDesc& info) {
 	rhi::PipelineState oldPipelineState = *pipelineState;
 	ReleaseQueue::Get()->enqueue(oldPipelineState);
 
-	rhi::ShaderBlob computeShader;
-	computeShader.initialize(info._shaderPath);
+	ShaderScene* shaderScene = ShaderScene::Get();
+	Shader* computeShader = shaderScene->findShader(info._shaderPathHash);
+
+	GpuShaderScene* gpuShaderScene = GpuShaderScene::Get();
+	gpuShaderScene->terminateShader(computeShader);
+	gpuShaderScene->initializeShader(computeShader);
 
 	rhi::ComputePipelineStateDesc psoDesc = info._desc;
-	psoDesc._cs = computeShader.getShaderByteCode();
+	psoDesc._cs = gpuShaderScene->getShader(shaderScene->getShaderIndex(computeShader))->getShaderByteCode();
 	pipelineState->iniaitlize(psoDesc);
-
-	computeShader.terminate();
 }
 }
 
@@ -97,14 +103,29 @@ void PipelineStateReloader::update() {
 	for (u32 i = 0; i < requestCount; ++i) {
 		u64 shaderPathHash = _reloadRequestShaderPathHashs[i];
 		u16 pipelineStateIndices[PipelineStateShaderPathContainer::COUNT_MAX];
-		u16 pipelineStateCount;
+		u16 pipelineStateCount = 0;
 
-		_graphicsPipelineStateContainer.collectPipelineState(shaderPathHash, pipelineStateIndices, pipelineStateCount);
+		for (u32 psoIndex = 0; psoIndex < _graphicsPipelineStateContainer._count; ++psoIndex) {
+			if (_graphicsPipelineStateInfos[psoIndex]._shaderPathHashes[0] == shaderPathHash) {
+				pipelineStateIndices[pipelineStateCount++] = psoIndex;
+			}
+
+			if (_graphicsPipelineStateInfos[psoIndex]._shaderPathHashes[1] == shaderPathHash) {
+				pipelineStateIndices[pipelineStateCount++] = psoIndex;
+			}
+		}
+
 		for (u16 psoIndex = 0; psoIndex < _graphicsPipelineStateContainer._count; ++psoIndex) {
 			reloadPipelineState(_graphicsPipelineStateContainer._pipelineStates[psoIndex], _graphicsPipelineStateInfos[psoIndex]);
 		}
 
-		_computePipelineStateContainer.collectPipelineState(shaderPathHash, pipelineStateIndices, pipelineStateCount);
+		pipelineStateCount = 0;
+		for (u32 psoIndex = 0; psoIndex < _computePipelineStateContainer._count; ++psoIndex) {
+			if (_computePipelineStateInfos[psoIndex]._shaderPathHash == shaderPathHash) {
+				pipelineStateIndices[pipelineStateCount++] = psoIndex;
+			}
+		}
+
 		for (u16 psoIndex = 0; psoIndex < _computePipelineStateContainer._count; ++psoIndex) {
 			reloadPipelineState(_computePipelineStateContainer._pipelineStates[psoIndex], _computePipelineStateInfos[psoIndex]);
 		}
@@ -116,45 +137,20 @@ void PipelineStateReloader::registerPipelineState(rhi::PipelineState* pipelineSt
 		findIndex = _graphicsPipelineStateContainer._count++;
 	}
 
-	u32 shaderPathCount = LTN_COUNTOF(desc._shaderPaths);
-	{
-		GraphicsPipelineStateInfos& info = _graphicsPipelineStateInfos[findIndex];
-		for (u32 i = 0; i < shaderPathCount; ++i) {
-			memcpy(info._shaderPaths[i], desc._shaderPaths[i], StrLength(desc._shaderPaths[i]));
-		}
-		info._desc = desc._desc;
-	}
-
-	{
-		auto& info = _graphicsPipelineStateContainer._shaderPathInfos[findIndex];
-		info._count = shaderPathCount;
-		for (u32 i = 0; i < shaderPathCount; ++i) {
-			info._shaderPathHashs[i] = StrHash64(desc._shaderPaths[i]);
-		}
-	}
-
+	_graphicsPipelineStateInfos[findIndex] = desc;
 	_graphicsPipelineStateContainer._pipelineStates[findIndex] = pipelineState;
 }
+
 void PipelineStateReloader::registerPipelineState(rhi::PipelineState* pipelineState, ComputePipelineStateRegisterDesc& desc) {
 	u32 findIndex = _computePipelineStateContainer.findEmptyPipelineStateIndex();
 	if (findIndex == -1) {
 		findIndex = _computePipelineStateContainer._count++;
 	}
 
-	{
-		ComputePipelineStateInfos& info = _computePipelineStateInfos[findIndex];
-		info._desc = desc._desc;
-		memcpy(info._shaderPath, desc._shaderPath, StrLength(desc._shaderPath));
-	}
-
-	{
-		auto& info = _computePipelineStateContainer._shaderPathInfos[findIndex];
-		info._count = 1;
-		info._shaderPathHashs[0] = StrHash64(desc._shaderPath);
-	}
-
+	_computePipelineStateInfos[findIndex] = desc;
 	_computePipelineStateContainer._pipelineStates[findIndex] = pipelineState;
 }
+
 void PipelineStateReloader::unregisterPipelineState(rhi::PipelineState* pipelineState) {
 	if (_graphicsPipelineStateContainer.removePipelineState(pipelineState)) {
 		return;
@@ -201,16 +197,5 @@ bool PipelineStateShaderPathContainer::removePipelineState(rhi::PipelineState* p
 	}
 
 	return true;
-}
-
-void PipelineStateShaderPathContainer::collectPipelineState(u64 shaderHash, u16* outIndices, u16& outCount) const {
-	for (u32 psoIndex = 0; psoIndex < _count; ++psoIndex) {
-		const ShaderPathInfo& info = _shaderPathInfos[psoIndex];
-		for (u32 shaderIndex = 0; shaderIndex < info._count; ++shaderIndex) {
-			if (info._shaderPathHashs[shaderIndex] == shaderHash) {
-				outIndices[outCount++] = psoIndex;
-			}
-		}
-	}
 }
 }

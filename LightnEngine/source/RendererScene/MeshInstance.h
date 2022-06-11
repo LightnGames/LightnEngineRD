@@ -2,6 +2,7 @@
 #include <Core/Type.h>
 #include <Core/Utility.h>
 #include <Core/VirturalArray.h>
+#include <Core/Math.h>
 #include "RenderSceneUtility.h"
 
 namespace ltn {
@@ -9,23 +10,45 @@ class Mesh;
 class MaterialInstance;
 class SubMeshInstance {
 public:
+	void setMaterialInstance(MaterialInstance* materialInstance) { _materialInstance = materialInstance; }
+	MaterialInstance* getMaterialInstance() { return _materialInstance; }
+	const MaterialInstance* getMaterialInstance() const { return _materialInstance; }
+
+private:
 	MaterialInstance* _materialInstance = nullptr;
 };
 
 class LodMeshInstance {
 public:
+	void setLodThreshold(f32 threshold) { _lodThreshold = threshold; }
+	f32 getLodThreshold() const { return _lodThreshold; }
+
+private:
 	f32 _lodThreshold = 0.0f;
 };
 
 class MeshInstance {
 public:
-	VirtualArray::AllocationInfo _meshAllocationInfo;
-	VirtualArray::AllocationInfo _lodMeshAllocationInfo;
-	VirtualArray::AllocationInfo _subMeshAllocationInfo;
+	void setMesh(const Mesh* mesh) { _mesh = mesh; }
+	void setLodMeshInstances(LodMeshInstance* lodMeshInstances) { _lodMeshInstances = lodMeshInstances; }
+	void setSubMeshInstances(SubMeshInstance* subMeshInstances) { _subMeshInstances = subMeshInstances; }
 
+	void setMaterialInstance(u16 materialSlotIndex, MaterialInstance* materialInstance);
+	void setMaterialInstance(u64 materialSlotNameHash, MaterialInstance* materialInstance);
+	void setWorldMatrix(const Matrix4& worldMatrix, bool dirtyFlags = true);
+
+	const Mesh* getMesh() const { return _mesh; }
+	const LodMeshInstance* getLodMeshInstance(u32 index = 0) const { return &_lodMeshInstances[index]; }
+	const SubMeshInstance* getSubMeshInstance(u32 index = 0) const { return &_subMeshInstances[index]; }
+	LodMeshInstance* getLodMeshInstance(u32 index = 0) { return &_lodMeshInstances[index]; }
+	SubMeshInstance* getSubMeshInstance(u32 index = 0) { return &_subMeshInstances[index]; }
+	Matrix4 getWorldMatrix() const { return _worldMatrix; }
+
+private:
 	SubMeshInstance* _subMeshInstances = nullptr;
 	LodMeshInstance* _lodMeshInstances = nullptr;
 	const Mesh* _mesh = nullptr;
+	Matrix4 _worldMatrix;
 };
 
 // メッシュインスタンスの実データを管理するクラス
@@ -53,9 +76,14 @@ public:
 	MeshInstance* getMeshInstance(u32 index) { return &_meshInstances[index]; }
 
 private:
-	VirtualArray _meshAllocations;
-	VirtualArray _lodMeshAllocations;
-	VirtualArray _subMeshAllocations;
+	VirtualArray _meshInstanceAllocations;
+	VirtualArray _lodMeshInstanceAllocations;
+	VirtualArray _subMeshInstanceAllocations;
+	
+	VirtualArray::AllocationInfo* _meshInstanceAllocationInfos = nullptr;
+	VirtualArray::AllocationInfo* _lodMeshInstanceAllocationInfos = nullptr;
+	VirtualArray::AllocationInfo* _subMeshInstanceAllocationInfos = nullptr;
+	
 	MeshInstance* _meshInstances = nullptr;
 	LodMeshInstance* _lodMeshInstances = nullptr;
 	SubMeshInstance* _subMeshInstances = nullptr;

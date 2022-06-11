@@ -44,6 +44,7 @@ if (!(x)) { \
 #endif
 
 #define LTN_COUNTOF(x) _countof(x)
+#define LTN_OFFSETOF(x, y) offsetof(x, y)
 
 namespace ltn {
 using FilePtr = FILE*;
@@ -73,16 +74,23 @@ T RoundDivUp(const T& value, const T& divideValue) {
 	return (value / divideValue) + 1;
 }
 
+template <class T>
+u32 SizeOfU32(u32 size) { return sizeof(T) * size; }
+
+static void GetEnvPath(char* envPath) {
+	constexpr char ENV_NAME[] = "LTN_ROOT";
+	size_t size;
+	errno_t error = getenv_s(&size, nullptr, 0, ENV_NAME);
+	LTN_ASSERT(size > 0);
+
+	getenv_s(&size, envPath, size, ENV_NAME);
+}
+
 class AssetPath {
 public:
 	explicit AssetPath(const char* localPath) {
-		constexpr char ENV_NAME[] = "LTN_ROOT";
-		size_t size;
-		errno_t error = getenv_s(&size, nullptr, 0, ENV_NAME);
-		LTN_ASSERT(size > 0);
-
 		char envPath[FILE_PATH_COUNT_MAX];
-		getenv_s(&size, envPath, size, ENV_NAME);
+		GetEnvPath(envPath);
 		sprintf_s(_path, FILE_PATH_COUNT_MAX, "%s\\Resource\\%s", envPath, localPath);
 	}
 
@@ -93,6 +101,14 @@ public:
 	void openFile(){
 		errno_t error = fopen_s(&_filePtr, _path, "rb");
 		LTN_ASSERT(error == 0);
+	}
+
+	void seekSet(u32 offset){
+		fseek(_filePtr, offset, SEEK_SET);
+	}
+
+	void seekCur(u32 offset) {
+		fseek(_filePtr, offset, SEEK_CUR);
 	}
 
 	void closeFile(){

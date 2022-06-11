@@ -1202,6 +1202,7 @@ void exportMesh(const char* fileName) {
 			}
 
 			if (findMaterialIndex == static_cast<uint32>(-1)) {
+				std::cout << "Material Name: " << name << std::endl;
 				localRemapedMaterialIndices[i] = static_cast<uint32>(localMaterialNameHashes.size());
 				localMaterialNameHashes.push_back(nameHash);
 				continue;

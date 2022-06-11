@@ -21,9 +21,8 @@ private:
 	rhi::SwapChain _swapChain;
 	rhi::CommandQueue _commandQueue;
 
+	u32 _frameIndex = 0;
 	u64 _fenceValues[rhi::BACK_BUFFER_COUNT] = {};
 	GpuTexture _backBuffers[rhi::BACK_BUFFER_COUNT] = {};
-	DescriptorHandles _rtvDescriptors;
-	u32 _frameIndex = 0;
 };
 }

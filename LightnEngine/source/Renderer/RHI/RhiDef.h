@@ -576,8 +576,9 @@ struct DescriptorRange {
 	DescriptorRange(DescriptorRangeType rangeType,
 		u32 numDescriptors,
 		u32 baseShaderRegister,
+		u32 registerSpace = 0,
 		DescriptorRangeFlags flags = DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
-		:_rangeType(rangeType), _numDescriptors(numDescriptors), _baseShaderRegister(baseShaderRegister), _flags(flags) {
+		:_rangeType(rangeType), _numDescriptors(numDescriptors), _baseShaderRegister(baseShaderRegister), _registerSpace(registerSpace), _flags(flags) {
 	}
 
 	void initialize(DescriptorRangeType rangeType,

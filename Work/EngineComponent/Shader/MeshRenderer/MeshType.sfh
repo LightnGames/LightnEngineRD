@@ -1,0 +1,49 @@
+struct Mesh
+{
+    uint _lodMeshOffset;
+    uint _lodMeshCount;
+    uint _streamedLodLevel;
+};
+
+struct LodMesh
+{
+    uint _vertexOffset;
+    uint _subMeshOffset;
+    uint _subMeshCount;
+};
+
+struct SubMesh
+{
+    uint _indexCount;
+    uint _indexOffset;
+};
+
+struct MeshInstance
+{
+    uint _stateFlags;
+    uint _meshIndex;
+    uint _lodMeshInstanceOffset;
+    float _boundsRadius;
+    float3 _aabbMin;
+    float3 _aabbMax;
+    float _worldScale;
+    float4x3 _worldMatrix;
+};
+
+struct LodMeshInstance
+{
+    uint _subMeshInstanceOffset;
+    float _threshhold;
+};
+
+struct SubMeshInstance
+{
+    uint _materialParameterOffset;
+    uint _materialIndex;
+};
+
+struct IndirectArgumentSubInfo
+{
+    uint _meshInstanceIndex;
+    uint _materialParameterOffset;
+};

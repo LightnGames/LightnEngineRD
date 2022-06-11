@@ -52,19 +52,16 @@ void GeometryResourceManager::update() {
 	MeshScene* meshScene = MeshScene::Get();
 	const MeshPool* meshPool = meshScene->getMeshPool();
 
-	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->geCreateInfos();
+	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->getCreateInfos();
 	u32 createMeshCount = meshCreateInfos->getUpdateCount();
 	auto createMeshes = meshCreateInfos->getObjects();
 	for (u32 i = 0; i < createMeshCount; ++i) {
 		VramUpdater* vramUpdater = VramUpdater::Get();
 		const Mesh* mesh = createMeshes[i];
-		u32 meshIndex = meshPool->getMeshIndex(mesh);
-		MeshGeometryInfo& info = _meshInfos[meshIndex];
-		info._vertexAllocationInfo = _vertexPositionAllocations.allocation(mesh->_vertexCount);
-		info._indexAllocationInfo = _indexAllocations.allocation(mesh->_indexCount);
+		loadLodMesh(mesh, 0, 1);
 	}
 
-	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->geCreateInfos();
+	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->getDestroyInfos();
 	u32 destroyMeshCount = meshDestroyInfos->getUpdateCount();
 	auto destroyMeshes = meshDestroyInfos->getObjects();
 	for (u32 i = 0; i < destroyMeshCount; ++i) {
@@ -94,5 +91,62 @@ rhi::IndexBufferView GeometryResourceManager::getIndexBufferView() const {
 
 GeometryResourceManager* GeometryResourceManager::Get() {
 	return &g_geometryResourceManager;
+}
+
+void GeometryResourceManager::loadLodMesh(const Mesh* mesh, u32 beginLodLevel, u32 endLodLevel) {
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	MeshScene* meshScene = MeshScene::Get();
+	const MeshPool* meshPool = meshScene->getMeshPool();
+	u32 meshIndex = meshPool->getMeshIndex(mesh);
+	MeshGeometryInfo& info = _meshInfos[meshIndex];
+	info._vertexAllocationInfo = _vertexPositionAllocations.allocation(mesh->getVertexCount());
+	info._indexAllocationInfo = _indexAllocations.allocation(mesh->getIndexCount());
+
+	// .mesh -> .meshg
+	char path[FILE_PATH_COUNT_MAX];
+	sprintf_s(path, "%s%s", mesh->getAssetPath(), "g");
+
+	AssetPath assetPath(path);
+	assetPath.openFile();
+
+	// 座標
+	{
+		u32 count = mesh->getVertexCount();
+		u32 offset = u32(info._vertexAllocationInfo._offset);
+		VertexPosition* positions = vramUpdater->enqueueUpdate<VertexPosition>(&_vertexPositionGpuBuffer, offset, count);
+		assetPath.readFile(positions, sizeof(VertexPosition) * count);
+
+		// 法線・UVダミー読み取り
+		assetPath.seekCur(sizeof(VertexNormalTangent) * count);
+		assetPath.seekCur(sizeof(VertexTexCoords) * count);
+
+		//u32 endOffset = sizeof(VertexPosition) * endVertexOffset;
+		//u32 srcOffset = sizeof(VertexPosition) * beginVertexOffset;
+		//u32 dstOffset = sizeof(VertexPosition) * vertexBinaryIndex;
+		//VertexPosition* vertexPtr = vramUpdater->enqueueUpdate<VertexPosition>(&_positionVertexBuffer, dstOffset, vertexCount);
+		//fseek(fin, srcOffset, SEEK_CUR);
+		//fread_s(vertices.data(), sizeof(VertexPosition) * vertexCount, sizeof(VertexPosition), vertexCount, fin);
+		//fseek(fin, endOffset, SEEK_CUR);
+		//memcpy(vertexPtr, vertices.data(), sizeof(VertexPosition) * vertices.size());
+	}
+
+	// インデックスバッファ
+	{
+		u32 count = mesh->getIndexCount();
+		u32 offset = u32(info._indexAllocationInfo._offset);
+		VertexIndex* indices = vramUpdater->enqueueUpdate<VertexIndex>(&_indexGpuBuffer, offset, count);
+		assetPath.readFile(indices, sizeof(VertexIndex) * count);
+
+		//u32 endOffset = sizeof(u32) * endClassicIndexOffset;
+		//u32 srcOffset = sizeof(u32) * beginClassicIndexOffset;
+		//u32 dstOffset = sizeof(u32) * classicIndex;
+		//u32* classicIndexPtr = vramUpdater->enqueueUpdate<u32>(&_classicIndexBuffer, dstOffset, classicIndexCount);
+		//fseek(fin, srcOffset, SEEK_CUR);
+		//fread_s(triangles.data(), sizeof(u32) * classicIndexCount, sizeof(u32), classicIndexCount, fin);
+		//fseek(fin, endOffset, SEEK_CUR);
+		//memcpy(classicIndexPtr, triangles.data(), sizeof(u32) * classicIndexCount);
+	}
+
+	assetPath.closeFile();
 }
 }

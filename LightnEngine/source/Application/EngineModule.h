@@ -2,7 +2,7 @@
 #include <Core/ModuleSettings.h>
 
 namespace ltn {
-class LTN_API EngineModuleManager{
+class LTN_API EngineModuleManager {
 public:
 	void run();
 

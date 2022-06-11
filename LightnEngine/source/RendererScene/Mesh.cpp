@@ -27,8 +27,8 @@ void MeshScene::lateUpdate() {
 #define ENABLE_ZERO_CLEAR 1
 #if ENABLE_ZERO_CLEAR
 		Mesh* mesh = _meshPool.getMesh(_meshPool.getMeshIndex(destroyMeshes[i]));
-		memset(mesh->_lodMeshes, 0, sizeof(LodMesh) * mesh->_lodMeshCount);
-		memset(mesh->_subMeshes, 0, sizeof(SubMesh) * mesh->_subMeshCount);
+		memset(mesh->getLodMesh(), 0, sizeof(LodMesh) * mesh->getLodMeshCount());
+		memset(mesh->getSubMesh(), 0, sizeof(SubMesh) * mesh->getSubMeshCount());
 		memset(mesh, 0, sizeof(Mesh));
 #endif
 	}
@@ -43,7 +43,6 @@ Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	// 以下はメッシュエクスポーターと同一の定義にする
 	constexpr u32 LOD_PER_MESH_COUNT_MAX = 8;
 	constexpr u32 SUBMESH_PER_MESH_COUNT_MAX = 64;
-	constexpr u32 MATERIAL_SLOT_COUNT_MAX = 16;
 
 	struct SubMeshInfo {
 		u32 _materialSlotIndex = 0;
@@ -79,25 +78,30 @@ Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	MeshHeader meshHeader;
 	SubMeshInfo subMeshInfos[SUBMESH_PER_MESH_COUNT_MAX] = {};
 	LodInfo lodInfos[LOD_PER_MESH_COUNT_MAX] = {};
-	u64 materialNameHashes[MATERIAL_SLOT_COUNT_MAX] = {};
 
 	meshAsset.readFile(&meshHeader, sizeof(MeshHeader));
-	meshAsset.readFile(materialNameHashes, sizeof(u64) * meshHeader.materialSlotCount);
-	meshAsset.readFile(subMeshInfos, sizeof(SubMeshInfo) * meshHeader.totalSubMeshCount);
-	meshAsset.readFile(lodInfos, sizeof(LodInfo) * meshHeader.totalLodMeshCount);
 
 	MeshPool::MeshAllocationDesc allocationDesc;
 	allocationDesc._lodMeshCount = meshHeader.totalLodMeshCount;
 	allocationDesc._subMeshCount = meshHeader.totalSubMeshCount;
 	Mesh* mesh = _meshPool.allocateMesh(allocationDesc);
 
-	mesh->_lodMeshCount = meshHeader.totalLodMeshCount;
-	mesh->_subMeshCount = meshHeader.totalSubMeshCount;
-	mesh->_vertexCount = meshHeader.totalVertexCount;
-	mesh->_indexCount = meshHeader.totalIndexCount;
-	*mesh->_assetPathHash = StrHash64(desc._assetPath);
+	meshAsset.readFile(mesh->getMaterialSlotNameHashes(), sizeof(u64) * meshHeader.materialSlotCount);
+	meshAsset.readFile(subMeshInfos, sizeof(SubMeshInfo) * meshHeader.totalSubMeshCount);
+	meshAsset.readFile(lodInfos, sizeof(LodInfo) * meshHeader.totalLodMeshCount);
 
-	LodMesh* lodMeshes = mesh->_lodMeshes;
+	mesh->setLodMeshCount(meshHeader.totalLodMeshCount);
+	mesh->setSubMeshCount(meshHeader.totalSubMeshCount);
+	mesh->setVertexCount(meshHeader.totalVertexCount);
+	mesh->setIndexCount(meshHeader.totalIndexCount);
+	mesh->setMaterialSlotCount(meshHeader.materialSlotCount);
+	mesh->setAssetPathHash(StrHash64(desc._assetPath));
+
+	u32 assetPathLength = StrLength(desc._assetPath) + 1;
+	mesh->setAssetPath(Memory::allocObjects<char>(assetPathLength));
+	memcpy(mesh->getAssetPath(), desc._assetPath, assetPathLength);
+
+	LodMesh* lodMeshes = mesh->getLodMesh();
 	for (u32 i = 0; i < meshHeader.totalLodMeshCount; ++i) {
 		const LodInfo& lodInfo = lodInfos[i];
 		LodMesh& lodMesh = lodMeshes[i];
@@ -105,7 +109,7 @@ Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 		lodMesh._subMeshOffset = lodInfo._subMeshOffset;
 	}
 
-	SubMesh* subMeshes = mesh->_subMeshes;
+	SubMesh* subMeshes = mesh->getSubMesh();
 	for (u32 i = 0; i < meshHeader.totalSubMeshCount; ++i) {
 		const SubMeshInfo& subMeshInfo = subMeshInfos[i];
 		SubMesh& subMesh = subMeshes[i];
@@ -146,6 +150,11 @@ void MeshPool::initialize(const InitializetionDesc& desc) {
 		_lodMeshes = Memory::allocObjects<LodMesh>(desc._lodMeshCount);
 		_subMeshes = Memory::allocObjects<SubMesh>(desc._subMeshCount);
 		_meshAssetPathHashes = Memory::allocObjects<u64>(desc._meshCount);
+		_meshAssetPaths = Memory::allocObjects<char*>(desc._meshCount);
+
+		_meshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._meshCount);
+		_lodMeshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._lodMeshCount);
+		_subMeshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._subMeshCount);
 	}
 }
 
@@ -157,6 +166,11 @@ void MeshPool::terminate() {
 	Memory::freeObjects(_meshes);
 	Memory::freeObjects(_lodMeshes);
 	Memory::freeObjects(_subMeshes);
+	Memory::freeObjects(_meshAssetPathHashes);
+	Memory::freeObjects(_meshAssetPaths);
+	Memory::freeObjects(_meshAllocationInfos);
+	Memory::freeObjects(_lodMeshAllocationInfos);
+	Memory::freeObjects(_subMeshAllocationInfos);
 }
 
 Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
@@ -164,22 +178,24 @@ Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
 	VirtualArray::AllocationInfo lodMeshAllocationInfo = _lodMeshAllocations.allocation(desc._lodMeshCount);
 	VirtualArray::AllocationInfo subMeshAllocationInfo = _subMeshAllocations.allocation(desc._subMeshCount);
 
+	_meshAllocationInfos[meshAllocationInfo._offset] = meshAllocationInfo;
+	_lodMeshAllocationInfos[meshAllocationInfo._offset] = lodMeshAllocationInfo;
+	_subMeshAllocationInfos[meshAllocationInfo._offset] = subMeshAllocationInfo;
+
 	Mesh* mesh = &_meshes[meshAllocationInfo._offset];
-	mesh->_meshAllocationInfo = meshAllocationInfo;
-	mesh->_lodMeshAllocationInfo = lodMeshAllocationInfo;
-	mesh->_subMeshAllocationInfo = subMeshAllocationInfo;
-	mesh->_lodMeshes = &_lodMeshes[lodMeshAllocationInfo._offset];
-	mesh->_subMeshes = &_subMeshes[subMeshAllocationInfo._offset];
-	mesh->_lodMeshCount = desc._lodMeshCount;
-	mesh->_subMeshCount = desc._subMeshCount;
-	mesh->_assetPathHash = &_meshAssetPathHashes[meshAllocationInfo._offset];
+	mesh->setLodMeshes(&_lodMeshes[lodMeshAllocationInfo._offset]);
+	mesh->setSubMeshes(&_subMeshes[subMeshAllocationInfo._offset]);
+	mesh->setAssetPathHashPtr(&_meshAssetPathHashes[meshAllocationInfo._offset]);
+	mesh->setAssetPathPtr(&_meshAssetPaths[meshAllocationInfo._offset]);
 	return mesh;
 }
 
 void MeshPool::freeMesh(const Mesh* mesh) {
-	_meshAllocations.freeAllocation(mesh->_meshAllocationInfo);
-	_lodMeshAllocations.freeAllocation(mesh->_lodMeshAllocationInfo);
-	_subMeshAllocations.freeAllocation(mesh->_subMeshAllocationInfo);
+	u32 meshIndex = getMeshIndex(mesh);
+	_meshAllocations.freeAllocation(_meshAllocationInfos[meshIndex]);
+	_lodMeshAllocations.freeAllocation(_lodMeshAllocationInfos[meshIndex]);
+	_subMeshAllocations.freeAllocation(_subMeshAllocationInfos[meshIndex]);
+	Memory::freeObjects(_meshAssetPaths[getMeshIndex(mesh)]);
 }
 Mesh* MeshPool::findMesh(u64 assetPathHash) {
 	for (u32 i = 0; i < MeshScene::MESH_CAPACITY; ++i) {
@@ -188,5 +204,14 @@ Mesh* MeshPool::findMesh(u64 assetPathHash) {
 		}
 	}
 	return nullptr;
+}
+u16 Mesh::findMaterialSlotIndex(u64 slotNameHash) const {
+	for (u32 i = 0; i < _materialSlotCount; ++i) {
+		if (_materialSlotNameHashes[i] == slotNameHash) {
+			return i;
+		}
+	}
+
+	return INVALID_MATERIAL_SLOT_INDEX;
 }
 }

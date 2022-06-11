@@ -1,5 +1,6 @@
 #include "VramUpdater.h"
 #include <Renderer/RenderCore/DeviceManager.h>
+#include <Renderer/RenderCore/RendererUtility.h>
 
 namespace ltn {
 namespace {
@@ -85,6 +86,7 @@ void* VramUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceInd
 }
 
 void VramUpdater::populateCommandList(rhi::CommandList* commandList) {
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "VramUpdater");
 	constexpr u32 BARRIER_COUNT_MAX = 128;
 	constexpr u32 UNKNOWN_RESOURCE_INDEX = 0xffffffff;
 	void* uniqueResources[BARRIER_COUNT_MAX] = {};
@@ -101,8 +103,6 @@ void VramUpdater::populateCommandList(rhi::CommandList* commandList) {
 
 		return UNKNOWN_RESOURCE_INDEX;
 	};
-
-	//DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4::DEEP_GREEN, "Vram Updater");
 
 	// vram to vram
 	for (u32 headerIndex = 0; headerIndex < _updateHeaderCount; ++headerIndex) {

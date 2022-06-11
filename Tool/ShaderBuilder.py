@@ -1,5 +1,6 @@
 import sys, os.path, subprocess, struct, xxhash, glob
-import AssetDevelopmentConfig, RruntimeMessageSender
+from subprocess import Popen
+import AssetDevelopmentConfig
 
 DXC_PATH = "%s\\dxc\\dxc.exe" % AssetDevelopmentConfig.TOOL_ROOT
 ENTRY_POINT = 'main'
@@ -38,7 +39,7 @@ def convert(shader_file_path):
     # 3: float4
     # 4: uint
     # 5: texture
-    if shader_output_ext == 'pso':
+    """if shader_output_ext == 'pso':
         base_color_hash = xxhash.xxh32(b'BaseColor').intdigest()
         albedo_texture_index_hash = xxhash.xxh32(b'BaseColorRoughness').intdigest()
         shader_parameters = []
@@ -49,7 +50,7 @@ def convert(shader_file_path):
         with open(shader_info_path, "wb") as fout:
             fout.write(struct.pack("H", len(shader_parameters)))
             for shader_parameter in shader_parameters:
-                fout.write(struct.pack("IH", shader_parameter[0], shader_parameter[1]))
+                fout.write(struct.pack("IH", shader_parameter[0], shader_parameter[1]))"""
 
     # DXCシェーダーコンパイラでシェーダーをビルドする
     cmd = []
@@ -75,7 +76,8 @@ def convert(shader_file_path):
         print("shader build failed!")
 
     # ランタイムが起動していたら再リロードするためにメッセージを送る
-    RruntimeMessageSender.SendMessage(shader_output_path)
+    cmd = "python %s\\RuntimeMessageSender.py %s" % (AssetDevelopmentConfig.TOOL_ROOT, shader_output_path)
+    Popen(cmd)
 
 if __name__ == "__main__":
     if len(sys.argv) == 1 :

@@ -30,7 +30,7 @@ void ViewScene::terminate() {
 
 void ViewScene::lateUpdate() {
 	for (u32 i = 0; i < VIEW_COUNT_MAX; ++i) {
-		if (_viewStateFlags[i] == VIEW_STATE_DESTROY) {
+		if (_viewStateFlags[i] == View::VIEW_STATE_DESTROY) {
 			_viewEnabledFlags[i] = 0;
 			_views[i] = View();
 		}
@@ -43,7 +43,8 @@ View* ViewScene::createView() {
 	for (u32 i = 0; i < VIEW_COUNT_MAX; ++i) {
 		if (_viewEnabledFlags[i] == 0) {
 			_viewEnabledFlags[i] = 1;
-			_viewStateFlags[i] |= VIEW_STATE_CREATED;
+			_viewStateFlags[i] |= View::VIEW_STATE_CREATED;
+			_views[i].setStateFlags(&_viewStateFlags[i]);
 			return &_views[i];
 		}
 	}
@@ -55,7 +56,7 @@ void ViewScene::destroyView(View* view) {
 	u32 viewIndex = getViewIndex(view);
 	LTN_ASSERT(viewIndex < VIEW_COUNT_MAX);
 
-	_viewStateFlags[viewIndex] = VIEW_STATE_DESTROY;
+	_viewStateFlags[viewIndex] = View::VIEW_STATE_DESTROY;
 }
 
 ViewScene* ViewScene::Get() {

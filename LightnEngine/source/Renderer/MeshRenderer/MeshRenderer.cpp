@@ -5,8 +5,11 @@
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
+#include <Renderer/MeshRenderer/GpuMaterialManager.h>
+#include <Renderer/MeshRenderer/GpuTextureManager.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/VramUpdater.h>
 
 namespace ltn {
 namespace {
@@ -26,7 +29,7 @@ void MeshRenderer::initialize() {
 		rhi::DescriptorRange lodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
 		rhi::DescriptorRange materialInstanceIndexSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
 		rhi::DescriptorRange hizSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
-		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
 		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
 
 		rhi::RootParameter rootParameters[GpuCullingRootParam::COUNT] = {};
@@ -56,10 +59,10 @@ void MeshRenderer::initialize() {
 		pipelineStateDesc._cs = shader.getShaderByteCode();
 		_gpuCullingPipelineState.iniaitlize(pipelineStateDesc);
 
-		PipelineStateReloader::ComputePipelineStateRegisterDesc reloaderDesc = {};
-		reloaderDesc._desc = pipelineStateDesc;
-		reloaderDesc._shaderPath = shaderPath.get();
-		PipelineStateReloader::Get()->registerPipelineState(&_gpuCullingPipelineState, reloaderDesc);
+		//PipelineStateReloader::ComputePipelineStateRegisterDesc reloaderDesc = {};
+		//reloaderDesc._desc = pipelineStateDesc;
+		//reloaderDesc._shaderPathHash = shaderPath.get();
+		//PipelineStateReloader::Get()->registerPipelineState(&_gpuCullingPipelineState, reloaderDesc);
 
 		shader.terminate();
 	}
@@ -67,11 +70,11 @@ void MeshRenderer::initialize() {
 	// コマンドシグネチャ
 	{
 		rhi::IndirectArgumentDesc argumentDescs[1] = {};
-		argumentDescs[0]._type = rhi::INDIRECT_ARGUMENT_TYPE_DRAW;
+		argumentDescs[0]._type = rhi::INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
 		rhi::CommandSignatureDesc desc = {};
 		desc._device = device;
-		desc._byteStride = sizeof(rhi::DrawArguments);
+		desc._byteStride = sizeof(rhi::DrawIndexedArguments);
 		desc._argumentDescs = argumentDescs;
 		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
 		_commandSignature.initialize(desc);
@@ -84,7 +87,7 @@ void MeshRenderer::initialize() {
 		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
 		desc._device = device;
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgument);
-		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		desc._initialState = rhi::RESOURCE_STATE_INDIRECT_ARGUMENT;
 		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		_indirectArgumentGpuBuffer.initialize(desc);
 		_indirectArgumentGpuBuffer.setName("IndirectArguments");
@@ -92,6 +95,11 @@ void MeshRenderer::initialize() {
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(u32);
 		_indirectArgumentCountGpuBuffer.initialize(desc);
 		_indirectArgumentCountGpuBuffer.setName("IndirectArgumentCounts");
+
+		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgumentSubInfo);
+		_indirectArgumentSubInfoGpuBuffer.initialize(desc);
+		_indirectArgumentSubInfoGpuBuffer.setName("IndirectArgumentSubInfos");
 
 		desc._flags = rhi::RESOURCE_FLAG_NONE;
 		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
@@ -104,26 +112,35 @@ void MeshRenderer::initialize() {
 	{
 		DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
 		_cullingInfoCbv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate();
-		_indirectArgumentUav = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(2);
+		_indirectArgumentUav = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(3);
 		_indirectArgumentCountCpuUav = descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->allocate();
+		_indirectArgumentSubInfoSrv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate();
+
+		// UAV
+		{
+			rhi::UnorderedAccessViewDesc desc = {};
+			desc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
+			desc._buffer._numElements = _indirectArgumentGpuBuffer.getU32ElementCount();
+			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
+			device->createUnorderedAccessView(_indirectArgumentGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(0)._cpuHandle);
+
+			desc._buffer._numElements = _indirectArgumentCountGpuBuffer.getU32ElementCount();
+			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(1)._cpuHandle);
+			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentCountCpuUav._cpuHandle);
+
+			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer.getU32ElementCount();
+			device->createUnorderedAccessView(_indirectArgumentSubInfoGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(2)._cpuHandle);
+		}
 
 		// SRV
 		{
 			rhi::ShaderResourceViewDesc desc = {};
-			desc._format = rhi::FORMAT_UNKNOWN;
-			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
-			desc._buffer._firstElement = 0;
-			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_NONE;
-			desc._buffer._numElements = INDIRECT_ARGUMENT_CAPACITY;
-			desc._buffer._structureByteStride = sizeof(gpu::IndirectArgument);
-			device->createShaderResourceView(_indirectArgumentGpuBuffer.getResource(), &desc, _indirectArgumentUav.get(0)._cpuHandle);
-
 			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
 			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
-			desc._buffer._structureByteStride = 0;
-			device->createShaderResourceView(_indirectArgumentCountGpuBuffer.getResource(), &desc, _indirectArgumentUav.get(1)._cpuHandle);
-			device->createShaderResourceView(_indirectArgumentCountGpuBuffer.getResource(), &desc, _indirectArgumentCountCpuUav._cpuHandle);
-
+			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer.getU32ElementCount();
+			device->createShaderResourceView(_indirectArgumentSubInfoGpuBuffer.getResource(), &desc, _indirectArgumentSubInfoSrv._cpuHandle);
 		}
 
 		// CBV
@@ -140,6 +157,7 @@ void MeshRenderer::terminate() {
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
 	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_cullingInfoCbv);
 	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_indirectArgumentUav);
+	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_indirectArgumentSubInfoSrv);
 	descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->free(_indirectArgumentCountCpuUav);
 
 	PipelineStateReloader* pipelineStateReloader = PipelineStateReloader::Get();
@@ -150,7 +168,14 @@ void MeshRenderer::terminate() {
 	_commandSignature.terminate();
 	_indirectArgumentGpuBuffer.terminate();
 	_indirectArgumentCountGpuBuffer.terminate();
+	_indirectArgumentSubInfoGpuBuffer.terminate();
 	_cullingInfoGpuBuffer.terminate();
+}
+
+void MeshRenderer::update() {
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	gpu::CullingInfo* cullingInfo = vramUpdater->enqueueUpdate<gpu::CullingInfo>(&_cullingInfoGpuBuffer);
+	cullingInfo->_meshInstanceReserveCount = GpuMeshInstanceManager::Get()->getMeshInstanceReserveCount();
 }
 
 void MeshRenderer::culling(const CullingDesc& desc) {
@@ -158,15 +183,16 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "GpuCulling");
 
 	ScopedBarrierDesc barriers[] = {
-	ScopedBarrierDesc(&_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-	ScopedBarrierDesc(&_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS)
+		ScopedBarrierDesc(&_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(&_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(&_indirectArgumentSubInfoGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS)
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
 	// Indirect Argument カウントバッファをクリア
 	{
 		u32 clearValues[4] = {};
-		rhi::GpuDescriptorHandle gpuDescriptor = _indirectArgumentUav._firstHandle._gpuHandle + _indirectArgumentUav._incrementSize;
+		rhi::GpuDescriptorHandle gpuDescriptor = _indirectArgumentUav.get(1)._gpuHandle;
 		rhi::CpuDescriptorHandle cpuDescriptor = _indirectArgumentCountCpuUav._cpuHandle;
 		rhi::Resource* resource = _indirectArgumentCountGpuBuffer.getResource();
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
@@ -176,9 +202,9 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 	commandList->setPipelineState(&_gpuCullingPipelineState);
 	//gpuCullingResource->resourceBarriersHizTextureToSrv(commandList);
 
-	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuDescriptors();
-	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuDescriptors();
-	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsetsGpuDescriptor();
+	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
+	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsetsGpuSrv();
 
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_INFO, _cullingInfoCbv._gpuHandle);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::VIEW_INFO, desc._viewCbv);
@@ -195,22 +221,35 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 
 void MeshRenderer::render(const RenderDesc& desc) {
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
+	GpuMeshInstanceManager* gpuMeshInstanceManager = GpuMeshInstanceManager::Get();
 
 	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
-	rhi::VertexBufferView vertexBufferViews[1];
+	rhi::VertexBufferView vertexBufferViews[2];
 	vertexBufferViews[0] = geometryResourceManager->getPositionVertexBufferView();
+	vertexBufferViews[1] = gpuMeshInstanceManager->getMeshInstanceIndexVertexBufferView();
 
-	const u32* indirectArgumentCounts = GpuMeshInstanceManager::Get()->getSubMeshInstanceCounts();
-	const u32* indirectArgumentOffsets = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsets();
+	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
+	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
+	const u32* indirectArgumentCounts = gpuMeshInstanceManager->getSubMeshInstanceCounts();
+	const u32* indirectArgumentOffsets = gpuMeshInstanceManager->getSubMeshInstanceOffsets();
 	rhi::CommandList* commandList = desc._commandList;
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "Render");
+
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	for (u32 i = 0; i < desc._pipelineStateCount; ++i) {
 		if (desc._enabledFlags[i] == 0) {
 			continue;
 		}
 
-		commandList->setComputeRootSignature(&desc._rootSignatures[i]);
+		commandList->setGraphicsRootSignature(&desc._rootSignatures[i]);
 		commandList->setPipelineState(&desc._pipelineStates[i]);
+
+		commandList->setGraphicsRootDescriptorTable(DefaultRootParam::VIEW_INFO, desc._viewCbv);
+		commandList->setGraphicsRootDescriptorTable(DefaultRootParam::MESH_INSTANCE, meshInstanceSrv);
+		commandList->setGraphicsRootDescriptorTable(DefaultRootParam::MATERIAL_PARAMETER, materialParameterSrv);
+		commandList->setGraphicsRootDescriptorTable(DefaultRootParam::INDIRECT_ARGUMENT_SUB_INFO, _indirectArgumentSubInfoSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(DefaultRootParam::TEXTURE, textureSrv);
 
 		commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 		commandList->setIndexBuffer(&indexBufferView);

@@ -5,7 +5,10 @@
 #include <Core/VirturalArray.h>
 
 namespace ltn {
+class Mesh;
 using VertexPosition = Float3;
+using VertexNormalTangent = u32;
+using VertexTexCoords = u32;
 using VertexIndex = u32;
 struct MeshGeometryInfo {
 	VirtualArray::AllocationInfo _vertexAllocationInfo;
@@ -25,6 +28,9 @@ public:
 	rhi::IndexBufferView getIndexBufferView() const;
 
 	static GeometryResourceManager* Get();
+
+private:
+	void loadLodMesh(const Mesh* mesh, u32 beginLodLevel, u32 endLodLevel);
 
 private:
 	rhi::VertexBufferView _vertexBufferView;

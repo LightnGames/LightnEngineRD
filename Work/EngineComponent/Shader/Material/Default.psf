@@ -1,7 +1,15 @@
-struct PSInput{
-    float4 _position : SV_Position;
+#include "ShaderInput.sfh"
+
+ByteAddressBuffer _materialParameters : register(t1);
+Texture2D _textures[] : register(t0, space1);
+
+struct MaterialParameter
+{
+    float4 _baseColor;
+    uint _baseColorTextureIndex;
 };
 
-float4 main(PSInput input) : SV_TARGET {
-    return float4(input._position.xy, 0, 1);
+float4 main(VertexOut input) : SV_TARGET {
+    MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(input._materialParameterOffset);
+    return float4(input._position.xy / 1000.0, 0, 1) * materialParameter._baseColor;
 }

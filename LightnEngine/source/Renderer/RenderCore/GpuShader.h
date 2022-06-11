@@ -1,6 +1,7 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
 namespace ltn {
+class Shader;
 class GpuShaderScene {
 public:
 	void initialize();
@@ -8,6 +9,9 @@ public:
 	void update();
 
 	rhi::ShaderBlob* getShader(u32 index) { return &_shaders[index]; }
+
+	void initializeShader(const Shader* shader);
+	void terminateShader(const Shader* shader);
 
 	static GpuShaderScene* Get();
 

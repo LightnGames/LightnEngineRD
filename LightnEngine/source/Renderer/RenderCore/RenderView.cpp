@@ -3,6 +3,7 @@
 #include <Renderer/RenderCore/VramUpdater.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
+#include <Renderer/RenderCore/RendererUtility.h>
 #include <RendererScene/View.h>
 
 namespace ltn {
@@ -56,11 +57,12 @@ void RenderViewScene::update() {
 	const View* views = viewScene->getView(0);
 	const u8* stateFlags = viewScene->getViewStateFlags();
 	for (u32 i = 0; i < ViewScene::VIEW_COUNT_MAX; ++i) {
-		if (stateFlags[i] == ViewScene::VIEW_STATE_NONE) {
+		if (stateFlags[i] == View::VIEW_STATE_NONE) {
 			continue;
 		}
 
-		if (stateFlags[i] & ViewScene::VIEW_STATE_CREATED) {
+		// ビュー生成
+		if (stateFlags[i] & View::VIEW_STATE_CREATED) {
 			rhi::Device* device = DeviceManager::Get()->getDevice();
 			const View& view = views[i];
 
@@ -123,36 +125,18 @@ void RenderViewScene::update() {
 				srvDesc._texture2D._mipLevels = 1;
 				device->createShaderResourceView(_viewDepthTextures[i].getResource(), &srvDesc, _viewDepthSrv.get(i)._cpuHandle);
 			}
+
+			// 初期化時は Gpu ビュー情報も初期化
+			updateGpuView(views[i]);
 		}
 
-		if (stateFlags[i] & ViewScene::VIEW_STATE_UPDATED) {
-			const View& view = views[i];
-			const Camera* camera = view.getCamera();
-			f32 farClip = camera->_farClip;
-			f32 nearClip = camera->_nearClip;
-			f32 fov = camera->_fov;
-			f32 fovHalfTan = tanf(fov / 2.0f);
-			f32 aspectRate = view.getAspectRate();
-			Vector3 cameraPosition = camera->_worldMatrix.getCol(3).getVector3();
-			Matrix4 viewMatrix = camera->_worldMatrix.inverse();
-			Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(fov, aspectRate, nearClip, farClip);
-			Matrix4 viewProjectionMatrix = projectionMatrix * viewMatrix;
-
-			gpu::View* gpuView = VramUpdater::Get()->enqueueUpdate<gpu::View>(&_viewConstantBuffer);
-			gpuView->_matrixView = viewMatrix.transpose().getFloat4x4();
-			gpuView->_matrixProj = projectionMatrix.transpose().getFloat4x4();
-			gpuView->_matrixViewProj = viewProjectionMatrix.transpose().getFloat4x4();
-			gpuView->_cameraPosition = cameraPosition.getFloat3();
-			gpuView->_nearAndFarClip.x = nearClip;
-			gpuView->_nearAndFarClip.y = farClip;
-			gpuView->_halfFovTan.x = fovHalfTan * aspectRate;
-			gpuView->_halfFovTan.y = fovHalfTan;
-			gpuView->_viewPortSize[0] = view.getWidth();
-			gpuView->_viewPortSize[1] = view.getHeight();
-			gpuView->_upDirection = camera->_worldMatrix.getCol(1).getFloat3();
+		// ビュー更新
+		if (stateFlags[i] & View::VIEW_STATE_UPDATED) {
+			updateGpuView(views[i]);
 		}
 
-		if (stateFlags[i] & ViewScene::VIEW_STATE_DESTROY) {
+		// ビュー破棄
+		if (stateFlags[i] & View::VIEW_STATE_DESTROY) {
 			_viewColorTextures[i].terminate();
 			_viewDepthTextures[i].terminate();
 		}
@@ -160,6 +144,7 @@ void RenderViewScene::update() {
 }
 
 void RenderViewScene::setUpView(rhi::CommandList* commandList, const View& view,u32 viewIndex) {
+	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "SetUpView");
 	f32 clearColor[4] = {};
 	rhi::CpuDescriptorHandle rtv = _viewRtv.get(viewIndex)._cpuHandle;
 	rhi::CpuDescriptorHandle dsv = _viewDsv.get(viewIndex)._cpuHandle;
@@ -173,5 +158,30 @@ void RenderViewScene::setUpView(rhi::CommandList* commandList, const View& view,
 
 RenderViewScene* RenderViewScene::Get() {
 	return &g_renderViewScene;
+}
+void RenderViewScene::updateGpuView(const View& view) {
+	const Camera* camera = view.getCamera();
+	f32 farClip = camera->_farClip;
+	f32 nearClip = camera->_nearClip;
+	f32 fov = camera->_fov;
+	f32 fovHalfTan = Tan(fov / 2.0f);
+	f32 aspectRate = view.getAspectRate();
+	Vector3 cameraPosition = camera->_worldMatrix.getCol(3).getVector3();
+	Matrix4 viewMatrix = camera->_worldMatrix.inverse();
+	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(fov, aspectRate, nearClip, farClip);
+	Matrix4 viewProjectionMatrix = viewMatrix * projectionMatrix;
+
+	gpu::View* gpuView = VramUpdater::Get()->enqueueUpdate<gpu::View>(&_viewConstantBuffer);
+	gpuView->_matrixView = viewMatrix.transpose().getFloat4x4();
+	gpuView->_matrixProj = projectionMatrix.transpose().getFloat4x4();
+	gpuView->_matrixViewProj = viewProjectionMatrix.transpose().getFloat4x4();
+	gpuView->_cameraPosition = cameraPosition.getFloat3();
+	gpuView->_nearAndFarClip.x = nearClip;
+	gpuView->_nearAndFarClip.y = farClip;
+	gpuView->_halfFovTan.x = fovHalfTan * aspectRate;
+	gpuView->_halfFovTan.y = fovHalfTan;
+	gpuView->_viewPortSize[0] = view.getWidth();
+	gpuView->_viewPortSize[1] = view.getHeight();
+	gpuView->_upDirection = camera->_worldMatrix.getCol(1).getFloat3();
 }
 }

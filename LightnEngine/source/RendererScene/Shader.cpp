@@ -6,21 +6,32 @@ namespace {
 ShaderScene g_shaderScene;
 }
 void ShaderScene::initialize() {
-	VirtualArray::Desc handleDesc = {};
-	handleDesc._size = SHADER_COUNT_MAX;
-	_shaderAllocations.initialize(handleDesc);
+	{
+		VirtualArray::Desc handleDesc = {};
+		handleDesc._size = SHADER_CAPACITY;
+		_shaderAllocations.initialize(handleDesc);
 
-	_shaders = Memory::allocObjects<Shader>(SHADER_COUNT_MAX);
-	_shaderAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(SHADER_COUNT_MAX);
-	_shaderAssetPathHashes = Memory::allocObjects<u64>(SHADER_COUNT_MAX);
-	_shaderAssetPaths = Memory::allocObjects<char*>(SHADER_COUNT_MAX);
+		handleDesc._size = SHADER_PARAMETER_CAPACITY;
+		_parameterAllocations.initialize(handleDesc);
+	}
+
+	_shaders = Memory::allocObjects<Shader>(SHADER_CAPACITY);
+	_shaderAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(SHADER_CAPACITY);
+	_shaderAssetPathHashes = Memory::allocObjects<u64>(SHADER_CAPACITY);
+	_shaderAssetPaths = Memory::allocObjects<char*>(SHADER_CAPACITY);
+	_parameterAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(SHADER_PARAMETER_CAPACITY);
+	_parameterNameHashes = Memory::allocObjects<u32>(SHADER_PARAMETER_CAPACITY);
+	_parameterOffsets = Memory::allocObjects<u16>(SHADER_PARAMETER_CAPACITY);
 }
 
 void ShaderScene::terminate() {
 	_shaderAllocations.terminate();
+	_parameterAllocations.terminate();
 	Memory::freeObjects(_shaders);
 	Memory::freeObjects(_shaderAllocationInfos);
 	Memory::freeObjects(_shaderAssetPathHashes);
+	Memory::freeObjects(_parameterNameHashes);
+	Memory::freeObjects(_parameterOffsets);
 }
 
 void ShaderScene::lateUpdate() {
@@ -30,6 +41,12 @@ void ShaderScene::lateUpdate() {
 		u32 shaderIndex = getShaderIndex(destroyShaders[i]);
 		_shaderAllocations.freeAllocation(_shaderAllocationInfos[shaderIndex]);
 		Memory::freeObjects(_shaderAssetPaths[i]);
+
+		if (destroyShaders[i]->_parameterSizeInByte != 0) {
+			_parameterAllocations.freeAllocation(_parameterAllocationInfos[shaderIndex]);
+		}
+
+		_shaders[shaderIndex] = Shader();
 	}
 
 	_shaderCreateInfos.reset();
@@ -48,8 +65,32 @@ Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 
 	Shader* shader = &_shaders[allocationInfo._offset];
 	shader->_assetPath = _shaderAssetPaths[allocationInfo._offset];
+	shader->_assetPathHash = StrHash64(desc._assetPath);
 
-	_shaderAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
+	// シェーダーパラメーター情報
+	if (desc._TEST_collectParameter) {
+		u32 parameterCount = 2;
+		u32 parameterSizeInByte = 20;
+		VirtualArray::AllocationInfo parameterAllocationInfo = _parameterAllocations.allocation(parameterCount);
+		_parameterAllocationInfos[allocationInfo._offset] = parameterAllocationInfo;
+
+		u32* parameterNameHashes = &_parameterNameHashes[parameterAllocationInfo._offset];
+		u16* parameterOffsets = &_parameterOffsets[parameterAllocationInfo._offset];
+		shader->_parameterCount = parameterCount;
+		shader->_parameterNameHashes = parameterNameHashes;
+		shader->_parameterOffsets = parameterOffsets;
+		shader->_parameterSizeInByte = parameterSizeInByte;
+
+		// offset:0 size:16 BaseColor
+		parameterNameHashes[0] = StrHash32("BaseColor");
+		parameterOffsets[0] = 0;
+
+		// offset:16 size:4 BaseColorTextureIndex
+		parameterNameHashes[1] = StrHash32("BaseColorTexture");
+		parameterOffsets[1] = 16;
+	}
+
+	_shaderAssetPathHashes[allocationInfo._offset] = shader->_assetPathHash;
 	_shaderCreateInfos.push(shader);
 	return shader;
 }
@@ -59,7 +100,7 @@ void ShaderScene::destroyShader(Shader* shader) {
 }
 
 Shader* ShaderScene::findShader(u64 assetPathHash) {
-	for (u32 i = 0; i < SHADER_COUNT_MAX; ++i) {
+	for (u32 i = 0; i < SHADER_CAPACITY; ++i) {
 		if (_shaderAssetPathHashes[i] == assetPathHash) {
 			return &_shaders[i];
 		}
@@ -68,5 +109,15 @@ Shader* ShaderScene::findShader(u64 assetPathHash) {
 }
 ShaderScene* ShaderScene::Get() {
 	return &g_shaderScene;
+}
+bool Shader::findParameter(u32 nameHash, u16& outOffsetSizeInByte) const {
+	for (u16 i = 0; i < _parameterCount; ++i) {
+		if (_parameterNameHashes[i] == nameHash) {
+			outOffsetSizeInByte = _parameterOffsets[i];
+			return true;
+		}
+	}
+
+	return false;
 }
 }

@@ -123,7 +123,7 @@ public:
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//queryHeapSystem->popGpuMarker(_commandList, _gpuTickIndex);
 		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
-		rhi::EndMarker();
+		rhi::EndMarker(_commandList);
 	}
 private:
 	rhi::CommandList* _commandList = nullptr;

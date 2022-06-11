@@ -16,20 +16,24 @@ namespace ltn {
 rhi::PipelineState _pipelineState;
 rhi::RootSignature _rootSignature;
 void Renderer::initialize() {
+	// デバイス
 	DeviceManager* deviceManager = DeviceManager::Get();
 	deviceManager->initialize();
 
+	// コマンドキュー
 	rhi::Device* device = deviceManager->getDevice();
 	rhi::CommandQueueDesc commandQueueDesc = {};
 	commandQueueDesc._device = device;
 	commandQueueDesc._type = rhi::COMMAND_LIST_TYPE_DIRECT;
 	_commandQueue.initialize(commandQueueDesc);
 
+	// コマンドリストプール
 	CommandListPool::Desc commandListPoolDesc = {};
 	commandListPoolDesc._device = device;
 	commandListPoolDesc._type = rhi::COMMAND_LIST_TYPE_DIRECT;
 	CommandListPool::Get()->initialize(commandListPoolDesc);
 
+	// スワップチェーン
 	Application* app = ApplicationSysytem::Get()->getApplication();
 	rhi::SwapChainDesc swapChainDesc = {};
 	swapChainDesc._bufferingCount = rhi::BACK_BUFFER_COUNT;
@@ -41,26 +45,14 @@ void Renderer::initialize() {
 	swapChainDesc._factory = deviceManager->getHardwareFactory();
 	_swapChain.initialize(swapChainDesc);
 
-	// デスクリプタアロケーター初期化
+	// デスクリプタアロケーター
 	DescriptorAllocatorGroup::Desc descriptorAllocatorDesc = {};
 	descriptorAllocatorDesc._device = device;
 	descriptorAllocatorDesc._rtvCount = 16;
 	descriptorAllocatorDesc._dsvCount = 16;
 	descriptorAllocatorDesc._srvCbvUavCpuCount = 128;
-	descriptorAllocatorDesc._srvCbvUavGpuCount = 1024;
+	descriptorAllocatorDesc._srvCbvUavGpuCount = 1024 * 2;
 	DescriptorAllocatorGroup::Get()->initialize(descriptorAllocatorDesc);
-
-	// スワップチェーンのバックバッファを取得
-	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
-		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
-		rtvTexture.initializeFromBackbuffer(&_swapChain, backBufferIndex);
-		rtvTexture.setName("SwapChainBackBuffer[%d]", backBufferIndex);
-	}
-
-	_rtvDescriptors = DescriptorAllocatorGroup::Get()->getRtvAllocator()->allocate(rhi::BACK_BUFFER_COUNT);
-	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
-		device->createRenderTargetView(_backBuffers[backBufferIndex].getResource(), _rtvDescriptors.get(backBufferIndex)._cpuHandle);
-	}
 
 	// グローバル ビデオメモリアロケーター
 	rhi::VideoMemoryAllocatorDesc videoMemoryAllocatorDesc = {};
@@ -68,6 +60,7 @@ void Renderer::initialize() {
 	videoMemoryAllocatorDesc._hardwareAdapter = deviceManager->getHardwareAdapter();
 	GlobalVideoMemoryAllocator::Get()->initialize(videoMemoryAllocatorDesc);
 
+	// Vram アップデーター
 	VramUpdater::Get()->initialize();
 
 	// ImGui
@@ -77,7 +70,18 @@ void Renderer::initialize() {
 	imguiSystemDesc._windowHandle = app->getWindowHandle();
 	ImGuiSystem::Get()->initialize(imguiSystemDesc);
 
+	// レンダーディレクター
+	RenderDirector::Get()->initialize();
+
+	// パイプラインステートリローダー
 	PipelineStateReloader::Get()->initialize();
+
+	// スワップチェーンのバックバッファを取得
+	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
+		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
+		rtvTexture.initializeFromBackbuffer(&_swapChain, backBufferIndex);
+		rtvTexture.setName("SwapChainBackBuffer[%d]", backBufferIndex);
+	}
 
 	{
 		AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
@@ -104,23 +108,11 @@ void Renderer::initialize() {
 		_pipelineState.iniaitlize(pipelineStateDesc);
 		_pipelineState.setName("PsoScreenTriangle");
 
-		PipelineStateReloader::GraphicsPipelineStateRegisterDesc reloaderDesc = {};
-		reloaderDesc._desc = pipelineStateDesc;
-		reloaderDesc._shaderPaths[0] = vertexShaderPath.get();
-		reloaderDesc._shaderPaths[1] = pixelShaderPath.get();
-		PipelineStateReloader::Get()->registerPipelineState(&_pipelineState,reloaderDesc);
-
 		vertexShader.terminate();
 		pixelShader.terminate();
 	}
 
-	RenderDirector::Get()->initialize();
-
 	//QueryHeapSystem::Get()->initialize();
-	//ViewSystemImpl::Get()->initialize();
-
-	//_vramBufferUpdater.initialize();
-	//_debugWindow.initialize();
 
 	//// タイムスタンプのためにGPU周波数を取得
 	//QueryHeapSystem::Get()->setGpuFrequency(_commandQueue);
@@ -133,9 +125,7 @@ void Renderer::terminate() {
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
-	DescriptorAllocatorGroup::Get()->getRtvAllocator()->free(_rtvDescriptors);
 
-	PipelineStateReloader::Get()->unregisterPipelineState(&_pipelineState);
 	_pipelineState.terminate();
 	_rootSignature.terminate();
 
@@ -155,27 +145,27 @@ void Renderer::terminate() {
 void Renderer::update() {
 	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();
-	ImGuiSystem::Get()->beginFrame();
 }
 
 void Renderer::render() {
 	u64 completedFenceValue = _commandQueue.getCompletedValue();
 	rhi::CommandList* commandList = CommandListPool::Get()->allocateCommandList(completedFenceValue);
-
-	rhi::CpuDescriptorHandle rtvDescriptor = _rtvDescriptors.get(_frameIndex)._cpuHandle;
-
 	commandList->reset();
 
-	VramUpdater::Get()->populateCommandList(commandList);
-
-	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
-	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
-
+	// Vram アップデーター
 	{
+		VramUpdater::Get()->populateCommandList(commandList);
+	}
 
+	// メイン描画
+	{
 		RenderDirector::Get()->render(commandList);
 		ImGuiSystem::Get()->render(commandList);
+	}
 
+	// View テクスチャからバックバッファにコピー
+	{
+		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "CopyBackBuffer");
 		RenderViewScene* renderViewScene = RenderViewScene::Get();
 		GpuTexture* mainViewTexture = renderViewScene->getViewColorTexture(0);
 		GpuTexture* backBuffer = &_backBuffers[_frameIndex];

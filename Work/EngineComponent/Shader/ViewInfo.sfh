@@ -1,0 +1,16 @@
+#define FRUSTUM_PLANE_COUNT 6
+struct ViewInfo
+{
+    float4x4 _matrixView;
+    float4x4 _matrixProj;
+    float4x4 _matrixViewProj;
+    float3 _cameraPosition;
+    uint _padding1;
+    float2 _nearAndFarClip;
+    float2 _halfFovTan;
+    uint2 _viewPortSize;
+    uint2 _padding2;
+    float3 _upDirection;
+    uint _debugVisualizeType;
+    float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
+};

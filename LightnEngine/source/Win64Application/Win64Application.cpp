@@ -1,11 +1,13 @@
 #include "Win64Application.h"
 #include <Core/Type.h>
-#include <Renderer/RenderCore/Renderer.h>
-#include <Renderer/RenderCore/ImGuiSystem.h>
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
+#include <Renderer/MeshRenderer/GpuTextureManager.h>
+#include <Renderer/MeshRenderer/MeshRenderer.h>
+#include <Renderer/RenderCore/Renderer.h>
+#include <Renderer/RenderCore/ImGuiSystem.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
 #include <RendererScene/Mesh.h>
@@ -13,6 +15,7 @@
 #include <RendererScene/Material.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Shader.h>
+#include <RendererScene/Texture.h>
 #include <Windows.h>
 
 namespace ltn {
@@ -38,13 +41,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 }
 
 void update(){
+	GpuTextureManager::Get()->update();
 	GpuShaderScene::Get()->update();
 	RenderViewScene::Get()->update();
 	GpuMeshInstanceManager::Get()->update();
 	GpuMeshResourceManager::Get()->update();
 	GeometryResourceManager::Get()->update();
 	GpuMaterialManager::Get()->update();
+	MeshRenderer::Get()->update();
 	Renderer::Get()->update();
+	TextureScene::Get()->lateUpdate();
 	MaterialScene::Get()->lateUpdate();
 	MeshInstanceScene::Get()->lateUpdate();
 	MeshScene::Get()->lateUpdate();

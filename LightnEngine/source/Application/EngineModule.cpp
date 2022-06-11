@@ -7,6 +7,7 @@
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/MeshRenderer.h>
 #include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
+#include <Renderer/MeshRenderer/GpuTextureManager.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
 #include <RendererScene/Mesh.h>
@@ -14,6 +15,7 @@
 #include <RendererScene/Material.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Shader.h>
+#include <RendererScene/Texture.h>
 
 namespace ltn {
 void EngineModuleManager::run() {
@@ -40,6 +42,12 @@ void EngineModuleManager::run() {
 
 	MaterialScene* materialScene = MaterialScene::Get();
 	materialScene->initialize();
+
+	TextureScene* textureScene = TextureScene::Get();
+	textureScene->initialize();
+
+	GpuTextureManager* gpuTextureManager = GpuTextureManager::Get();
+	gpuTextureManager->initialize();
 
 	RenderViewScene* renderViewScene = RenderViewScene::Get();
 	renderViewScene->initialize();
@@ -70,6 +78,8 @@ void EngineModuleManager::run() {
 	meshRenderer->terminate();
 	gpuShaderScene->terminate();
 	renderViewScene->terminate();
+	gpuTextureManager->terminate();
+	textureScene->terminate();
 	materialScene->terminate();
 	viewScene->terminate();
 	meshInstanceScene->terminate();

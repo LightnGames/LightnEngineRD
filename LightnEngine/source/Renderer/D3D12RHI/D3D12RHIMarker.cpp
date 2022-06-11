@@ -11,8 +11,8 @@ void BeginMarker(rhi::CommandList* commandList, const Color4& color, const char*
 	u64 pixColor = PIX_COLOR(r, g, b);
 	PIXBeginEvent(commandList->_commandList, pixColor, name);
 }
-void EndMarker() {
-	PIXEndEvent();
+void EndMarker(rhi::CommandList* commandList) {
+	PIXEndEvent(commandList->_commandList);
 }
 }
 }

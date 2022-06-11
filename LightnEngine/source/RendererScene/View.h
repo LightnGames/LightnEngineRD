@@ -4,6 +4,8 @@
 namespace ltn {
 struct Camera {
 	Matrix4 _worldMatrix;
+	Vector3 _position;
+	Vector3 _rotation;
 	f32 _fov = 1.0472f;
 	f32 _farClip = 300;
 	f32 _nearClip = 0.1f;
@@ -11,8 +13,18 @@ struct Camera {
 
 class View {
 public:
+	enum ViewStateFlags {
+		VIEW_STATE_NONE = 0,
+		VIEW_STATE_CREATED = 1 << 0,
+		VIEW_STATE_UPDATED = 1 << 1,
+		VIEW_STATE_DESTROY = 1 << 2
+	};
+
+	void setStateFlags(u8* flags) { _stateFlags = flags; }
+
 	void setWidth(u32 width) { _width = width; }
 	void setHeight(u32 height) { _height = height; }
+	void postUpdate() { *_stateFlags |= VIEW_STATE_UPDATED; }
 
 	u32 getWidth() const { return _width; }
 	u32 getHeight() const { return _height; }
@@ -21,6 +33,7 @@ public:
 	const Camera* getCamera() const { return &_camera; }
 
 private:
+	u8* _stateFlags = nullptr;
 	u32 _width = 0;
 	u32 _height = 0;
 	Camera _camera;
@@ -29,13 +42,6 @@ private:
 class ViewScene {
 public:
 	static constexpr u32 VIEW_COUNT_MAX = 8;
-
-	enum ViewStateFlags {
-		VIEW_STATE_NONE = 0,
-		VIEW_STATE_CREATED = 1 << 0,
-		VIEW_STATE_UPDATED = 1 << 1,
-		VIEW_STATE_DESTROY = 1 << 2
-	};
 
 	void initialize();
 	void terminate();

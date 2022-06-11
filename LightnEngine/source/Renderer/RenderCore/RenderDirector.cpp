@@ -25,6 +25,10 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 	u32 viewCount = ViewScene::VIEW_COUNT_MAX;
 	const View* views = viewScene->getView(0);
 	const u8* viewEnabledFlags = viewScene->getViewEnabledFlags();
+
+	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
+	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
+
 	for (u32 i = 0; i < viewCount; ++i) {
 		if (viewEnabledFlags[i] == 0) {
 			continue;
@@ -48,7 +52,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._viewCbv = renderViewScene->getViewCbv(i);
 			desc._rootSignatures = materialManager->getDefaultRootSignatures();
 			desc._pipelineStates = materialManager->getDefaultPipelineStates();
-			desc._pipelineStateCount = MaterialScene::MATERIAL_COUNT_MAX;
+			desc._pipelineStateCount = MaterialScene::MATERIAL_CAPACITY;
 			desc._enabledFlags = materialScene->getEnabledFlags();
 			meshRenderer->render(desc);
 		}

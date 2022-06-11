@@ -32,25 +32,21 @@ void GpuMeshResourceManager::initialize() {
 		_subMeshGpuBuffer.setName("SubMeshes");
 	}
 
-	// Descriptor
+	// SRV
 	{
 		_meshSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate(3);
 
 		rhi::ShaderResourceViewDesc desc = {};
-		desc._format = rhi::FORMAT_UNKNOWN;
+		desc._format = rhi::FORMAT_R32_TYPELESS;
 		desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
-		desc._buffer._firstElement = 0;
-		desc._buffer._flags = rhi::BUFFER_SRV_FLAG_NONE;
-		desc._buffer._numElements = MeshScene::MESH_CAPACITY;
-		desc._buffer._structureByteStride = sizeof(gpu::Mesh);
+		desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
+		desc._buffer._numElements = _meshGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_meshGpuBuffer.getResource(), &desc, _meshSrv.get(0)._cpuHandle);
 
-		desc._buffer._numElements = MeshScene::LOD_MESH_CAPACITY;
-		desc._buffer._structureByteStride = sizeof(gpu::LodMesh);
+		desc._buffer._numElements = _lodMeshGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_lodMeshGpuBuffer.getResource(), &desc, _meshSrv.get(1)._cpuHandle);
 
-		desc._buffer._numElements = MeshScene::SUB_MESH_CAPACITY;
-		desc._buffer._structureByteStride = sizeof(gpu::SubMesh);
+		desc._buffer._numElements = _subMeshGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_subMeshGpuBuffer.getResource(), &desc, _meshSrv.get(2)._cpuHandle);
 	}
 }
@@ -68,51 +64,51 @@ void GpuMeshResourceManager::update() {
 	const MeshPool* meshPool = meshScene->getMeshPool();
 
 	// 新規作成されたメッシュをGPUに追加
-	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->geCreateInfos();
+	const UpdateInfos<Mesh>* meshCreateInfos = meshScene->getCreateInfos();
 	u32 createMeshCount = meshCreateInfos->getUpdateCount();
 	auto createMeshes = meshCreateInfos->getObjects();
 	for (u32 i = 0; i < createMeshCount; ++i) {
 		const Mesh* mesh = createMeshes[i];
-		u32 lodMeshCount = mesh->_lodMeshCount;
-		u32 subMeshCount = mesh->_subMeshCount;
+		u32 lodMeshCount = mesh->getLodMeshCount();
+		u32 subMeshCount = mesh->getSubMeshCount();
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
-		u32 lodMeshIndex = meshPool->getLodMeshIndex(mesh->_lodMeshes);
-		u32 subMeshIndex = meshPool->getSubMeshIndex(mesh->_subMeshes);
+		u32 lodMeshIndex = meshPool->getLodMeshIndex(mesh->getLodMesh());
+		u32 subMeshIndex = meshPool->getSubMeshIndex(mesh->getSubMesh());
 
 		gpu::Mesh* gpuMesh = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshGpuBuffer, meshIndex, 1);
 		gpu::LodMesh* gpuLodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshGpuBuffer, lodMeshIndex, lodMeshCount);
 		gpu::SubMesh* gpuSubMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshGpuBuffer, subMeshIndex, subMeshCount);
 
-		gpuMesh->_lodMeshCount = mesh->_lodMeshCount;
+		gpuMesh->_lodMeshCount = mesh->getLodMeshCount();
 		gpuMesh->_lodMeshOffset = lodMeshIndex;
 		gpuMesh->_streamedLodLevel = 0;
 
 		for (u32 lodIndex = 0; lodIndex < lodMeshCount; ++lodIndex) {
-			const LodMesh& lodMesh = mesh->_lodMeshes[lodIndex];
+			const LodMesh* lodMesh = mesh->getLodMesh(lodIndex);
 			gpu::LodMesh& gpuLodMesh = gpuLodMeshes[lodIndex];
-			gpuLodMesh._subMeshOffset = lodMesh._subMeshOffset;
-			gpuLodMesh._subMeshCount = lodMesh._subMeshCount;
+			gpuLodMesh._subMeshOffset = lodMesh->_subMeshOffset;
+			gpuLodMesh._subMeshCount = lodMesh->_subMeshCount;
 		}
 
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
-			const SubMesh& subMesh = mesh->_subMeshes[subMeshIndex];
+			const SubMesh* subMesh = mesh->getSubMesh(subMeshIndex);
 			gpu::SubMesh& gpuSubMesh = gpuSubMeshes[subMeshIndex];
-			gpuSubMesh._indexCount = subMesh._indexCount;
-			gpuSubMesh._indexOffset = subMesh._indexOffset;
+			gpuSubMesh._indexCount = subMesh->_indexCount;
+			gpuSubMesh._indexOffset = subMesh->_indexOffset;
 		}
 	}
 
 	// 削除されたメッシュをGPUから削除
-	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->geCreateInfos();
+	const UpdateInfos<Mesh>* meshDestroyInfos = meshScene->getDestroyInfos();
 	u32 destroyMeshCount = meshDestroyInfos->getUpdateCount();
 	auto destroyMeshes = meshDestroyInfos->getObjects();
 	for (u32 i = 0; i < destroyMeshCount; ++i) {
-		const Mesh* mesh = createMeshes[i];
-		u32 lodMeshCount = mesh->_lodMeshCount;
-		u32 subMeshCount = mesh->_subMeshCount;
+		const Mesh* mesh = destroyMeshes[i];
+		u32 lodMeshCount = mesh->getLodMeshCount();
+		u32 subMeshCount = mesh->getSubMeshCount();
 		u32 meshIndex = meshPool->getMeshIndex(mesh);
-		u32 lodMeshIndex = meshPool->getLodMeshIndex(mesh->_lodMeshes);
-		u32 subMeshIndex = meshPool->getSubMeshIndex(mesh->_subMeshes);
+		u32 lodMeshIndex = meshPool->getLodMeshIndex(mesh->getLodMesh());
+		u32 subMeshIndex = meshPool->getSubMeshIndex(mesh->getSubMesh());
 
 		// メモリクリアをアップロード
 		gpu::Mesh* gpuMesh = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshGpuBuffer, meshIndex, 1);

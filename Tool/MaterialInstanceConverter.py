@@ -1,5 +1,5 @@
 import sys, yaml, os.path, subprocess, struct, xxhash, glob
-import AssetDevelopmentConfig, RruntimeMessageSender
+import AssetDevelopmentConfig
 
 MATI_EXT = ".mti"
 
@@ -21,10 +21,33 @@ def convert(file_path):
 
         print("Output -> %s" % output_path)
 
+        # Shader Param Type
+        # 0: float
+        # 1: float2
+        # 2: float3
+        # 3: float4
+        # 4: uint
+        # 5: texture
+
         string_format = 'utf-8'
         with open(output_path, mode='wb') as fout:
-            vertex_path_hash = xxhash.xxh64(material_path.encode(string_format)).intdigest()
-            fout.write(struct.pack('<Q', vertex_path_hash))
+            material_path_hash = xxhash.xxh64(material_path.encode(string_format)).intdigest()
+            fout.write(struct.pack('<Q', material_path_hash))
+
+            material_parameter_count = 2
+            material_parameter_size = 34
+            fout.write(struct.pack('<I', material_parameter_count))
+            fout.write(struct.pack('<I', material_parameter_size))
+
+            texture_path_hash = xxhash.xxh32("BaseColor".encode(string_format)).intdigest()
+            fout.write(struct.pack('<I', texture_path_hash))
+            fout.write(struct.pack('<B', 3))
+            fout.write(struct.pack('<ffff', *[1.0, 1.0, 1.0, 1.0]))
+
+            texture_path_hash = xxhash.xxh32("BaseColorTexture".encode(string_format)).intdigest()
+            fout.write(struct.pack('<I', texture_path_hash))
+            fout.write(struct.pack('<B', 5))
+            fout.write(struct.pack('<Q', 0))
 
 if __name__ == "__main__":
     args = sys.argv

@@ -5,6 +5,8 @@
 // DirectX Math ÇÃÉâÉbÉpÅ[
 namespace ltn {
 using Float4x4 = DirectX::XMFLOAT4X4;
+using Float4x3 = DirectX::XMFLOAT4X3;
+using Float3x4 = DirectX::XMFLOAT3X4;
 using Float2 = DirectX::XMFLOAT2;
 using Float3 = DirectX::XMFLOAT3;
 using Float4 = DirectX::XMFLOAT4;
@@ -13,9 +15,20 @@ using Color4 = Float4;
 using Vector = DirectX::XMVECTOR;
 using Matrix = DirectX::XMMATRIX;
 
+static f32 DegToRad(f32 degree) {
+	return DirectX::XMConvertToRadians(degree);
+}
+
+static f32 Tan(f32 value) {
+	return tanf(value);
+}
+
 struct Vector3 {
 	Vector3() :_v(DirectX::XMVectorZero()) {}
 	Vector3(DirectX::XMVECTOR v) :_v(v) {}
+	Vector3(Float3 vector) {
+		_v = DirectX::XMLoadFloat3(&vector);
+	}
 
 	Vector3(f32 x, f32 y, f32 z) {
 		_v = DirectX::XMVectorSet(x, y, z, 1.0f);
@@ -57,10 +70,6 @@ struct Vector4 {
 	Vector _v;
 };
 
-struct Matrix33 {
-
-};
-
 struct Matrix4 {
 	Matrix4(const DirectX::XMMATRIX matrix) :_m(matrix) {}
 
@@ -97,8 +106,44 @@ struct Matrix4 {
 		return result;
 	}
 
+	Float4x3 getFloat4x3() const {
+		Float4x3 result;
+		DirectX::XMStoreFloat4x3(&result, _m);
+		return result;
+	}
+
+	Float3x4 getFloat3x4() const {
+		Float3x4 result;
+		DirectX::XMStoreFloat3x4(&result, _m);
+		return result;
+	}
+
 	Vector4 getCol(u32 index) const {
 		return _m.r[index];
+	}
+
+	Vector3 getTranslation() const {
+		return getCol(3).getVector3();
+	}
+
+	static Matrix4 identity() {
+		return DirectX::XMMatrixIdentity();
+	}
+
+	static Matrix4 rotationX(f32 angle) {
+		return DirectX::XMMatrixRotationX(angle);
+	}
+
+	static Matrix4 rotationY(f32 angle) {
+		return DirectX::XMMatrixRotationY(angle);
+	}
+
+	static Matrix4 rotationZ(f32 angle) {
+		return DirectX::XMMatrixRotationZ(angle);
+	}
+
+	static Matrix4 rotationXYZ(f32 pitch, f32 yaw, f32 roll) {
+		return DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 	}
 
 	static Matrix4 translationFromVector(const Vector3& offset) {
