@@ -2,6 +2,7 @@
 #include <Renderer/RenderCore/GpuTexture.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 namespace ltn {
+class Texture;
 class GpuTextureManager {
 public:
 	void initialize();
@@ -11,6 +12,9 @@ public:
 	rhi::GpuDescriptorHandle getTextureGpuSrv() const { return _textureSrv._firstHandle._gpuHandle; }
 
 	static GpuTextureManager* Get();
+
+private:
+	void createTexture(const Texture* texture);
 
 private:
 	DescriptorHandles _textureSrv;

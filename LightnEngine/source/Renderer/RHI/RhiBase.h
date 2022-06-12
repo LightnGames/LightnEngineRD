@@ -129,16 +129,15 @@ public:
 	virtual void terminate() = 0;
 };
 
+constexpr u32 BACK_BUFFER_COUNT = 3;
+constexpr Format BACK_BUFFER_FORMAT = FORMAT_R8G8B8A8_UNORM;
+
 u32 GetConstantBufferAligned(u32 sizeInByte);
 u32 GetTextureBufferAligned(u32 sizeInByte);
 u8 GetFormatPlaneCount(Device* device, Format format);
 
-constexpr u32 BACK_BUFFER_COUNT = 3;
-constexpr Format BACK_BUFFER_FORMAT = FORMAT_R8G8B8A8_UNORM;
-
-
-u32 BitsPerPixel(Format fmt) {
-	switch (fmt) {
+static u32 BitsPerPixel(Format format) {
+	switch (format) {
 	case FORMAT_R32G32B32A32_TYPELESS:
 	case FORMAT_R32G32B32A32_FLOAT:
 	case FORMAT_R32G32B32A32_UINT:
@@ -284,7 +283,7 @@ u32 BitsPerPixel(Format fmt) {
 	}
 }
 
-HRESULT GetSurfaceInfo(
+static HRESULT GetSurfaceInfo(
 	u32 width,
 	u32 height,
 	Format fmt,

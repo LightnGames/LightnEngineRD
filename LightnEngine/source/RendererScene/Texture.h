@@ -39,6 +39,7 @@ public:
 	DdsHeader* getDdsHeader() { return &_ddsHeader; }
 
 	const char* getAssetPath() const { return _assetPath; }
+	const DdsHeader* getDdsHeader() const { return &_ddsHeader; }
 
 private:
 	DdsHeader _ddsHeader;

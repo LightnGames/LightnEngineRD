@@ -78,7 +78,7 @@ void Win64Application::initialize() {
 
 	u32 width = 1920;
 	u32 height = 1080;
-	RECT windowRect = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+	RECT windowRect = { 0, 0, LONG(width), LONG(height) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	// Create the window and store a handle to it.
@@ -108,14 +108,14 @@ void Win64Application::run() {
 
 	MSG msg = {};
 	while (msg.message != WM_QUIT) {
+		editorCamera.update();
+		update();
+		render();
+		
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-
-		editorCamera.update();
-		update();
-		render();
 	}
 
 	editorCamera.terminate();
