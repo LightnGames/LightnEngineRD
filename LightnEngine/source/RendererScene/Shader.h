@@ -1,6 +1,7 @@
 #pragma once
 #include <Core/Type.h>
 #include <Core/VirturalArray.h>
+#include <Core/ChunkAllocator.h>
 #include "RenderSceneUtility.h"
 namespace ltn {
 class Shader {
@@ -41,8 +42,8 @@ public:
 		bool _TEST_collectParameter = false;
 	};
 
-	Shader* createShader(const CreatationDesc& desc);
-	void destroyShader(Shader* shader);
+	const Shader* createShader(const CreatationDesc& desc);
+	void destroyShader(const Shader* shader);
 
 	const UpdateInfos<Shader>* getCreateInfos() const { return &_shaderCreateInfos; }
 	const UpdateInfos<Shader>* getDestroyInfos() const { return &_shaderDestroyInfos; }
@@ -65,5 +66,6 @@ private:
 	char** _shaderAssetPaths = nullptr;
 	UpdateInfos<Shader> _shaderCreateInfos;
 	UpdateInfos<Shader> _shaderDestroyInfos;
+	ChunkAllocator _chunkAllocator;
 };
 }

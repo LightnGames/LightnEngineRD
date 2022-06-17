@@ -3,6 +3,7 @@
 #include <Core/ModuleSettings.h>
 #include <Core/Utility.h>
 #include <Core/Math.h>
+#include <Core/ChunkAllocator.h>
 #include "RenderSceneUtility.h"
 
 namespace ltn {
@@ -90,7 +91,7 @@ public:
 	u32 getLodMeshIndex(const LodMesh* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshes); }
 	u32 getSubMeshIndex(const SubMesh* subMesh) const { return static_cast<u32>(subMesh - _subMeshes); }
 	Mesh* getMesh(u32 index) { return &_meshes[index]; }
-	Mesh* findMesh(u64 assetPathHash);
+	const Mesh* findMesh(u64 assetPathHash) const;
 
 private:
 	VirtualArray _meshAllocations;
@@ -105,6 +106,7 @@ private:
 	SubMesh* _subMeshes = nullptr;
 	u64* _meshAssetPathHashes = nullptr;
 	char** _meshAssetPaths = nullptr;
+	ChunkAllocator _chunkAllocator;
 };
 
 // メッシュ総合管理するクラス
@@ -122,13 +124,13 @@ public:
 	void terminate();
 	void lateUpdate();
 
-	Mesh* createMesh(const CreatationDesc& desc);
-	void destroyMesh(Mesh* mesh);
+	const Mesh* createMesh(const CreatationDesc& desc);
+	void destroyMesh(const Mesh* mesh);
 
 	const MeshPool* getMeshPool() const { return &_meshPool; }
 	const UpdateInfos<Mesh>* getCreateInfos() { return &_meshCreateInfos; }
 	const UpdateInfos<Mesh>* getDestroyInfos() { return &_meshDestroyInfos; }
-	Mesh* findMesh(u64 assetPathHash) { return _meshPool.findMesh(assetPathHash); }
+	const Mesh* findMesh(u64 assetPathHash) const { return _meshPool.findMesh(assetPathHash); }
 
 	static MeshScene* Get();
 private:

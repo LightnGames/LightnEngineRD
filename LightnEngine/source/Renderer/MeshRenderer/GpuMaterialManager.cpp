@@ -43,31 +43,31 @@ void GpuMaterialManager::initialize() {
 		device->createShaderResourceView(_parameterGpuBuffer.getResource(), &desc, _parameterSrv._cpuHandle);
 	}
 
-	_defaultRootSignatures = Memory::allocObjects<rhi::RootSignature>(MaterialScene::MATERIAL_CAPACITY);
-	_defaultPipelineStates = Memory::allocObjects<rhi::PipelineState>(MaterialScene::MATERIAL_CAPACITY);
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_defaultRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_defaultPipelineStates = allocation.allocateClearedObjects<rhi::PipelineState>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		});
 }
 
 void GpuMaterialManager::terminate() {
 	_parameterGpuBuffer.terminate();
-
-	Memory::freeObjects(_defaultRootSignatures);
-	Memory::freeObjects(_defaultPipelineStates);
+	_chunkAllocator.free();
 	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_parameterSrv);
 }
 
 void GpuMaterialManager::update() {
 	VramUpdater* vramUpdater = VramUpdater::Get();
-	MaterialScene* materialScene = MaterialScene::Get();
+	PipelineSetScene* pipelineSetScene = PipelineSetScene::Get();
 	ShaderScene* shaderScene = ShaderScene::Get();
 	GpuShaderScene* gpuShaderScene = GpuShaderScene::Get();
 
 	// 新規作成
-	const UpdateInfos<Material>* createInfos = materialScene->getMaterialCreateInfos();
+	const UpdateInfos<PipelineSet>* createInfos = pipelineSetScene->getCreateInfos();
 	u32 createCount = createInfos->getUpdateCount();
-	auto createMaterials = createInfos->getObjects();
+	auto createPipelineSets = createInfos->getObjects();
 	for (u32 i = 0; i < createCount; ++i) {
-		const Material* material = createMaterials[i];
-		u32 materialIndex = materialScene->getMaterialIndex(material);
+		const PipelineSet* pipelineSet = createPipelineSets[i];
+		u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(pipelineSet);
 		rhi::Device* device = DeviceManager::Get()->getDevice();
 
 		// ルートシグネチャ
@@ -91,15 +91,15 @@ void GpuMaterialManager::update() {
 			rootSignatureDesc._parameters = rootParameters;
 			rootSignatureDesc._flags = rhi::ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-			rhi::RootSignature& rootSignature = _defaultRootSignatures[materialIndex];
+			rhi::RootSignature& rootSignature = _defaultRootSignatures[pipelineSetIndex];
 			rootSignature.iniaitlize(rootSignatureDesc);
 			rootSignature.setName("RootSigScreenTriangle");
 		}
 
 		// パイプラインステート
 		{
-			const Shader* vertexShader = material->getVertexShader();
-			const Shader* pixelShader = material->getPixelShader();
+			const Shader* vertexShader = pipelineSet->getVertexShader();
+			const Shader* pixelShader = pipelineSet->getPixelShader();
 			u32 vertexShaderIndex = shaderScene->getShaderIndex(vertexShader);
 			u32 pixelShaderIndex = shaderScene->getShaderIndex(pixelShader);
 
@@ -110,13 +110,13 @@ void GpuMaterialManager::update() {
 			pipelineStateDesc._numRenderTarget = 1;
 			pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
 			pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			pipelineStateDesc._rootSignature = &_defaultRootSignatures[materialIndex];
+			pipelineStateDesc._rootSignature = &_defaultRootSignatures[pipelineSetIndex];
 			pipelineStateDesc._sampleDesc._count = 1;
 			pipelineStateDesc._inputElements = inputElements;
 			pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
 			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_LESS_EQUAL;
 
-			rhi::PipelineState& pipelineState = _defaultPipelineStates[materialIndex];
+			rhi::PipelineState& pipelineState = _defaultPipelineStates[pipelineSetIndex];
 			pipelineState.iniaitlize(pipelineStateDesc);
 			pipelineState.setName("PsoScreenTriangle");
 
@@ -124,41 +124,41 @@ void GpuMaterialManager::update() {
 			reloaderDesc._desc = pipelineStateDesc;
 			reloaderDesc._shaderPathHashes[0] = vertexShader->_assetPathHash;
 			reloaderDesc._shaderPathHashes[1] = pixelShader->_assetPathHash;
-			PipelineStateReloader::Get()->registerPipelineState(&_defaultPipelineStates[materialIndex], reloaderDesc);
+			PipelineStateReloader::Get()->registerPipelineState(&_defaultPipelineStates[pipelineSetIndex], reloaderDesc);
 		}
 	}
 
 	// 破棄
-	const UpdateInfos<Material>* destroyInfos = materialScene->getMaterialDestroyInfos();
+	const UpdateInfos<PipelineSet>* destroyInfos = pipelineSetScene->getDestroyInfos();
 	u32 destroyCount = destroyInfos->getUpdateCount();
-	auto destroyMaterials = createInfos->getObjects();
+	auto destroyPipelineSets = destroyInfos->getObjects();
 	for (u32 i = 0; i < destroyCount; ++i) {
-		const Material* material = createMaterials[i];
-		u32 materialIndex = materialScene->getMaterialIndex(material);
+		const PipelineSet* pipelineSet = destroyPipelineSets[i];
+		u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(pipelineSet);
 
-		PipelineStateReloader::Get()->unregisterPipelineState(&_defaultPipelineStates[materialIndex]);
+		PipelineStateReloader::Get()->unregisterPipelineState(&_defaultPipelineStates[pipelineSetIndex]);
 
-		_defaultPipelineStates[materialIndex].terminate();
-		_defaultRootSignatures[materialIndex].terminate();
+		_defaultPipelineStates[pipelineSetIndex].terminate();
+		_defaultRootSignatures[pipelineSetIndex].terminate();
 	}
 
-	updateMaterialInstances();
+	updateMaterialParameters();
 }
 
-void GpuMaterialManager::updateMaterialInstances() {
+void GpuMaterialManager::updateMaterialParameters() {
 	VramUpdater* vramUpdater = VramUpdater::Get();
-	MaterialScene* materialScene = MaterialScene::Get();
+	MaterialParameterContainer* materialInstanceScene = MaterialParameterContainer::Get();
 
-	const UpdateInfos<MaterialInstance>* updateInfos = materialScene->getMaterialInstanceUpdateInfos();
+	const UpdateInfos<MaterialParameterSet>* updateInfos = materialInstanceScene->getMaterialParameterUpdateInfos();
 	u32 updateCount = updateInfos->getUpdateCount();
 	auto updateMaterialInstances = updateInfos->getObjects();
 	for (u32 i = 0; i < updateCount; ++i) {
-		const MaterialInstance* materialInstance = updateMaterialInstances[i];
-		u32 materialParameterIndex = materialScene->getMaterialParameterIndex(materialInstance->getMaterialParameters());
-		u32 materialParameterSize = materialInstance->getParentMaterial()->getParameterSizeInByte();
+		const MaterialParameterSet* materialInstance = updateMaterialInstances[i];
+		u32 materialParameterIndex = materialInstanceScene->getMaterialParameterIndex(materialInstance->_parameters);
+		u32 materialParameterSize = materialInstance->_sizeInByte;
 
 		u8* gpuMaterialParameters = vramUpdater->enqueueUpdate<u8>(&_parameterGpuBuffer, materialParameterIndex, materialParameterSize);
-		memcpy(gpuMaterialParameters, materialInstance->getMaterialParameters(), materialParameterSize);
+		memcpy(gpuMaterialParameters, materialInstance->_parameters, materialParameterSize);
 	}
 }
 

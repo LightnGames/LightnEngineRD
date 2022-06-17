@@ -14,24 +14,23 @@ void ShaderScene::initialize() {
 		handleDesc._size = SHADER_PARAMETER_CAPACITY;
 		_parameterAllocations.initialize(handleDesc);
 	}
-
-	_shaders = Memory::allocObjects<Shader>(SHADER_CAPACITY);
-	_shaderAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(SHADER_CAPACITY);
-	_shaderAssetPathHashes = Memory::allocObjects<u64>(SHADER_CAPACITY);
-	_shaderAssetPaths = Memory::allocObjects<char*>(SHADER_CAPACITY);
-	_parameterAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(SHADER_PARAMETER_CAPACITY);
-	_parameterNameHashes = Memory::allocObjects<u32>(SHADER_PARAMETER_CAPACITY);
-	_parameterOffsets = Memory::allocObjects<u16>(SHADER_PARAMETER_CAPACITY);
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_shaders = allocation.allocateClearedObjects<Shader>(SHADER_CAPACITY);
+		_shaderAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(SHADER_CAPACITY);
+		_shaderAssetPathHashes = allocation.allocateObjects<u64>(SHADER_CAPACITY);
+		_shaderAssetPaths = allocation.allocateObjects<char*>(SHADER_CAPACITY);
+		_parameterAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(SHADER_PARAMETER_CAPACITY);
+		_parameterNameHashes = allocation.allocateObjects<u32>(SHADER_PARAMETER_CAPACITY);
+		_parameterOffsets = allocation.allocateObjects<u16>(SHADER_PARAMETER_CAPACITY);
+		});
 }
 
 void ShaderScene::terminate() {
+	lateUpdate();
+
 	_shaderAllocations.terminate();
 	_parameterAllocations.terminate();
-	Memory::freeObjects(_shaders);
-	Memory::freeObjects(_shaderAllocationInfos);
-	Memory::freeObjects(_shaderAssetPathHashes);
-	Memory::freeObjects(_parameterNameHashes);
-	Memory::freeObjects(_parameterOffsets);
+	_chunkAllocator.free();
 }
 
 void ShaderScene::lateUpdate() {
@@ -53,7 +52,7 @@ void ShaderScene::lateUpdate() {
 	_shaderDestroyInfos.reset();
 }
 
-Shader* ShaderScene::createShader(const CreatationDesc& desc) {
+const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 	VirtualArray::AllocationInfo allocationInfo = _shaderAllocations.allocation(1);
 
 	_shaderAllocationInfos[allocationInfo._offset] = allocationInfo;
@@ -95,7 +94,7 @@ Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 	return shader;
 }
 
-void ShaderScene::destroyShader(Shader* shader) {
+void ShaderScene::destroyShader(const Shader* shader) {
 	_shaderDestroyInfos.push(shader);
 }
 

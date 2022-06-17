@@ -19,12 +19,14 @@ void MeshInstancePool::initialize(const InitializetionDesc& desc) {
 		_subMeshInstanceAllocations.initialize(handleDesc);
 	}
 
-	_meshInstances = Memory::allocObjects<MeshInstance>(desc._meshInstanceCount);
-	_lodMeshInstances = Memory::allocObjects<LodMeshInstance>(desc._lodMeshInstanceCount);
-	_subMeshInstances = Memory::allocObjects<SubMeshInstance>(desc._subMeshInstanceCount);
-	_meshInstanceAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
-	_lodMeshInstanceAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
-	_subMeshInstanceAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
+	_chunkAllocator.allocate([this, desc](ChunkAllocator::Allocation& allocation) {
+		_meshInstances = allocation.allocateObjects<MeshInstance>(desc._meshInstanceCount);
+		_lodMeshInstances = allocation.allocateObjects<LodMeshInstance>(desc._lodMeshInstanceCount);
+		_subMeshInstances = allocation.allocateObjects<SubMeshInstance>(desc._subMeshInstanceCount);
+		_meshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
+		_lodMeshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
+		_subMeshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
+	});
 }
 
 void MeshInstancePool::terminate() {
@@ -32,12 +34,7 @@ void MeshInstancePool::terminate() {
 	_lodMeshInstanceAllocations.terminate();
 	_subMeshInstanceAllocations.terminate();
 
-	Memory::freeObjects(_meshInstances);
-	Memory::freeObjects(_lodMeshInstances);
-	Memory::freeObjects(_subMeshInstances);
-	Memory::freeObjects(_meshInstanceAllocationInfos);
-	Memory::freeObjects(_lodMeshInstanceAllocationInfos);
-	Memory::freeObjects(_subMeshInstanceAllocationInfos);
+	_chunkAllocator.free();
 }
 
 MeshInstance* MeshInstancePool::allocateMeshInstance(const MeshAllocationDesc& desc) {
@@ -98,7 +95,7 @@ void MeshInstanceScene::lateUpdate() {
 	_subMeshInstanceUpdateInfos.reset();
 }
 
-MeshInstance* MeshInstanceScene::createMeshInstance(const MeshInstanceCreatationDesc& desc) {
+MeshInstance* MeshInstanceScene::createMeshInstance(const CreatationDesc& desc) {
 	MeshInstancePool::MeshAllocationDesc allocationDesc;
 	allocationDesc._mesh = desc._mesh;
 
@@ -114,19 +111,19 @@ void MeshInstanceScene::destroyMeshInstance(MeshInstance* meshInstance) {
 	_meshInstanceDestroyInfos.push(meshInstance);
 }
 
-void MeshInstance::setMaterialInstance(u16 materialSlotIndex, MaterialInstance* materialInstance) {
+void MeshInstance::setMaterial(u16 materialSlotIndex, const Material* material) {
 	UpdateInfos<SubMeshInstance>* subMeshInstanceUpdateInfos = MeshInstanceScene::Get()->getSubMeshInstanceUpdateInfos();
 	const SubMesh* subMeshes = _mesh->getSubMesh();
 	u32 subMeshCount = _mesh->getSubMeshCount();
 	for (u32 i = 0; i < subMeshCount; ++i) {
 		if (subMeshes[i]._materialSlotIndex == materialSlotIndex) {
-			_subMeshInstances[i].setMaterialInstance(materialInstance);
+			_subMeshInstances[i].setMaterial(material);
 			subMeshInstanceUpdateInfos->push(&_subMeshInstances[i]);
 		}
 	}
 }
 
-void MeshInstance::setMaterialInstance(u64 materialSlotNameHash, MaterialInstance* materialInstance) {
+void MeshInstance::setMaterial(u64 materialSlotNameHash, const Material* material) {
 	const u64* materialSlotNameHashes = _mesh->getMaterialSlotNameHashes();
 	u32 materialSlotCount = _mesh->getMaterialSlotCount();
 	u16 findMaterialSlotIndex = 0;
@@ -137,7 +134,7 @@ void MeshInstance::setMaterialInstance(u64 materialSlotNameHash, MaterialInstanc
 		}
 	}
 
-	setMaterialInstance(findMaterialSlotIndex, materialInstance);
+	setMaterial(findMaterialSlotIndex, material);
 }
 
 void MeshInstance::setWorldMatrix(const Matrix4& worldMatrix, bool dirtyFlags) {

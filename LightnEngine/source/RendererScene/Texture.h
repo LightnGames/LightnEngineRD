@@ -1,6 +1,7 @@
 #pragma once
 #include <Core/Type.h>
 #include <Core/VirturalArray.h>
+#include <Core/ChunkAllocator.h>
 #include "RenderSceneUtility.h"
 namespace ltn {
 struct DdsPixelFormat {
@@ -58,9 +59,10 @@ public:
 		const char* _assetPath = nullptr;
 	};
 
-	Texture* createTexture(const TextureCreatationDesc& desc);
-	void destroyTexture(Texture* texture);
+	const Texture* createTexture(const TextureCreatationDesc& desc);
+	void destroyTexture(const Texture* texture);
 
+	const Texture* findTexture(u64 assetPathHash) const;
 	u32 getTextureIndex(const Texture* texture) const { return u32(texture - _textures); }
 
 	const UpdateInfos<Texture>* getCreateInfos() const { return &_textureCreateInfos; }
@@ -78,5 +80,6 @@ private:
 
 	UpdateInfos<Texture> _textureCreateInfos;
 	UpdateInfos<Texture> _textureDestroyInfos;
+	ChunkAllocator _chunkAllocator;
 };
 }

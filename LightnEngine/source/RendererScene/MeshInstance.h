@@ -3,19 +3,19 @@
 #include <Core/Utility.h>
 #include <Core/VirturalArray.h>
 #include <Core/Math.h>
+#include <Core/ChunkAllocator.h>
 #include "RenderSceneUtility.h"
 
 namespace ltn {
 class Mesh;
-class MaterialInstance;
+class Material;
 class SubMeshInstance {
 public:
-	void setMaterialInstance(MaterialInstance* materialInstance) { _materialInstance = materialInstance; }
-	MaterialInstance* getMaterialInstance() { return _materialInstance; }
-	const MaterialInstance* getMaterialInstance() const { return _materialInstance; }
+	void setMaterial(const Material* material) { _material = material; }
+	const Material* getMaterial() const { return _material; }
 
 private:
-	MaterialInstance* _materialInstance = nullptr;
+	const Material* _material = nullptr;
 };
 
 class LodMeshInstance {
@@ -33,8 +33,8 @@ public:
 	void setLodMeshInstances(LodMeshInstance* lodMeshInstances) { _lodMeshInstances = lodMeshInstances; }
 	void setSubMeshInstances(SubMeshInstance* subMeshInstances) { _subMeshInstances = subMeshInstances; }
 
-	void setMaterialInstance(u16 materialSlotIndex, MaterialInstance* materialInstance);
-	void setMaterialInstance(u64 materialSlotNameHash, MaterialInstance* materialInstance);
+	void setMaterial(u16 materialSlotIndex, const Material* material);
+	void setMaterial(u64 materialSlotNameHash, const Material* material);
 	void setWorldMatrix(const Matrix4& worldMatrix, bool dirtyFlags = true);
 
 	const Mesh* getMesh() const { return _mesh; }
@@ -87,6 +87,7 @@ private:
 	MeshInstance* _meshInstances = nullptr;
 	LodMeshInstance* _lodMeshInstances = nullptr;
 	SubMeshInstance* _subMeshInstances = nullptr;
+	ChunkAllocator _chunkAllocator;
 };
 
 class MeshInstanceScene {
@@ -95,7 +96,7 @@ public:
 	static constexpr u32 LOD_MESH_INSTANCE_CAPACITY = 1024 * 4;
 	static constexpr u32 SUB_MESH_INSTANCE_CAPACITY = 1024 * 8;
 
-	struct MeshInstanceCreatationDesc {
+	struct CreatationDesc {
 		const Mesh* _mesh = nullptr;
 	};
 
@@ -103,7 +104,7 @@ public:
 	void terminate();
 	void lateUpdate();
 
-	MeshInstance* createMeshInstance(const MeshInstanceCreatationDesc& desc);
+	MeshInstance* createMeshInstance(const CreatationDesc& desc);
 	void destroyMeshInstance(MeshInstance* meshInstance);
 
 	const MeshInstancePool* getMeshInstancePool() const { return &_meshInstancePool; }

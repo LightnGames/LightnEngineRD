@@ -1,6 +1,7 @@
 #pragma once
 #include <Core/Math.h>
 #include <Core/Type.h>
+#include <Core/ChunkAllocator.h>
 namespace ltn {
 struct Camera {
 	Matrix4 _worldMatrix;
@@ -61,5 +62,6 @@ private:
 	View* _views = nullptr;
 	u8* _viewStateFlags = nullptr;
 	u8* _viewEnabledFlags = nullptr;
+	ChunkAllocator _chunkAllocator;
 };
 }

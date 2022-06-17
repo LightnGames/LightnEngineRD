@@ -55,6 +55,7 @@ void GpuTextureManager::update() {
 GpuTextureManager* GpuTextureManager::Get() {
 	return &g_gpuTextureManager;
 }
+
 void GpuTextureManager::createTexture(const Texture* texture) {
 	TextureScene* textureScene = TextureScene::Get();
 	rhi::Device* device = DeviceManager::Get()->getDevice();
@@ -157,5 +158,8 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 	}
 
 	assetPath.closeFile();
+
+	// SRV ¶¬
+	device->createShaderResourceView(gpuTexture.getResource(), nullptr, _textureSrv.get(textureIndex)._cpuHandle);
 }
 }

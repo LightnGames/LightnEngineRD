@@ -3,6 +3,13 @@
 ByteAddressBuffer _materialParameters : register(t1);
 Texture2D _textures[] : register(t0, space1);
 
+SamplerState LinerSampler
+{
+    Filter = MIN_MAG_MIP_LINEAR;
+    AddressU = Wrap;
+    AddressV = Wrap;
+};
+
 struct MaterialParameter
 {
     float4 _baseColor;
@@ -11,5 +18,6 @@ struct MaterialParameter
 
 float4 main(VertexOut input) : SV_TARGET {
     MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(input._materialParameterOffset);
-    return float4(input._position.xy / 1000.0, 0, 1) * materialParameter._baseColor;
+    float4 baseColor = _textures[materialParameter._baseColorTextureIndex].Sample(LinerSampler, float2(0, 0));
+    return float4(input._position.xy / 1000.0, 0, 1) * materialParameter._baseColor + baseColor;
 }

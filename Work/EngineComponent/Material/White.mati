@@ -1,4 +1,0 @@
-Material : EngineComponent\Material\Default.mto
-Parameters :
-    BaseColor : [1, 1, 1, 1]
-    BaseColorTexture : EngineComponent\Material\Default.mto

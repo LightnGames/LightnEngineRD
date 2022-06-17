@@ -11,13 +11,37 @@
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
 #include <RendererScene/Mesh.h>
+#include <RendererScene/MeshPreset.h>
 #include <RendererScene/View.h>
 #include <RendererScene/Material.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Shader.h>
 #include <RendererScene/Texture.h>
+#include <RendererScene/CommonResource.h>
 
 namespace ltn {
+void update() {
+	GpuTextureManager::Get()->update();
+	GpuShaderScene::Get()->update();
+	RenderViewScene::Get()->update();
+	GpuMeshInstanceManager::Get()->update();
+	GpuMeshResourceManager::Get()->update();
+	GeometryResourceManager::Get()->update();
+	GpuMaterialManager::Get()->update();
+	MeshRenderer::Get()->update();
+	Renderer::Get()->update();
+	TextureScene::Get()->lateUpdate();
+	MaterialScene::Get()->lateUpdate();
+	MeshInstanceScene::Get()->lateUpdate();
+	MeshScene::Get()->lateUpdate();
+	ShaderScene::Get()->lateUpdate();
+	ViewScene::Get()->lateUpdate();
+}
+
+void render() {
+	Renderer::Get()->render();
+}
+
 void EngineModuleManager::run() {
 	ltn::win64app::Win64Application app;
 	app.initialize();
@@ -46,6 +70,9 @@ void EngineModuleManager::run() {
 	TextureScene* textureScene = TextureScene::Get();
 	textureScene->initialize();
 
+	MeshPresetScene* meshPresetScene = MeshPresetScene::Get();
+	meshPresetScene->initialize();
+
 	GpuTextureManager* gpuTextureManager = GpuTextureManager::Get();
 	gpuTextureManager->initialize();
 
@@ -70,7 +97,28 @@ void EngineModuleManager::run() {
 	MeshRenderer* meshRenderer = MeshRenderer::Get();
 	meshRenderer->initialize();
 
-	app.run();
+	{
+		CommonResource* commonResource = CommonResource::Get();
+		commonResource->initialize();
+
+		EditorCamera editorCamera;
+		editorCamera.initialize();
+
+		while (app.update()) {
+			editorCamera.update();
+			update();
+			render();
+		}
+
+		editorCamera.terminate();
+		commonResource->terminate();
+	}
+
+	// I—¹‚·‚é‘O‚É GPU ˆ—‘Ò‚¿
+	{
+		Renderer::Get()->waitForIdle();
+		update();
+	}
 
 	app.terminate();
 	gpuMaterialManager->terminate();
@@ -85,6 +133,7 @@ void EngineModuleManager::run() {
 	meshInstanceScene->terminate();
 	shaderScene->terminate();
 	meshScene->terminate();
+	meshPresetScene->terminate();
 	geometryResourceManager->terminate();
 	gpuMeshResourceManager->terminate();
 	renderer->terminate();

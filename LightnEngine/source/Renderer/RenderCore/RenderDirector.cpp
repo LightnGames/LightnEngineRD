@@ -20,7 +20,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 	ViewScene* viewScene = ViewScene::Get();
 	RenderViewScene* renderViewScene = RenderViewScene::Get();
 	MeshRenderer* meshRenderer = MeshRenderer::Get();
-	MaterialScene* materialScene = MaterialScene::Get();
+	PipelineSetScene* pipelineSetScene = PipelineSetScene::Get();
 	GpuMaterialManager* materialManager = GpuMaterialManager::Get();
 	u32 viewCount = ViewScene::VIEW_COUNT_MAX;
 	const View* views = viewScene->getView(0);
@@ -52,8 +52,8 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._viewCbv = renderViewScene->getViewCbv(i);
 			desc._rootSignatures = materialManager->getDefaultRootSignatures();
 			desc._pipelineStates = materialManager->getDefaultPipelineStates();
-			desc._pipelineStateCount = MaterialScene::MATERIAL_CAPACITY;
-			desc._enabledFlags = materialScene->getEnabledFlags();
+			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
+			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			meshRenderer->render(desc);
 		}
 	}

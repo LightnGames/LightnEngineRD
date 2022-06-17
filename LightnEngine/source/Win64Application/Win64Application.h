@@ -10,7 +10,7 @@ class Win64Application :public Application {
 public:
 	void initialize() override;
 	void terminate() override;
-	void run() override;
+	bool update() override;
 
 	u32 getScreenWidth() override { return _screenWidth; }
 	u32 getScreenHeight() override { return _screenHeight; }

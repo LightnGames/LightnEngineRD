@@ -186,7 +186,7 @@
     <ClInclude Include="source\Editor\EditorCamera.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="source\RendererScene\Model.h">
+    <ClInclude Include="source\RendererScene\MeshPreset.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\RendererScene\RenderSceneUtility.h">
@@ -211,6 +211,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RendererScene\CommonResource.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -335,7 +338,7 @@
     <ClCompile Include="source\Editor\EditorCamera.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="source\RendererScene\Model.cpp">
+    <ClCompile Include="source\RendererScene\MeshPreset.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\RendererScene\Shader.cpp">
@@ -351,6 +354,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="source\ThiredParty\D3D12TextureUtility\DDSTextureLoader12.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RendererScene\CommonResource.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

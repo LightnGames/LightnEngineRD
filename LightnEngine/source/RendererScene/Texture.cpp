@@ -11,18 +11,17 @@ void TextureScene::initialize() {
 	handleDesc._size = TEXTURE_CAPACITY;
 	_textureAllocations.initialize(handleDesc);
 
-	_textures = Memory::allocObjects<Texture>(TEXTURE_CAPACITY);
-	_textureAssetPathHashes = Memory::allocObjects<u64>(TEXTURE_CAPACITY);
-	_textureAssetPaths = Memory::allocObjects<char*>(TEXTURE_CAPACITY);
-	_textureAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(TEXTURE_CAPACITY);
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_textures = allocation.allocateObjects<Texture>(TEXTURE_CAPACITY);
+		_textureAssetPathHashes = allocation.allocateObjects<u64>(TEXTURE_CAPACITY);
+		_textureAssetPaths = allocation.allocateObjects<char*>(TEXTURE_CAPACITY);
+		_textureAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(TEXTURE_CAPACITY);
+		});
 }
 
 void TextureScene::terminate() {
 	_textureAllocations.terminate();
-	Memory::freeObjects(_textures);
-	Memory::freeObjects(_textureAssetPaths);
-	Memory::freeObjects(_textureAssetPathHashes);
-	Memory::freeObjects(_textureAllocationInfos);
+	_chunkAllocator.free();
 }
 
 void TextureScene::lateUpdate() {
@@ -40,7 +39,7 @@ void TextureScene::lateUpdate() {
 	_textureDestroyInfos.reset();
 }
 
-Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
+const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 	VirtualArray::AllocationInfo allocationInfo = _textureAllocations.allocation(1);
 
 	_textureAllocationInfos[allocationInfo._offset] = allocationInfo;
@@ -80,10 +79,21 @@ Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 	return texture;
 }
 
-void TextureScene::destroyTexture(Texture* texture) {
+void TextureScene::destroyTexture(const Texture* texture) {
+	_textureDestroyInfos.push(texture);
+}
+
+const Texture* TextureScene::findTexture(u64 assetPathHash) const {
+	for (u32 i = 0; i < TEXTURE_CAPACITY; ++i) {
+		if (_textureAssetPathHashes[i] == assetPathHash) {
+			return &_textures[i];
+		}
+	}
+
+	return nullptr;
 }
 
 TextureScene* TextureScene::Get() {
-    return &g_textureScene;
+	return &g_textureScene;
 }
 }

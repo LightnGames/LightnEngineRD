@@ -36,7 +36,7 @@ void MeshScene::lateUpdate() {
 	_meshDestroyInfos.reset();
 }
 
-Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
+const Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	AssetPath meshAsset(desc._assetPath);
 	meshAsset.openFile();
 
@@ -124,7 +124,7 @@ Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	return mesh;
 }
 
-void MeshScene::destroyMesh(Mesh* mesh) {
+void MeshScene::destroyMesh(const Mesh* mesh) {
 	_meshDestroyInfos.push(mesh);
 }
 
@@ -145,32 +145,23 @@ void MeshPool::initialize(const InitializetionDesc& desc) {
 		_subMeshAllocations.initialize(handleDesc);
 	}
 
-	{
-		_meshes = Memory::allocObjects<Mesh>(desc._meshCount);
-		_lodMeshes = Memory::allocObjects<LodMesh>(desc._lodMeshCount);
-		_subMeshes = Memory::allocObjects<SubMesh>(desc._subMeshCount);
-		_meshAssetPathHashes = Memory::allocObjects<u64>(desc._meshCount);
-		_meshAssetPaths = Memory::allocObjects<char*>(desc._meshCount);
-
-		_meshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._meshCount);
-		_lodMeshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._lodMeshCount);
-		_subMeshAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(desc._subMeshCount);
-	}
+	_chunkAllocator.allocate([this, desc](ChunkAllocator::Allocation& allocation) {
+		_meshes = allocation.allocateObjects<Mesh>(desc._meshCount);
+		_lodMeshes = allocation.allocateObjects<LodMesh>(desc._lodMeshCount);
+		_subMeshes = allocation.allocateObjects<SubMesh>(desc._subMeshCount);
+		_meshAssetPathHashes = allocation.allocateObjects<u64>(desc._meshCount);
+		_meshAssetPaths = allocation.allocateObjects<char*>(desc._meshCount);
+		_meshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshCount);
+		_lodMeshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._lodMeshCount);
+		_subMeshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._subMeshCount);
+	});
 }
 
 void MeshPool::terminate() {
 	_meshAllocations.terminate();
 	_lodMeshAllocations.terminate();
 	_subMeshAllocations.terminate();
-
-	Memory::freeObjects(_meshes);
-	Memory::freeObjects(_lodMeshes);
-	Memory::freeObjects(_subMeshes);
-	Memory::freeObjects(_meshAssetPathHashes);
-	Memory::freeObjects(_meshAssetPaths);
-	Memory::freeObjects(_meshAllocationInfos);
-	Memory::freeObjects(_lodMeshAllocationInfos);
-	Memory::freeObjects(_subMeshAllocationInfos);
+	_chunkAllocator.free();
 }
 
 Mesh* MeshPool::allocateMesh(const MeshAllocationDesc& desc) {
@@ -197,7 +188,7 @@ void MeshPool::freeMesh(const Mesh* mesh) {
 	_subMeshAllocations.freeAllocation(_subMeshAllocationInfos[meshIndex]);
 	Memory::freeObjects(_meshAssetPaths[getMeshIndex(mesh)]);
 }
-Mesh* MeshPool::findMesh(u64 assetPathHash) {
+const Mesh* MeshPool::findMesh(u64 assetPathHash) const {
 	for (u32 i = 0; i < MeshScene::MESH_CAPACITY; ++i) {
 		if (_meshAssetPathHashes[i] == assetPathHash) {
 			return &_meshes[i];

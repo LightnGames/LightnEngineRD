@@ -10,7 +10,7 @@ public:
 	Array getObjects() const { return _objects; }
 	u32 getUpdateCount() const { return _updateCount; }
 
-	void push(T* mesh) {
+	void push(const T* mesh) {
 		LTN_ASSERT(_updateCount < STACK_COUNT_MAX);
 		_objects[_updateCount++] = mesh;
 	}
@@ -20,7 +20,7 @@ public:
 	}
 
 	static constexpr u32 STACK_COUNT_MAX = 256;
-	T* _objects[STACK_COUNT_MAX];
+	const T* _objects[STACK_COUNT_MAX];
 	u32 _updateCount = 0;
 };
 }

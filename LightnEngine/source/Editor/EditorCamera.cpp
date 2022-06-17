@@ -4,21 +4,11 @@
 #include <Editor/DebugSerializedStructure.h>
 #include <ThiredParty/ImGui/imgui.h>
 
-#include <RendererScene/Shader.h>
-#include <RendererScene/Material.h>
-#include <RendererScene/Mesh.h>
-#include <RendererScene/Model.h>
+#include <RendererScene/CommonResource.h>
 #include <RendererScene/MeshInstance.h>
+#include <RendererScene/MeshPreset.h>
 
 namespace ltn {
-Shader* _vertexShader;
-Shader* _pixelShader;
-Material* _material;
-MaterialInstance* _materialInstance;
-MaterialInstance* _materialInstance2;
-Mesh* _mesh;
-
-Model _model;
 MeshInstance* _meshInstance;
 MeshInstance* _meshInstance2;
 void EditorCamera::initialize() {
@@ -28,67 +18,18 @@ void EditorCamera::initialize() {
 	_view->setWidth(app->getScreenWidth());
 	_view->setHeight(app->getScreenHeight());
 
-
 	{
-		ShaderScene::CreatationDesc desc;
-		desc._assetPath = "EngineComponent\\Shader\\Material\\Default.vso";
-		_vertexShader = ShaderScene::Get()->createShader(desc);
-
-		desc._TEST_collectParameter = true;
-		desc._assetPath = "EngineComponent\\Shader\\Material\\Default.pso";
-		_pixelShader = ShaderScene::Get()->createShader(desc);
-	}
-
-	{
-		MaterialScene::MaterialCreatationDesc desc;
-		desc._assetPath = "EngineComponent\\Material\\Default.mto";
-		_material = MaterialScene::Get()->createMaterial(desc);
-	}
-
-	{
-		MaterialScene::MaterialInstanceCreatationDesc desc;
-		desc._assetPath = "EngineComponent\\Material\\White.mti";
-		_materialInstance = MaterialScene::Get()->createMaterialInstance(desc);
-		_materialInstance2 = MaterialScene::Get()->createMaterialInstance(desc);
-
-		_materialInstance2->setParameter<Float4>(StrHash32("BaseColor"), Float4(0.2f, 0.2f, 0.2f, 1.0f));
-		MaterialScene::Get()->getMaterialInstanceUpdateInfos()->push(_materialInstance2);
-	}
-
-	{
-		MeshScene::CreatationDesc desc;
-		desc._assetPath = "EngineComponent\\BasicShape\\Quad.mesh";
-		_mesh = MeshScene::Get()->createMesh(desc);
-	}
-
-	{
-		Model::MeshCreatationDesc desc;
-		desc._assetPath = "EngineComponent\\BasicShape\\Quad.mdl";
-		_model.create(desc);
-	}
-
-	{
-		MeshInstanceScene::MeshInstanceCreatationDesc desc;
-		desc._mesh = _model.getMesh();
-		_meshInstance = MeshInstanceScene::Get()->createMeshInstance(desc);
+		const MeshPreset* meshPreset = CommonResource::Get()->getQuadMeshPreset();
+		_meshInstance = meshPreset->createMeshInstance(1);
 		_meshInstance->setWorldMatrix(Matrix4::translationFromVector(Vector3(1, 2, 3)));
-		_meshInstance->getSubMeshInstance(0)->setMaterialInstance(_materialInstance);
-
-		_meshInstance2 = MeshInstanceScene::Get()->createMeshInstance(desc);
+		
+		_meshInstance2 = meshPreset->createMeshInstance(1);
 		_meshInstance2->setWorldMatrix(Matrix4::translationFromVector(Vector3(-1, 0, 0)));
-		_meshInstance2->getSubMeshInstance(0)->setMaterialInstance(_materialInstance2);
+		_meshInstance2->setMaterial(StrHash64("lambert2"), CommonResource::Get()->getGrayMaterial());
 	}
 }
 
 void EditorCamera::terminate() {
-	ShaderScene::Get()->destroyShader(_vertexShader);
-	ShaderScene::Get()->destroyShader(_pixelShader);
-	MaterialScene::Get()->destroyMaterial(_material);
-	MaterialScene::Get()->destroyMaterialInstance(_materialInstance);
-	MaterialScene::Get()->destroyMaterialInstance(_materialInstance2);
-	MeshScene::Get()->destroyMesh(_mesh);
-
-	_model.destroy();
 	MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance);
 	MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance2);
 	ViewScene::Get()->destroyView(_view);

@@ -32,7 +32,7 @@ void GpuMeshInstanceManager::initialize() {
 		_subMeshInstanceGpuBuffer.initialize(desc);
 		_subMeshInstanceGpuBuffer.setName("SubMeshInstances");
 
-		desc._sizeInByte = MaterialScene::MATERIAL_CAPACITY * sizeof(u32);
+		desc._sizeInByte = PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32);
 		_subMeshInstanceOffsetsGpuBuffer.initialize(desc);
 		_subMeshInstanceOffsetsGpuBuffer.setName("SubMeshInstanceOffsets");
 
@@ -66,10 +66,10 @@ void GpuMeshInstanceManager::initialize() {
 	}
 
 	{
-		_subMeshInstanceCounts = Memory::allocObjects<u32>(MaterialScene::MATERIAL_CAPACITY);
-		_subMeshInstanceOffsets = Memory::allocObjects<u32>(MaterialScene::MATERIAL_CAPACITY);
-		memset(_subMeshInstanceCounts, 0, MaterialScene::MATERIAL_CAPACITY);
-		memset(_subMeshInstanceOffsets, 0, MaterialScene::MATERIAL_CAPACITY);
+		_subMeshInstanceCounts = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_subMeshInstanceOffsets = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memset(_subMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memset(_subMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
 	}
 
 	{
@@ -137,9 +137,9 @@ void GpuMeshInstanceManager::update() {
 			const SubMeshInstance* subMeshInstance = meshInstance->getSubMeshInstance(subMeshIndex);
 			gpu::SubMeshInstance& gpuSubMesh = gpuSubMeshInstances[subMeshIndex];
 			u32 materialIndex = 0;
-			const u8* materialParameters = subMeshInstance->getMaterialInstance()->getMaterialParameters();
+			const u8* materialParameters = subMeshInstance->getMaterial()->getParameterSet()->_parameters;
 			gpuSubMesh._materialIndex = materialIndex;
-			gpuSubMesh._materialParameterOffset = MaterialScene::Get()->getMaterialParameterIndex(materialParameters);
+			gpuSubMesh._materialParameterOffset = MaterialParameterContainer::Get()->getMaterialParameterIndex(materialParameters);
 			_subMeshInstanceCounts[materialIndex]++;
 			updateSubMeshInstanceOffset = true;
 		}
@@ -193,12 +193,12 @@ void GpuMeshInstanceManager::update() {
 	// サブメッシュインスタンスオフセットを VRAM アップロード
 	if (updateSubMeshInstanceOffset) {
 		u32 offset = 0;
-		for (u32 i = 0; i < MaterialScene::MATERIAL_CAPACITY; ++i) {
+		for (u32 i = 0; i < PipelineSetScene::PIPELINE_SET_CAPACITY; ++i) {
 			_subMeshInstanceOffsets[i] = offset;
 			offset += _subMeshInstanceCounts[i];
 		}
-		u32* offsets = vramUpdater->enqueueUpdate<u32>(&_subMeshInstanceOffsetsGpuBuffer, 0, MaterialScene::MATERIAL_CAPACITY);
-		memcpy(offsets, _subMeshInstanceOffsets, sizeof(u32) * MaterialScene::MATERIAL_CAPACITY);
+		u32* offsets = vramUpdater->enqueueUpdate<u32>(&_subMeshInstanceOffsetsGpuBuffer, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memcpy(offsets, _subMeshInstanceOffsets, sizeof(u32) * PipelineSetScene::PIPELINE_SET_CAPACITY);
 	}
 }
 

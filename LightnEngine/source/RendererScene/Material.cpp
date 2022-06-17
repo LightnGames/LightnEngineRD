@@ -3,57 +3,46 @@
 #include <Core/Utility.h>
 #include <Core/Math.h>
 #include <RendererScene/Shader.h>
+#include <RendererScene/Texture.h>
 
 namespace ltn {
 namespace {
 MaterialScene g_materialScene;
+MaterialParameterContainer g_materialParameterContainer;
+PipelineSetScene g_pipelineSetScene;
 }
+
 void MaterialScene::initialize() {
 	{
 		VirtualArray::Desc handleDesc = {};
 		handleDesc._size = MATERIAL_CAPACITY;
 		_materialAllocations.initialize(handleDesc);
-
-		handleDesc._size = MATERIAL_INSTANCE_CAPACITY;
-		_materialInstanceAllocations.initialize(handleDesc);
-
-		handleDesc._size = MATERIAL_PARAMETER_SIZE_IN_BYTE;
-		_materialParameterAllocations.initialize(handleDesc);
 	}
 
-	_materials = Memory::allocObjects<Material>(MATERIAL_CAPACITY);
-	_materialInstances = Memory::allocObjects<MaterialInstance>(MATERIAL_INSTANCE_CAPACITY);
-	_materialParameters = Memory::allocObjects<u8>(MATERIAL_PARAMETER_SIZE_IN_BYTE);
-	_materialAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(MATERIAL_CAPACITY);
-	_materialInstanceAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(MATERIAL_INSTANCE_CAPACITY);
-	_materialParameterAllocationInfos = Memory::allocObjects<VirtualArray::AllocationInfo>(MATERIAL_PARAMETER_SIZE_IN_BYTE);
-	_enabledFlags = Memory::allocObjects<u8>(MATERIAL_CAPACITY);
-	_materialAssetPathHashes = Memory::allocObjects<u64>(MATERIAL_CAPACITY);
-	_materialInstanceAssetPathHashes = Memory::allocObjects<u64>(MATERIAL_INSTANCE_CAPACITY);
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_materials = allocation.allocateObjects<Material>(MATERIAL_CAPACITY);
+		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MATERIAL_CAPACITY);
+		_materialAssetPathHashes = allocation.allocateObjects<u64>(MATERIAL_CAPACITY);
+		});
 
-	memset(_enabledFlags, 0, MATERIAL_CAPACITY);
-	memset(_materialParameterAllocationInfos, 0, sizeof(VirtualArray::AllocationInfo) * MATERIAL_INSTANCE_CAPACITY);
+	MaterialParameterContainer::Get()->initialize();
+	PipelineSetScene::Get()->initialize();
 }
 
 void MaterialScene::terminate() {
 	lateUpdate();
 
 	_materialAllocations.terminate();
-	_materialInstanceAllocations.terminate();
-	_materialParameterAllocations.terminate();
+	_chunkAllocator.free();
 
-	Memory::freeObjects(_materials);
-	Memory::freeObjects(_materialInstances);
-	Memory::freeObjects(_materialParameters);
-	Memory::freeObjects(_materialAllocationInfos);
-	Memory::freeObjects(_materialInstanceAllocationInfos);
-	Memory::freeObjects(_materialParameterAllocationInfos);
-	Memory::freeObjects(_enabledFlags);
-	Memory::freeObjects(_materialAssetPathHashes);
-	Memory::freeObjects(_materialInstanceAssetPathHashes);
+	MaterialParameterContainer::Get()->terminate();
+	PipelineSetScene::Get()->terminate();
 }
 
 void MaterialScene::lateUpdate() {
+	PipelineSetScene::Get()->lateUpdate();
+	MaterialParameterContainer::Get()->lateUpdate();
+
 #define ENABLE_ZERO_CLEAR 1
 	u32 destroyMeshCount = _materialDestroyInfos.getUpdateCount();
 	auto destroyMaterials = _materialDestroyInfos.getObjects();
@@ -61,7 +50,8 @@ void MaterialScene::lateUpdate() {
 		u32 materialIndex = getMaterialIndex(destroyMaterials[i]);
 		LTN_ASSERT(materialIndex < MATERIAL_CAPACITY);
 		_materialAllocations.freeAllocation(_materialAllocationInfos[materialIndex]);
-		_enabledFlags[materialIndex] = 0;
+
+		MaterialParameterContainer::Get()->freeMaterialParameters(destroyMaterials[i]->getParameterSet());
 
 #if ENABLE_ZERO_CLEAR
 		_materialAllocationInfos[materialIndex] = VirtualArray::AllocationInfo();
@@ -72,14 +62,199 @@ void MaterialScene::lateUpdate() {
 
 	_materialCreateInfos.reset();
 	_materialDestroyInfos.reset();
-	_materialInstanceUpdateInfos.reset();
 }
 
-Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc) {
+const Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc) {
 	VirtualArray::AllocationInfo allocationInfo = _materialAllocations.allocation(1);
 
 	_materialAllocationInfos[allocationInfo._offset] = allocationInfo;
 	Material* material = &_materials[allocationInfo._offset];
+
+	u64 pipelineSetHash = 0;
+	u32 materialParameterCount = 0;
+	u32 materialParameterSize = 0;
+	u8 materialParameters[256];
+	{
+		AssetPath asset(desc._assetPath);
+		asset.openFile();
+		asset.readFile(&pipelineSetHash, sizeof(u64));
+		asset.readFile(&materialParameterCount, sizeof(u32));
+		asset.readFile(&materialParameterSize, sizeof(u32));
+		asset.readFile(materialParameters, materialParameterSize);
+		asset.closeFile();
+	}
+
+	LTN_ASSERT(materialParameterSize < LTN_COUNTOF(materialParameters));
+
+	const PipelineSet* pipelineSet = PipelineSetScene::Get()->findPipelineSet(pipelineSetHash);
+	LTN_ASSERT(pipelineSet != nullptr);
+	material->setPipelineSet(pipelineSet);
+
+	// パラメーターメモリ確保
+	u16 materialParameterSizeInByte = pipelineSet->getParameterSizeInByte();
+	MaterialParameterSet materialParameterSet = MaterialParameterContainer::Get()->allocateMaterialParameters(materialParameterSizeInByte);
+	material->setParameterSet(materialParameterSet);
+
+	// マテリアルパラメーターバイナリを解析
+	TextureScene* textureScene = TextureScene::Get();
+	const u8* materialParameterReadPtr = materialParameters;
+	for (u32 i = 0; i < materialParameterCount; ++i) {
+		u32 parameterNameHash = *reinterpret_cast<const u32*>(materialParameterReadPtr);
+		materialParameterReadPtr += sizeof(u32);
+
+		u8 parameterType = *materialParameterReadPtr;
+		LTN_ASSERT(parameterType < Shader::PARAMETER_TYPE_COUNT);
+		materialParameterReadPtr += sizeof(u8);
+
+		u32 writeParameterSize = 0;
+		u8 readParameterSize = 0;
+		u8* writePtr = materialParameterSet._parameters + pipelineSet->findMaterialParameterOffset(parameterNameHash);
+		switch (parameterType) {
+		case Shader::PARAMETER_TYPE_FLOAT4:
+			writeParameterSize = sizeof(Float4);
+			readParameterSize = sizeof(Float4);
+			memcpy(writePtr, materialParameterReadPtr, writeParameterSize);
+			break;
+
+		case Shader::PARAMETER_TYPE_TEXTURE:
+			writeParameterSize = sizeof(u32);
+			readParameterSize = sizeof(u64);
+			u64 textureAssetPathHash;
+			memcpy(&textureAssetPathHash, materialParameterReadPtr, readParameterSize);
+
+			const Texture* texture = textureScene->findTexture(textureAssetPathHash);
+			u32 textureIndex = textureScene->getTextureIndex(texture);
+			memcpy(writePtr, &textureIndex, writeParameterSize);
+			break;
+		}
+		materialParameterReadPtr += readParameterSize;
+	}
+
+	_materialAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
+
+	MaterialParameterContainer::Get()->postUpdateMaterialParameter(material->getParameterSet());
+	_materialCreateInfos.push(material);
+	return material;
+}
+
+void MaterialScene::destroyMaterial(const Material* material) {
+	_materialDestroyInfos.push(material);
+}
+
+Material* MaterialScene::findMaterial(u64 assetPathHash) {
+	for (u32 i = 0; i < MATERIAL_CAPACITY; ++i) {
+		if (_materialAssetPathHashes[i] == assetPathHash) {
+			return &_materials[i];
+		}
+	}
+
+	return nullptr;
+}
+
+MaterialScene* MaterialScene::Get() {
+	return &g_materialScene;
+}
+u32 PipelineSet::getParameterSizeInByte() const {
+	return _vertexShader->_parameterSizeInByte + _pixelShader->_parameterSizeInByte;
+}
+
+u16 PipelineSet::findMaterialParameterOffset(u32 parameterNameHash) const {
+	u16 offset;
+	if (getVertexShader()->findParameter(parameterNameHash, offset)) {
+		return offset;
+	}
+
+	if (getPixelShader()->findParameter(parameterNameHash, offset)) {
+		return offset;
+	}
+
+	LTN_ASSERT(false);
+	return 0;
+}
+void MaterialParameterContainer::initialize() {
+	{
+		VirtualArray::Desc handleDesc = {};
+		handleDesc._size = MATERIAL_PARAMETER_SIZE_IN_BYTE;
+		_materialParameterAllocations.initialize(handleDesc);
+	}
+
+	_materialParameters = Memory::allocObjects<u8>(MATERIAL_PARAMETER_SIZE_IN_BYTE);
+}
+
+void MaterialParameterContainer::terminate() {
+	_materialParameterAllocations.terminate();
+	Memory::freeObjects(_materialParameters);
+}
+
+void MaterialParameterContainer::lateUpdate() {
+	_materialParameterUpdateInfos.reset();
+}
+
+MaterialParameterSet MaterialParameterContainer::allocateMaterialParameters(u32 sizeInByte) {
+	VirtualArray::AllocationInfo allocationInfo = _materialParameterAllocations.allocation(sizeInByte);
+	MaterialParameterSet parameterSet;
+	parameterSet._parameters = &_materialParameters[allocationInfo._offset];
+	parameterSet._sizeInByte = sizeInByte;
+	parameterSet._allocationInfo = allocationInfo;
+	return parameterSet;
+}
+
+void MaterialParameterContainer::freeMaterialParameters(const MaterialParameterSet* parameterSet) {
+	_materialParameterAllocations.freeAllocation(parameterSet->_allocationInfo);
+}
+
+MaterialParameterContainer* MaterialParameterContainer::Get() {
+	return &g_materialParameterContainer;
+}
+
+void PipelineSetScene::initialize() {
+	{
+		VirtualArray::Desc handleDesc = {};
+		handleDesc._size = PIPELINE_SET_CAPACITY;
+		_pipelineSetAllocations.initialize(handleDesc);
+	}
+
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_pipelineSets = allocation.allocateObjects<PipelineSet>(PIPELINE_SET_CAPACITY);
+		_pipelineSetAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(PIPELINE_SET_CAPACITY);
+		_assetPathHashes = allocation.allocateObjects<u64>(PIPELINE_SET_CAPACITY);
+		_enabledFlags = allocation.allocateObjects<u8>(PIPELINE_SET_CAPACITY);
+		});
+
+	memset(_enabledFlags, 0, PIPELINE_SET_CAPACITY);
+}
+
+void PipelineSetScene::terminate() {
+	lateUpdate();
+
+	_pipelineSetAllocations.terminate();
+	_chunkAllocator.free();
+}
+
+void PipelineSetScene::lateUpdate() {
+#define ENABLE_ZERO_CLEAR 1
+	u32 destroyCount = _pipelineSetDestroyInfos.getUpdateCount();
+	auto destroyPipelineSets = _pipelineSetDestroyInfos.getObjects();
+	for (u32 i = 0; i < destroyCount; ++i) {
+		u32 pipelineSetIndex = getPipelineSetIndex(destroyPipelineSets[i]);
+		LTN_ASSERT(pipelineSetIndex < PIPELINE_SET_CAPACITY);
+		_pipelineSetAllocations.freeAllocation(_pipelineSetAllocationInfos[pipelineSetIndex]);
+		_enabledFlags[pipelineSetIndex] = 0;
+
+#if ENABLE_ZERO_CLEAR
+		_pipelineSetAllocationInfos[pipelineSetIndex] = VirtualArray::AllocationInfo();
+		_pipelineSets[pipelineSetIndex] = PipelineSet();
+		_assetPathHashes[pipelineSetIndex] = 0;
+#endif
+	}
+
+	_pipelineSetCreateInfos.reset();
+	_pipelineSetDestroyInfos.reset();
+}
+
+const PipelineSet* PipelineSetScene::createPipelineSet(const CreatationDesc& desc) {
+	VirtualArray::AllocationInfo allocationInfo = _pipelineSetAllocations.allocation(1);
+	_pipelineSetAllocationInfos[allocationInfo._offset] = allocationInfo;
 
 	u64 vertexShaderHash = 0;
 	u64 pixelShaderHash = 0;
@@ -92,139 +267,36 @@ Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc) {
 	}
 
 	ShaderScene* shaderScene = ShaderScene::Get();
-	material->_vertexShader = shaderScene->findShader(vertexShaderHash);
-	material->_pixelShader = shaderScene->findShader(pixelShaderHash);
-	LTN_ASSERT(material->_vertexShader != nullptr);
-	LTN_ASSERT(material->_pixelShader != nullptr);
+	const Shader* vertexShader = shaderScene->findShader(vertexShaderHash);
+	const Shader* pixelShader = shaderScene->findShader(pixelShaderHash);
+	LTN_ASSERT(vertexShader != nullptr);
+	LTN_ASSERT(pixelShader != nullptr);
 
-	_materialAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
+	PipelineSet* pipelineSet = &_pipelineSets[allocationInfo._offset];
+	pipelineSet->_vertexShader = vertexShader;
+	pipelineSet->_pixelShader = pixelShader;
+
 	_enabledFlags[allocationInfo._offset] = 1;
-	_materialCreateInfos.push(material);
-	return material;
+	_assetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
+	_pipelineSetCreateInfos.push(pipelineSet);
+	return pipelineSet;
 }
 
-MaterialInstance* MaterialScene::createMaterialInstance(const MaterialInstanceCreatationDesc& desc) {
-	VirtualArray::AllocationInfo allocationInfo = _materialInstanceAllocations.allocation(1);
-
-	_materialInstanceAllocationInfos[allocationInfo._offset] = allocationInfo;
-	MaterialInstance* materialInstance = &_materialInstances[allocationInfo._offset];
-
-	u64 materialPathHash = 0;
-	u32 materialParameterCount = 0;
-	u32 materialParameterSize = 0;
-	u8 materialParameters[256];
-	{
-		AssetPath asset(desc._assetPath);
-		asset.openFile();
-		asset.readFile(&materialPathHash, sizeof(u64));
-		asset.readFile(&materialParameterCount, sizeof(u32));
-		asset.readFile(&materialParameterSize, sizeof(u32));
-		LTN_ASSERT(materialParameterSize < LTN_COUNTOF(materialParameters));
-		asset.readFile(materialParameters, materialParameterSize);
-		asset.closeFile();
-	}
-
-	const Material* material = findMaterial(materialPathHash);
-	u16 materialParameterSizeInByte = 0;
-	materialParameterSizeInByte += material->getVertexShader()->_parameterSizeInByte;
-	materialParameterSizeInByte += material->getPixelShader()->_parameterSizeInByte;
-
-	// マテリアルパラメーターがあればそのサイズ分確保
-	if (materialParameterSizeInByte > 0) {
-		VirtualArray::AllocationInfo materialParameterAllocationInfo = _materialParameterAllocations.allocation(materialParameterSizeInByte);
-		materialInstance->setMaterialParameters(&_materialParameters[materialParameterAllocationInfo._offset]);
-		_materialParameterAllocationInfos[allocationInfo._offset] = materialParameterAllocationInfo;
-	}
-	materialInstance->setParentMaterial(material);
-
-	// マテリアルパラメーターバイナリを解析
-	const u8* materialParameterReadPtr = materialParameters;
-	for (u32 i = 0; i < materialParameterCount; ++i) {
-		u32 parameterNameHash = *reinterpret_cast<const u32*>(materialParameterReadPtr);
-		materialParameterReadPtr += sizeof(u32);
-		
-		u8 parameterType = *materialParameterReadPtr;
-		LTN_ASSERT(parameterType < Shader::PARAMETER_TYPE_COUNT);
-		materialParameterReadPtr += sizeof(u8);
-
-		u32 writeParameterSize = 0;
-		u8 readParameterSize = 0;
-		switch (parameterType) {
-		case Shader::PARAMETER_TYPE_FLOAT4:
-			writeParameterSize = sizeof(Float4);
-			readParameterSize = sizeof(Float4);
-			materialInstance->setParameter(parameterNameHash, materialParameterReadPtr, writeParameterSize);
-			break;
-
-		case Shader::PARAMETER_TYPE_TEXTURE:
-			u32 textureIndex = 0;
-			writeParameterSize = sizeof(u32);
-			readParameterSize = sizeof(u64);
-			materialInstance->setParameter(parameterNameHash, &textureIndex, writeParameterSize);
-			break;
-		}
-		materialParameterReadPtr += readParameterSize;
-	}
-
-	_materialInstanceAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
-	_materialInstanceUpdateInfos.push(materialInstance);
-	return materialInstance;
+void PipelineSetScene::destroyPipelineSet(const PipelineSet* pipelineSet) {
+	_pipelineSetDestroyInfos.push(pipelineSet);
 }
 
-void MaterialScene::destroyMaterial(Material* material) {
-	_materialDestroyInfos.push(material);
-}
-
-void MaterialScene::destroyMaterialInstance(MaterialInstance* materialInstance) {
-	u32 materialInstanceIndex = getMaterialInstanceIndex(materialInstance);
-	LTN_ASSERT(materialInstanceIndex < MATERIAL_CAPACITY);
-	_materialInstanceAllocations.freeAllocation(_materialInstanceAllocationInfos[materialInstanceIndex]);
-
-	if (materialInstance->isEnabledMaterialParameter()) {
-		_materialParameterAllocations.freeAllocation(_materialParameterAllocationInfos[materialInstanceIndex]);
-	}
-
-#define ENABLE_ZERO_CLEAR 1
-#if ENABLE_ZERO_CLEAR
-	_materialInstanceAllocationInfos[materialInstanceIndex] = VirtualArray::AllocationInfo();
-	_materialParameterAllocationInfos[materialInstanceIndex] = VirtualArray::AllocationInfo();
-	_materialInstances[materialInstanceIndex] = MaterialInstance();
-#endif
-}
-
-void MaterialInstance::setParameter(u32 nameHash, const void* parameter, u32 sizeInByte) {
-	u16 offset;
-	if (_parentMaterial->getVertexShader()->findParameter(nameHash, offset)) {
-		memcpy(&_materialParameters[offset], parameter, sizeInByte);
-	}
-
-	if (_parentMaterial->getPixelShader()->findParameter(nameHash, offset)) {
-		memcpy(&_materialParameters[offset], parameter, sizeInByte);
-	}
-}
-
-Material* MaterialScene::findMaterial(u64 assetPathHash) {
-	for (u32 i = 0; i < MATERIAL_CAPACITY; ++i) {
-		if (_materialAssetPathHashes[i] == assetPathHash) {
-			return &_materials[i];
+const PipelineSet* PipelineSetScene::findPipelineSet(u64 pipelineDescHash) const {
+	for (u32 i = 0; i < PIPELINE_SET_CAPACITY; ++i) {
+		if (_assetPathHashes[i] == pipelineDescHash) {
+			return &_pipelineSets[i];
 		}
 	}
+
 	return nullptr;
 }
 
-MaterialInstance* MaterialScene::findMaterialInstance(u64 assetPathHash) {
-	for (u32 i = 0; i < MATERIAL_INSTANCE_CAPACITY; ++i) {
-		if (_materialInstanceAssetPathHashes[i] == assetPathHash) {
-			return &_materialInstances[i];
-		}
-	}
-	return nullptr;
-}
-
-MaterialScene* MaterialScene::Get() {
-	return &g_materialScene;
-}
-u32 Material::getParameterSizeInByte() const {
-	return _vertexShader->_parameterSizeInByte + _pixelShader->_parameterSizeInByte;
+PipelineSetScene* PipelineSetScene::Get() {
+	return &g_pipelineSetScene;
 }
 }

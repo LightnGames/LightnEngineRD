@@ -9,12 +9,11 @@ ViewScene g_viewScene;
 }
 
 void ViewScene::initialize() {
-	_views = Memory::allocObjects<View>(VIEW_COUNT_MAX);
-	_viewStateFlags = Memory::allocObjects<u8>(VIEW_COUNT_MAX);
-	_viewEnabledFlags = Memory::allocObjects<u8>(VIEW_COUNT_MAX);
-
-	memset(_viewEnabledFlags, 0, sizeof(u8) * VIEW_COUNT_MAX);
-	memset(_viewStateFlags, 0, sizeof(u8) * VIEW_COUNT_MAX);
+	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+		_views = allocation.allocateClearedObjects<View>(VIEW_COUNT_MAX);
+		_viewStateFlags = allocation.allocateClearedObjects<u8>(VIEW_COUNT_MAX);
+		_viewEnabledFlags = allocation.allocateClearedObjects<u8>(VIEW_COUNT_MAX);
+		});
 }
 
 void ViewScene::terminate() {
@@ -23,9 +22,7 @@ void ViewScene::terminate() {
 		LTN_ASSERT(_viewEnabledFlags[i] == 0);
 	}
 
-	Memory::freeObjects(_views);
-	Memory::freeObjects(_viewStateFlags);
-	Memory::freeObjects(_viewEnabledFlags);
+	_chunkAllocator.free();
 }
 
 void ViewScene::lateUpdate() {

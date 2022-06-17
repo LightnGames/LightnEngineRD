@@ -1,4 +1,5 @@
 #pragma once
+#include <Core/ChunkAllocator.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 
@@ -27,7 +28,7 @@ public:
 	static GpuMaterialManager* Get();
 
 private:
-	void updateMaterialInstances();
+	void updateMaterialParameters();
 
 private:
 	rhi::RootSignature* _defaultRootSignatures = nullptr;
@@ -35,5 +36,6 @@ private:
 
 	GpuBuffer _parameterGpuBuffer;
 	DescriptorHandle _parameterSrv;
+	ChunkAllocator _chunkAllocator;
 };
 }
