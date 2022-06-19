@@ -11,6 +11,7 @@
 #include <Renderer/RenderCore/VramUpdater.h>
 #include <Renderer/RenderCore/RenderDirector.h>
 #include <Renderer/RenderCore/RenderView.h>
+#include <Renderer/RenderCore/GpuTimeStampManager.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -31,7 +32,7 @@ void Renderer::initialize() {
 	CommandListPool::Desc commandListPoolDesc = {};
 	commandListPoolDesc._device = device;
 	commandListPoolDesc._type = rhi::COMMAND_LIST_TYPE_DIRECT;
-	CommandListPool::Get()->initialize(commandListPoolDesc);
+	_commandListPool.initialize(commandListPoolDesc);
 
 	// スワップチェーン
 	Application* app = ApplicationSysytem::Get()->getApplication();
@@ -76,6 +77,9 @@ void Renderer::initialize() {
 	// パイプラインステートリローダー
 	PipelineStateReloader::Get()->initialize();
 
+	// GPU タイムスタンプマネージャー
+	GpuTimeStampManager::Get()->initialize();
+
 	// スワップチェーンのバックバッファを取得
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
 		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
@@ -111,12 +115,6 @@ void Renderer::initialize() {
 		vertexShader.terminate();
 		pixelShader.terminate();
 	}
-
-	//QueryHeapSystem::Get()->initialize();
-
-	//// タイムスタンプのためにGPU周波数を取得
-	//QueryHeapSystem::Get()->setGpuFrequency(_commandQueue);
-	//QueryHeapSystem::Get()->setCpuFrequency();
 }
 
 void Renderer::terminate() {
@@ -132,8 +130,9 @@ void Renderer::terminate() {
 	PipelineStateReloader::Get()->terminate();
 	ImGuiSystem::Get()->terminate();
 
+	GpuTimeStampManager::Get()->terminate();
 	DescriptorAllocatorGroup::Get()->terminate();
-	CommandListPool::Get()->terminate();
+	_commandListPool.terminate();
 	_commandQueue.terminate();
 	_swapChain.terminate();
 
@@ -143,13 +142,16 @@ void Renderer::terminate() {
 }
 
 void Renderer::update() {
+	GpuTimeStampManager::Get()->update(_frameIndex);
 	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();
 }
 
 void Renderer::render() {
+	moveToNextFrame();
+
 	u64 completedFenceValue = _commandQueue.getCompletedValue();
-	rhi::CommandList* commandList = CommandListPool::Get()->allocateCommandList(completedFenceValue);
+	rhi::CommandList* commandList = _commandListPool.allocateCommandList(completedFenceValue);
 	commandList->reset();
 
 	// Vram アップデーター
@@ -170,30 +172,16 @@ void Renderer::render() {
 		GpuTexture* mainViewTexture = renderViewScene->getViewColorTexture(0);
 		GpuTexture* backBuffer = &_backBuffers[_frameIndex];
 
-		ScopedBarrierDesc barriers[2] = {
+		ScopedBarrierDesc barriers[] = {
 			ScopedBarrierDesc(backBuffer, rhi::RESOURCE_STATE_COPY_DEST),
 			ScopedBarrierDesc(mainViewTexture, rhi::RESOURCE_STATE_COPY_SOURCE)
 		};
 		ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 		commandList->copyResource(backBuffer->getResource(), mainViewTexture->getResource());
-
-		//f32 clearColor[4] = {};
-		//rhi::ViewPort viewPort = { 0,0,1920,1080,0,1 };
-		//rhi::Rect scissorRect = { 0,0,1920,1080 };
-		//commandList->setRenderTargets(1, &rtvDescriptor, nullptr);
-		//commandList->clearRenderTargetView(rtvDescriptor, clearColor);
-		//commandList->setGraphicsRootSignature(&_rootSignature);
-		//commandList->setPipelineState(&_pipelineState);
-		//commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//commandList->setViewports(1, &viewPort);
-		//commandList->setScissorRects(1, &scissorRect);
-		//commandList->drawInstanced(3, 1, 0, 0);
 	}
 
 	_commandQueue.executeCommandLists(1, &commandList);
 	_swapChain.present(1, 0);
-
-	moveToNextFrame();
 }
 
 void Renderer::waitForIdle() {
@@ -206,8 +194,7 @@ void Renderer::moveToNextFrame() {
 
 	ReleaseQueue::Get()->update();
 
-	u64 fenceValue = _commandQueue.incrimentFence();
-	_fenceValues[_frameIndex] = fenceValue;
+	_fenceValues[_frameIndex] = _commandQueue.getNextFenceValue();
 }
 
 Renderer g_renderer;

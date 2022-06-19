@@ -68,12 +68,13 @@ struct CommandQueue:public CommandQueueBase {
 	void waitForFence(u64 fenceValue);
 	u64 incrimentFence();
 	u64 getCompletedValue() const;
+	u64 getNextFenceValue() const { return _nextFenceValue; }
 
 	ID3D12CommandQueue* _commandQueue = nullptr;
 	ID3D12Fence* _fence = nullptr;
 	HANDLE _fenceEvent = nullptr;
 	u64 _nextFenceValue = 0;
-	u64 _lastFenceValue = 0;
+	u64 _lastCompletedFenceValue = 0;
 };
 
 struct DescriptorHeap:public DescriptorHeapBase {

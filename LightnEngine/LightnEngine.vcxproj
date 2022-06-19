@@ -57,6 +57,7 @@
     <ClInclude Include="source\Renderer\RenderCore\GpuResource.h" />
     <ClInclude Include="source\Renderer\RenderCore\GpuShader.h" />
     <ClInclude Include="source\Renderer\RenderCore\GpuTexture.h" />
+    <ClInclude Include="source\Renderer\RenderCore\GpuTimeStampManager.h" />
     <ClInclude Include="source\Renderer\RenderCore\ImGuiSystem.h" />
     <ClInclude Include="source\Renderer\RenderCore\ReleaseQueue.h" />
     <ClInclude Include="source\Renderer\RenderCore\RenderDirector.h" />
@@ -117,6 +118,7 @@
     <ClCompile Include="source\Renderer\RenderCore\GpuBuffer.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GpuShader.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\GpuTexture.cpp" />
+    <ClCompile Include="source\Renderer\RenderCore\GpuTimeStampManager.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\ImGuiSystem.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\ReleaseQueue.cpp" />
     <ClCompile Include="source\Renderer\RenderCore\RenderDirector.cpp" />

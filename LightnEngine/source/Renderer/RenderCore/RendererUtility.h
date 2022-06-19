@@ -2,6 +2,7 @@
 #include <Renderer/RHI/Rhi.h>
 #include <Renderer/RHI/RhiMarker.h>
 #include <Renderer/RenderCore/GpuResource.h>
+#include <Renderer/RenderCore/GpuTimeStampManager.h>
 namespace ltn {
 struct ScopedBarrierDesc {
 	ScopedBarrierDesc(GpuResource* resource, rhi::ResourceStates stateAfter)
@@ -60,9 +61,9 @@ private:
 	u32 _barrierCount = 0;
 };
 
-class GpuScopedEvent {
+class GpuScopedTimer {
 public:
-	GpuScopedEvent(rhi::CommandList* commandList, const Color4& color, const char* format, ...) {
+	GpuScopedTimer(rhi::CommandList* commandList, const Color4& color, const char* format, ...) {
 		_commandList = commandList;
 		va_list va;
 		va_start(va, format);
@@ -74,7 +75,7 @@ public:
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//_markerIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
 	}
-	~GpuScopedEvent() {
+	~GpuScopedTimer() {
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//queryHeapSystem->popGpuMarker(_commandList, _markerIndex);
 	}
@@ -84,9 +85,9 @@ private:
 	char _name[64] = {};
 };
 
-class CpuScopedEvent {
+class CpuScopedTimer {
 public:
-	CpuScopedEvent(const char* name, ...) {
+	CpuScopedTimer(const char* name, ...) {
 		va_list va;
 		va_start(va, name);
 		vsprintf_s(_name, name, va);
@@ -95,7 +96,7 @@ public:
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
 	}
-	~CpuScopedEvent() {
+	~CpuScopedTimer() {
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
 	}
@@ -104,9 +105,9 @@ private:
 	char _name[64] = {};
 };
 
-class CpuGpuScopedEvent {
+class CpuGpuScopedTimer {
 public:
-	CpuGpuScopedEvent(rhi::CommandList* commandList, const Color4& color, const char* name, ...) {
+	CpuGpuScopedTimer(rhi::CommandList* commandList, const Color4& color, const char* name, ...) {
 		_commandList = commandList;
 		va_list va;
 		va_start(va, name);
@@ -117,9 +118,10 @@ public:
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//_gpuTickIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
 		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
+		_gpuTimeStampIndex = GpuTimeStampManager::Get()->pushGpuMarker(commandList);
 		rhi::BeginMarker(commandList, color, _name);
 	}
-	~CpuGpuScopedEvent() {
+	~CpuGpuScopedTimer() {
 		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
 		//queryHeapSystem->popGpuMarker(_commandList, _gpuTickIndex);
 		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
@@ -127,12 +129,12 @@ public:
 	}
 private:
 	rhi::CommandList* _commandList = nullptr;
-	u32 _gpuTickIndex = 0;
+	u32 _gpuTimeStampIndex = 0;
 	u32 _cpuTickIndex = 0;
 	char _name[64] = {};
 };
 
-#define DEBUG_MARKER_CPU_SCOPED_EVENT(...) CpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
-#define DEBUG_MARKER_GPU_SCOPED_EVENT(...) GpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
-#define DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(...) CpuGpuScopedEvent __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_CPU_SCOPED_TIMER(...) CpuScopedTimer __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_GPU_SCOPED_TIMER(...) GpuScopedTimer __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
+#define DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(...) CpuGpuScopedTimer __DEBUG_SCOPED_EVENT__(__VA_ARGS__)
 }

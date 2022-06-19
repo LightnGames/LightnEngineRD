@@ -15,8 +15,6 @@ public:
 	void terminate();
 	rhi::CommandList* allocateCommandList(u64 fenceValue);
 
-	static CommandListPool* Get();
-
 private:
 	rhi::CommandList _commandLists[COMMAND_LIST_COUNT_MAX] = {};
 };

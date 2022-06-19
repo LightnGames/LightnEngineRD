@@ -580,11 +580,11 @@ void CommandQueue::getTimestampFrequency(u64* frequency) {
 }
 
 bool CommandQueue::isFenceComplete(u64 fenceValue) {
-	if (fenceValue > _lastFenceValue) {
-		_lastFenceValue = Max(_lastFenceValue, _fence->GetCompletedValue());
+	if (fenceValue > _lastCompletedFenceValue) {
+		_lastCompletedFenceValue = Max(_lastCompletedFenceValue, _fence->GetCompletedValue());
 	}
 
-	return fenceValue <= _lastFenceValue;
+	return fenceValue <= _lastCompletedFenceValue;
 }
 
 void CommandQueue::waitForIdle() {
@@ -600,8 +600,8 @@ void CommandQueue::waitForFence(u64 fenceValue) {
 
 	//フェンスが完了するまで待機
 	_fence->SetEventOnCompletion(fenceValue, _fenceEvent);
-	WaitForSingleObjectEx(_fenceEvent, INFINITE, FALSE);
-	_lastFenceValue = fenceValue;
+	WaitForSingleObject(_fenceEvent, INFINITE);
+	_lastCompletedFenceValue = fenceValue;
 }
 
 u64 CommandQueue::incrimentFence() {
