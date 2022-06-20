@@ -107,24 +107,23 @@ private:
 
 class CpuGpuScopedTimer {
 public:
-	CpuGpuScopedTimer(rhi::CommandList* commandList, const Color4& color, const char* name, ...) {
+	CpuGpuScopedTimer(rhi::CommandList* commandList, const Color4& color, const char* format, ...) {
 		_commandList = commandList;
-		va_list va;
-		va_start(va, name);
-		vsprintf_s(_name, name, va);
-		//_gpuMarker.setEvent(commandList, color, name, va);
-		va_end(va);
 
-		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		//_gpuTickIndex = queryHeapSystem->pushGpuMarker(_commandList, _name);
-		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
-		_gpuTimeStampIndex = GpuTimeStampManager::Get()->pushGpuMarker(commandList);
+		GpuTimerManager* timerManager = GpuTimerManager::Get();
+		_gpuTimeStampIndex = timerManager->pushGpuTimer(commandList);
 		rhi::BeginMarker(commandList, color, _name);
+
+		va_list va;
+		va_start(va, format);
+		vsprintf_s(_name, format, va);
+		timerManager->writeGpuTimerInfo(_gpuTimeStampIndex, format, va, color);
+		va_end(va);
 	}
+
 	~CpuGpuScopedTimer() {
-		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		//queryHeapSystem->popGpuMarker(_commandList, _gpuTickIndex);
-		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
+		GpuTimerManager* timerManager = GpuTimerManager::Get();
+		timerManager->popGpuTimer(_commandList, _gpuTimeStampIndex);
 		rhi::EndMarker(_commandList);
 	}
 private:

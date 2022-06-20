@@ -21,7 +21,7 @@ void GpuTexture::initialize(const GpuTextureDesc& desc) {
 	_desc = textureDesc;
 
 	if (desc._allocator != nullptr) {
-		desc._allocator->createResource(textureDesc, desc._initialState, &_allocation, &_resource);
+		desc._allocator->createResource(textureDesc, desc._initialState, desc._optimizedClearValue, &_allocation, &_resource);
 		return;
 	}
 	desc._device->createCommittedResource(rhi::HEAP_TYPE_DEFAULT, rhi::HEAP_FLAG_NONE, textureDesc, desc._initialState, desc._optimizedClearValue, &_resource);

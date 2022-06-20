@@ -17,7 +17,7 @@ void GpuBuffer::initialize(const GpuBufferDesc& desc) {
 	_sizeInByte = desc._sizeInByte;
 
 	if (desc._allocator != nullptr) {
-		desc._allocator->createResource(bufferDesc, desc._initialState, &_allocation, &_resource);
+		desc._allocator->createResource(bufferDesc, desc._initialState, nullptr, &_allocation, &_resource);
 		return;
 	}
 	desc._device->createCommittedResource(desc._heapType, rhi::HEAP_FLAG_NONE, bufferDesc, desc._initialState, nullptr, &_resource);

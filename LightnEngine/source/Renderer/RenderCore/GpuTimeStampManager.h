@@ -19,12 +19,21 @@ public:
 	void terminate();
 	void update(u32 frameIndex);
 
-	u32 pushGpuTimer(rhi::CommandList* commandList, const GpuTimerAdditionalInfo& info);
-	void popGpuTimer(u32 timerIndex);
+	u32 pushGpuTimer(rhi::CommandList* commandList);
+	void popGpuTimer(rhi::CommandList* commandList, u32 timerIndex);
+
+	void writeGpuTimerInfo(u32 timerIndex, const char* format, va_list va, const Color4& color);
+
+	u32 getTimerCount() const { return _gpuTimerCounts[_frameIndex]; }
+	const GpuTimerAdditionalInfo* getGpuTimerAdditionalInfo(u32 timerIndex) {
+		return &_gpuTimerAdditionalInfos[_frameIndex * GPU_TIMER_CAPACITY + timerIndex];
+	}
+
+	static GpuTimerManager* Get();
 
 private:
 	GpuTimerAdditionalInfo* _gpuTimerAdditionalInfos = nullptr;
-	u32 _gpuTimerCount[rhi::BACK_BUFFER_COUNT] = {};
+	u32 _gpuTimerCounts[rhi::BACK_BUFFER_COUNT] = {};
 	u32 _frameIndex = 0;
 };
 
@@ -36,10 +45,13 @@ public:
 	void terminate();
 	void update(u32 frameIndex, u32 timerCount);
 
-	void readbackTimeStamps(u32 frameIndex, u32 timerCount);
+	void readbackTimeStamps(u32 frameIndex, u32 timeStampCount);
 	void writeGpuMarker(rhi::CommandList* commandList, u32 timeStampIndex);
 
+	f64 getGpuTickDelta() const { return _gpuTickDelta; }
+	f64 getGpuTickDeltaInMilliseconds() const { return 1000.0 * _gpuTickDelta; }
 	f32 getCurrentGpuFrameTime() const;
+	const u64* getGpuTimeStamps() const { return _gpuTimeStamps; }
 
 	static GpuTimeStampManager* Get();
 

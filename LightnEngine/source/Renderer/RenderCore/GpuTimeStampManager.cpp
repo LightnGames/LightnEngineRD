@@ -6,6 +6,7 @@
 namespace ltn {
 namespace {
 GpuTimeStampManager g_gpuTimeStampManager;
+GpuTimerManager g_gpuTimerManager;
 }
 
 GpuTimeStampManager* ltn::GpuTimeStampManager::Get() {
@@ -47,7 +48,7 @@ void GpuTimeStampManager::initialize() {
 	}
 
 	// GPU 周波数取得
-	u64 frequency = 0.0;
+	u64 frequency = 0;
 	_commandQueue.getTimestampFrequency(&frequency);
 	_gpuTickDelta = 1.0 / f64(frequency);
 
@@ -67,10 +68,9 @@ void GpuTimeStampManager::update(u32 frameIndex, u32 timerCount) {
 	readbackTimeStamps(frameIndex, timerCount);
 }
 
-void GpuTimeStampManager::readbackTimeStamps(u32 frameIndex, u32 timerCount) {
+void GpuTimeStampManager::readbackTimeStamps(u32 frameIndex, u32 timeStampCount) {
 	_commandQueue.waitForFence(_fenceValue);
 	
-	u32 timeStampCount = timerCount * 2;
 	u64 timeStampOffset = TIME_STAMP_CAPACITY * frameIndex;
 	u64 timeStampOffsetInByte = sizeof(u64) * timeStampOffset;
 	u64 timeStampSizeInByte = sizeof(u64) * timeStampCount;
@@ -81,15 +81,18 @@ void GpuTimeStampManager::readbackTimeStamps(u32 frameIndex, u32 timerCount) {
 	memcpy(_gpuTimeStamps, mapPtr, timeStampSizeInByte);
 	_timeStampBuffer.unmap();
 
-	u64 completedFenceValue = _commandQueue.getCompletedValue();
-	rhi::CommandList* commandList = _commandListPool.allocateCommandList(completedFenceValue);
-	commandList->reset();
+	// GPU タイムスタンプリードバックコマンド発行
+	{
+		u64 completedFenceValue = _commandQueue.getCompletedValue();
+		rhi::CommandList* commandList = _commandListPool.allocateCommandList(completedFenceValue);
+		commandList->reset();
 
-	rhi::Resource* resource = _timeStampBuffer.getResource();
-	commandList->resolveQueryData(&_queryHeap, rhi::QUERY_TYPE_TIMESTAMP, timeStampOffset, timeStampCount, resource, timeStampOffsetInByte);
-	_commandQueue.executeCommandLists(1, &commandList);
+		rhi::Resource* resource = _timeStampBuffer.getResource();
+		commandList->resolveQueryData(&_queryHeap, rhi::QUERY_TYPE_TIMESTAMP, 0, timeStampCount, resource, 0);
+		_commandQueue.executeCommandLists(1, &commandList);
 
-	_fenceValue = commandList->_fenceValue;
+		_fenceValue = commandList->_fenceValue;
+	}
 }
 
 void GpuTimeStampManager::writeGpuMarker(rhi::CommandList* commandList, u32 timeStampIndex) {
@@ -101,20 +104,40 @@ f32 GpuTimeStampManager::getCurrentGpuFrameTime() const {
 }
 
 void GpuTimerManager::initialize() {
+	_gpuTimerAdditionalInfos = Memory::allocObjects<GpuTimerAdditionalInfo>(GPU_TIMER_CAPACITY * rhi::BACK_BUFFER_COUNT);
+	GpuTimeStampManager::Get()->initialize();
 }
 
 void GpuTimerManager::terminate() {
+	Memory::freeObjects(_gpuTimerAdditionalInfos);
+	GpuTimeStampManager::Get()->terminate();
 }
 
 void GpuTimerManager::update(u32 frameIndex) {
-	GpuTimeStampManager::Get()->update(frameIndex, _gpuTimerCount[_frameIndex]);
+	u32 gpuTimerCount = _gpuTimerCounts[_frameIndex];
+	GpuTimeStampManager::Get()->update(frameIndex, gpuTimerCount * 2);
 	_frameIndex = frameIndex;
+	_gpuTimerCounts[frameIndex] = 0;
 }
 
-u32 GpuTimerManager::pushGpuTimer(rhi::CommandList* commandList, const GpuTimerAdditionalInfo& info) {
-	u32 timerIndex = ++_gpuTimerCount[_frameIndex];
+u32 GpuTimerManager::pushGpuTimer(rhi::CommandList* commandList) {
+	u32 timerIndex = _gpuTimerCounts[_frameIndex]++;
+	GpuTimeStampManager::Get()->writeGpuMarker(commandList, timerIndex * 2);
 	return timerIndex;
 }
-void GpuTimerManager::popGpuTimer(u32 timerIndex) {
+
+void GpuTimerManager::popGpuTimer(rhi::CommandList* commandList, u32 timerIndex) {
+	GpuTimeStampManager::Get()->writeGpuMarker(commandList, timerIndex * 2 + 1);
+}
+
+void GpuTimerManager::writeGpuTimerInfo(u32 timerIndex, const char* format, va_list va, const Color4& color) {
+	GpuTimerAdditionalInfo* infos = _gpuTimerAdditionalInfos + _frameIndex * GPU_TIMER_CAPACITY;
+	GpuTimerAdditionalInfo& info = infos[timerIndex];
+	info._color = color;
+	vsprintf_s(info._name, format, va);
+}
+
+GpuTimerManager* GpuTimerManager::Get() {
+	return &g_gpuTimerManager;
 }
 }

@@ -78,7 +78,7 @@ void Renderer::initialize() {
 	PipelineStateReloader::Get()->initialize();
 
 	// GPU タイムスタンプマネージャー
-	GpuTimeStampManager::Get()->initialize();
+	GpuTimerManager::Get()->initialize();
 
 	// スワップチェーンのバックバッファを取得
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
@@ -130,7 +130,7 @@ void Renderer::terminate() {
 	PipelineStateReloader::Get()->terminate();
 	ImGuiSystem::Get()->terminate();
 
-	GpuTimeStampManager::Get()->terminate();
+	GpuTimerManager::Get()->terminate();
 	DescriptorAllocatorGroup::Get()->terminate();
 	_commandListPool.terminate();
 	_commandQueue.terminate();
@@ -142,7 +142,7 @@ void Renderer::terminate() {
 }
 
 void Renderer::update() {
-	GpuTimeStampManager::Get()->update(_frameIndex);
+	GpuTimerManager::Get()->update(_frameIndex);
 	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();
 }
@@ -167,7 +167,7 @@ void Renderer::render() {
 
 	// View テクスチャからバックバッファにコピー
 	{
-		DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "CopyBackBuffer");
+		DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "CopyBackBuffer");
 		RenderViewScene* renderViewScene = RenderViewScene::Get();
 		GpuTexture* mainViewTexture = renderViewScene->getViewColorTexture(0);
 		GpuTexture* backBuffer = &_backBuffers[_frameIndex];

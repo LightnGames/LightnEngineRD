@@ -180,7 +180,7 @@ void MeshRenderer::update() {
 
 void MeshRenderer::culling(const CullingDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
-	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "GpuCulling");
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "GpuCulling");
 
 	ScopedBarrierDesc barriers[] = {
 		ScopedBarrierDesc(&_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
@@ -234,7 +234,7 @@ void MeshRenderer::render(const RenderDesc& desc) {
 	const u32* indirectArgumentCounts = gpuMeshInstanceManager->getSubMeshInstanceCounts();
 	const u32* indirectArgumentOffsets = gpuMeshInstanceManager->getSubMeshInstanceOffsets();
 	rhi::CommandList* commandList = desc._commandList;
-	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "Render");
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Render");
 
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	for (u32 i = 0; i < desc._pipelineStateCount; ++i) {

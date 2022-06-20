@@ -3,6 +3,8 @@
 #include <ThiredParty/ImGui/imgui_impl_win32.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 
+#include <Renderer/RenderCore/GpuTimeStampManager.h>
+
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -71,11 +73,22 @@ void ImGuiSystem::beginFrame() {
 
 	ImGui::Begin("TestInfo");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+	GpuTimerManager* timerManager = GpuTimerManager::Get();
+	const u64* timeStamps = GpuTimeStampManager::Get()->getGpuTimeStamps();
+	f64 gpuTickDelta = GpuTimeStampManager::Get()->getGpuTickDeltaInMilliseconds();
+	u32 timerCount = timerManager->getTimerCount();
+	for (u32 i = 0; i < timerCount; ++i) {
+		u32 offset = i * 2;
+		f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
+		ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
+	}
+
 	ImGui::End();
 }
 
 void ImGuiSystem::render(rhi::CommandList* commandList) {
-	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "ImGui");
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "ImGui");
 	ImGui::Render();
 
 	rhi::DescriptorHeap* descriptorHeaps[] = { &_descriptorHeap };

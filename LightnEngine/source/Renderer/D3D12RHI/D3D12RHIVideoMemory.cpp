@@ -15,10 +15,12 @@ void VideoMemoryAllocator::initialize(const VideoMemoryAllocatorDesc& desc) {
 	allocatorDesc.pAdapter = desc._hardwareAdapter->_adapter;
 	LTN_SUCCEEDED(D3D12MA::CreateAllocator(&allocatorDesc, &_allocator));
 }
+
 void VideoMemoryAllocator::terminate() {
 	_allocator->Release();
 }
-void VideoMemoryAllocator::createResource(ResourceDesc desc, ResourceStates initialState, VideoMemoryAllocation* allocation, Resource* resource) {
+
+void VideoMemoryAllocator::createResource(ResourceDesc desc, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource) {
 	D3D12MA::ALLOCATION_DESC allocationDesc = {};
 	allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -27,10 +29,11 @@ void VideoMemoryAllocator::createResource(ResourceDesc desc, ResourceStates init
 		&allocationDesc,
 		&d3d12ResourceDesc,
 		toD3d12(initialState),
-		NULL,
+		toD3d12(optimizedClearValue),
 		&allocation->_allocation,
 		IID_PPV_ARGS(&resource->_resource));
 }
+
 bool VideoMemoryAllocation::isAllocated() const {
 	return _allocation != nullptr;
 }

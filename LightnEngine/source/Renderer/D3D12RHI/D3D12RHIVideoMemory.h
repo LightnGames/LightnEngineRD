@@ -21,7 +21,7 @@ public:
 	void initialize(const VideoMemoryAllocatorDesc& desc)  override;
 	void terminate()  override;
 
-	void createResource(ResourceDesc desc, ResourceStates initialState, VideoMemoryAllocation* allocation, Resource* resource)  override;
+	void createResource(ResourceDesc desc, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource)  override;
 
 	D3D12MA::Allocator* _allocator = nullptr;
 };

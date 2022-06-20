@@ -190,10 +190,6 @@ D3D12_HEAP_FLAGS toD3d12(HeapFlags flags) {
 	return static_cast<D3D12_HEAP_FLAGS>(flags);
 }
 
-const D3D12_CLEAR_VALUE* toD3d12(const ClearValue* value) {
-	return reinterpret_cast<const D3D12_CLEAR_VALUE*>(value);
-}
-
 D3D12_CONSTANT_BUFFER_VIEW_DESC toD3d12(ConstantBufferViewDesc desc) {
 	D3D12_CONSTANT_BUFFER_VIEW_DESC result = {};
 	result.BufferLocation = desc._bufferLocation;

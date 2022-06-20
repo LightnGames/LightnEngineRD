@@ -14,7 +14,7 @@ public:
 	virtual void initialize(const VideoMemoryAllocatorDesc& desc) = 0;
 	virtual void terminate() = 0;
 
-	virtual void createResource(ResourceDesc desc, ResourceStates initialState, VideoMemoryAllocation * allocation, Resource * resource) = 0;
+	virtual void createResource(ResourceDesc desc, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource) = 0;
 };
 }
 }

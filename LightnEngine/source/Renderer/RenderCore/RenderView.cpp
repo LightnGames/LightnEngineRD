@@ -144,7 +144,7 @@ void RenderViewScene::update() {
 }
 
 void RenderViewScene::setUpView(rhi::CommandList* commandList, const View& view,u32 viewIndex) {
-	DEBUG_MARKER_CPU_GPU_SCOPED_EVENT(commandList, Color4(), "SetUpView");
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "SetUpView");
 	f32 clearColor[4] = {};
 	rhi::CpuDescriptorHandle rtv = _viewRtv.get(viewIndex)._cpuHandle;
 	rhi::CpuDescriptorHandle dsv = _viewDsv.get(viewIndex)._cpuHandle;
