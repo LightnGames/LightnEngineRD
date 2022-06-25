@@ -1,0 +1,33 @@
+MeshGeometry:
+    - fantasy_village\Building\SM_balcony_01.meshg
+    - fantasy_village\Building\SM_balcony_02.meshg
+Mesh:
+    - fantasy_village\Building\SM_balcony_01.mesh
+    - fantasy_village\Building\SM_balcony_02.mesh
+Texture:
+    - fantasy_village\Texture\T_wood_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_board_02_BaseColor.dds
+Material:
+    - fantasy_village\Material\MI_building_wood_01_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_01_Inst.mto
+PipelineSet:
+    - EngineComponent\Material\Default.pst
+MeshInstance:
+    -
+        Mesh: fantasy_village\Building\SM_balcony_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, 0]
+            - [8.742278E-08, -1.192093E-07, -1, 0]
+            - [0, -1, -1.192093E-07, 0]
+    -
+        Mesh: fantasy_village\Building\SM_balcony_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, 0]
+            - [8.742278E-08, -1.192093E-07, -1, 0]
+            - [0, -1, -1.192093E-07, 10]
+    -
+        Mesh: fantasy_village\Building\SM_balcony_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, 10]
+            - [8.742278E-08, -1.192093E-07, -1, 0]
+            - [0, -1, -1.192093E-07, 0]

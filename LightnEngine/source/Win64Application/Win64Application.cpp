@@ -1,5 +1,6 @@
 #include "Win64Application.h"
 #include <Core/Type.h>
+#include <Core/CpuTimerManager.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
 #include <Windows.h>
 
@@ -27,6 +28,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 }
 
 void Win64Application::initialize() {
+	CpuScopedPerf scopedPerf("Win64Application");
 	HINSTANCE windowHandle = GetModuleHandle(NULL);
 
 	// Initialize the window class.

@@ -7,7 +7,7 @@
 #include "RenderSceneUtility.h"
 
 namespace ltn {
-class Mesh;
+class MeshGeometry;
 class Material;
 class SubMeshInstance {
 public:
@@ -29,7 +29,7 @@ private:
 
 class MeshInstance {
 public:
-	void setMesh(const Mesh* mesh) { _mesh = mesh; }
+	void setMesh(const MeshGeometry* mesh) { _mesh = mesh; }
 	void setLodMeshInstances(LodMeshInstance* lodMeshInstances) { _lodMeshInstances = lodMeshInstances; }
 	void setSubMeshInstances(SubMeshInstance* subMeshInstances) { _subMeshInstances = subMeshInstances; }
 
@@ -37,7 +37,7 @@ public:
 	void setMaterial(u64 materialSlotNameHash, const Material* material);
 	void setWorldMatrix(const Matrix4& worldMatrix, bool dirtyFlags = true);
 
-	const Mesh* getMesh() const { return _mesh; }
+	const MeshGeometry* getMesh() const { return _mesh; }
 	const LodMeshInstance* getLodMeshInstance(u32 index = 0) const { return &_lodMeshInstances[index]; }
 	const SubMeshInstance* getSubMeshInstance(u32 index = 0) const { return &_subMeshInstances[index]; }
 	LodMeshInstance* getLodMeshInstance(u32 index = 0) { return &_lodMeshInstances[index]; }
@@ -47,7 +47,7 @@ public:
 private:
 	SubMeshInstance* _subMeshInstances = nullptr;
 	LodMeshInstance* _lodMeshInstances = nullptr;
-	const Mesh* _mesh = nullptr;
+	const MeshGeometry* _mesh = nullptr;
 	Matrix4 _worldMatrix;
 };
 
@@ -61,14 +61,14 @@ public:
 	};
 
 	struct MeshAllocationDesc {
-		const Mesh* _mesh = nullptr;
+		const MeshGeometry* _mesh = nullptr;
 	};
 
 	void initialize(const InitializetionDesc& desc);
 	void terminate();
 
-	MeshInstance* allocateMeshInstance(const MeshAllocationDesc& desc);
-	void freeMeshInstance(const MeshInstance* meshInstance);
+	MeshInstance* allocateMeshInstances(const MeshAllocationDesc& desc, u32 instanceCount);
+	void freeMeshInstances(const MeshInstance* meshInstances);
 
 	u32 getMeshInstanceIndex(const MeshInstance* mesh) const { return static_cast<u32>(mesh - _meshInstances); }
 	u32 getLodMeshInstanceIndex(const LodMeshInstance* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshInstances); }
@@ -97,15 +97,15 @@ public:
 	static constexpr u32 SUB_MESH_INSTANCE_CAPACITY = 1024 * 8;
 
 	struct CreatationDesc {
-		const Mesh* _mesh = nullptr;
+		const MeshGeometry* _mesh = nullptr;
 	};
 
 	void initialize();
 	void terminate();
 	void lateUpdate();
 
-	MeshInstance* createMeshInstance(const CreatationDesc& desc);
-	void destroyMeshInstance(MeshInstance* meshInstance);
+	MeshInstance* createMeshInstances(const CreatationDesc& desc, u32 instanceCount = 1);
+	void destroyMeshInstances(MeshInstance* meshInstance);
 
 	const MeshInstancePool* getMeshInstancePool() const { return &_meshInstancePool; }
 

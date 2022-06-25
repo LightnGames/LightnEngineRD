@@ -54,7 +54,9 @@ public:
 	void lateUpdate();
 
 	const Material* createMaterial(const MaterialCreatationDesc& desc);
+	void createMaterials(const MaterialCreatationDesc* descs, Material const** materials, u32 instanceCount);
 	void destroyMaterial(const Material* material);
+	void destroyMaterials(Material const** materials, u32 instanceCount);
 
 	const UpdateInfos<Material>* getMaterialCreateInfos() const { return &_materialCreateInfos; }
 	const UpdateInfos<Material>* getMaterialDestroyInfos() const { return &_materialDestroyInfos; }

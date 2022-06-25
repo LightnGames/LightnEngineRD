@@ -972,44 +972,17 @@ void RootSignature::iniaitlize(const RootSignatureDesc& desc) {
 		}
 	}
 
-	D3D12_STATIC_SAMPLER_DESC samplerDescs[2] = {};
-	{
-		D3D12_STATIC_SAMPLER_DESC& samplerDesc = samplerDescs[0];
-		samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
-		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.MipLODBias = 0;
-		samplerDesc.MaxAnisotropy = D3D12_MAX_MAXANISOTROPY;
-		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		samplerDesc.MinLOD = 0.0f;
-		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-		samplerDesc.ShaderRegister = 0;
-		samplerDesc.RegisterSpace = 0;
-		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-	}
-	{
-		D3D12_STATIC_SAMPLER_DESC& samplerDesc = samplerDescs[1];
-		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		samplerDesc.MipLODBias = 0;
-		samplerDesc.MaxAnisotropy = 0;
-		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		samplerDesc.MinLOD = 0.0f;
-		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-		samplerDesc.ShaderRegister = 1;
-		samplerDesc.RegisterSpace = 0;
-		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	D3D12_STATIC_SAMPLER_DESC samplerDescs[8] = {};
+	LTN_ASSERT(desc._numStaticSamplers < LTN_COUNTOF(samplerDescs));
+	LTN_ASSERT(sizeof(StaticSamplerDesc) == sizeof(D3D12_STATIC_SAMPLER_DESC));
+	for (u32 i = 0; i < desc._numStaticSamplers; ++i) {
+		memcpy(&samplerDescs[i], &desc._staticSamplers[i], sizeof(StaticSamplerDesc));
 	}
 
 	rootSignatureDesc.Desc_1_1.NumParameters = desc._numParameters;
 	rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
 	rootSignatureDesc.Desc_1_1.pStaticSamplers = samplerDescs;
-	rootSignatureDesc.Desc_1_1.NumStaticSamplers = LTN_COUNTOF(samplerDescs);
+	rootSignatureDesc.Desc_1_1.NumStaticSamplers = desc._numStaticSamplers;
 
 	ID3DBlob* signature = nullptr;
 	ID3DBlob* error = nullptr;

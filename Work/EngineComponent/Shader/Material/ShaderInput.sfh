@@ -1,6 +1,8 @@
 struct VSInput
 {
     float3 _position : POSITION;
+    uint _normalTangent : NORMAL_TANGENT;
+    uint _texcoord : TEXCOORD;
     uint _instanceIndex : INSTANCE_INDEX;
     uint _instanceId : SV_InstanceId;
 };

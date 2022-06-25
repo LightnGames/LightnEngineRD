@@ -1,6 +1,6 @@
 @echo off
 
 for %%f in (%*) do (
-  "%LTN_ROOT%\Tool\FBXConverter.exe" %%f
+python %LTN_ROOT%"\Tool\MeshConverter.py" %%f
 )
 pause

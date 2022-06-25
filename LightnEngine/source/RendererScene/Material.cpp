@@ -2,6 +2,7 @@
 #include <Core/Memory.h>
 #include <Core/Utility.h>
 #include <Core/Math.h>
+#include <Core/CpuTimerManager.h>
 #include <RendererScene/Shader.h>
 #include <RendererScene/Texture.h>
 
@@ -13,6 +14,7 @@ PipelineSetScene g_pipelineSetScene;
 }
 
 void MaterialScene::initialize() {
+	CpuScopedPerf scopedPerf("MaterialScene");
 	{
 		VirtualArray::Desc handleDesc = {};
 		handleDesc._size = MATERIAL_CAPACITY;
@@ -137,8 +139,21 @@ const Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc
 	return material;
 }
 
+void MaterialScene::createMaterials(const MaterialCreatationDesc* descs, Material const** materials, u32 instanceCount) {
+	for (u32 i = 0; i < instanceCount; ++i) {
+		const MaterialCreatationDesc* desc = descs + i;
+		materials[i] = createMaterial(*desc);
+	}
+}
+
 void MaterialScene::destroyMaterial(const Material* material) {
 	_materialDestroyInfos.push(material);
+}
+
+void MaterialScene::destroyMaterials(Material const** materials, u32 instanceCount) {
+	for (u32 i = 0; i < instanceCount; ++i) {
+		destroyMaterial(materials[i]);
+	}
 }
 
 Material* MaterialScene::findMaterial(u64 assetPathHash) {

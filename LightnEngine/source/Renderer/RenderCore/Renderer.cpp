@@ -11,12 +11,14 @@
 #include <Renderer/RenderCore/VramUpdater.h>
 #include <Renderer/RenderCore/RenderDirector.h>
 #include <Renderer/RenderCore/RenderView.h>
-#include <Renderer/RenderCore/GpuTimeStampManager.h>
+#include <Renderer/RenderCore/GpuTimerManager.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
 rhi::RootSignature _rootSignature;
 void Renderer::initialize() {
+	CpuScopedPerf scopedPerf("Renderer");
+
 	// デバイス
 	DeviceManager* deviceManager = DeviceManager::Get();
 	deviceManager->initialize();

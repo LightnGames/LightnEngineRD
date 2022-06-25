@@ -1,5 +1,6 @@
 #include "Texture.h"
 #include <Core/Memory.h>
+#include <Core/CpuTimerManager.h>
 
 namespace ltn {
 namespace {
@@ -7,6 +8,7 @@ TextureScene g_textureScene;
 }
 
 void TextureScene::initialize() {
+	CpuScopedPerf scopedPerf("TextureScene");
 	VirtualArray::Desc handleDesc = {};
 	handleDesc._size = TEXTURE_CAPACITY;
 	_textureAllocations.initialize(handleDesc);
@@ -79,8 +81,21 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 	return texture;
 }
 
+void TextureScene::createTextures(const TextureCreatationDesc* descs, Texture const** textures, u32 instanceCount) {
+	for (u32 i = 0; i < instanceCount; ++i) {
+		const TextureCreatationDesc* desc = descs + i;
+		textures[i] = createTexture(*desc);
+	}
+}
+
 void TextureScene::destroyTexture(const Texture* texture) {
 	_textureDestroyInfos.push(texture);
+}
+
+void TextureScene::destroyTextures(Texture const** textures, u32 instanceCount) {
+	for (u32 i = 0; i < instanceCount; ++i) {
+		destroyTexture(textures[i]);
+	}
 }
 
 const Texture* TextureScene::findTexture(u64 assetPathHash) const {

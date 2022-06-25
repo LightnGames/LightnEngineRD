@@ -630,7 +630,7 @@ struct ResourceDesc {
 	ResourceFlags _flags;
 };
 
-enum ShaderVisiblity {
+enum ShaderVisibility {
 	SHADER_VISIBILITY_ALL = 0,
 	SHADER_VISIBILITY_VERTEX = 1,
 	SHADER_VISIBILITY_HULL = 2,
@@ -675,7 +675,7 @@ struct RootParameter {
 	void initializeDescriptorTable(
 		u32 numDescriptorRange,
 		const DescriptorRange* descriptorRanges,
-		ShaderVisiblity shaderVisibility) {
+		ShaderVisibility shaderVisibility) {
 		_parameterType = ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		_descriptorTable._numDescriptorRanges = numDescriptorRange;
 		_descriptorTable._descriptorRanges = descriptorRanges;
@@ -684,7 +684,7 @@ struct RootParameter {
 
 	void initializeDescriptorCbv(
 		u32 shaderRegister,
-		ShaderVisiblity shaderVisibility,
+		ShaderVisibility shaderVisibility,
 		RootDescriptorFlags flags = ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE) {
 		_parameterType = ROOT_PARAMETER_TYPE_CBV;
 		_descriptor._shaderRegister = shaderRegister;
@@ -694,7 +694,7 @@ struct RootParameter {
 
 	void initializeDescriptorSrv(
 		u32 shaderRegister,
-		ShaderVisiblity shaderVisibility,
+		ShaderVisibility shaderVisibility,
 		RootDescriptorFlags flags = ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE) {
 		_parameterType = ROOT_PARAMETER_TYPE_SRV;
 		_descriptor._shaderRegister = shaderRegister;
@@ -705,7 +705,7 @@ struct RootParameter {
 	void initializeConstant(
 		u32 shaderRegister,
 		u32 num32bitValues,
-		ShaderVisiblity shaderVisibility,
+		ShaderVisibility shaderVisibility,
 		RootDescriptorFlags flags = ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE) {
 		_parameterType = ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		_shaderVisibility = shaderVisibility;
@@ -717,7 +717,7 @@ struct RootParameter {
 	RootDescriptorTable _descriptorTable;
 	RootConstants _constants;
 	RootDescriptor _descriptor;
-	ShaderVisiblity _shaderVisibility;
+	ShaderVisibility _shaderVisibility;
 };
 
 struct ShaderByteCode {
@@ -772,6 +772,59 @@ enum QueryType {
 enum FillMode {
 	FILL_MODE_WIREFRAME = 2,
 	FILL_MODE_SOLID = 3
+};
+
+enum Filter {
+	FILTER_MIN_MAG_MIP_POINT = 0,
+	FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
+	FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
+	FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
+	FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
+	FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
+	FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
+	FILTER_MIN_MAG_MIP_LINEAR = 0x15,
+	FILTER_ANISOTROPIC = 0x55,
+	FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
+	FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
+	FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
+	FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
+	FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
+	FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
+	FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
+	FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
+	FILTER_COMPARISON_ANISOTROPIC = 0xd5,
+	FILTER_MINIMUM_MIN_MAG_MIP_POINT = 0x100,
+	FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x101,
+	FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x104,
+	FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x105,
+	FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x110,
+	FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x111,
+	FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x114,
+	FILTER_MINIMUM_MIN_MAG_MIP_LINEAR = 0x115,
+	FILTER_MINIMUM_ANISOTROPIC = 0x155,
+	FILTER_MAXIMUM_MIN_MAG_MIP_POINT = 0x180,
+	FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x181,
+	FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x184,
+	FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x185,
+	FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x190,
+	FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x191,
+	FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x194,
+	FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
+	FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
+};
+
+enum TextureAddressMode {
+	TEXTURE_ADDRESS_MODE_WRAP = 1,
+	TEXTURE_ADDRESS_MODE_MIRROR = 2,
+	TEXTURE_ADDRESS_MODE_CLAMP = 3,
+	TEXTURE_ADDRESS_MODE_BORDER = 4,
+	TEXTURE_ADDRESS_MODE_MIRROR_ONCE = 5
+};
+
+enum StaticBorderColor {
+	STATIC_BORDER_COLOR_TRANSPARENT_BLACK = 0,
+	STATIC_BORDER_COLOR_OPAQUE_BLACK = (STATIC_BORDER_COLOR_TRANSPARENT_BLACK + 1) ,
+	STATIC_BORDER_COLOR_OPAQUE_WHITE = (STATIC_BORDER_COLOR_OPAQUE_BLACK + 1)
 };
 
 struct BufferUav {
@@ -859,13 +912,26 @@ struct ComputePipelineStateDesc {
 };
 
 struct StaticSamplerDesc {
+	Filter Filter;
+	TextureAddressMode AddressU;
+	TextureAddressMode AddressV;
+	TextureAddressMode AddressW;
+	f32 MipLODBias;
+	u32 MaxAnisotropy;
+	ComparisonFunc ComparisonFunc;
+	StaticBorderColor BorderColor;
+	f32 MinLOD;
+	f32 MaxLOD;
+	u32 ShaderRegister;
+	u32 RegisterSpace;
+	ShaderVisibility ShaderVisibility;
 };
 
 struct RootSignatureDesc {
 	Device* _device = nullptr;
-	u32 _numParameters;
-	const RootParameter* _parameters;
-	u32 _numStaticSamplers;
+	u32 _numParameters = 0;
+	const RootParameter* _parameters = nullptr;
+	u32 _numStaticSamplers = 0;
 	const StaticSamplerDesc* _staticSamplers = nullptr;
 	RootSignatureFlags _flags;
 };

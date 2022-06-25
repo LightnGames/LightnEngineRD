@@ -77,9 +77,7 @@ void PipelineStateReloader::initialize() {
 			s32 recvLength = recv(sock, path, FILE_PATH_COUNT_MAX, 0);
 			if (recvLength != -1) {
 				path[recvLength] = '\0';
-
 				_reloadRequestShaderPathHashs[currentRequestIndex] = StrHash64(path);
-
 				LTN_INFO("Recive request shader reload: %s", path);
 			}
 

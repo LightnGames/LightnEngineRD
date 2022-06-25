@@ -1,9 +1,10 @@
 #include "CommonResource.h"
+#include <Core/CpuTimerManager.h>
 #include <RendererScene/Shader.h>
 #include <RendererScene/Material.h>
-#include <RendererScene/Mesh.h>
+#include <RendererScene/MeshGeometry.h>
 #include <RendererScene/MeshInstance.h>
-#include <RendererScene/MeshPreset.h>
+#include <RendererScene/Mesh.h>
 #include <RendererScene/Texture.h>
 
 namespace ltn {
@@ -11,6 +12,7 @@ namespace {
 CommonResource g_commonResource;
 }
 void CommonResource::initialize() {
+	CpuScopedPerf scopedPerf("CommonResource");
 	{
 		ShaderScene::CreatationDesc desc;
 		desc._assetPath = "EngineComponent\\Shader\\Material\\Default.vso";
@@ -46,15 +48,15 @@ void CommonResource::initialize() {
 	}
 
 	{
-		MeshScene::CreatationDesc desc;
-		desc._assetPath = "EngineComponent\\BasicShape\\Quad.mesh";
-		_mesh = MeshScene::Get()->createMesh(desc);
+		MeshGeometryScene::CreatationDesc desc;
+		desc._assetPath = "EngineComponent\\BasicShape\\Quad.meshg";
+		_meshGeometry = MeshGeometryScene::Get()->createMeshGeometry(desc);
 	}
 
 	{
-		MeshPresetScene::MeshPresetCreatationDesc desc;
-		desc._assetPath = "EngineComponent\\BasicShape\\Quad.mdl";
-		_meshPreset = MeshPresetScene::Get()->createMeshPreset(desc);
+		MeshScene::CreatationDesc desc;
+		desc._assetPath = "EngineComponent\\BasicShape\\Quad.mesh";
+		_mesh = MeshScene::Get()->createMesh(desc);
 	}
 }
 
@@ -63,8 +65,8 @@ void CommonResource::terminate() {
 	ShaderScene::Get()->destroyShader(_pixelShader);
 	MaterialScene::Get()->destroyMaterial(_whiteMaterial);
 	MaterialScene::Get()->destroyMaterial(_grayMaterial);
+	MeshGeometryScene::Get()->destroyMeshGeometry(_meshGeometry);
 	MeshScene::Get()->destroyMesh(_mesh);
-	MeshPresetScene::Get()->destroyMeshPreset(_meshPreset);
 	TextureScene::Get()->destroyTexture(_checkerTexture);
 	PipelineSetScene::Get()->destroyPipelineSet(_pipelineSet);
 }

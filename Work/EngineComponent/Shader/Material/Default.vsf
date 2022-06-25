@@ -7,6 +7,15 @@ ByteAddressBuffer _meshInstances : register(t0);
 ByteAddressBuffer _materialParameters : register(t1);
 ByteAddressBuffer _indirectArgumentSubInfos : register(t2);
 
+// 32bit uint -> 16bit float2
+float2 unpackTexCoords(uint packed)
+{
+    uint x = (packed.x >> 0) & 0xffff;
+    uint y = (packed.x >> 16) & 0xffff;
+    float div = UINT16_MAX / 8.0;
+    return (float2(x, y) / div) - 4.0;
+}
+
 VertexOut main(VSInput input)
 {
     IndirectArgumentSubInfo subInfo = _indirectArgumentSubInfos.Load<IndirectArgumentSubInfo>(sizeof(IndirectArgumentSubInfo) * input._instanceIndex);
@@ -17,7 +26,7 @@ VertexOut main(VSInput input)
     VertexOut vertexOut;
     vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
     vertexOut._positionNdc = float4(input._position, 1);
-    //vertexOut._texcoord = unpackTexCoords(input._texcoord);
+    vertexOut._texcoord = unpackTexCoords(input._texcoord);
     //vertexOut._meshletIndex = 0;
     //vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
     //vertexOut._materialIndex = _meshInstanceInfo._materialIndex;

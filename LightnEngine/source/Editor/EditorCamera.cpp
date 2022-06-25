@@ -6,7 +6,7 @@
 
 #include <RendererScene/CommonResource.h>
 #include <RendererScene/MeshInstance.h>
-#include <RendererScene/MeshPreset.h>
+#include <RendererScene/Mesh.h>
 
 namespace ltn {
 MeshInstance* _meshInstance;
@@ -18,20 +18,20 @@ void EditorCamera::initialize() {
 	_view->setWidth(app->getScreenWidth());
 	_view->setHeight(app->getScreenHeight());
 
-	{
-		const MeshPreset* meshPreset = CommonResource::Get()->getQuadMeshPreset();
-		_meshInstance = meshPreset->createMeshInstance(1);
-		_meshInstance->setWorldMatrix(Matrix4::translationFromVector(Vector3(1, 2, 3)));
-		
-		_meshInstance2 = meshPreset->createMeshInstance(1);
-		_meshInstance2->setWorldMatrix(Matrix4::translationFromVector(Vector3(-1, 0, 0)));
-		_meshInstance2->setMaterial(StrHash64("lambert2"), CommonResource::Get()->getGrayMaterial());
-	}
+	//{
+	//	const MeshPreset* meshPreset = CommonResource::Get()->getQuadMeshPreset();
+	//	_meshInstance = meshPreset->createMeshInstance(1);
+	//	_meshInstance->setWorldMatrix(Matrix4::translationFromVector(Vector3(1, 2, 3)));
+	//	
+	//	_meshInstance2 = meshPreset->createMeshInstance(1);
+	//	_meshInstance2->setWorldMatrix(Matrix4::translationFromVector(Vector3(-1, 0, 0)));
+	//	_meshInstance2->setMaterial(StrHash64("lambert2"), CommonResource::Get()->getGrayMaterial());
+	//}
 }
 
 void EditorCamera::terminate() {
-	MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance);
-	MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance2);
+	//MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance);
+	//MeshInstanceScene::Get()->destroyMeshInstance(_meshInstance2);
 	ViewScene::Get()->destroyView(_view);
 }
 

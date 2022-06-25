@@ -1,0 +1,4 @@
+PipelineSet: EngineComponent\Material\Default.pst
+Parameters:
+    BaseColor : [Float4, [1.0, 1.0, 1.0, 1.0]]
+    BaseColorTexture : [Texture, fantasy_village\Texture\T_rope_BaseColor.dds]

@@ -60,7 +60,9 @@ public:
 	};
 
 	const Texture* createTexture(const TextureCreatationDesc& desc);
+	void createTextures(const TextureCreatationDesc* descs,Texture const** textures, u32 instanceCount);
 	void destroyTexture(const Texture* texture);
+	void destroyTextures(Texture const** textures, u32 instanceCount);
 
 	const Texture* findTexture(u64 assetPathHash) const;
 	u32 getTextureIndex(const Texture* texture) const { return u32(texture - _textures); }

@@ -1,5 +1,6 @@
 #include "GpuMaterialManager.h"
 #include <Core/Memory.h>
+#include <Core/CpuTimerManager.h>
 #include <RendererScene/Material.h>
 #include <RendererScene/Shader.h>
 #include <RendererScene/Texture.h>
@@ -14,13 +15,16 @@ namespace ltn {
 namespace {
 GpuMaterialManager g_gpuMaterialManager;
 
-rhi::InputElementDesc inputElements[2] = {
+rhi::InputElementDesc inputElements[] = {
 	{"POSITION", 0, rhi::FORMAT_R32G32B32_FLOAT, 0, 0, rhi::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-	{"INSTANCE_INDEX", 0, rhi::FORMAT_R32_UINT, 1, 0, rhi::INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1},
+	{"NORMAL_TANGENT", 0, rhi::FORMAT_R32_UINT, 1, 0, rhi::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, rhi::FORMAT_R32_UINT, 2, 0, rhi::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	{"INSTANCE_INDEX", 0, rhi::FORMAT_R32_UINT, 3, 0, rhi::INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1},
 };
 }
 
 void GpuMaterialManager::initialize() {
+	CpuScopedPerf scopedPerf("GpuMaterialManager");
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 	{
 		GpuBufferDesc desc = {};
@@ -85,10 +89,46 @@ void GpuMaterialManager::update() {
 			rootParameters[DefaultRootParam::INDIRECT_ARGUMENT_SUB_INFO].initializeDescriptorTable(1, &indirectArgumentSubInfoSrvRange, rhi::SHADER_VISIBILITY_ALL);
 			rootParameters[DefaultRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_ALL);
 
+			rhi::StaticSamplerDesc staticSamplerDescs[2];
+			{
+				rhi::StaticSamplerDesc& samplerDesc = staticSamplerDescs[0];
+				samplerDesc.Filter = rhi::FILTER_ANISOTROPIC;
+				samplerDesc.AddressU = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc.AddressV = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc.AddressW = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc.MipLODBias = 0;
+				samplerDesc.MaxAnisotropy = 16;
+				samplerDesc.ComparisonFunc = rhi::COMPARISON_FUNC_NEVER;
+				samplerDesc.BorderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+				samplerDesc.MinLOD = 0.0f;
+				samplerDesc.MaxLOD = FLT_MAX;
+				samplerDesc.ShaderRegister = 0;
+				samplerDesc.RegisterSpace = 0;
+				samplerDesc.ShaderVisibility = rhi::SHADER_VISIBILITY_PIXEL;
+			}
+			{
+				rhi::StaticSamplerDesc& samplerDesc = staticSamplerDescs[1];
+				samplerDesc.Filter = rhi::FILTER_MIN_MAG_MIP_LINEAR;
+				samplerDesc.AddressU = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc.AddressV = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc.AddressW = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc.MipLODBias = 0;
+				samplerDesc.MaxAnisotropy = 0;
+				samplerDesc.ComparisonFunc = rhi::COMPARISON_FUNC_NEVER;
+				samplerDesc.BorderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+				samplerDesc.MinLOD = 0.0f;
+				samplerDesc.MaxLOD = FLT_MAX;
+				samplerDesc.ShaderRegister = 1;
+				samplerDesc.RegisterSpace = 0;
+				samplerDesc.ShaderVisibility = rhi::SHADER_VISIBILITY_ALL;
+			}
+
 			rhi::RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc._device = device;
 			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
 			rootSignatureDesc._parameters = rootParameters;
+			rootSignatureDesc._numStaticSamplers = LTN_COUNTOF(staticSamplerDescs);
+			rootSignatureDesc._staticSamplers = staticSamplerDescs;
 			rootSignatureDesc._flags = rhi::ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 			rhi::RootSignature& rootSignature = _defaultRootSignatures[pipelineSetIndex];

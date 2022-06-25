@@ -1,5 +1,6 @@
 #include "GpuTextureManager.h"
 #include <Core/Memory.h>
+#include <Core/CpuTimerManager.h>
 #include <RendererScene/Texture.h>
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/VramUpdater.h>
@@ -25,6 +26,7 @@ void createTextureResource(GpuTexture& gpuTexture, u32 width, u32 height, rhi::F
 }
 
 void GpuTextureManager::initialize() {
+	CpuScopedPerf scopedPerf("GpuTextureManager");
 	_textures = Memory::allocObjects<GpuTexture>(TextureScene::TEXTURE_CAPACITY);
 	_textureSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate(TextureScene::TEXTURE_CAPACITY);
 }

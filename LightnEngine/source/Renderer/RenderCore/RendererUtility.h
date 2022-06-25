@@ -1,8 +1,9 @@
 #pragma once
+#include <Core/CpuTimerManager.h>
 #include <Renderer/RHI/Rhi.h>
 #include <Renderer/RHI/RhiMarker.h>
 #include <Renderer/RenderCore/GpuResource.h>
-#include <Renderer/RenderCore/GpuTimeStampManager.h>
+#include <Renderer/RenderCore/GpuTimerManager.h>
 namespace ltn {
 struct ScopedBarrierDesc {
 	ScopedBarrierDesc(GpuResource* resource, rhi::ResourceStates stateAfter)
@@ -85,52 +86,36 @@ private:
 	char _name[64] = {};
 };
 
-class CpuScopedTimer {
-public:
-	CpuScopedTimer(const char* name, ...) {
-		va_list va;
-		va_start(va, name);
-		vsprintf_s(_name, name, va);
-		va_end(va);
-
-		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		//_cpuTickIndex = queryHeapSystem->pushCpuMarker(_name);
-	}
-	~CpuScopedTimer() {
-		//QueryHeapSystem* queryHeapSystem = QueryHeapSystem::Get();
-		//queryHeapSystem->popCpuMarker(_cpuTickIndex);
-	}
-private:
-	//u32 _cpuTickIndex = 0;
-	char _name[64] = {};
-};
-
 class CpuGpuScopedTimer {
 public:
 	CpuGpuScopedTimer(rhi::CommandList* commandList, const Color4& color, const char* format, ...) {
 		_commandList = commandList;
-
-		GpuTimerManager* timerManager = GpuTimerManager::Get();
-		_gpuTimeStampIndex = timerManager->pushGpuTimer(commandList);
-		rhi::BeginMarker(commandList, color, _name);
+		CpuTimerManager* cpuTimerManager = CpuTimerManager::Get();
+		GpuTimerManager* gpuTimerManager = GpuTimerManager::Get();
+		_cpuTimerIndex = cpuTimerManager->pushCpuTimer();
+		_gpuTimerIndex = gpuTimerManager->pushGpuTimer(commandList);
 
 		va_list va;
 		va_start(va, format);
-		vsprintf_s(_name, format, va);
-		timerManager->writeGpuTimerInfo(_gpuTimeStampIndex, format, va, color);
+		cpuTimerManager->writeCpuTimerInfo(_gpuTimerIndex, format, va, color);
+		gpuTimerManager->writeGpuTimerInfo(_gpuTimerIndex, format, va, color);
 		va_end(va);
+
+		rhi::BeginMarker(commandList, color, gpuTimerManager->getGpuTimerAdditionalInfo(_gpuTimerIndex)->_name);
 	}
 
 	~CpuGpuScopedTimer() {
-		GpuTimerManager* timerManager = GpuTimerManager::Get();
-		timerManager->popGpuTimer(_commandList, _gpuTimeStampIndex);
+		CpuTimerManager* cpuTimerManager = CpuTimerManager::Get();
+		GpuTimerManager* gpuTimerManager = GpuTimerManager::Get();
+		gpuTimerManager->popGpuTimer(_commandList, _gpuTimerIndex);
+		cpuTimerManager->popCpuTimer(_cpuTimerIndex);
 		rhi::EndMarker(_commandList);
 	}
+
 private:
 	rhi::CommandList* _commandList = nullptr;
-	u32 _gpuTimeStampIndex = 0;
-	u32 _cpuTickIndex = 0;
-	char _name[64] = {};
+	u32 _cpuTimerIndex = 0;
+	u32 _gpuTimerIndex = 0;
 };
 
 #define DEBUG_MARKER_CPU_SCOPED_TIMER(...) CpuScopedTimer __DEBUG_SCOPED_EVENT__(__VA_ARGS__)

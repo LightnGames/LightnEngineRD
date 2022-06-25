@@ -939,14 +939,11 @@ struct SubMeshInfo {
 
 struct LodInfo {
 	uint32 vertexOffset = 0;
-	uint32 vertexIndexOffset = 0;
-	uint32 primitiveOffset = 0;
+	uint32 vertexCount = 0;
 	uint32 indexOffset = 0;
+	uint32 indexCount;
 	uint32 subMeshOffset = 0;
 	uint32 subMeshCount = 0;
-	uint32 vertexCount = 0;
-	uint32 vertexIndexCount = 0;
-	uint32 primitiveCount = 0;
 };
 
 struct MeshletPrimitiveInfo {
@@ -1427,9 +1424,8 @@ void exportMesh(const char* fileName) {
 
 		LodInfo& lodInfo = lodInfos[lodIndex];
 		lodInfo.subMeshCount = subMeshCount;
-		lodInfo.vertexCount = positions.size();
-		lodInfo.vertexIndexCount = uniqueVertexIndices.size();
-		lodInfo.primitiveCount = primitiveIndices.size();
+		lodInfo.vertexCount = uint32(positions.size());
+		lodInfo.indexCount = uint32(meshletizedTriangleIndices.size());
 
 		m_meshletSubsets.reserve(m_meshletSubsets.size() + meshletSubsets.size());
 		std::copy(meshletSubsets.begin(), meshletSubsets.end(), std::back_inserter(m_meshletSubsets));
@@ -1484,8 +1480,7 @@ void exportMesh(const char* fileName) {
 		const LodInfo& prevLodInfo = lodInfos[lodIndex - 1];
 		lodInfo.subMeshOffset = prevLodInfo.subMeshOffset + prevLodInfo.subMeshCount;
 		lodInfo.vertexOffset = prevLodInfo.vertexOffset + prevLodInfo.vertexCount;
-		lodInfo.vertexIndexOffset = prevLodInfo.vertexIndexOffset + prevLodInfo.vertexIndexCount;
-		lodInfo.primitiveOffset = prevLodInfo.primitiveOffset + prevLodInfo.primitiveCount;
+		lodInfo.indexOffset = prevLodInfo.indexOffset + prevLodInfo.indexCount;
 	}
 
 	uint32 subMeshCount = m_meshletSubsets.size();
@@ -1581,7 +1576,7 @@ void exportMesh(const char* fileName) {
 	// メッシュヘッダー出力
 	{
 		std::string exportFilePath = std::string(exportPath);
-		exportFilePath.append(".mesh");
+		exportFilePath.append(".meshg");
 		std::ofstream fout;
 		fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
 
@@ -1626,7 +1621,7 @@ void exportMesh(const char* fileName) {
 	// メッシュ頂点データ出力
 	{
 		std::string exportFilePath = std::string(exportPath);
-		exportFilePath.append(".meshg");
+		exportFilePath.append(".meshgv");
 		std::ofstream fout;
 		fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
 

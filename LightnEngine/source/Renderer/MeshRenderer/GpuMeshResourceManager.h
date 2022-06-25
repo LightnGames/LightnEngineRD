@@ -1,5 +1,5 @@
 #pragma once
-#include <RendererScene/Mesh.h>
+#include <RendererScene/MeshGeometry.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 #include <Core/Math.h>

@@ -46,7 +46,7 @@ if __name__ == "__main__":
         output_name = file_name + DDS_EXT
         output_path = os.path.join(output_dir, output_name)
 
-        texture_work_dds_path = texture_file_path.replace(file_ext, DDS_EXT)
+        texture_work_dds_path = file_path.replace(file_ext, DDS_EXT)
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)

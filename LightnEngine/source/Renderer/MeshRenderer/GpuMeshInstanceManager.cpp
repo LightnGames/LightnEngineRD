@@ -1,7 +1,8 @@
 #include "GpuMeshInstanceManager.h"
 #include <Core/Memory.h>
+#include <Core/CpuTimerManager.h>
 #include <RendererScene/MeshInstance.h>
-#include <RendererScene/Mesh.h>
+#include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Material.h>
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
@@ -12,6 +13,7 @@ namespace {
 GpuMeshInstanceManager g_gpuMeshInstanceManager;
 }
 void GpuMeshInstanceManager::initialize() {
+	CpuScopedPerf scopedPerf("GpuMeshInstanceManager");
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 
 	// GPU 
@@ -98,8 +100,8 @@ void GpuMeshInstanceManager::update() {
 	VramUpdater* vramUpdater = VramUpdater::Get();
 	MeshInstanceScene* meshInstanceScene = MeshInstanceScene::Get();
 	const MeshInstancePool* meshInstancePool = meshInstanceScene->getMeshInstancePool();
-	MeshScene* meshScene = MeshScene::Get();
-	const MeshPool* meshPool = meshScene->getMeshPool();
+	MeshGeometryScene* meshScene = MeshGeometryScene::Get();
+	const MeshGeometryPool* meshPool = meshScene->getMeshGeometryPool();
 
 	bool updateSubMeshInstanceOffset = false;
 
@@ -109,7 +111,7 @@ void GpuMeshInstanceManager::update() {
 	auto createMeshInstances = createMeshInstanceInfos->getObjects();
 	for (u32 i = 0; i < createMeshInstanceCount; ++i) {
 		const MeshInstance* meshInstance = createMeshInstances[i];
-		const Mesh* mesh = meshInstance->getMesh();
+		const MeshGeometry* mesh = meshInstance->getMesh();
 		u32 lodMeshCount = mesh->getLodMeshCount();
 		u32 subMeshCount = mesh->getSubMeshCount();
 		u32 meshInstanceIndex = meshInstancePool->getMeshInstanceIndex(meshInstance);
@@ -121,12 +123,12 @@ void GpuMeshInstanceManager::update() {
 		gpu::SubMeshInstance* gpuSubMeshInstances = vramUpdater->enqueueUpdate<gpu::SubMeshInstance>(&_subMeshInstanceGpuBuffer, subMeshInstanceIndex, subMeshCount);
 
 		gpuMeshInstance->_stateFlags = 1;
-		gpuMeshInstance->_meshIndex = meshPool->getMeshIndex(mesh);
+		gpuMeshInstance->_meshIndex = meshPool->getMeshGeometryIndex(mesh);
 		gpuMeshInstance->_lodMeshInstanceOffset = lodMeshInstanceIndex;
 		gpuMeshInstance->_worldMatrix = Matrix4::identity().getFloat3x4();
 
 		for (u32 lodIndex = 0; lodIndex < lodMeshCount; ++lodIndex) {
-			const LodMesh* lodMesh = mesh->getLodMesh(lodIndex);
+			const LodMeshGeometry* lodMesh = mesh->getLodMesh(lodIndex);
 			const LodMeshInstance* lodMeshInstance = meshInstance->getLodMeshInstance(lodIndex);
 			gpu::LodMeshInstance& gpuLodMesh = gpuLodMeshInstances[lodIndex];
 			gpuLodMesh._lodThreshhold = lodMeshInstance->getLodThreshold();
@@ -166,8 +168,8 @@ void GpuMeshInstanceManager::update() {
 	u32 destroyMeshInstanceCount = destroyMeshInstanceInfos->getUpdateCount();
 	auto destroyMeshInstances = destroyMeshInstanceInfos->getObjects();
 	for (u32 i = 0; i < destroyMeshInstanceCount; ++i) {
-		const MeshInstance* meshInstance = createMeshInstances[i];
-		const Mesh* mesh = meshInstance->getMesh();
+		const MeshInstance* meshInstance = destroyMeshInstances[i];
+		const MeshGeometry* mesh = meshInstance->getMesh();
 		u32 lodMeshCount = mesh->getLodMeshCount();
 		u32 subMeshCount = mesh->getSubMeshCount();
 		u32 meshInstanceIndex = meshInstancePool->getMeshInstanceIndex(meshInstance);

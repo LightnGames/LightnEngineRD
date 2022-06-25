@@ -1,0 +1,3 @@
+Mesh : EngineComponent\BasicShape\Quad.meshg
+Material :
+    lambert2 : EngineComponent\Material\White.mto

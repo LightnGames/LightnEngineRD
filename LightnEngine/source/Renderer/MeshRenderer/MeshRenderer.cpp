@@ -17,6 +17,7 @@ MeshRenderer g_meshRenderer;
 }
 
 void MeshRenderer::initialize() {
+	CpuScopedPerf scopedPerf("MeshRenderer");
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 
 	// GPU ƒJƒŠƒ“ƒO
@@ -26,8 +27,8 @@ void MeshRenderer::initialize() {
 		rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);
 		rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 4);
 		rhi::DescriptorRange indirectArgumentOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
-		rhi::DescriptorRange lodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
-		rhi::DescriptorRange materialInstanceIndexSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+		rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+		rhi::DescriptorRange lodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
 		rhi::DescriptorRange hizSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
 		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
 		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
@@ -37,8 +38,9 @@ void MeshRenderer::initialize() {
 		rootParameters[GpuCullingRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::MESH].initializeDescriptorTable(1, &meshSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_ALL);
-		rootParameters[GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSETS].initializeDescriptorTable(1, &indirectArgumentOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSET].initializeDescriptorTable(1, &indirectArgumentOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[GpuCullingRootParam::GEOMETRY_GLOBA_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultUavRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::HIZ].initializeDescriptorTable(1, &hizSrvRange, rhi::SHADER_VISIBILITY_ALL);
@@ -202,6 +204,7 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 	commandList->setPipelineState(&_gpuCullingPipelineState);
 	//gpuCullingResource->resourceBarriersHizTextureToSrv(commandList);
 
+	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = GeometryResourceManager::Get()->getGeometryGlobalOffsetGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
 	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsetsGpuSrv();
@@ -210,8 +213,9 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::VIEW_INFO, desc._viewCbv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH, meshSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE, meshInstanceSrv);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSETS, indirectArgumentOffsetSrv);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSET, indirectArgumentOffsetSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENTS, _indirectArgumentUav._firstHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::GEOMETRY_GLOBA_OFFSET, geometryGlobalOffsetSrv);
 
 	u32 meshInstanceReserveCount = desc._meshInstanceReserveCount;
 	u32 dispatchCount = RoundDivUp(meshInstanceReserveCount, 128u);
@@ -224,9 +228,11 @@ void MeshRenderer::render(const RenderDesc& desc) {
 	GpuMeshInstanceManager* gpuMeshInstanceManager = GpuMeshInstanceManager::Get();
 
 	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
-	rhi::VertexBufferView vertexBufferViews[2];
+	rhi::VertexBufferView vertexBufferViews[4];
 	vertexBufferViews[0] = geometryResourceManager->getPositionVertexBufferView();
-	vertexBufferViews[1] = gpuMeshInstanceManager->getMeshInstanceIndexVertexBufferView();
+	vertexBufferViews[1] = geometryResourceManager->getNormalTangentVertexBufferView();
+	vertexBufferViews[2] = geometryResourceManager->getTexcoordVertexBufferView();
+	vertexBufferViews[3] = gpuMeshInstanceManager->getMeshInstanceIndexVertexBufferView();
 
 	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
 	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();

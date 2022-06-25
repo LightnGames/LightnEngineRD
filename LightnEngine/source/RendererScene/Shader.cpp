@@ -1,11 +1,12 @@
 #include "Shader.h"
 #include <Core/Memory.h>
-
+#include <Core/CpuTimerManager.h>
 namespace ltn {
 namespace {
 ShaderScene g_shaderScene;
 }
 void ShaderScene::initialize() {
+	CpuScopedPerf scopedPerf("ShaderScene");
 	{
 		VirtualArray::Desc handleDesc = {};
 		handleDesc._size = SHADER_CAPACITY;
