@@ -81,6 +81,8 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange materialParameterSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 			rhi::DescriptorRange indirectArgumentSubInfoSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
+			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
+			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
 
 			rhi::RootParameter rootParameters[DefaultRootParam::COUNT] = {};
 			rootParameters[DefaultRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_ALL);
@@ -88,6 +90,8 @@ void GpuMaterialManager::update() {
 			rootParameters[DefaultRootParam::MATERIAL_PARAMETER].initializeDescriptorTable(1, &materialParameterSrvRange, rhi::SHADER_VISIBILITY_ALL);
 			rootParameters[DefaultRootParam::INDIRECT_ARGUMENT_SUB_INFO].initializeDescriptorTable(1, &indirectArgumentSubInfoSrvRange, rhi::SHADER_VISIBILITY_ALL);
 			rootParameters[DefaultRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_ALL);
+			rootParameters[DefaultRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &meshInstanceLodLevelSrvRange, rhi::SHADER_VISIBILITY_ALL);
+			rootParameters[DefaultRootParam::MATERIAL_SCREEN_PERSENTAGE].initializeDescriptorTable(1, &materialScreenPersentageSrvRange, rhi::SHADER_VISIBILITY_ALL);
 
 			rhi::StaticSamplerDesc staticSamplerDescs[2];
 			{

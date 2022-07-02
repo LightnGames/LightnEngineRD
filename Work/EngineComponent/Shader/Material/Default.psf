@@ -1,6 +1,10 @@
 #include "ShaderInput.sfh"
+#include "../Def.sfh"
 
 ByteAddressBuffer _materialParameters : register(t1);
+ByteAddressBuffer _meshInstanceLodLevels : register(t3);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t4);
+ByteAddressBuffer _materialScreenPersentages : register(t5);
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
 
@@ -10,10 +14,21 @@ struct MaterialParameter
     uint _baseColorTextureIndex;
 };
 
+float3 heatMap(float unormValue)
+{
+    float redValue = min(unormValue * 2.0, 1.0);
+    float blueValue = max((unormValue - 0.5) * 2.0, 0.0);
+    return lerp(float3(1, 0, 0), lerp(float3(0, 1, 0), float3(0, 0, 1), blueValue), redValue);
+}
+
 float4 main(VertexOut input) : SV_TARGET
 {
     MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(input._materialParameterOffset);
     float4 baseColor = _textures[NonUniformResourceIndex(materialParameter._baseColorTextureIndex)].Sample(_anisotropicSampler, input._texcoord);
+    //float screenPersentages = float(_meshInstanceScreenPersentages.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
+    //float screenPersentages = float(_meshInstanceLodLevels.Load(input._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(4);
+    //float screenPersentages = float(_materialScreenPersentages.Load(input._materialIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
     //return float4(input._texcoord, 0, 1);
+    //return float4(heatMap(1.0 - screenPersentages), 1.0);
     return materialParameter._baseColor * baseColor;
 }

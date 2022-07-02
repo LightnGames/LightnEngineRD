@@ -34,6 +34,14 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			continue;
 		}
 
+		// LOD î•ñŒvZ
+		{
+			MeshRenderer::ComputeLodDesc desc;
+			desc._commandList = commandList;
+			desc._viewCbv = renderViewScene->getViewCbv(i);
+			meshRenderer->computeLod(desc);
+		}
+
 		// GPU ƒJƒŠƒ“ƒO
 		{
 			MeshRenderer::CullingDesc desc;

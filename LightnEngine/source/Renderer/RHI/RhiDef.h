@@ -618,7 +618,7 @@ struct SampleDesc {
 };
 
 struct ResourceDesc {
-	ResourceDimension _dimension;
+	ResourceDimension _dimension = RESOURCE_DIMENSION_UNKNOWN;
 	u64 _alignment = 0;
 	u64 _width = 0;
 	u32 _height = 0;
@@ -863,19 +863,6 @@ struct Tex3dUav {
 	u32 _wSize = 0;
 };
 
-struct UnorderedAccessViewDesc {
-	Format _format;
-	UavDimension _viewDimension;
-	union {
-		BufferUav _buffer;
-		Tex1dUav _texture1D;
-		Tex1dArrayUav _texture1DArray;
-		Tex2dUav _texture2D;
-		Tex2dArrayUav _texture2DArray;
-		Tex3dUav _texture3D;
-	};
-};
-
 struct GraphicsPipelineStateDesc {
 	Device* _device = nullptr;
 	RootSignature* _rootSignature = nullptr;
@@ -1026,6 +1013,19 @@ struct MemoryRange {
 struct ConstantBufferViewDesc {
 	u64 _bufferLocation = 0;
 	u32 _sizeInBytes = 0;
+};
+
+struct UnorderedAccessViewDesc {
+	Format _format;
+	UavDimension _viewDimension;
+	union {
+		BufferUav _buffer;
+		Tex1dUav _texture1D;
+		Tex1dArrayUav _texture1DArray;
+		Tex2dUav _texture2D;
+		Tex2dArrayUav _texture2DArray;
+		Tex3dUav _texture3D;
+	};
 };
 
 struct ShaderResourceViewDesc {

@@ -83,12 +83,10 @@ void GpuMeshResourceManager::update() {
 
 		gpuMesh->_lodMeshCount = mesh->getLodMeshCount();
 		gpuMesh->_lodMeshOffset = lodMeshIndex;
-		gpuMesh->_streamedLodLevel = 0;
 
 		for (u32 lodIndex = 0; lodIndex < lodMeshCount; ++lodIndex) {
 			const LodMeshGeometry* lodMesh = mesh->getLodMesh(lodIndex);
 			gpu::LodMesh& gpuLodMesh = gpuLodMeshes[lodIndex];
-			gpuLodMesh._vertexOffset = lodMesh->_vertexOffset;
 			gpuLodMesh._subMeshOffset = subMeshIndex + lodMesh->_subMeshOffset;
 			gpuLodMesh._subMeshCount = lodMesh->_subMeshCount;
 		}

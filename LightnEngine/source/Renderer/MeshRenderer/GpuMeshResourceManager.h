@@ -11,11 +11,9 @@ namespace gpu {
 struct Mesh {
 	u32 _lodMeshOffset = 0;
 	u32 _lodMeshCount = 0;
-	u32 _streamedLodLevel = 0;
 };
 
 struct LodMesh {
-	u32 _vertexOffset = 0;
 	u32 _subMeshOffset = 0;
 	u32 _subMeshCount = 0;
 };

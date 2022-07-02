@@ -1,5 +1,5 @@
 #include "../ViewInfo.sfh"
-#include "../MeshRenderer/MeshType.sfh"
+#include "../MeshRenderer/MeshDef.sfh"
 #include "ShaderInput.sfh"
 
 ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
@@ -27,11 +27,9 @@ VertexOut main(VSInput input)
     vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
     vertexOut._positionNdc = float4(input._position, 1);
     vertexOut._texcoord = unpackTexCoords(input._texcoord);
-    //vertexOut._meshletIndex = 0;
-    //vertexOut._meshInstanceIndex = _meshInstanceInfo._meshInstanceIndex;
-    //vertexOut._materialIndex = _meshInstanceInfo._materialIndex;
+    vertexOut._meshInstanceIndex = subInfo._meshInstanceIndex;
     vertexOut._worldPosition = worldPos.xyz;
-    //vertexOut._triangleOffset = _meshInstanceInfo._triangleOffset;
     vertexOut._materialParameterOffset = subInfo._materialParameterOffset;
+    vertexOut._materialIndex = subInfo._materialIndex;
     return vertexOut;
 }

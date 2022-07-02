@@ -123,6 +123,38 @@ public:
 
 private:
 	char _path[FILE_PATH_COUNT_MAX];
-	FilePtr _filePtr;
+	FilePtr _filePtr = nullptr;
+};
+
+class ThreeDigiets {
+public:
+	ThreeDigiets(u64 value) {
+		char temp[64];
+		sprintf_s(temp, "%lld", value);
+
+		u32 count = 0;
+		for (u32 i = 0; i < LTN_COUNTOF(temp); ++i) {
+			if (temp[i] == '\0') {
+				count = i;
+				break;
+			}
+		}
+
+		u32 currentStrIndex = 0;
+		for (u32 i = 0; i < count; ++i) {
+			_str[currentStrIndex++] = temp[i];
+			u32 strIndex = count - i - 1;
+			bool isFirst = strIndex == 0;
+			if (strIndex % 3 == 0 && !isFirst) {
+				_str[currentStrIndex++] = ',';
+			}
+		}
+
+		_str[currentStrIndex] = '\0';
+	}
+
+	const char* get() const { return _str; }
+
+	char _str[64];
 };
 }

@@ -17,6 +17,7 @@ public:
 	};
 
 	bool findParameter(u32 nameHash, u16& outOffsetSizeInByte) const;
+	u16 findParameters(u8 parameterType, u16* outParameterOffsets) const;
 
 	const char* _assetPath = nullptr;
 	u64 _assetPathHash = 0;
@@ -24,6 +25,7 @@ public:
 	u16 _parameterSizeInByte = 0;
 	const u32* _parameterNameHashes = nullptr;
 	const u16* _parameterOffsets = nullptr;
+	const u8* _parameterTypes = nullptr;
 };
 
 class ShaderScene {
@@ -62,6 +64,7 @@ private:
 	VirtualArray::AllocationInfo* _parameterAllocationInfos = nullptr;
 	u32* _parameterNameHashes = nullptr;
 	u16* _parameterOffsets = nullptr;
+	u8* _parameterTypes = nullptr;
 
 	char** _shaderAssetPaths = nullptr;
 	UpdateInfos<Shader> _shaderCreateInfos;

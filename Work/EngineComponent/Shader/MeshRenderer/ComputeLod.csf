@@ -1,0 +1,72 @@
+#include "MeshDef.sfh"
+#include "../ViewInfo.sfh"
+
+ConstantBuffer<CullingInfo> _cullingInfo : register(b0);
+ConstantBuffer<ViewInfo> _viewInfo : register(b1);
+ByteAddressBuffer _meshes : register(t0);
+ByteAddressBuffer _lodMeshes : register(t1);
+ByteAddressBuffer _subMeshes : register(t2);
+ByteAddressBuffer _meshInstances : register(t4);
+ByteAddressBuffer _lodMeshInstances : register(t5);
+ByteAddressBuffer _subMeshInstances : register(t6);
+
+RWByteAddressBuffer _meshInstanceLodLevels : register(u0);
+RWByteAddressBuffer _meshInstanceScreenPersentages : register(u1);
+RWByteAddressBuffer _meshLodMinLevels : register(u2);
+RWByteAddressBuffer _meshLodMaxLevels : register(u3);
+RWByteAddressBuffer _materialScreenPersentages : register(u4);
+
+#define THREAD_NUM 128
+[numthreads(THREAD_NUM, 1, 1)]
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
+{
+    uint meshInstanceIndex = dtid;
+    if (_cullingInfo._meshInstanceReserveCount <= dtid)
+    {
+        return;
+    }
+    
+    MeshInstance meshInstance = _meshInstances.Load<MeshInstance>(sizeof(MeshInstance) * meshInstanceIndex);
+    Mesh mesh = _meshes.Load<Mesh>(sizeof(Mesh) * meshInstance._meshIndex);
+    float3 boundsCenter = (meshInstance._aabbMin + meshInstance._aabbMax) / 2.0;
+    float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._cameraPosition;
+    float boundsDepth = length(viewSpaceBoundsCenter);
+    float screenRadius = meshInstance._boundsRadius / (_viewInfo._halfFovTan.y * boundsDepth);
+    float screenDimeter = screenRadius * 2.0;
+    float screenArea = screenDimeter * screenDimeter;
+	
+    uint lodLevel = mesh._lodMeshCount - 1;
+    for (uint lodIndex = 0; lodIndex < mesh._lodMeshCount; ++lodIndex)
+    {
+        uint lodMeshIndex = meshInstance._lodMeshInstanceOffset + lodIndex;
+        LodMeshInstance lodMeshInstance = _lodMeshInstances.Load<LodMeshInstance>(sizeof(LodMeshInstance) * lodMeshIndex);
+        if (lodMeshInstance._threshhold < screenArea)
+        {
+            lodLevel = lodIndex;
+            break;
+        }
+    }
+	
+    uint dummyValue = 0;
+    uint unorm16ScreenArea = screenArea * UINT16_MAX;
+    // メッシュインスタンス LOD
+    _meshInstanceLodLevels.Store(meshInstanceIndex * UINT32_SIZE_IN_BYTE, lodLevel);
+    _meshInstanceScreenPersentages.Store(meshInstanceIndex * UINT32_SIZE_IN_BYTE, unorm16ScreenArea);
+    
+    // メッシュ LOD
+    _meshLodMinLevels.InterlockedMin(meshInstance._meshIndex * UINT32_SIZE_IN_BYTE, lodLevel, dummyValue);
+    _meshLodMaxLevels.InterlockedMax(meshInstance._meshIndex * UINT32_SIZE_IN_BYTE, lodLevel, dummyValue);
+    
+    // マテリアル スクリーン表示面積
+    uint lodMeshIndex = mesh._lodMeshOffset + lodLevel;
+    uint lodMeshInstanceIndex = meshInstance._lodMeshInstanceOffset + lodLevel;
+    LodMesh lodMesh = _lodMeshes.Load<LodMesh>(sizeof(LodMesh) * lodMeshIndex);
+    LodMeshInstance lodMeshInstance = _lodMeshInstances.Load<LodMeshInstance>(sizeof(LodMeshInstance) * lodMeshInstanceIndex);
+    uint subMeshCount = lodMesh._subMeshCount;
+    for (uint i = 0; i < subMeshCount; ++i)
+    {
+        uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + i;
+        SubMeshInstance subMeshInstance = _subMeshInstances.Load<SubMeshInstance>(sizeof(SubMeshInstance) * subMeshInstanceIndex);
+        _materialScreenPersentages.InterlockedMin(subMeshInstance._materialIndex * UINT32_SIZE_IN_BYTE, unorm16ScreenArea, dummyValue);
+    }
+}

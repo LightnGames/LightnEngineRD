@@ -5,6 +5,7 @@
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Core/Memory.h>
 #include <Core/CpuTimerManager.h>
+#include <ThiredParty/ImGui/imgui.h>
 
 namespace ltn {
 namespace {
@@ -39,6 +40,10 @@ void GeometryResourceManager::initialize() {
 		desc._sizeInByte = MeshGeometryScene::LOD_MESH_GEOMETRY_CAPACITY * sizeof(gpu::GeometryGlobalOffsetInfo);
 		_geometryGlobalOffsetGpuBuffer.initialize(desc);
 		_geometryGlobalOffsetGpuBuffer.setName("GeometryGlobalOffsets");
+
+		desc._sizeInByte = MeshGeometryScene::MESH_GEOMETRY_CAPACITY * sizeof(MeshLodStreamRange);
+		_meshLodStreamRangeGpuBuffer.initialize(desc);
+		_meshLodStreamRangeGpuBuffer.setName("MeshLodStreamRanges");
 	}
 
 
@@ -51,7 +56,7 @@ void GeometryResourceManager::initialize() {
 		handleDesc._size = INDEX_COUNT_MAX;
 		_indexAllocations.initialize(handleDesc);
 
-		_streamedLodRanges = Memory::allocObjects<LodStreamRange>(MeshGeometryScene::MESH_GEOMETRY_CAPACITY);
+		_meshStreamLodRanges = Memory::allocObjects<MeshLodStreamRange>(MeshGeometryScene::MESH_GEOMETRY_CAPACITY);
 		_geometryAllocationInfos = Memory::allocObjects<GeometryAllocationInfo>(MeshGeometryScene::LOD_MESH_GEOMETRY_CAPACITY);
 	}
 
@@ -59,6 +64,7 @@ void GeometryResourceManager::initialize() {
 	{
 		DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
 		_geometryGlobalOffsetSrv = descriptorAllocator->allocate();
+		_meshLodStreamRangeSrv = descriptorAllocator->allocate();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -66,19 +72,24 @@ void GeometryResourceManager::initialize() {
 		desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
 		desc._buffer._numElements = _geometryGlobalOffsetGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_geometryGlobalOffsetGpuBuffer.getResource(), &desc, _geometryGlobalOffsetSrv._cpuHandle);
+
+		desc._buffer._numElements = _meshLodStreamRangeGpuBuffer.getU32ElementCount();
+		device->createShaderResourceView(_meshLodStreamRangeGpuBuffer.getResource(), &desc, _meshLodStreamRangeSrv._cpuHandle);
 	}
 }
 
 void GeometryResourceManager::terminate() {
 	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
 	descriptorAllocator->free(_geometryGlobalOffsetSrv);
+	descriptorAllocator->free(_meshLodStreamRangeSrv);
 
-	Memory::freeObjects(_streamedLodRanges);
+	Memory::freeObjects(_meshStreamLodRanges);
 	Memory::freeObjects(_geometryAllocationInfos);
 	_vertexPositionGpuBuffer.terminate();
 	_vertexNormalTangentGpuBuffer.terminate();
 	_vertexTexcoordGpuBuffer.terminate();
 	_geometryGlobalOffsetGpuBuffer.terminate();
+	_meshLodStreamRangeGpuBuffer.terminate();
 	_indexGpuBuffer.terminate();
 	_vertexPositionAllocations.terminate();
 	_indexAllocations.terminate();
@@ -89,14 +100,25 @@ void GeometryResourceManager::update() {
 	const MeshGeometryPool* meshPool = meshScene->getMeshGeometryPool();
 
 	// ジオメトリ情報を追加
-	const UpdateInfos<MeshGeometry>* meshCreateInfos = meshScene->getCreateInfos();
-	u32 createMeshCount = meshCreateInfos->getUpdateCount();
-	auto createMeshes = meshCreateInfos->getObjects();
-	for (u32 i = 0; i < createMeshCount; ++i) {
-		VramUpdater* vramUpdater = VramUpdater::Get();
-		const MeshGeometry* mesh = createMeshes[i];
-		loadLodMesh(mesh, 0, mesh->getLodMeshCount());
-	}
+	//const UpdateInfos<MeshGeometry>* meshCreateInfos = meshScene->getCreateInfos();
+	//u32 createMeshCount = meshCreateInfos->getUpdateCount();
+	//auto createMeshes = meshCreateInfos->getObjects();
+	//for (u32 i = 0; i < createMeshCount; ++i) {
+	//	VramUpdater* vramUpdater = VramUpdater::Get();
+	//	const MeshGeometry* mesh = createMeshes[i];
+	//	for (u32 n = 0;n < mesh->getLodMeshCount(); ++n) {
+	//		loadLodMesh(mesh, n, n + 1);
+	//	}
+	//	loadLodMesh(mesh, 0, mesh->getLodMeshCount());
+	//	if (mesh->getLodMeshCount() > 1) {
+	//		loadLodMesh(mesh, 0, 1);
+	//		unloadLodMesh(mesh, 0, 1);
+	//		loadLodMesh(mesh, 0, 1);
+	//	}
+	//	else {
+	//		loadLodMesh(mesh, 0, mesh->getLodMeshCount());
+	//	}
+	//}
 
 	// ジオメトリ情報を削除
 	const UpdateInfos<MeshGeometry>* meshDestroyInfos = meshScene->getDestroyInfos();
@@ -107,15 +129,14 @@ void GeometryResourceManager::update() {
 		u32 meshIndex = meshPool->getMeshGeometryIndex(mesh);
 
 		// ストリーミングされている範囲のジオメトリを削除
-		const LodStreamRange& streamRange = _streamedLodRanges[meshIndex];
-		for (u16 lodLevel = streamRange._beginLevel; lodLevel < streamRange._endLevel; ++lodLevel) {
-			const LodMeshGeometry* lodMesh = mesh->getLodMesh(lodLevel);
-			u32 lodMeshIndex = meshPool->getLodMeshGeometryIndex(lodMesh);
-			GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
-			_vertexPositionAllocations.freeAllocation(info._vertexAllocationInfo);
-			_indexAllocations.freeAllocation(info._indexAllocationInfo);
-		}
+		const MeshLodStreamRange& streamRange = _meshStreamLodRanges[meshIndex];
+		unloadLodMesh(mesh, streamRange._beginLevel, streamRange._endLevel + 1);
 	}
+
+	ImGui::Begin("Geometry");
+	ImGui::Text("VertexCount : %-10s", ThreeDigiets(_vertexPositionAllocations.getAllocateCount()).get());
+	ImGui::Text("IndexCount  : %-10s", ThreeDigiets(_indexAllocations.getAllocateCount()).get());
+	ImGui::End();
 }
 
 rhi::VertexBufferView GeometryResourceManager::getPositionVertexBufferView() const {
@@ -154,6 +175,17 @@ GeometryResourceManager* GeometryResourceManager::Get() {
 	return &g_geometryResourceManager;
 }
 
+void GeometryResourceManager::updateMeshLodStreamRange(u32 meshIndex, u32 beginLodLevel, u32 endLodLevel) {
+	LTN_ASSERT(beginLodLevel <= endLodLevel);
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	MeshLodStreamRange& streamRange = _meshStreamLodRanges[meshIndex];
+	streamRange._beginLevel = u16(beginLodLevel);
+	streamRange._endLevel = u16(endLodLevel);
+
+	MeshLodStreamRange* meshLodStreamRange = vramUpdater->enqueueUpdate<MeshLodStreamRange>(&_meshLodStreamRangeGpuBuffer, meshIndex);
+	*meshLodStreamRange = streamRange;
+}
+
 // 指定された LOD 範囲のジオメトリ情報を読み取って VRAM アップロード
 void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLodLevel, u32 endLodLevel) {
 	VramUpdater* vramUpdater = VramUpdater::Get();
@@ -176,10 +208,6 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 		endVertexOffset += lodMesh->_vertexCount;
 		endIndexOffset += lodMesh->_indexCount;
 	}
-
-	LodStreamRange& streamRange = _streamedLodRanges[meshIndex];
-	streamRange._beginLevel = Min(streamRange._beginLevel, u16(beginLodLevel));
-	streamRange._endLevel = Max(streamRange._endLevel, u16(endLodLevel));
 
 	// .meshg -> .meshgv
 	char path[FILE_PATH_COUNT_MAX];
@@ -213,10 +241,6 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 			const GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
 
 			u32 globalOffset = u32(info._vertexAllocationInfo._offset);
-			u32 localOffset = lodMesh->_vertexOffset;
-
-			u32 beginOffset = sizeof(VertexPosition) * localOffset;
-			u32 endOffset = sizeof(VertexPosition) * vertexCount;
 			VertexPosition* positions = vramUpdater->enqueueUpdate<VertexPosition>(&_vertexPositionGpuBuffer, globalOffset, vertexCount);
 			assetPath.readFile(positions, sizeof(VertexPosition) * vertexCount);
 		}
@@ -233,10 +257,6 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 			const GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
 
 			u32 globalOffset = u32(info._vertexAllocationInfo._offset);
-			u32 localOffset = lodMesh->_vertexOffset;
-
-			u32 beginOffset = sizeof(VertexNormalTangent) * localOffset;
-			u32 endOffset = sizeof(VertexNormalTangent) * vertexCount;
 			VertexNormalTangent* normalTangents = vramUpdater->enqueueUpdate<VertexNormalTangent>(&_vertexNormalTangentGpuBuffer, globalOffset, vertexCount);
 			assetPath.readFile(normalTangents, sizeof(VertexNormalTangent) * vertexCount);
 		}
@@ -254,10 +274,6 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 			const GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
 
 			u32 globalOffset = u32(info._vertexAllocationInfo._offset);
-			u32 localOffset = lodMesh->_vertexOffset;
-
-			u32 beginOffset = sizeof(VertexTexCoord) * localOffset;
-			u32 endOffset = sizeof(VertexTexCoord) * vertexCount;
 			VertexTexCoord* positions = vramUpdater->enqueueUpdate<VertexTexCoord>(&_vertexTexcoordGpuBuffer, globalOffset, vertexCount);
 			assetPath.readFile(positions, sizeof(VertexTexCoord) * vertexCount);
 		}
@@ -266,7 +282,7 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 
 	// インデックスバッファ
 	{
-		assetPath.seekCur(sizeof(VertexIndex) * beginVertexOffset);
+		assetPath.seekCur(sizeof(VertexIndex) * beginIndexOffset);
 		for (u32 i = beginLodLevel; i < endLodLevel; ++i) {
 			const LodMeshGeometry* lodMesh = mesh->getLodMesh(i);
 			u32 lodMeshIndex = meshPool->getLodMeshGeometryIndex(lodMesh);
@@ -274,15 +290,23 @@ void GeometryResourceManager::loadLodMesh(const MeshGeometry* mesh, u32 beginLod
 			const GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
 
 			u32 globalOffset = u32(info._indexAllocationInfo._offset);
-			u32 localOffset = lodMesh->_indexOffset;
-
-			u32 beginOffset = sizeof(VertexIndex) * localOffset;
-			u32 endOffset = sizeof(VertexIndex) * indexCount;
 			VertexIndex* positions = vramUpdater->enqueueUpdate<VertexIndex>(&_indexGpuBuffer, globalOffset, indexCount);
 			assetPath.readFile(positions, sizeof(VertexIndex) * indexCount);
 		}
 	}
 
 	assetPath.closeFile();
+}
+void GeometryResourceManager::unloadLodMesh(const MeshGeometry* mesh, u32 beginLodLevel, u32 endLodLevel) {
+	MeshGeometryScene* meshScene = MeshGeometryScene::Get();
+	const MeshGeometryPool* meshPool = meshScene->getMeshGeometryPool();
+	for (u16 lodLevel = beginLodLevel; lodLevel < endLodLevel; ++lodLevel) {
+		const LodMeshGeometry* lodMesh = mesh->getLodMesh(lodLevel);
+		u32 lodMeshIndex = meshPool->getLodMeshGeometryIndex(lodMesh);
+		GeometryAllocationInfo& info = _geometryAllocationInfos[lodMeshIndex];
+		_vertexPositionAllocations.freeAllocation(info._vertexAllocationInfo);
+		_indexAllocations.freeAllocation(info._indexAllocationInfo);
+		info = GeometryAllocationInfo();
+	}
 }
 }

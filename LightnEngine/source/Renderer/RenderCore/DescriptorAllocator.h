@@ -23,7 +23,7 @@ struct DescriptorHandle {
 
 struct DescriptorHandles {
 	DescriptorHandle get(u32 index) const {
-		return _firstHandle + index * _incrementSize;
+		return _firstHandle + u64(index * _incrementSize);
 	}
 
 	u32 _descriptorCount = 0;

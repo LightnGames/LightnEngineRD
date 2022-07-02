@@ -23,6 +23,7 @@ void ShaderScene::initialize() {
 		_parameterAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(SHADER_PARAMETER_CAPACITY);
 		_parameterNameHashes = allocation.allocateObjects<u32>(SHADER_PARAMETER_CAPACITY);
 		_parameterOffsets = allocation.allocateObjects<u16>(SHADER_PARAMETER_CAPACITY);
+		_parameterTypes = allocation.allocateObjects<u8>(SHADER_PARAMETER_CAPACITY);
 		});
 }
 
@@ -76,18 +77,22 @@ const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 
 		u32* parameterNameHashes = &_parameterNameHashes[parameterAllocationInfo._offset];
 		u16* parameterOffsets = &_parameterOffsets[parameterAllocationInfo._offset];
+		u8* parameterTypes = &_parameterTypes[parameterAllocationInfo._offset];
 		shader->_parameterCount = parameterCount;
 		shader->_parameterNameHashes = parameterNameHashes;
 		shader->_parameterOffsets = parameterOffsets;
 		shader->_parameterSizeInByte = parameterSizeInByte;
+		shader->_parameterTypes = parameterTypes;
 
 		// offset:0 size:16 BaseColor
 		parameterNameHashes[0] = StrHash32("BaseColor");
 		parameterOffsets[0] = 0;
+		parameterTypes[0] = Shader::PARAMETER_TYPE_FLOAT4;
 
 		// offset:16 size:4 BaseColorTextureIndex
 		parameterNameHashes[1] = StrHash32("BaseColorTexture");
 		parameterOffsets[1] = 16;
+		parameterTypes[1] = Shader::PARAMETER_TYPE_TEXTURE;
 	}
 
 	_shaderAssetPathHashes[allocationInfo._offset] = shader->_assetPathHash;
@@ -119,5 +124,18 @@ bool Shader::findParameter(u32 nameHash, u16& outOffsetSizeInByte) const {
 	}
 
 	return false;
+}
+u16 Shader::findParameters(u8 parameterType, u16* outParameterOffsets) const {
+	u16 foundCount = 0;
+	for (u16 i = 0; i < _parameterCount; ++i) {
+		if (parameterType == _parameterTypes[i]) {
+			if (outParameterOffsets != nullptr) {
+				outParameterOffsets[foundCount] = _parameterOffsets[i];
+			}
+			foundCount++;
+		}
+	}
+
+	return foundCount;
 }
 }

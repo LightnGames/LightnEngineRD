@@ -12,6 +12,7 @@
 #include <Renderer/MeshRenderer/GpuTextureManager.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
+#include <Renderer/RenderCore/MeshLodStreamingManager.h>
 #include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
@@ -24,6 +25,7 @@
 namespace ltn {
 void update() {
 	CpuTimerManager::Get()->update();
+	LodStreamingManager::Get()->update();
 	GpuTextureManager::Get()->update();
 	GpuShaderScene::Get()->update();
 	RenderViewScene::Get()->update();
@@ -70,6 +72,7 @@ void EngineModuleManager::run() {
 	GpuMeshResourceManager* gpuMeshResourceManager = GpuMeshResourceManager::Get();
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	GpuMaterialManager* gpuMaterialManager = GpuMaterialManager::Get();
+	LodStreamingManager* meshLodStreamingManager = LodStreamingManager::Get();
 	MeshRenderer* meshRenderer = MeshRenderer::Get();
 	CommonResource* commonResource = CommonResource::Get();
 
@@ -94,6 +97,7 @@ void EngineModuleManager::run() {
 		gpuMeshResourceManager->initialize();
 		geometryResourceManager->initialize();
 		gpuMaterialManager->initialize();
+		meshLodStreamingManager->initialize();
 		meshRenderer->initialize();
 
 		commonResource->initialize();
@@ -136,6 +140,7 @@ void EngineModuleManager::run() {
 		meshScene->terminate();
 		geometryResourceManager->terminate();
 		gpuMeshResourceManager->terminate();
+		meshLodStreamingManager->terminate();
 		renderer->terminate();
 		cpuTimerManager->terminate();
 	}

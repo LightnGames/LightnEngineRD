@@ -65,15 +65,18 @@ public:
 	void destroyTextures(Texture const** textures, u32 instanceCount);
 
 	const Texture* findTexture(u64 assetPathHash) const;
+	const Texture* getTexture(u32 index) const { return &_textures[index]; }
 	u32 getTextureIndex(const Texture* texture) const { return u32(texture - _textures); }
 
 	const UpdateInfos<Texture>* getCreateInfos() const { return &_textureCreateInfos; }
 	const UpdateInfos<Texture>* getDestroyInfos() const { return &_textureDestroyInfos; }
+	const u8* getTextureEnabledFlags() const { return _textureEnabledFlags; }
 
 	static TextureScene* Get();
 
 private:
 	Texture* _textures = nullptr;
+	u8* _textureEnabledFlags = nullptr;
 	u64* _textureAssetPathHashes = nullptr;
 	char** _textureAssetPaths = nullptr;
 

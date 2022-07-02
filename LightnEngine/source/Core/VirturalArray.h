@@ -17,6 +17,7 @@ public:
 	struct AllocationInfo {
 		u64 _handle = 0;
 		u64 _offset = 0;
+		u64 _count = 0;
 	};
 
 	void initialize(const Desc& desc);
@@ -25,7 +26,10 @@ public:
 	AllocationInfo allocation(u32 size);
 	void freeAllocation(AllocationInfo allocationInfo);
 
+	u32 getAllocateCount() const { return _allocateCount; }
+
 private:
 	D3D12MA::VirtualBlock* _virtualBlock = nullptr;
+	u32 _allocateCount = 0;
 };
 }

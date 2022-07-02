@@ -4,16 +4,17 @@
 #include <RendererScene/Texture.h>
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/VramUpdater.h>
+#include <Renderer/RenderCore/ReleaseQueue.h>
 #include <cmath>
 
 namespace ltn {
 namespace {
 GpuTextureManager g_gpuTextureManager;
+}
 
-void createTextureResource(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format) {
+void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format) {
 	rhi::Device* device = DeviceManager::Get()->getDevice();
-
-	u32 mipLevel = static_cast<u32>(std::log2(max(width, height)) + 1);
+	u32 mipLevel = u32(std::log2(Max(width, height)) + 1);
 	GpuTextureDesc textureDesc = {};
 	textureDesc._device = device;
 	textureDesc._format = format;
@@ -22,7 +23,6 @@ void createTextureResource(GpuTexture& gpuTexture, u32 width, u32 height, rhi::F
 	textureDesc._mipLevels = mipLevel;
 	textureDesc._initialState = rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	gpuTexture.initialize(textureDesc);
-}
 }
 
 void GpuTextureManager::initialize() {
@@ -42,7 +42,8 @@ void GpuTextureManager::update() {
 	u32 createCount = textureCreateInfos->getUpdateCount();
 	auto createTextures = textureCreateInfos->getObjects();
 	for (u32 i = 0; i < createCount; ++i) {
-		createTexture(createTextures[i]);
+		const DdsHeader* ddsHeader = createTextures[i]->getDdsHeader();
+		createTexture(createTextures[i], 0, ddsHeader->_mipMapCount);
 	}
 
 	const UpdateInfos<Texture>* textureDestroyInfos = textureScene->getDestroyInfos();
@@ -50,7 +51,41 @@ void GpuTextureManager::update() {
 	auto destroyTextures = textureDestroyInfos->getObjects();
 	for (u32 i = 0; i < destroyCount; ++i) {
 		u32 textureIndex = textureScene->getTextureIndex(destroyTextures[i]);
-		_textures[i].terminate();
+		LTN_ASSERT(textureIndex < TextureScene::TEXTURE_CAPACITY);
+		if (_textures[textureIndex].getResourceDesc()._width != 0) {
+			_textures[textureIndex].terminate();
+		}
+	}
+}
+
+void GpuTextureManager::streamTexture(const Texture* texture, u32 currentStreamMipLevel, u32 targetStreamMipLevel) {
+	// 古いテクスチャのコピーを取って破棄
+	TextureScene* textureScene = TextureScene::Get();
+	u32 textureIndex = textureScene->getTextureIndex(texture);
+	GpuTexture oldGpuTexture = _textures[textureIndex];
+	rhi::Resource oldTextureResource = *oldGpuTexture.getResource();
+	ReleaseQueue::Get()->enqueue(oldTextureResource);
+
+	if (targetStreamMipLevel > currentStreamMipLevel) {
+		u8 loadMipCount = targetStreamMipLevel - currentStreamMipLevel;
+
+		// 追加読み込みする範囲の IO 読み取りだけしてテクスチャ作成
+		createTexture(texture, currentStreamMipLevel, loadMipCount);
+
+		// すでに読み込まれているテクスチャを古いテクスチャからコピー
+		copyTexture(&_textures[textureIndex], &oldGpuTexture, 0, currentStreamMipLevel, 0, loadMipCount);
+	} else {
+		u32 width = 1 << (targetStreamMipLevel - 1);
+		u8 loadMipCount = currentStreamMipLevel - targetStreamMipLevel;
+
+		// 縮小後の新しいサイズの空テクスチャ作成
+		createEmptyTexture(_textures[textureIndex], width, width, oldGpuTexture.getResourceDesc()._format);
+
+		// 古いテクスチャから縮小後の範囲だけテクスチャコピー
+		copyTexture(&_textures[textureIndex], &oldGpuTexture, 0, targetStreamMipLevel, loadMipCount, 0);
+
+		rhi::Device* device = DeviceManager::Get()->getDevice();
+		device->createShaderResourceView(_textures[textureIndex].getResource(), nullptr, _textureSrv.get(textureIndex)._cpuHandle);
 	}
 }
 
@@ -58,7 +93,7 @@ GpuTextureManager* GpuTextureManager::Get() {
 	return &g_gpuTextureManager;
 }
 
-void GpuTextureManager::createTexture(const Texture* texture) {
+void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset, u32 loadMipCount) {
 	TextureScene* textureScene = TextureScene::Get();
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 	VramUpdater* vramUpdater = VramUpdater::Get();
@@ -87,8 +122,8 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 	bool is3dTexture = ddsHeaderDxt10._resourceDimension == rhi::RESOURCE_DIMENSION_TEXTURE3D;
 	bool isCubeMapTexture = false;
 
-	u32 mipOffset = 0;
-	u32 mipCount = ddsHeader->_mipMapCount;
+	u32 mipOffset = beginMipOffset;
+	u32 mipCount = loadMipCount;
 	u32 numArray = is3dTexture ? 1 : ddsHeaderDxt10._arraySize;
 	u32 targetMipCount = Min(mipOffset + mipCount, ddsMipCount);
 	u32 maxResolution = 1 << (targetMipCount - 1);
@@ -98,7 +133,7 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 	u32 mipFrontLevelOffset = mipOffset;
 
 	GpuTexture& gpuTexture = _textures[textureIndex];
-	createTextureResource(gpuTexture, clampedWidth, clampedHeight, ddsHeaderDxt10._dxgiFormat);
+	createEmptyTexture(gpuTexture, clampedWidth, clampedHeight, ddsHeaderDxt10._dxgiFormat);
 
 	// 最大解像度が指定してある場合、それ以外のピクセルを読み飛ばします。
 	if (mipBackLevelOffset > 0) {
@@ -126,7 +161,6 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 		assetPath.seekCur(textureFileSeekSizeInbyte);
 	}
 
-	u64 requiredSize = 0;
 
 	// サブリソースのレイアウトに沿ってファイルからピクセルデータを読み込み＆ VRAM にアップロード
 	{
@@ -135,6 +169,7 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 		u32 numRows[SUBRESOURCE_COUNT_MAX];
 		u64 rowSizesInBytes[SUBRESOURCE_COUNT_MAX];
 		u32 numberOfResources = numArray * targetMipCount * numberOfPlanes;
+		u64 requiredSize = 0;
 		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
 
 		u32 clampedMipCount = Min(mipCount, ddsMipCount);
@@ -163,5 +198,13 @@ void GpuTextureManager::createTexture(const Texture* texture) {
 
 	// SRV 生成
 	device->createShaderResourceView(gpuTexture.getResource(), nullptr, _textureSrv.get(textureIndex)._cpuHandle);
+}
+
+void GpuTextureManager::copyTexture(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount, s32 srcSubResourceOffset, s32 dstSubResourceOffset) {
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	for (u32 i = 0; i < subResourceCount; ++i) {
+		u32 srcSubResourceIndex = firstSubResource + i;
+		vramUpdater->enqueueUpdate(dstTexture, srcTexture, srcSubResourceIndex + srcSubResourceOffset, srcSubResourceIndex + dstSubResourceOffset);
+	}
 }
 }

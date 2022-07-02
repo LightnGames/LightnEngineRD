@@ -1492,11 +1492,14 @@ void exportMesh(const char* fileName) {
 		info.triangleStripIndexCount = m_subSets[subMeshIndex].Count;
 	}
 
-	for (uint32 subMeshIndex = 1; subMeshIndex < subMeshCount; ++subMeshIndex) {
-		SubMeshInfo& info = subMeshInfos[subMeshIndex];
-		const SubMeshInfo& prevInfo = subMeshInfos[subMeshIndex - 1];
-		info.meshletOffset = prevInfo.meshletOffset + prevInfo.meshletCount;
-		info.triangleStripIndexOffset = prevInfo.triangleStripIndexOffset + prevInfo.triangleStripIndexCount;
+	for (uint32 lodIndex = 0; lodIndex < lodCount; ++lodIndex) {
+		const LodInfo& lodInfo = lodInfos[lodIndex];
+		uint32 indexOffset = 0;
+		for (uint32 subMeshIndex = 0; subMeshIndex < lodInfo.subMeshCount; ++subMeshIndex) {
+			SubMeshInfo& info = subMeshInfos[lodInfo.subMeshOffset + subMeshIndex];
+			info.triangleStripIndexOffset = indexOffset;
+			indexOffset += info.triangleStripIndexCount;
+		}
 	}
 
 	uint32 meshletCount = m_meshlets.size();

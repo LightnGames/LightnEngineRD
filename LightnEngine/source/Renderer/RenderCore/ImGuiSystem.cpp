@@ -3,6 +3,7 @@
 #include <ThiredParty/ImGui/imgui_impl_win32.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 
+#include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GpuTimerManager.h>
 #include <Core/CpuTimerManager.h>
 
@@ -74,7 +75,10 @@ void ImGuiSystem::beginFrame() {
 
 	ImGui::Begin("TestInfo");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
+	
+	rhi::QueryVideoMemoryInfo videoMemoryInfo = DeviceManager::Get()->getHardwareAdapter()->queryVideoMemoryInfo();
+	ImGui::Text("[VMEM info] %-14s / %-14s byte", ThreeDigiets(videoMemoryInfo._currentUsage).get(), ThreeDigiets(videoMemoryInfo._budget).get());
+	
 	{
 		ImGui::Separator();
 		GpuTimerManager* timerManager = GpuTimerManager::Get();

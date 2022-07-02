@@ -14,6 +14,7 @@ struct CullingInfo {
 
 struct IndirectArgumentSubInfo {
 	u32 _meshInstanceIndex;
+	u32 _materialIndex;
 	u32 _materialParameterOffset;
 };
 }
@@ -28,9 +29,24 @@ struct GpuCullingRootParam {
 		INDIRECT_ARGUMENT_OFFSET,
 		INDIRECT_ARGUMENTS,
 		GEOMETRY_GLOBA_OFFSET,
-		LOD_LEVEL,
+		MESH_INSTANCE_LOD_LEVEL,
+		MESH_LOD_STREAM_RANGE,
 		CULLING_RESULT,
 		HIZ,
+		COUNT
+	};
+};
+
+struct ComputeLodLevelRootParam {
+	enum {
+		CULLING_INFO = 0,
+		VIEW_INFO,
+		MESH,
+		MESH_INSTANCE,
+		SUB_MESH_INFO,
+		MESH_INSTANCE_LOD_LEVEL,
+		MESH_LOD_LEVEL,
+		MATERIAL_LOD_LEVEL,
 		COUNT
 	};
 };
@@ -40,12 +56,12 @@ public:
 	static constexpr u32 INDIRECT_ARGUMENT_CAPACITY = 1024 * 64;
 
 	struct CullingDesc {
-		u32 _meshInstanceReserveCount = 0;
-		rhi::GpuDescriptorHandle _sceneCbv;
 		rhi::GpuDescriptorHandle _viewCbv;
-		rhi::GpuDescriptorHandle _meshSrv;
-		rhi::GpuDescriptorHandle _meshInstanceSrv;
-		rhi::GpuDescriptorHandle _indirectArgumentOffsetSrv;
+		rhi::CommandList* _commandList = nullptr;
+	};
+
+	struct ComputeLodDesc {
+		rhi::GpuDescriptorHandle _viewCbv;
 		rhi::CommandList* _commandList = nullptr;
 	};
 
@@ -63,6 +79,7 @@ public:
 
 	void update();
 	void culling(const CullingDesc& desc);
+	void computeLod(const ComputeLodDesc& desc);
 	void render(const RenderDesc& desc);
 
 	static MeshRenderer* Get();
@@ -80,5 +97,7 @@ private:
 	rhi::CommandSignature _commandSignature;
 	rhi::RootSignature _gpuCullingRootSignature;
 	rhi::PipelineState _gpuCullingPipelineState;
+	rhi::RootSignature _computeLodRootSignature;
+	rhi::PipelineState _computeLodPipelineState;
 };
 }

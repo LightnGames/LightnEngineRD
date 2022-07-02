@@ -13,6 +13,7 @@ public:
 
 	u32 getParameterSizeInByte() const;
 	u16 findMaterialParameterOffset(u32 parameterNameHash) const;
+	u16 findMaterialParameters(u8 parameterType, u16* outParameterTypes) const;
 
 	const Shader* _vertexShader = nullptr;
 	const Shader* _pixelShader = nullptr;
@@ -31,6 +32,9 @@ public:
 	void setPipelineSet(const PipelineSet* pipelineSet) { _pipelineSet = pipelineSet; }
 	void setParameterSet(const MaterialParameterSet& parameters) { _parameters = parameters; }
 	u8* getParameters() { return _parameters._parameters; }
+
+	template <class T>
+	const T* getParameter(u32 offset) const { return reinterpret_cast<T*>(_parameters._parameters + offset); }
 	const u8* getParameters() const { return _parameters._parameters; }
 	MaterialParameterSet* getParameterSet() { return &_parameters; }
 	const MaterialParameterSet* getParameterSet() const { return &_parameters; }
@@ -61,7 +65,9 @@ public:
 	const UpdateInfos<Material>* getMaterialCreateInfos() const { return &_materialCreateInfos; }
 	const UpdateInfos<Material>* getMaterialDestroyInfos() const { return &_materialDestroyInfos; }
 
+	const u8* getEnabledFlags() const { return _enabledFlags; }
 	u32 getMaterialIndex(const Material* material) const { return u32(material - _materials); }
+	Material* getMaterial(u32 index) { return &_materials[index]; }
 	Material* findMaterial(u64 assetPathHash);
 
 	static MaterialScene* Get();
@@ -71,6 +77,7 @@ private:
 	VirtualArray::AllocationInfo* _materialAllocationInfos = nullptr;
 	Material* _materials = nullptr;
 
+	u8* _enabledFlags = nullptr;
 	u64* _materialAssetPathHashes = nullptr;
 	UpdateInfos<Material> _materialCreateInfos;
 	UpdateInfos<Material> _materialDestroyInfos;

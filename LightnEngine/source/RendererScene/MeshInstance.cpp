@@ -113,6 +113,11 @@ MeshInstance* MeshInstanceScene::createMeshInstances(const CreatationDesc& desc,
 		MeshInstance* meshInstance = &meshInstances[i];
 		meshInstance->setMesh(desc._mesh);
 		meshInstance->setWorldMatrix(Matrix4::identity(), false);
+		u32 lodCount = desc._mesh->getLodMeshCount();
+		for (u32 lodLevel = 0; lodLevel < lodCount; ++lodLevel) {
+			f32 threshhold = 1.0f - ((lodLevel + 1) / f32(lodCount));
+			meshInstance->getLodMeshInstance(lodLevel)->setLodThreshold(threshhold);
+		}
 		_meshInstanceCreateInfos.push(meshInstance);
 	}
 

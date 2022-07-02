@@ -5,15 +5,19 @@
 
 namespace ltn {
 namespace gpu {
-struct MeshInstance {
-	u32 _stateFlags = 0;
-	u32 _meshIndex = 0;
-	u32 _lodMeshInstanceOffset = 0;
-	f32 _boundsRadius;
+struct MeshInstanceDynamicData {
+	f32 _boundsRadius = 0.0f;
 	Float3 _aabbMin;
 	Float3 _aabbMax;
 	f32 _worldScale = 0.0f;
 	Float3x4 _worldMatrix;
+};
+
+struct MeshInstance {
+	u32 _stateFlags = 0;
+	u32 _meshIndex = 0;
+	u32 _lodMeshInstanceOffset = 0;
+	MeshInstanceDynamicData _dynamicData;
 };
 
 struct LodMeshInstance {
@@ -36,8 +40,8 @@ public:
 	rhi::GpuDescriptorHandle getMeshInstanceGpuSrv() const { return _meshInstanceSrv._firstHandle._gpuHandle; }
 	rhi::GpuDescriptorHandle getSubMeshInstanceOffsetsGpuSrv() const { return _subMeshInstanceOffsetsSrv._gpuHandle; }
 
-	const u32* getSubMeshInstanceCounts() const { return _subMeshInstanceCounts; }
-	const u32* getSubMeshInstanceOffsets() const { return _subMeshInstanceOffsets; }
+	const u32* getPipelineSetSubMeshInstanceCounts() const { return _pipelineSetSubMeshInstanceCounts; }
+	const u32* getPipelineSetSubMeshInstanceOffsets() const { return _pipelineSetSubMeshInstanceOffsets; }
 	u32 getMeshInstanceReserveCount() const { return _meshInstanceReserveCount; };
 
 	static GpuMeshInstanceManager* Get();
@@ -50,8 +54,8 @@ private:
 	GpuBuffer _meshInstanceIndexGpuBuffer;
 	DescriptorHandles _meshInstanceSrv;
 	DescriptorHandle _subMeshInstanceOffsetsSrv;
-	u32* _subMeshInstanceOffsets = nullptr;
-	u32* _subMeshInstanceCounts = nullptr;
+	u32* _pipelineSetSubMeshInstanceOffsets = nullptr;
+	u32* _pipelineSetSubMeshInstanceCounts = nullptr;
 	u32 _meshInstanceReserveCount = 0;
 };
 }

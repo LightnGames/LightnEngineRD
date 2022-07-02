@@ -20,14 +20,18 @@ VirtualArray::AllocationInfo VirtualArray::allocation(u32 size) {
 	UINT64 allocOffset;
 	LTN_SUCCEEDED(_virtualBlock->Allocate(&allocDesc, &alloc, &allocOffset));
 
+	_allocateCount += size;
+
 	AllocationInfo info = {};
 	info._handle = alloc.AllocHandle;
 	info._offset = allocOffset;
+	info._count = size;
 	return info;
 }
 void VirtualArray::freeAllocation(AllocationInfo allocationInfo) {
 	D3D12MA::VirtualAllocation alloc = {};
 	alloc.AllocHandle = static_cast<D3D12MA::AllocHandle>(allocationInfo._handle);
 	_virtualBlock->FreeAllocation(alloc);
+	_allocateCount -= u32(allocationInfo._count);
 }
 }

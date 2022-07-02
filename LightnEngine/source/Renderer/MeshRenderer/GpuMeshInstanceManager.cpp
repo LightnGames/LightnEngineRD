@@ -1,6 +1,7 @@
 #include "GpuMeshInstanceManager.h"
 #include <Core/Memory.h>
 #include <Core/CpuTimerManager.h>
+#include <Core/Aabb.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Material.h>
@@ -68,10 +69,10 @@ void GpuMeshInstanceManager::initialize() {
 	}
 
 	{
-		_subMeshInstanceCounts = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		_subMeshInstanceOffsets = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memset(_subMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memset(_subMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_pipelineSetSubMeshInstanceCounts = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_pipelineSetSubMeshInstanceOffsets = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memset(_pipelineSetSubMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memset(_pipelineSetSubMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
 	}
 
 	{
@@ -92,18 +93,21 @@ void GpuMeshInstanceManager::terminate() {
 	_subMeshInstanceOffsetsGpuBuffer.terminate();
 	_meshInstanceIndexGpuBuffer.terminate();
 
-	Memory::freeObjects(_subMeshInstanceCounts);
-	Memory::freeObjects(_subMeshInstanceOffsets);
+	Memory::freeObjects(_pipelineSetSubMeshInstanceCounts);
+	Memory::freeObjects(_pipelineSetSubMeshInstanceOffsets);
 }
 
 void GpuMeshInstanceManager::update() {
 	VramUpdater* vramUpdater = VramUpdater::Get();
+	PipelineSetScene* pipelineSetScene = PipelineSetScene::Get();
+	MaterialScene* materialScene = MaterialScene::Get();
+	MaterialParameterContainer* materialParameterContainer = MaterialParameterContainer::Get();
 	MeshInstanceScene* meshInstanceScene = MeshInstanceScene::Get();
 	const MeshInstancePool* meshInstancePool = meshInstanceScene->getMeshInstancePool();
 	MeshGeometryScene* meshScene = MeshGeometryScene::Get();
 	const MeshGeometryPool* meshPool = meshScene->getMeshGeometryPool();
 
-	bool updateSubMeshInstanceOffset = false;
+	bool updatePipelineSetOffset = false;
 
 	// 新規作成されたメッシュを GPU に追加
 	UpdateInfos<MeshInstance>* createMeshInstanceInfos = meshInstanceScene->getMeshInstanceCreateInfos();
@@ -125,7 +129,12 @@ void GpuMeshInstanceManager::update() {
 		gpuMeshInstance->_stateFlags = 1;
 		gpuMeshInstance->_meshIndex = meshPool->getMeshGeometryIndex(mesh);
 		gpuMeshInstance->_lodMeshInstanceOffset = lodMeshInstanceIndex;
-		gpuMeshInstance->_worldMatrix = Matrix4::identity().getFloat3x4();
+
+		gpu::MeshInstanceDynamicData& dynamicData = gpuMeshInstance->_dynamicData;
+		dynamicData._worldMatrix = Matrix4::identity().getFloat3x4();
+		dynamicData._aabbMin = mesh->getBoundsMin().getFloat3();
+		dynamicData._aabbMax = mesh->getBoundsMax().getFloat3();
+		dynamicData._boundsRadius = (mesh->getBoundsMax() - mesh->getBoundsMin()).length();
 
 		for (u32 lodIndex = 0; lodIndex < lodMeshCount; ++lodIndex) {
 			const LodMeshGeometry* lodMesh = mesh->getLodMesh(lodIndex);
@@ -137,13 +146,16 @@ void GpuMeshInstanceManager::update() {
 
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 			const SubMeshInstance* subMeshInstance = meshInstance->getSubMeshInstance(subMeshIndex);
-			gpu::SubMeshInstance& gpuSubMesh = gpuSubMeshInstances[subMeshIndex];
-			u32 materialIndex = 0;
-			const u8* materialParameters = subMeshInstance->getMaterial()->getParameterSet()->_parameters;
-			gpuSubMesh._materialIndex = materialIndex;
-			gpuSubMesh._materialParameterOffset = MaterialParameterContainer::Get()->getMaterialParameterIndex(materialParameters);
-			_subMeshInstanceCounts[materialIndex]++;
-			updateSubMeshInstanceOffset = true;
+			const Material* material = subMeshInstance->getMaterial();
+			gpu::SubMeshInstance& gpuSubMeshInstance = gpuSubMeshInstances[subMeshIndex];
+			u32 materialIndex = materialScene->getMaterialIndex(material);
+			const u8* materialParameters = material->getParameterSet()->_parameters;
+			gpuSubMeshInstance._materialIndex = materialIndex;
+			gpuSubMeshInstance._materialParameterOffset = materialParameterContainer->getMaterialParameterIndex(materialParameters);
+
+			u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(material->getPipelineSet());
+			_pipelineSetSubMeshInstanceCounts[pipelineSetIndex]++;
+			updatePipelineSetOffset = true;
 		}
 
 		_meshInstanceReserveCount = Max(_meshInstanceReserveCount, meshInstanceIndex + 1);
@@ -155,12 +167,19 @@ void GpuMeshInstanceManager::update() {
 	auto updateMeshInstances = updateMeshInstanceInfos->getObjects();
 	for (u32 i = 0; i < updateMeshInstanceCount; ++i) {
 		const MeshInstance* meshInstance = updateMeshInstances[i];
+
+		const MeshGeometry* mesh = meshInstance->getMesh();
+		AABB boundsAabb = AABB(mesh->getBoundsMin(), mesh->getBoundsMax()).getTransformedAabb(meshInstance->getWorldMatrix());
+
 		u32 meshInstanceIndex = meshInstancePool->getMeshInstanceIndex(meshInstance);
 		u32 meshInstanceOffset = sizeof(gpu::MeshInstance) * meshInstanceIndex;
-		u32 worldMatrixOffset = LTN_OFFSETOF(gpu::MeshInstance, _worldMatrix);
-		u32 offset = meshInstanceOffset + worldMatrixOffset;
-		Float3x4* gpuWorldMatrix = reinterpret_cast<Float3x4*>(vramUpdater->enqueueUpdate(&_meshInstanceGpuBuffer, offset, sizeof(Float3x4)));
-		*gpuWorldMatrix = meshInstance->getWorldMatrix().getFloat3x4();
+		u32 dynamicDataOffset = LTN_OFFSETOF(gpu::MeshInstance, _dynamicData);
+		u32 offset = meshInstanceOffset + dynamicDataOffset;
+		gpu::MeshInstanceDynamicData* dynamicData = reinterpret_cast<gpu::MeshInstanceDynamicData*>(vramUpdater->enqueueUpdate(&_meshInstanceGpuBuffer, offset, sizeof(gpu::MeshInstanceDynamicData)));
+		dynamicData->_aabbMin = boundsAabb._min.getFloat3();
+		dynamicData->_aabbMax = boundsAabb._max.getFloat3();
+		dynamicData->_worldMatrix = meshInstance->getWorldMatrix().getFloat3x4();
+		dynamicData->_boundsRadius = (mesh->getBoundsMax() - mesh->getBoundsMin()).length();
 	}
 
 	// 削除されたメッシュを GPU から削除
@@ -178,9 +197,10 @@ void GpuMeshInstanceManager::update() {
 
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 			const SubMeshInstance* subMeshInstance = meshInstance->getSubMeshInstance(subMeshIndex);
-			u32 materialIndex = 0;
-			_subMeshInstanceCounts[materialIndex]--;
-			updateSubMeshInstanceOffset = true;
+			const Material* material = subMeshInstance->getMaterial();
+			u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(material->getPipelineSet());
+			_pipelineSetSubMeshInstanceCounts[pipelineSetIndex]--;
+			updatePipelineSetOffset = true;
 		}
 
 		// メモリクリアをアップロード
@@ -193,14 +213,14 @@ void GpuMeshInstanceManager::update() {
 	}
 
 	// サブメッシュインスタンスオフセットを VRAM アップロード
-	if (updateSubMeshInstanceOffset) {
+	if (updatePipelineSetOffset) {
 		u32 offset = 0;
 		for (u32 i = 0; i < PipelineSetScene::PIPELINE_SET_CAPACITY; ++i) {
-			_subMeshInstanceOffsets[i] = offset;
-			offset += _subMeshInstanceCounts[i];
+			_pipelineSetSubMeshInstanceOffsets[i] = offset;
+			offset += _pipelineSetSubMeshInstanceCounts[i];
 		}
 		u32* offsets = vramUpdater->enqueueUpdate<u32>(&_subMeshInstanceOffsetsGpuBuffer, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memcpy(offsets, _subMeshInstanceOffsets, sizeof(u32) * PipelineSetScene::PIPELINE_SET_CAPACITY);
+		memcpy(offsets, _pipelineSetSubMeshInstanceOffsets, sizeof(u32) * PipelineSetScene::PIPELINE_SET_CAPACITY);
 	}
 }
 

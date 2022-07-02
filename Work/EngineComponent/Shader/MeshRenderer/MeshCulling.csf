@@ -1,5 +1,5 @@
 #include "../ViewInfo.sfh"
-#include "MeshType.sfh"
+#include "MeshDef.sfh"
 
 struct IndirectArgument
 {
@@ -8,11 +8,6 @@ struct IndirectArgument
     uint _startIndexLocation;
     int _baseVertexLocation;
     uint _startInstanceLocation;
-};
-
-struct CullingInfo
-{
-    uint _meshInstanceReserveCount;
 };
 
 ConstantBuffer<CullingInfo> _cullingInfo : register(b0);
@@ -26,7 +21,8 @@ ByteAddressBuffer _lodMeshInstances : register(t5);
 ByteAddressBuffer _subMeshInstances : register(t6);
 ByteAddressBuffer _indirectArgumentOffsets : register(t7);
 ByteAddressBuffer _geometryGlobalOffsets : register(t8);
-ByteAddressBuffer _currentLodLevels : register(t9);
+ByteAddressBuffer _meshInstanceLodLevels : register(t9);
+ByteAddressBuffer _meshLodStreamRanges : register(t10);
 #if UBER_OCCLUSION
 Texture2D<float> _hizTextures[] : register(t13);
 #endif
@@ -50,8 +46,17 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
     
     Mesh mesh = _meshes.Load<Mesh>(sizeof(Mesh) * meshInstance._meshIndex);
-    //uint lodLevel = getCurrentLodLevel(meshInstanceIndex);
-    uint lodLevel = 0;
+    uint lodLevel = _meshInstanceLodLevels.Load(UINT32_SIZE_IN_BYTE * meshInstanceIndex);
+    uint meshLodStreamRange = _meshLodStreamRanges.Load(UINT32_SIZE_IN_BYTE * meshInstance._meshIndex);
+    uint meshLodLevelMin = meshLodStreamRange & 0x0000ffff; // ‰ºˆÊ 16bit
+    uint meshLodLevelMax = (meshLodStreamRange >> 16) & 0x0000ffff; // ãˆÊ 16bit
+    lodLevel = clamp(lodLevel, meshLodLevelMin, meshLodLevelMax);
+    
+    // Lod Level ‚ª Lod ”‚æ‚è‘å‚«‚¢ê‡‚ÍƒJƒŠƒ“ƒO
+    if (lodLevel >= mesh._lodMeshCount)
+    {
+        return;
+    }
 	
     uint lodMeshOffset = mesh._lodMeshOffset + lodLevel;
     LodMesh lodMesh = _lodMeshes.Load<LodMesh>(sizeof(LodMesh) * lodMeshOffset);
@@ -79,13 +84,13 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         arguments._startIndexLocation = geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset;
         arguments._instanceCount = 1;
         arguments._startInstanceLocation = indirectArgumentOffset;
-        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset + lodMesh._vertexOffset;
+        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset;
         _indirectArguments.Store(sizeof(IndirectArgument) * indirectArgumentOffset, arguments);
         
         IndirectArgumentSubInfo subInfo;
         subInfo._meshInstanceIndex = meshInstanceIndex;
+        subInfo._materialIndex = subMeshInstance._materialIndex;
         subInfo._materialParameterOffset = subMeshInstance._materialParameterOffset;
         _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * indirectArgumentOffset, subInfo);
-
     }
 }

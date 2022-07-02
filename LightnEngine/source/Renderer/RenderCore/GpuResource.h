@@ -46,7 +46,7 @@ public:
 protected:
 	u32 _sizeInByte = 0;
 	rhi::ResourceDesc _desc;
-	rhi::ResourceStates _currentState;
+	rhi::ResourceStates _currentState = rhi::RESOURCE_STATE_COMMON;
 	rhi::Resource _resource;
 	rhi::VideoMemoryAllocation _allocation;
 };

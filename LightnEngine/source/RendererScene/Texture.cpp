@@ -18,7 +18,8 @@ void TextureScene::initialize() {
 		_textureAssetPathHashes = allocation.allocateObjects<u64>(TEXTURE_CAPACITY);
 		_textureAssetPaths = allocation.allocateObjects<char*>(TEXTURE_CAPACITY);
 		_textureAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(TEXTURE_CAPACITY);
-		});
+		_textureEnabledFlags = allocation.allocateClearedObjects<u8>(TEXTURE_CAPACITY);
+	});
 }
 
 void TextureScene::terminate() {
@@ -27,14 +28,17 @@ void TextureScene::terminate() {
 }
 
 void TextureScene::lateUpdate() {
-	u32 destroyShaderCount = _textureDestroyInfos.getUpdateCount();
+	u32 destroyCount = _textureDestroyInfos.getUpdateCount();
 	auto destroyTextures = _textureDestroyInfos.getObjects();
-	for (u32 i = 0; i < destroyShaderCount; ++i) {
-		u32 shaderIndex = getTextureIndex(destroyTextures[i]);
-		_textureAllocations.freeAllocation(_textureAllocationInfos[shaderIndex]);
+	for (u32 i = 0; i < destroyCount; ++i) {
+		u32 textureIndex = getTextureIndex(destroyTextures[i]);
+		LTN_ASSERT(textureIndex < TEXTURE_CAPACITY);
+		LTN_ASSERT(_textureEnabledFlags[textureIndex] == 1);
+		_textureAllocations.freeAllocation(_textureAllocationInfos[textureIndex]);
+		_textureEnabledFlags[textureIndex] = 0;
 		Memory::freeObjects(_textureAssetPaths[i]);
 
-		_textures[shaderIndex] = Texture();
+		_textures[textureIndex] = Texture();
 	}
 
 	_textureCreateInfos.reset();
@@ -76,6 +80,7 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 		assetPath.closeFile();
 	}
 
+	_textureEnabledFlags[allocationInfo._offset] = 1;
 	_textureAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
 	_textureCreateInfos.push(texture);
 	return texture;

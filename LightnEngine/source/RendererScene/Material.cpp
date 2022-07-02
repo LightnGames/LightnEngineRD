@@ -25,6 +25,7 @@ void MaterialScene::initialize() {
 		_materials = allocation.allocateObjects<Material>(MATERIAL_CAPACITY);
 		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MATERIAL_CAPACITY);
 		_materialAssetPathHashes = allocation.allocateObjects<u64>(MATERIAL_CAPACITY);
+		_enabledFlags = allocation.allocateClearedObjects<u8>(MATERIAL_CAPACITY);
 		});
 
 	MaterialParameterContainer::Get()->initialize();
@@ -51,7 +52,9 @@ void MaterialScene::lateUpdate() {
 	for (u32 i = 0; i < destroyMeshCount; ++i) {
 		u32 materialIndex = getMaterialIndex(destroyMaterials[i]);
 		LTN_ASSERT(materialIndex < MATERIAL_CAPACITY);
+		LTN_ASSERT(_enabledFlags[materialIndex] == 1);
 		_materialAllocations.freeAllocation(_materialAllocationInfos[materialIndex]);
+		_enabledFlags[materialIndex] = 0;
 
 		MaterialParameterContainer::Get()->freeMaterialParameters(destroyMaterials[i]->getParameterSet());
 
@@ -132,6 +135,7 @@ const Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc
 		materialParameterReadPtr += readParameterSize;
 	}
 
+	_enabledFlags[allocationInfo._offset] = 1;
 	_materialAssetPathHashes[allocationInfo._offset] = StrHash64(desc._assetPath);
 
 	MaterialParameterContainer::Get()->postUpdateMaterialParameter(material->getParameterSet());
@@ -186,6 +190,13 @@ u16 PipelineSet::findMaterialParameterOffset(u32 parameterNameHash) const {
 	LTN_ASSERT(false);
 	return 0;
 }
+u16 PipelineSet::findMaterialParameters(u8 parameterType, u16* outParameterTypes) const {
+	u16 parameterCount = 0;
+	parameterCount += _vertexShader->findParameters(parameterType, outParameterTypes);
+	parameterCount += _pixelShader->findParameters(parameterType, outParameterTypes + parameterCount);
+	return parameterCount;
+}
+
 void MaterialParameterContainer::initialize() {
 	{
 		VirtualArray::Desc handleDesc = {};

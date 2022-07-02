@@ -40,6 +40,8 @@ public:
 	void setAssetPathPtr(char** assetPath) { _assetPath = assetPath; }
 	void setAssetPathHash(u64 assetPathHash) { *_assetPathHash = assetPathHash; }
 	void setAssetPath(char* assetPath) { *_assetPath = assetPath; }
+	void setBoundsMin(const Vector3& boundsMin) { _boundsMin = boundsMin; }
+	void setBoundsMax(const Vector3& boundsMax) { _boundsMax = boundsMax; }
 
 	u16 findMaterialSlotIndex(u64 slotNameHash) const;
 	u32 getLodMeshCount() const { return _lodMeshCount; }
@@ -53,6 +55,9 @@ public:
 	const u64* getMaterialSlotNameHashes() const { return _materialSlotNameHashes; }
 	const LodMeshGeometry* getLodMesh(u32 index = 0) const { return &_lodMeshGeometries[index]; }
 	const SubMeshGeometry* getSubMesh(u32 index = 0) const { return &_subMeshGeometries[index]; }
+	Vector3 getBoundsMin() const { return _boundsMin; }
+	Vector3 getBoundsMax() const { return _boundsMax; }
+
 	char* getAssetPath() { return *_assetPath; }
 	u64* getMaterialSlotNameHashes() { return _materialSlotNameHashes; }
 	LodMeshGeometry* getLodMesh(u32 index = 0) { return &_lodMeshGeometries[index]; }
@@ -67,6 +72,8 @@ private:
 	u32 _indexCount = 0;
 	u16 _materialSlotCount;
 	u64 _materialSlotNameHashes[MATERIAL_SLOT_COUNT_MAX];
+	Vector3 _boundsMin;
+	Vector3 _boundsMax;
 	u64* _assetPathHash = nullptr;
 	char** _assetPath = nullptr;
 };
@@ -95,6 +102,7 @@ public:
 	u32 getLodMeshGeometryIndex(const LodMeshGeometry* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshGeometries); }
 	u32 getSubMeshGeometryIndex(const SubMeshGeometry* subMesh) const { return static_cast<u32>(subMesh - _subMeshGeometries); }
 	MeshGeometry* getMeshGeometry(u32 index) { return &_meshGeometries[index]; }
+	const MeshGeometry* getMeshGeometry(u32 index) const { return &_meshGeometries[index]; }
 	const MeshGeometry* findMeshGeometry(u64 assetPathHash) const;
 
 private:

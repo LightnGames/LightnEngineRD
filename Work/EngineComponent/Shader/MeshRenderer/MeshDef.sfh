@@ -1,21 +1,13 @@
-#define FLT_MAX 3.402823466e+38
-#define EPSILON 0.000001
-#define UINT16_SIZE_IN_BYTE 2
-#define UINT32_SIZE_IN_BYTE 4
-#define UINT16_MAX 65535
-#define UINT32_MAX 4294967295
-#define POS_NAN 0x7f800000
+#include "../Def.sfh"
 
 struct Mesh
 {
     uint _lodMeshOffset;
     uint _lodMeshCount;
-    uint _streamedLodLevel;
 };
 
 struct LodMesh
 {
-    uint _vertexOffset;
     uint _subMeshOffset;
     uint _subMeshCount;
 };
@@ -53,6 +45,7 @@ struct SubMeshInstance
 struct IndirectArgumentSubInfo
 {
     uint _meshInstanceIndex;
+    uint _materialIndex;
     uint _materialParameterOffset;
 };
 
@@ -60,4 +53,9 @@ struct GeometryGlobalOffsetInfo
 {
     uint _vertexOffset;
     uint _indexOffset;
+};
+
+struct CullingInfo
+{
+    uint _meshInstanceReserveCount;
 };

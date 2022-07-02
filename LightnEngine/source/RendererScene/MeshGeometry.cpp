@@ -95,6 +95,8 @@ const MeshGeometry* MeshGeometryScene::createMeshGeometry(const CreatationDesc& 
 	mesh->setIndexCount(meshHeader.totalIndexCount);
 	mesh->setMaterialSlotCount(meshHeader.materialSlotCount);
 	mesh->setAssetPathHash(StrHash64(desc._assetPath));
+	mesh->setBoundsMin(Vector3(meshHeader.boundsMin));
+	mesh->setBoundsMax(Vector3(meshHeader.boundsMax));
 
 	u32 assetPathLength = StrLength(desc._assetPath) + 1;
 	mesh->setAssetPath(Memory::allocObjects<char>(assetPathLength));

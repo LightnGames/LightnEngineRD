@@ -2,6 +2,10 @@
 #include <Core/Type.h>
 #include <DirectXMath.h>
 
+#define NOMINMAX
+#undef min
+#undef max
+
 // DirectX Math ÇÃÉâÉbÉpÅ[
 namespace ltn {
 using Float4x4 = DirectX::XMFLOAT4X4;
@@ -12,7 +16,7 @@ using Float3 = DirectX::XMFLOAT3;
 using Float4 = DirectX::XMFLOAT4;
 using Color4 = Float4;
 
-using Vector = DirectX::XMVECTOR;
+using Vector = DirectX::XMVECTORF32;
 using Matrix = DirectX::XMMATRIX;
 
 static f32 DegToRad(f32 degree) {
@@ -24,14 +28,52 @@ static f32 Tan(f32 value) {
 }
 
 struct Vector3 {
-	Vector3() :_v(DirectX::XMVectorZero()) {}
-	Vector3(DirectX::XMVECTOR v) :_v(v) {}
+	Vector3() {
+		_v.v = DirectX::XMVectorZero();
+	}
+
+	Vector3(DirectX::XMVECTOR v) {
+		_v.v = v;
+	}
+
 	Vector3(Float3 vector) {
-		_v = DirectX::XMLoadFloat3(&vector);
+		_v.v = DirectX::XMLoadFloat3(&vector);
 	}
 
 	Vector3(f32 x, f32 y, f32 z) {
-		_v = DirectX::XMVectorSet(x, y, z, 1.0f);
+		_v.v = DirectX::XMVectorSet(x, y, z, 1.0f);
+	}
+
+	Vector3 operator +() const {
+		return _v.v;
+	}
+
+	Vector3 operator -() const {
+		return  DirectX::XMVectorNegate(_v.v);
+	}
+
+	Vector3 operator *(f32 s) const {
+		return _v * s;
+	}
+
+	Vector3 operator /(f32 s) const {
+		return _v / s;
+	}
+
+	Vector3 operator +(const Vector3& v) const {
+		return _v.v + v._v;
+	}
+
+	Vector3 operator -(const Vector3& v) const {
+		return _v.v - v._v;
+	}
+
+	Vector3 multiply(const Vector3& v) const {
+		return DirectX::XMVectorMultiply(_v, v._v);
+	}
+
+	f32 length() const {
+		return DirectX::XMVectorGetX(DirectX::XMVector3Length(_v));
 	}
 
 	Float3 getFloat3() const {
@@ -40,19 +82,44 @@ struct Vector3 {
 		return result;
 	}
 
+	Vector3 min(const Vector3& v) const {
+		return DirectX::XMVectorMin(_v, v._v);
+	}
+
+	Vector3 max(const Vector3& v) const {
+		return DirectX::XMVectorMax(_v, v._v);
+	}
+
+	static Vector3 Zero() {
+		return DirectX::g_XMZero.v;
+	}
+
+	static Vector3 One() {
+		return DirectX::g_XMOne3.v;
+	}
+
+	static Vector3 FltMax() {
+		return DirectX::g_XMFltMax.v;
+	}
+
 	Vector _v;
 };
 
 struct Vector4 {
-	Vector4() :_v(DirectX::XMVectorZero()) {}
-	Vector4(DirectX::XMVECTOR v) :_v(v) {}
+	Vector4() {
+		_v.v = DirectX::XMVectorZero();
+	}
+
+	Vector4(DirectX::XMVECTOR v) {
+		_v.v = v;
+	}
 
 	Vector4(f32 x, f32 y, f32 z, f32 w) {
-		_v = DirectX::XMVectorSet(x, y, z, w);
+		_v.v = DirectX::XMVectorSet(x, y, z, w);
 	}
 
 	Vector3 getVector3() const {
-		return _v;
+		return _v.v;
 	}
 
 	Float3 getFloat3() const {
