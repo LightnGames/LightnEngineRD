@@ -10,6 +10,35 @@ struct IndirectArgument
     uint _startInstanceLocation;
 };
 
+struct CullingResult
+{
+    uint _testFrustumCullingSubMeshInstanceCount;
+    uint _passFrustumCullingSubMeshInstanceCount;
+    uint _testOcclusionCullingSubMeshInstanceCount;
+    uint _passOcclusionCullingSubMeshInstanceCount;
+    uint _testOcclusionCullingMeshInstanceCount;
+    uint _passOcclusionCullingMeshInstanceCount;
+    uint _testFrustumCullingMeshInstanceCount;
+    uint _passFrustumCullingMeshInstanceCount;
+    uint _testFrustumCullingTriangleCount;
+    uint _passFrustumCullingTriangleCount;
+    uint _testOcclusionCullingTriangleCount;
+    uint _passOcclusionCullingTriangleCount;
+};
+
+#define OFFSET_testFrustumCullingSubMeshInstanceCount (UINT32_SIZE_IN_BYTE * 0)
+#define OFFSET_passFrustumCullingSubMeshInstanceCount (UINT32_SIZE_IN_BYTE * 1)
+#define OFFSET_testOcclusionCullingSubMeshInstanceCount (UINT32_SIZE_IN_BYTE * 2)
+#define OFFSET_passOcclusionCullingSubMeshInstanceCount (UINT32_SIZE_IN_BYTE * 3)
+#define OFFSET_testOcclusionCullingMeshInstanceCount (UINT32_SIZE_IN_BYTE * 4)
+#define OFFSET_passOcclusionCullingMeshInstanceCount (UINT32_SIZE_IN_BYTE * 5)
+#define OFFSET_testFrustumCullingMeshInstanceCount (UINT32_SIZE_IN_BYTE * 6)
+#define OFFSET_passFrustumCullingMeshInstanceCount (UINT32_SIZE_IN_BYTE * 7)
+#define OFFSET_testFrustumCullingTriangleCount (UINT32_SIZE_IN_BYTE * 8)
+#define OFFSET_passFrustumCullingTriangleCount (UINT32_SIZE_IN_BYTE * 9)
+#define OFFSET_testOcclusionCullingTriangleCount (UINT32_SIZE_IN_BYTE * 10)
+#define OFFSET_passOcclusionCullingTriangleCount (UINT32_SIZE_IN_BYTE * 11)
+
 ConstantBuffer<CullingInfo> _cullingInfo : register(b0);
 ConstantBuffer<ViewInfo> _viewInfo : register(b2);
 
@@ -30,6 +59,7 @@ Texture2D<float> _hizTextures[] : register(t13);
 RWByteAddressBuffer _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 RWByteAddressBuffer _indirectArgumentSubInfos : register(u2);
+RWByteAddressBuffer _cullingResult : register(u3);
 
 [numthreads(128, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
@@ -52,6 +82,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint meshLodLevelMax = (meshLodStreamRange >> 16) & 0x0000ffff; // ãˆÊ 16bit
     lodLevel = clamp(lodLevel, meshLodLevelMin, meshLodLevelMax);
     
+    
     // Lod Level ‚ª Lod ”‚æ‚è‘å‚«‚¢ê‡‚ÍƒJƒŠƒ“ƒO
     if (lodLevel >= mesh._lodMeshCount)
     {
@@ -62,6 +93,25 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     LodMesh lodMesh = _lodMeshes.Load<LodMesh>(sizeof(LodMesh) * lodMeshOffset);
     uint subMeshCount = lodMesh._subMeshCount;
     GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = _geometryGlobalOffsets.Load<GeometryGlobalOffsetInfo>(sizeof(GeometryGlobalOffsetInfo) * lodMeshOffset);
+    
+    {
+        uint triangleCount = 0;
+        for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
+        {
+            uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
+            SubMesh subMesh = _subMeshes.Load<SubMesh>(sizeof(SubMesh) * subMeshOffset);
+            triangleCount += subMesh._indexCount / 3;
+        }
+    
+        uint dummy;
+        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingMeshInstanceCount, 1, dummy);
+        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
+        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingTriangleCount, triangleCount, dummy);
+    
+        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingMeshInstanceCount, 1, dummy);
+        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
+        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingTriangleCount, triangleCount, dummy);
+    }
     
     uint lodMeshInstanceOffset = meshInstance._lodMeshInstanceOffset + lodLevel;
     LodMeshInstance lodMeshInstance = _lodMeshInstances.Load<LodMeshInstance>(sizeof(LodMeshInstance) * lodMeshInstanceOffset);

@@ -109,8 +109,7 @@ def convert(file_path):
 
         fout.write(struct.pack('<I', len(mesh_path_counts)))
         for mesh_path, per_mesh_mesh_instances in mesh_path_counts.items():
-            model_path = mesh_instance['Mesh']
-            model_path_hash = xxhash.xxh64(model_path.encode(string_format)).intdigest()
+            model_path_hash = xxhash.xxh64(mesh_path.encode(string_format)).intdigest()
             fout.write(struct.pack('<Q', model_path_hash))
             fout.write(struct.pack('<I', len(per_mesh_mesh_instances)))
             for mesh_instance in per_mesh_mesh_instances:

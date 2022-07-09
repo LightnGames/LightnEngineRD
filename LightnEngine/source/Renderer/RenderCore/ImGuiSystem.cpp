@@ -3,10 +3,6 @@
 #include <ThiredParty/ImGui/imgui_impl_win32.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 
-#include <Renderer/RenderCore/DeviceManager.h>
-#include <Renderer/RenderCore/GpuTimerManager.h>
-#include <Core/CpuTimerManager.h>
-
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -70,42 +66,10 @@ void ImGuiSystem::beginFrame() {
 	// メインビューポートにドッキング可能エリアを追加
 	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
+#if 0
 	bool open = true;
 	ImGui::ShowDemoWindow(&open);
-
-	ImGui::Begin("TestInfo");
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	
-	rhi::QueryVideoMemoryInfo videoMemoryInfo = DeviceManager::Get()->getHardwareAdapter()->queryVideoMemoryInfo();
-	ImGui::Text("[VMEM info] %-14s / %-14s byte", ThreeDigiets(videoMemoryInfo._currentUsage).get(), ThreeDigiets(videoMemoryInfo._budget).get());
-	
-	{
-		ImGui::Separator();
-		GpuTimerManager* timerManager = GpuTimerManager::Get();
-		const u64* timeStamps = GpuTimeStampManager::Get()->getGpuTimeStamps();
-		f64 gpuTickDelta = GpuTimeStampManager::Get()->getGpuTickDeltaInMilliseconds();
-		u32 timerCount = timerManager->getTimerCount();
-		for (u32 i = 0; i < timerCount; ++i) {
-			u32 offset = i * 2;
-			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
-			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
-		}
-	}
-
-	{
-		ImGui::Separator();
-		CpuTimerManager* timerManager = CpuTimerManager::Get();
-		const u64* timeStamps = CpuTimeStampManager::Get()->getCpuTimeStamps();
-		f64 gpuTickDelta = CpuTimeStampManager::Get()->getCpuTickDeltaInMilliseconds();
-		u32 timerCount = timerManager->getTimerCount();
-		for (u32 i = 0; i < timerCount; ++i) {
-			u32 offset = i * 2;
-			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
-			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
-		}
-	}
-
-	ImGui::End();
+#endif
 }
 
 void ImGuiSystem::render(rhi::CommandList* commandList) {

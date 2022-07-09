@@ -89,34 +89,34 @@ void Renderer::initialize() {
 		rtvTexture.setName("SwapChainBackBuffer[%d]", backBufferIndex);
 	}
 
-	{
-		AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
-		AssetPath pixelShaderPath("EngineComponent\\Shader\\ScreenTriangle.pso");
-		rhi::ShaderBlob vertexShader;
-		rhi::ShaderBlob pixelShader;
-		vertexShader.initialize(vertexShaderPath.get());
-		pixelShader.initialize(pixelShaderPath.get());
+	//{
+	//	AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
+	//	AssetPath pixelShaderPath("EngineComponent\\Shader\\ScreenTriangle.pso");
+	//	rhi::ShaderBlob vertexShader;
+	//	rhi::ShaderBlob pixelShader;
+	//	vertexShader.initialize(vertexShaderPath.get());
+	//	pixelShader.initialize(pixelShaderPath.get());
 
-		rhi::RootSignatureDesc rootSignatureDesc = {};
-		rootSignatureDesc._device = device;
-		_rootSignature.iniaitlize(rootSignatureDesc);
-		_rootSignature.setName("RootSigScreenTriangle");
+	//	rhi::RootSignatureDesc rootSignatureDesc = {};
+	//	rootSignatureDesc._device = device;
+	//	_rootSignature.iniaitlize(rootSignatureDesc);
+	//	_rootSignature.setName("RootSigScreenTriangle");
 
-		rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
-		pipelineStateDesc._device = device;
-		pipelineStateDesc._vs = vertexShader.getShaderByteCode();
-		pipelineStateDesc._ps = pixelShader.getShaderByteCode();
-		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
-		pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		pipelineStateDesc._rootSignature = &_rootSignature;
-		pipelineStateDesc._sampleDesc._count = 1;
-		_pipelineState.iniaitlize(pipelineStateDesc);
-		_pipelineState.setName("PsoScreenTriangle");
+	//	rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
+	//	pipelineStateDesc._device = device;
+	//	pipelineStateDesc._vs = vertexShader.getShaderByteCode();
+	//	pipelineStateDesc._ps = pixelShader.getShaderByteCode();
+	//	pipelineStateDesc._numRenderTarget = 1;
+	//	pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+	//	pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	//	pipelineStateDesc._rootSignature = &_rootSignature;
+	//	pipelineStateDesc._sampleDesc._count = 1;
+	//	_pipelineState.iniaitlize(pipelineStateDesc);
+	//	_pipelineState.setName("PsoScreenTriangle");
 
-		vertexShader.terminate();
-		pixelShader.terminate();
-	}
+	//	vertexShader.terminate();
+	//	pixelShader.terminate();
+	//}
 }
 
 void Renderer::terminate() {
@@ -126,8 +126,8 @@ void Renderer::terminate() {
 		_backBuffers[i].terminate();
 	}
 
-	_pipelineState.terminate();
-	_rootSignature.terminate();
+	//_pipelineState.terminate();
+	//_rootSignature.terminate();
 
 	PipelineStateReloader::Get()->terminate();
 	ImGuiSystem::Get()->terminate();
@@ -139,6 +139,7 @@ void Renderer::terminate() {
 	_swapChain.terminate();
 
 	VramUpdater::Get()->terminate();
+	ReleaseQueue::Get()->terminate();
 	GlobalVideoMemoryAllocator::Get()->terminate();
 	DeviceManager::Get()->terminate();
 }

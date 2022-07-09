@@ -1,4 +1,4 @@
-#include "MeshLodStreamingManager.h"
+#include "LodStreamingManager.h"
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
@@ -19,6 +19,7 @@ LodStreamingManager g_meshLodStreamingManager;
 void LodStreamingManager::initialize() {
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 
+	// GPU バッファ
 	{
 		GpuBufferDesc desc = {};
 		desc._device = device;
@@ -58,6 +59,7 @@ void LodStreamingManager::initialize() {
 		_materialScreenPersentageReadbackBuffer.setName("MaterialScreenPersentageReadback");
 	}
 
+	// デスクリプタ
 	{
 		DescriptorAllocator* descriptorGpuAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
 		_meshLodLevelSrv = descriptorGpuAllocator->allocate(2);
@@ -120,7 +122,7 @@ void LodStreamingManager::initialize() {
 		_textureStreamingLevels = allocation.allocateObjects<u8>(TextureScene::TEXTURE_CAPACITY);
 		_prevTextureStreamingLevels = allocation.allocateClearedObjects<u8>(TextureScene::TEXTURE_CAPACITY);
 	});
-	memset(_textureStreamingLevels, 0xff, TextureScene::TEXTURE_CAPACITY);
+	memset(_textureStreamingLevels, INVALID_TEXTURE_STREAMING_LEVEL, TextureScene::TEXTURE_CAPACITY);
 }
 
 void LodStreamingManager::terminate() {
@@ -222,7 +224,7 @@ LodStreamingManager* LodStreamingManager::Get() {
 
 void LodStreamingManager::updateMeshStreaming() {
 	// ストリーミングロード、アンロードされた時にログを表示するか？
-#define OUTPUT_STREAM_LOG 1
+#define OUTPUT_STREAM_LOG 0
 #if OUTPUT_STREAM_LOG
 	constexpr char OUTPUT_LOG_FORMAT[] = "%-20s %-30s %d -> %d";
 	bool updated = false;
@@ -235,13 +237,15 @@ void LodStreamingManager::updateMeshStreaming() {
 	for (u32 i = 0; i < MeshGeometryScene::MESH_GEOMETRY_CAPACITY; ++i) {
 		const GeometryResourceManager::MeshLodStreamRange& lodRange = meshLodStreamRanges[i];
 		u16 minLodLevel = u16(_meshLodMinLevels[i]);
-		if (minLodLevel == UINT16_MAX) {
+		if (minLodLevel == INVALID_MESH_STREAMING_LEVEL) {
 			continue;
 		}
 
 		const MeshGeometry* mesh = meshPool->getMeshGeometry(i);
 		u16 maxLodLevel = u16(_meshLodMaxLevels[i]);
-		if (lodRange._beginLevel == UINT16_MAX) {
+
+		// 初回ロード時
+		if (lodRange._beginLevel == INVALID_MESH_STREAMING_LEVEL) {
 #if OUTPUT_STREAM_LOG
 			updated = true;
 			LTN_INFO(OUTPUT_LOG_FORMAT, "Init Added.", mesh->getAssetPath(), minLodLevel, maxLodLevel + 1);
@@ -251,6 +255,7 @@ void LodStreamingManager::updateMeshStreaming() {
 			continue;
 		}
 
+		// 詳細 LOD Level 追加時
 		bool minLodAdded = minLodLevel < lodRange._beginLevel;
 		if (minLodAdded) {
 #if OUTPUT_STREAM_LOG
@@ -261,6 +266,7 @@ void LodStreamingManager::updateMeshStreaming() {
 			geometryResourceManager->updateMeshLodStreamRange(i, minLodLevel, lodRange._endLevel);
 		}
 
+		// 粗い LOD Level 追加時
 		bool maxLodAdded = maxLodLevel > lodRange._endLevel;
 		if (maxLodAdded) {
 #if OUTPUT_STREAM_LOG
@@ -271,6 +277,7 @@ void LodStreamingManager::updateMeshStreaming() {
 			geometryResourceManager->updateMeshLodStreamRange(i, lodRange._beginLevel, maxLodLevel);
 		}
 
+		// 詳細 LOD Level 削除時
 		bool minLodRemoved = minLodLevel > lodRange._beginLevel;
 		if (minLodRemoved) {
 #if OUTPUT_STREAM_LOG
@@ -281,6 +288,7 @@ void LodStreamingManager::updateMeshStreaming() {
 			geometryResourceManager->updateMeshLodStreamRange(i, minLodLevel, lodRange._endLevel);
 		}
 
+		// 粗い LOD Level 削除時
 		bool maxLodRemoved = maxLodLevel < lodRange._endLevel;
 		if (maxLodRemoved) {
 #if OUTPUT_STREAM_LOG
@@ -299,16 +307,26 @@ void LodStreamingManager::updateMeshStreaming() {
 #endif
 
 	// ストリーミング状況をリスト形式でデバッグ表示
+	constexpr char IMGUI_TEXT_FORMAT[] = "%-65s [%2d,%2d] / %d";
+	const u8* meshEnabledFlags = meshPool->getEnabledFlags();
 	ImGui::Begin("MeshStreamingStatus");
+	ImGui::Text("%-65s [range] / lodCount", "");
 	for (u32 i = 0; i < MeshGeometryScene::MESH_GEOMETRY_CAPACITY; ++i) {
-		const GeometryResourceManager::MeshLodStreamRange& lodRange = meshLodStreamRanges[i];
-		u16 minLodLevel = u16(_meshLodMinLevels[i]);
-		if (minLodLevel == UINT16_MAX) {
+		if (meshEnabledFlags[i] == 0) {
 			continue;
 		}
 
+		const GeometryResourceManager::MeshLodStreamRange& lodRange = meshLodStreamRanges[i];
+		s16 beginLodLevel = s16(lodRange._beginLevel);
+		s16 endLodLevel = s16(lodRange._endLevel);
+
 		const MeshGeometry* mesh = meshPool->getMeshGeometry(i);
-		ImGui::Text("%-30s [%d, %d] / %d", mesh->getAssetPath(), lodRange._beginLevel, lodRange._endLevel, mesh->getLodMeshCount());
+		bool meshInvalid = lodRange._beginLevel == INVALID_MESH_STREAMING_LEVEL || lodRange._endLevel == INVALID_MESH_STREAMING_LEVEL;
+		if (meshInvalid) {
+			ImGui::TextDisabled(IMGUI_TEXT_FORMAT, mesh->getAssetPath(), -1, -1, mesh->getLodMeshCount());
+		} else {
+			ImGui::Text(IMGUI_TEXT_FORMAT, mesh->getAssetPath(), beginLodLevel, endLodLevel, mesh->getLodMeshCount());
+		}
 	}
 	ImGui::End();
 }
@@ -320,13 +338,16 @@ void LodStreamingManager::updateTextureStreaming() {
 			continue;
 		}
 
-		streamTexture(i);
+		computeTextureStreamingMipLevels(i);
 	}
 
 	TextureScene* textureScene = TextureScene::Get();
 	GpuTextureManager* gpuTextureManager = GpuTextureManager::Get();
 	const u8* textureEnableFlags = textureScene->getTextureEnabledFlags();
-#if 0
+#define OUTPUT_STREAM_LOG 0
+#if OUTPUT_STREAM_LOG
+	bool updated = false;
+#endif
 	for (u32 i = 0; i < TextureScene::TEXTURE_CAPACITY; ++i) {
 		if (textureEnableFlags[i] == 0) {
 			continue;
@@ -336,39 +357,63 @@ void LodStreamingManager::updateTextureStreaming() {
 			continue;
 		}
 
-		if (_textureStreamingLevels[i] == UINT8_MAX) {
+		if (_textureStreamingLevels[i] == INVALID_TEXTURE_STREAMING_LEVEL) {
 			continue;
 		}
 
 		const Texture* texture = textureScene->getTexture(i);
+		u32 width = u32(gpuTextureManager->getTexture(i)->getResourceDesc()._width);
+#if OUTPUT_STREAM_LOG
+		updated = true;
+		LTN_INFO("Texture streaming %-30s %u -> %u　(%4d x %4d)", texture->getAssetPath(), _prevTextureStreamingLevels[i], _textureStreamingLevels[i], width, width);
+#endif
 		gpuTextureManager->streamTexture(texture, _prevTextureStreamingLevels[i], _textureStreamingLevels[i]);
+		gpuTextureManager->requestCreateSrv(i);
 		_prevTextureStreamingLevels[i] = _textureStreamingLevels[i];
+
+	}
+
+#if OUTPUT_STREAM_LOG
+	if (updated) {
+		LTN_INFO("-----------------------------------------------------------------------");
 	}
 #endif
 
+	constexpr char IMGUI_TEXT_FORMAT[] = "%-65s %2d / %2d (%4d x %4d)";
 	ImGui::Begin("TextureStreamingStatus");
 	for (u32 i = 0; i < TextureScene::TEXTURE_CAPACITY; ++i) {
 		if (textureEnableFlags[i] == 0) {
 			continue;
 		}
+
 		const Texture* texture = textureScene->getTexture(i);
-		ImGui::Text("%-30s %d / %d", texture->getAssetPath(), _textureStreamingLevels[i], texture->getDdsHeader()->_mipMapCount);
+		u32 width = u32(gpuTextureManager->getTexture(i)->getResourceDesc()._width);
+		u32 mipCount = texture->getDdsHeader()->_mipMapCount;
+		bool textureInvalid = _textureStreamingLevels[i] == INVALID_TEXTURE_STREAMING_LEVEL;
+		if (textureInvalid) {
+			ImGui::TextDisabled(IMGUI_TEXT_FORMAT, texture->getAssetPath(), -1, mipCount, width, width);
+		} else {
+			ImGui::Text(IMGUI_TEXT_FORMAT, texture->getAssetPath(), _textureStreamingLevels[i], mipCount, width, width);
+		}
 	}
 	ImGui::End();
 }
 
-void LodStreamingManager::streamTexture(u32 materialIndex) {
-	if (_materialScreenPersentages[materialIndex] >= UINT16_MAX) {
+void LodStreamingManager::computeTextureStreamingMipLevels(u32 materialIndex) {
+	if (_materialScreenPersentages[materialIndex] == UINT32_MAX) {
 		return;
 	}
 
 	TextureScene* textureScene = TextureScene::Get();
 	Application* app = ApplicationSysytem::Get()->getApplication();
-	f32 screenPersentage = _materialScreenPersentages[materialIndex] / f32(UINT16_MAX);
+	f32 screenPersentage = Min(_materialScreenPersentages[materialIndex] / f32(UINT16_MAX), 1.0f);
 
+	// FIXME: 毎回マテリアルが参照しているテクスチャを検索するのは重いのでキャッシュするなりする
 	const Material* material = MaterialScene::Get()->getMaterial(materialIndex);
 	u16 textureOffsets[16];
 	u16 textureCount = material->getPipelineSet()->findMaterialParameters(Shader::PARAMETER_TYPE_TEXTURE, textureOffsets);
+
+	// Material が参照しているテクスチャのストリーミングレベルを更新します
 	LTN_ASSERT(textureCount < LTN_COUNTOF(textureOffsets));
 	for (u32 i = 0; i < textureCount; ++i) {
 		u32 textureIndex = *material->getParameter<u32>(textureOffsets[i]);
@@ -381,9 +426,9 @@ void LodStreamingManager::streamTexture(u32 materialIndex) {
 			requestMipLevel++;
 		}
 
-		u8 currentStreamMipLevel = _textureStreamingLevels[i];
-		u8 targetStreamMipLevel = Min(_textureStreamingLevels[i], requestMipLevel);
-		_textureStreamingLevels[textureIndex] = requestMipLevel;
+		// 小さすぎるテクスチャを作成するとリソース作成できない場合があるため最小ミップレベルを指定
+		constexpr u8 MIN_STREAMING_MIP_LEVEL = 4;
+		_textureStreamingLevels[textureIndex] = Max(requestMipLevel, MIN_STREAMING_MIP_LEVEL);
 	}
 }
 }

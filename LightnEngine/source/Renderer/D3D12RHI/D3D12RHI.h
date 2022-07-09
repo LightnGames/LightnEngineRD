@@ -140,6 +140,7 @@ struct Resource :public ResourceBase {
 	 void unmap(const MemoryRange* range) override;
 	 u64 getGpuVirtualAddress() const override;
 	 void setName(const char* name) override;
+	 virtual u64 getUniqueMarker() const override { return u64(_resource); }
 
 	ID3D12Resource* _resource = nullptr;
 };

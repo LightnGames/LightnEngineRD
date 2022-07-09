@@ -109,6 +109,7 @@ struct ResourceBase {
 	virtual void unmap(const MemoryRange* range = nullptr) = 0;
 	virtual void setName(const char* name) = 0;
 	virtual u64 getGpuVirtualAddress() const = 0;
+	virtual u64 getUniqueMarker() const = 0;
 };
 
 struct PipelineStateBase {

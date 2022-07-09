@@ -1,0 +1,5 @@
+Mesh : fantasy_village\Building\SM_wall_roof_01.meshg
+Material :
+    MI_building_wood_01_Inst : fantasy_village\Material\MI_building_wood_01_Inst.mto
+    MI_plaster_01_Inst : fantasy_village\Material\MI_plaster_01_Inst.mto
+    MI_wallpaper_01_Inst : fantasy_village\Material\MI_wallpaper_01_Inst.mto

@@ -12,7 +12,7 @@
 #include <Renderer/MeshRenderer/GpuTextureManager.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
-#include <Renderer/RenderCore/MeshLodStreamingManager.h>
+#include <Renderer/RenderCore/LodStreamingManager.h>
 #include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>

@@ -141,7 +141,7 @@ void GpuMeshInstanceManager::update() {
 			const LodMeshInstance* lodMeshInstance = meshInstance->getLodMeshInstance(lodIndex);
 			gpu::LodMeshInstance& gpuLodMesh = gpuLodMeshInstances[lodIndex];
 			gpuLodMesh._lodThreshhold = lodMeshInstance->getLodThreshold();
-			gpuLodMesh._subMeshInstanceOffset = lodMeshInstanceIndex + lodMesh->_subMeshOffset;
+			gpuLodMesh._subMeshInstanceOffset = subMeshInstanceIndex + lodMesh->_subMeshOffset;
 		}
 
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {

@@ -1,0 +1,4 @@
+Mesh : fantasy_village\Building\SM_window_glass_02.meshg
+Material :
+    MI_building_wood_01_Inst : fantasy_village\Material\MI_building_wood_01_Inst.mto
+    MI_glass_01_Inst : fantasy_village\Material\MI_glass_01_Inst.mto

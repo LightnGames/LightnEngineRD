@@ -57,6 +57,7 @@ public:
 
 	struct CullingDesc {
 		rhi::GpuDescriptorHandle _viewCbv;
+		rhi::GpuDescriptorHandle _cullingResultUav;
 		rhi::CommandList* _commandList = nullptr;
 	};
 

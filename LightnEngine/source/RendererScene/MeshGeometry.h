@@ -104,6 +104,7 @@ public:
 	MeshGeometry* getMeshGeometry(u32 index) { return &_meshGeometries[index]; }
 	const MeshGeometry* getMeshGeometry(u32 index) const { return &_meshGeometries[index]; }
 	const MeshGeometry* findMeshGeometry(u64 assetPathHash) const;
+	const u8* getEnabledFlags() const { return _enabledFlags; }
 
 private:
 	VirtualArray _meshAllocations;
@@ -116,6 +117,7 @@ private:
 	MeshGeometry* _meshGeometries = nullptr;
 	LodMeshGeometry* _lodMeshGeometries = nullptr;
 	SubMeshGeometry* _subMeshGeometries = nullptr;
+	u8* _enabledFlags = nullptr;
 	u64* _assetPathHashes = nullptr;
 	char** _assetPaths = nullptr;
 	ChunkAllocator _chunkAllocator;

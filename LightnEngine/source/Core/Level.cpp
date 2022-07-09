@@ -37,24 +37,24 @@ void Level::initialize(const char* levelFilePath) {
 		assetPath.readFile(meshHeader, BIN_HEADER_LENGTH);
 		LTN_ASSERT(strcmp(meshHeader, "MSHG") == 0);
 
-		u32 meshCount = _levelHeader._meshCount;
+		u32 meshGeometryCount = _levelHeader._meshGeometryCount;
 		u32 filePathTotalCounts = 0;
-		u32* filePathCounts = Memory::allocObjects<u32>(meshCount);
-		assetPath.readFile(filePathCounts, sizeof(u32) * meshCount);
-		for (u32 i = 0; i < meshCount; ++i) {
+		u32* filePathCounts = Memory::allocObjects<u32>(meshGeometryCount);
+		assetPath.readFile(filePathCounts, sizeof(u32) * meshGeometryCount);
+		for (u32 i = 0; i < meshGeometryCount; ++i) {
 			filePathTotalCounts += filePathCounts[i];
 		}
 
-		MeshGeometryScene::CreatationDesc* descs = Memory::allocObjects<MeshGeometryScene::CreatationDesc>(meshCount);
+		MeshGeometryScene::CreatationDesc* descs = Memory::allocObjects<MeshGeometryScene::CreatationDesc>(meshGeometryCount);
 		char* filePathChunks = Memory::allocObjects<char>(filePathTotalCounts);
 		char* filePathReadPtr = filePathChunks;
 		assetPath.readFile(filePathChunks, filePathTotalCounts);
-		for (u32 i = 0; i < meshCount; ++i) {
+		for (u32 i = 0; i < meshGeometryCount; ++i) {
 			descs[i]._assetPath = filePathReadPtr;
 			filePathReadPtr += filePathCounts[i];
 		}
 
-		MeshGeometryScene::Get()->createMeshGeometries(descs, _meshGeometries, meshCount);
+		MeshGeometryScene::Get()->createMeshGeometries(descs, _meshGeometries, meshGeometryCount);
 
 		Memory::freeObjects(filePathCounts);
 		Memory::freeObjects(descs);
@@ -124,7 +124,7 @@ void Level::initialize(const char* levelFilePath) {
 		assetPath.readFile(meshHeader, BIN_HEADER_LENGTH);
 		LTN_ASSERT(strcmp(meshHeader, "MESH") == 0);
 
-		u32 meshCount = _levelHeader._meshGeometryCount;
+		u32 meshCount = _levelHeader._meshCount;
 		u32 filePathTotalCounts = 0;
 		u32* filePathCounts = Memory::allocObjects<u32>(meshCount);
 		assetPath.readFile(filePathCounts, sizeof(u32)* meshCount);
@@ -196,10 +196,10 @@ void Level::terminate() {
 		MeshInstanceScene::Get()->destroyMeshInstances(_meshInstances[i]);
 	}
 
-	MeshGeometryScene::Get()->destroyMeshGeometries(_meshGeometries, _levelHeader._meshCount);
+	MeshGeometryScene::Get()->destroyMeshGeometries(_meshGeometries, _levelHeader._meshGeometryCount);
 	TextureScene::Get()->destroyTextures(_textures, _levelHeader._textureCount);
 	MaterialScene::Get()->destroyMaterials(_materials, _levelHeader._materialCount);
-	MeshScene::Get()->destroyMeshes(_meshes, _levelHeader._meshGeometryCount);
+	MeshScene::Get()->destroyMeshes(_meshes, _levelHeader._meshCount);
 
 	Memory::freeObjects(_meshInstanceCounts);
 	Memory::freeObjects(_meshInstances);

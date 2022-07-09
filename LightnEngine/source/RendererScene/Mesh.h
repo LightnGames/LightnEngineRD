@@ -22,6 +22,7 @@ private:
 class MeshScene {
 public:
 	static constexpr u32 MESH_CAPACITY = 256;
+	static constexpr u32 MESH_MATERIAL_CAPACITY = MESH_CAPACITY * 8;
 
 	struct CreatationDesc {
 		const char* _assetPath = nullptr;

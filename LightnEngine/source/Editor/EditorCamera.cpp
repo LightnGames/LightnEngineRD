@@ -8,6 +8,11 @@
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Mesh.h>
 
+#include <Renderer/RenderCore/DeviceManager.h>
+#include <Renderer/RenderCore/GpuTimerManager.h>
+#include <Core/CpuTimerManager.h>
+#include <Renderer/RHI/Rhi.h>
+
 namespace ltn {
 MeshInstance* _meshInstance;
 MeshInstance* _meshInstance2;
@@ -56,5 +61,39 @@ void EditorCamera::update() {
 	camera->_rotation = cameraRotation;
 	camera->_worldMatrix = Matrix4::rotationXYZ(cameraRotation.x, cameraRotation.y, cameraRotation.z) * Matrix4::translationFromVector(Vector3(cameraPosition));
 	_view->postUpdate();
+
+	ImGui::Begin("TestInfo");
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+	rhi::QueryVideoMemoryInfo videoMemoryInfo = DeviceManager::Get()->getHardwareAdapter()->queryVideoMemoryInfo();
+	ImGui::Text("[VMEM info] %-14s / %-14s byte", ThreeDigiets(videoMemoryInfo._currentUsage).get(), ThreeDigiets(videoMemoryInfo._budget).get());
+
+	{
+		ImGui::Separator();
+		GpuTimerManager* timerManager = GpuTimerManager::Get();
+		const u64* timeStamps = GpuTimeStampManager::Get()->getGpuTimeStamps();
+		f64 gpuTickDelta = GpuTimeStampManager::Get()->getGpuTickDeltaInMilliseconds();
+		u32 timerCount = timerManager->getTimerCount();
+		for (u32 i = 0; i < timerCount; ++i) {
+			u32 offset = i * 2;
+			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
+			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
+		}
+	}
+
+	{
+		ImGui::Separator();
+		CpuTimerManager* timerManager = CpuTimerManager::Get();
+		const u64* timeStamps = CpuTimeStampManager::Get()->getCpuTimeStamps();
+		f64 gpuTickDelta = CpuTimeStampManager::Get()->getCpuTickDeltaInMilliseconds();
+		u32 timerCount = timerManager->getTimerCount();
+		for (u32 i = 0; i < timerCount; ++i) {
+			u32 offset = i * 2;
+			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
+			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
+		}
+	}
+
+	ImGui::End();
 }
 }

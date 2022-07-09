@@ -158,7 +158,8 @@ void GpuMaterialManager::update() {
 			pipelineStateDesc._sampleDesc._count = 1;
 			pipelineStateDesc._inputElements = inputElements;
 			pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
-			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_LESS_EQUAL;
+			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_LESS;
+			pipelineStateDesc._dsvFormat = rhi::FORMAT_D32_FLOAT;
 
 			rhi::PipelineState& pipelineState = _defaultPipelineStates[pipelineSetIndex];
 			pipelineState.iniaitlize(pipelineStateDesc);

@@ -29,14 +29,15 @@ struct TextureUpdateHeader {
 struct TextureCopyHeader {
 	GpuTexture* _dstTexture = nullptr;
 	GpuTexture _srcTexture;
+	void* _srcTextureUniqueMarker = nullptr; // src テクスチャ識別子
 	u32 _srcSubResourceIndex = 0;
 	u32 _dstSubResourceIndex = 0;
 };
 
 class VramUpdater {
 public:
-	static constexpr u32 STAGING_BUFFER_SIZE_IN_BYTE = 1024 * 1024 * 32; // 32MB
-	static constexpr u32 BUFFER_HEADER_COUNT_MAX = 1024;
+	static constexpr u32 STAGING_BUFFER_SIZE_IN_BYTE = 1024 * 1024 * 64; // 64MB
+	static constexpr u32 BUFFER_HEADER_COUNT_MAX = 1024 * 4;
 	static constexpr u32 TEXTURE_HEADER_COUNT_MAX = 512;
 
 	void initialize();

@@ -17,6 +17,8 @@ void MeshScene::initialize() {
 		VirtualArray::Desc handleDesc = {};
 		handleDesc._size = MESH_CAPACITY;
 		_meshAllocations.initialize(handleDesc);
+
+		handleDesc._size = MESH_MATERIAL_CAPACITY;
 		_materialAllocations.initialize(handleDesc);
 	}
 
@@ -24,8 +26,8 @@ void MeshScene::initialize() {
 		_assetPathHashes = allocation.allocateObjects<u64>(MESH_CAPACITY);
 		_meshes = allocation.allocateObjects<Mesh>(MESH_CAPACITY);
 		_meshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MESH_CAPACITY);
-		_materials = allocation.allocateObjects<Material*>(MESH_CAPACITY);
-		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MESH_CAPACITY);
+		_materials = allocation.allocateObjects<Material*>(MESH_MATERIAL_CAPACITY);
+		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MESH_MATERIAL_CAPACITY);
 		});
 }
 
@@ -61,9 +63,12 @@ const Mesh* MeshScene::createMesh(const CreatationDesc& desc) {
 	mesh->setMeshGeometry(MeshGeometryScene::Get()->findMeshGeometry(meshPathHash));
 	mesh->setMaterials(materials);
 
+	const MeshGeometry* meshGeometry = mesh->getMeshGeometry();
+	LTN_ASSERT(meshGeometry->getMaterialSlotCount() <= materialSlotCount);
+
 	MaterialScene* materialScene = MaterialScene::Get();
 	for (u32 i = 0; i < materialSlotCount; ++i) {
-		u16 materialSlotIndex = mesh->getMeshGeometry()->findMaterialSlotIndex(materialSlotNameHashes[i]);
+		u16 materialSlotIndex = meshGeometry->findMaterialSlotIndex(materialSlotNameHashes[i]);
 		LTN_ASSERT(materialSlotIndex != MeshGeometry::INVALID_MATERIAL_SLOT_INDEX);
 		materials[materialSlotIndex] = materialScene->findMaterial(materialPathHashes[i]);
 		LTN_ASSERT(materials[materialSlotIndex] != nullptr);

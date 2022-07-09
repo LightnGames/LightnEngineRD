@@ -2,6 +2,7 @@
 
 namespace ltn {
 using uchar = unsigned char;
+using s16 = short;
 using s32 = signed int;
 using s64 = signed __int64;
 using u8 = unsigned char;

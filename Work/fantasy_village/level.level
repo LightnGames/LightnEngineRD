@@ -1,33 +1,1007 @@
 MeshGeometry:
     - fantasy_village\Building\SM_balcony_01.meshg
     - fantasy_village\Building\SM_balcony_02.meshg
+    - fantasy_village\Building\SM_block_01.meshg
+    - fantasy_village\Building\SM_block_02.meshg
+    - fantasy_village\Building\SM_block_03.meshg
+    - fantasy_village\Building\SM_block_04.meshg
+    - fantasy_village\Building\SM_border_01.meshg
+    - fantasy_village\Building\SM_border_02.meshg
+    - fantasy_village\Building\SM_border_03.meshg
+    - fantasy_village\Building\SM_border_04.meshg
+    - fantasy_village\Building\SM_border_05.meshg
+    - fantasy_village\Building\SM_border_06.meshg
+    - fantasy_village\Building\SM_border_07.meshg
+    - fantasy_village\Building\SM_border_08.meshg
+    - fantasy_village\Building\SM_border_09.meshg
+    - fantasy_village\Building\SM_border_10.meshg
+    - fantasy_village\Building\SM_building_arch_01.meshg
+    - fantasy_village\Building\SM_building_arch_02.meshg
+    - fantasy_village\Building\SM_building_block_01.meshg
+    - fantasy_village\Building\SM_building_block_02.meshg
+    - fantasy_village\Building\SM_building_block_03.meshg
+    - fantasy_village\Building\SM_building_block_04.meshg
+    - fantasy_village\Building\SM_building_block_05.meshg
+    - fantasy_village\Building\SM_building_block_06.meshg
+    - fantasy_village\Building\SM_building_block_07.meshg
+    - fantasy_village\Building\SM_building_part_01.meshg
+    - fantasy_village\Building\SM_building_part_02.meshg
+    - fantasy_village\Building\SM_building_part_03.meshg
+    - fantasy_village\Building\SM_building_part_04.meshg
+    - fantasy_village\Building\SM_building_part_05.meshg
+    - fantasy_village\Building\SM_building_part_06.meshg
+    - fantasy_village\Building\SM_building_part_07.meshg
+    - fantasy_village\Building\SM_building_part_08.meshg
+    - fantasy_village\Building\SM_building_tower_01.meshg
+    - fantasy_village\Building\SM_building_tower_02.meshg
+    - fantasy_village\Building\SM_building_tower_03.meshg
+    - fantasy_village\Building\SM_building_tower_04.meshg
+    - fantasy_village\Building\SM_building_tower_05.meshg
+    - fantasy_village\Building\SM_center_square.meshg
+    - fantasy_village\Building\SM_central_stairs.meshg
+    - fantasy_village\Building\SM_door_01.meshg
+    - fantasy_village\Building\SM_door_02.meshg
+    - fantasy_village\Building\SM_door_03.meshg
+    - fantasy_village\Building\SM_doorway_01.meshg
+    - fantasy_village\Building\SM_doorway_02.meshg
+    - fantasy_village\Building\SM_doorway_03.meshg
+    - fantasy_village\Building\SM_doorway_04.meshg
+    - fantasy_village\Building\SM_floor_01.meshg
+    - fantasy_village\Building\SM_floor_02.meshg
+    - fantasy_village\Building\SM_fortress_arch_01.meshg
+    - fantasy_village\Building\SM_fortress_central_entrance_01.meshg
+    - fantasy_village\Building\SM_fortress_column_01.meshg
+    - fantasy_village\Building\SM_fortress_column_02.meshg
+    - fantasy_village\Building\SM_fortress_stairs_01.meshg
+    - fantasy_village\Building\SM_fortress_top_part.meshg
+    - fantasy_village\Building\SM_fortress_tower_01.meshg
+    - fantasy_village\Building\SM_fortress_tower_02.meshg
+    - fantasy_village\Building\SM_fortress_tower_03.meshg
+    - fantasy_village\Building\SM_fortress_tower_04.meshg
+    - fantasy_village\Building\SM_fortress_tower_05.meshg
+    - fantasy_village\Building\SM_fortress_tower_central_01.meshg
+    - fantasy_village\Building\SM_fortress_tower_corner_01.meshg
+    - fantasy_village\Building\SM_fortress_wall_01.meshg
+    - fantasy_village\Building\SM_fortress_wall_02.meshg
+    - fantasy_village\Building\SM_fortress_wall_03.meshg
+    - fantasy_village\Building\SM_fortress_wall_corner_01.meshg
+    - fantasy_village\Building\SM_fortress_wall_door_01.meshg
+    - fantasy_village\Building\SM_fortress_wall_window_01.meshg
+    - fantasy_village\Building\SM_fortress_wall_window_02.meshg
+    - fantasy_village\Building\SM_foundation_column_01.meshg
+    - fantasy_village\Building\SM_foundation_column_02.meshg
+    - fantasy_village\Building\SM_foundation_wall_01.meshg
+    - fantasy_village\Building\SM_foundation_wall_02.meshg
+    - fantasy_village\Building\SM_fountain_part_01.meshg
+    - fantasy_village\Building\SM_fountain_part_02.meshg
+    - fantasy_village\Building\SM_fountain_part_03.meshg
+    - fantasy_village\Building\SM_fountain_part_04.meshg
+    - fantasy_village\Building\SM_roof_01.meshg
+    - fantasy_village\Building\SM_roof_02.meshg
+    - fantasy_village\Building\SM_roof_03.meshg
+    - fantasy_village\Building\SM_roof_04.meshg
+    - fantasy_village\Building\SM_roof_05.meshg
+    - fantasy_village\Building\SM_roof_06.meshg
+    - fantasy_village\Building\SM_roof_07.meshg
+    - fantasy_village\Building\SM_roof_08.meshg
+    - fantasy_village\Building\SM_roof_09.meshg
+    - fantasy_village\Building\SM_stairs_01.meshg
+    - fantasy_village\Building\SM_stairs_02.meshg
+    - fantasy_village\Building\SM_stairs_03.meshg
+    - fantasy_village\Building\SM_stairs_04.meshg
+    - fantasy_village\Building\SM_stone_flower_bed_01.meshg
+    - fantasy_village\Building\SM_stone_flower_bed_02.meshg
+    - fantasy_village\Building\SM_stone_flower_pot_01.meshg
+    - fantasy_village\Building\SM_wall_01.meshg
+    - fantasy_village\Building\SM_wall_02.meshg
+    - fantasy_village\Building\SM_wall_03.meshg
+    - fantasy_village\Building\SM_wall_04.meshg
+    - fantasy_village\Building\SM_wall_05.meshg
+    - fantasy_village\Building\SM_wall_06.meshg
+    - fantasy_village\Building\SM_wall_07.meshg
+    - fantasy_village\Building\SM_wall_08.meshg
+    - fantasy_village\Building\SM_wall_09.meshg
+    - fantasy_village\Building\SM_wall_10.meshg
+    - fantasy_village\Building\SM_wall_11.meshg
+    - fantasy_village\Building\SM_wall_12.meshg
+    - fantasy_village\Building\SM_wall_13.meshg
+    - fantasy_village\Building\SM_wall_corner_01.meshg
+    - fantasy_village\Building\SM_wall_door_01.meshg
+    - fantasy_village\Building\SM_wall_door_02.meshg
+    - fantasy_village\Building\SM_wall_door_03.meshg
+    - fantasy_village\Building\SM_wall_door_04.meshg
+    - fantasy_village\Building\SM_wall_door_05.meshg
+    - fantasy_village\Building\SM_wall_roof_01.meshg
+    - fantasy_village\Building\SM_wall_roof_02.meshg
+    - fantasy_village\Building\SM_wall_window_01.meshg
+    - fantasy_village\Building\SM_wall_window_02.meshg
+    - fantasy_village\Building\SM_wall_window_03.meshg
+    - fantasy_village\Building\SM_wall_window_05.meshg
+    - fantasy_village\Building\SM_wall_window_06.meshg
+    - fantasy_village\Building\SM_wall_window_07.meshg
+    - fantasy_village\Building\SM_wall_window_08.meshg
+    - fantasy_village\Building\SM_wall_window_09.meshg
+    - fantasy_village\Building\SM_wall_window_10.meshg
+    - fantasy_village\Building\SM_wall_window_11.meshg
+    - fantasy_village\Building\SM_wall_window_12.meshg
+    - fantasy_village\Building\SM_wall_window_13.meshg
+    - fantasy_village\Building\SM_window_01.meshg
+    - fantasy_village\Building\SM_window_02.meshg
+    - fantasy_village\Building\SM_window_03.meshg
+    - fantasy_village\Building\SM_window_canopy_01.meshg
+    - fantasy_village\Building\SM_window_door_01.meshg
+    - fantasy_village\Building\SM_window_flower_pot_01.meshg
+    - fantasy_village\Building\SM_window_glass_01.meshg
+    - fantasy_village\Building\SM_window_glass_02.meshg
+    - fantasy_village\Building\SM_window_glass_03.meshg
+    - fantasy_village\Building\SM_window_glass_04.meshg
+    - fantasy_village\Building\SM_wooden_base_01.meshg
+    - fantasy_village\Building\SM_wooden_base_02.meshg
+    - fantasy_village\Building\SM_wooden_base_03.meshg
+    - fantasy_village\Building\SM_wooden_base_04.meshg
+    - fantasy_village\Building\SM_wooden_beam_01.meshg
+    - fantasy_village\Building\SM_wooden_beam_02.meshg
+    - fantasy_village\Building\SM_wooden_border_01.meshg
+    - fantasy_village\Building\SM_wooden_border_02.meshg
+    - fantasy_village\Building\SM_wooden_panel_01.meshg
+    - fantasy_village\Building\SM_wooden_panel_02.meshg
+    - fantasy_village\Building\SM_wooden_panel_03.meshg
+    - fantasy_village\Building\SM_wooden_panel_04.meshg
+    - fantasy_village\Building\SM_wooden_panel_05.meshg
+    - fantasy_village\Building\SM_wooden_railing_01.meshg
+    - fantasy_village\Building\SM_wooden_railing_02.meshg
+    - fantasy_village\Terrain\Terrain_0_0.meshg
+    - fantasy_village\Terrain\Terrain_0_1.meshg
+    - fantasy_village\Terrain\Terrain_0_2.meshg
+    - fantasy_village\Terrain\Terrain_0_3.meshg
+    - fantasy_village\Terrain\Terrain_1_0.meshg
+    - fantasy_village\Terrain\Terrain_1_1.meshg
+    - fantasy_village\Terrain\Terrain_1_2.meshg
+    - fantasy_village\Terrain\Terrain_1_3.meshg
+    - fantasy_village\Terrain\Terrain_2_0.meshg
+    - fantasy_village\Terrain\Terrain_2_1.meshg
+    - fantasy_village\Terrain\Terrain_2_2.meshg
+    - fantasy_village\Terrain\Terrain_2_3.meshg
+    - fantasy_village\Terrain\Terrain_3_0.meshg
+    - fantasy_village\Terrain\Terrain_3_1.meshg
+    - fantasy_village\Terrain\Terrain_3_2.meshg
+    - fantasy_village\Terrain\Terrain_3_3.meshg
 Mesh:
-    - fantasy_village\Building\SM_balcony_01.mesh
-    - fantasy_village\Building\SM_balcony_02.mesh
+    - fantasy_village\Building\SM_foundation_wall_01.mesh
+    - fantasy_village\Building\SM_border_01.mesh
+    - fantasy_village\Building\SM_foundation_column_02.mesh
+    - fantasy_village\Building\SM_wall_door_03.mesh
+    - fantasy_village\Building\SM_building_part_02.mesh
+    - fantasy_village\Building\SM_wall_02.mesh
+    - fantasy_village\Building\SM_foundation_wall_02.mesh
+    - fantasy_village\Building\SM_foundation_wall_02.mesh
+    - fantasy_village\Building\SM_foundation_column_01.mesh
+    - fantasy_village\Building\SM_foundation_column_01.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_wall_02.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_wall_02.mesh
+    - fantasy_village\Building\SM_wall_02.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_wall_window_12.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_07.mesh
+    - fantasy_village\Building\SM_wall_07.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_02.mesh
+    - fantasy_village\Building\SM_border_02.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_border_07.mesh
+    - fantasy_village\Building\SM_block_03.mesh
+    - fantasy_village\Building\SM_block_03.mesh
+    - fantasy_village\Building\SM_block_03.mesh
+    - fantasy_village\Building\SM_block_03.mesh
+    - fantasy_village\Building\SM_border_06.mesh
+    - fantasy_village\Building\SM_door_01.mesh
+    - fantasy_village\Building\SM_doorway_02.mesh
+    - fantasy_village\Building\SM_wall_window_13.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_wall_window_13.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_building_part_02.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_wall_06.mesh
+    - fantasy_village\Building\SM_wall_window_10.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_roof_05.mesh
+    - fantasy_village\Building\SM_building_part_01.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_building_part_05.mesh
+    - fantasy_village\Building\SM_roof_03.mesh
+    - fantasy_village\Building\SM_roof_02.mesh
+    - fantasy_village\Building\SM_roof_01.mesh
+    - fantasy_village\Building\SM_roof_02.mesh
+    - fantasy_village\Building\SM_wall_corner_01.mesh
+    - fantasy_village\Building\SM_wooden_base_02.mesh
+    - fantasy_village\Building\SM_wooden_base_04.mesh
+    - fantasy_village\Building\SM_wall_corner_01.mesh
+    - fantasy_village\Building\SM_wall_01.mesh
+    - fantasy_village\Building\SM_wall_08.mesh
+    - fantasy_village\Building\SM_floor_01.mesh
 Texture:
+    - fantasy_village\Texture\T_bark_01_BaseColor.dds
+    - fantasy_village\Texture\T_bark_01_Normal.dds
+    - fantasy_village\Texture\T_bench_chair_BaseColor.dds
+    - fantasy_village\Texture\T_bench_chair_Normal.dds
+    - fantasy_village\Texture\T_brick_01_BaseColor.dds
+    - fantasy_village\Texture\T_brick_01_Normal.dds
+    - fantasy_village\Texture\T_brick_02_BaseColor.dds
+    - fantasy_village\Texture\T_brick_02_Normal.dds
+    - fantasy_village\Texture\T_brick_03_BaseColor.dds
+    - fantasy_village\Texture\T_brick_03_Normal.dds
+    - fantasy_village\Texture\T_brick_04_BaseColor.dds
+    - fantasy_village\Texture\T_brick_04_Normal.dds
+    - fantasy_village\Texture\T_brick_05_BaseColor.dds
+    - fantasy_village\Texture\T_brick_05_Normal.dds
+    - fantasy_village\Texture\T_brick_06_BaseColor.dds
+    - fantasy_village\Texture\T_brick_06_Normal.dds
+    - fantasy_village\Texture\T_building_01_Normal.dds
+    - fantasy_village\Texture\T_building_02_Normal.dds
+    - fantasy_village\Texture\T_concrete_BaseColor.dds
+    - fantasy_village\Texture\T_concrete_Normal.dds
+    - fantasy_village\Texture\T_decal_damage_01_Mask.dds
+    - fantasy_village\Texture\T_decal_damage_01_Normal.dds
+    - fantasy_village\Texture\T_decal_damage_02_Mask.dds
+    - fantasy_village\Texture\T_decal_damage_02_Normal.dds
+    - fantasy_village\Texture\T_decal_damage_03_Mask.dds
+    - fantasy_village\Texture\T_decal_damage_03_Normal.dds
+    - fantasy_village\Texture\T_decal_dirt_01_Mask.dds
+    - fantasy_village\Texture\T_decal_dirt_02_Mask.dds
+    - fantasy_village\Texture\T_decal_dirt_03_Mask.dds
+    - fantasy_village\Texture\T_decal_dirt_04_Mask.dds
+    - fantasy_village\Texture\T_decal_dirt_05_Mask.dds
+    - fantasy_village\Texture\T_decal_foliage_BaseColor.dds
+    - fantasy_village\Texture\T_decal_foliage_Normal.dds
+    - fantasy_village\Texture\T_dirt_glass_Mask.dds
+    - fantasy_village\Texture\T_flags_BaseColor.dds
+    - fantasy_village\Texture\T_floor_tiles_01_BaseColor.dds
+    - fantasy_village\Texture\T_floor_tiles_01_Normal.dds
+    - fantasy_village\Texture\T_foliage_BaseColor.dds
+    - fantasy_village\Texture\T_foliage_Mask.dds
+    - fantasy_village\Texture\T_fountain_BaseColor.dds
+    - fantasy_village\Texture\T_fountain_Normal.dds
+    - fantasy_village\Texture\T_fountain_water_Height.dds
+    - fantasy_village\Texture\T_fountain_water_Mask.dds
+    - fantasy_village\Texture\T_fountain_water_Normal.dds
+    - fantasy_village\Texture\T_fruits__Normal.dds
+    - fantasy_village\Texture\T_fruits_BaseColor.dds
+    - fantasy_village\Texture\T_grass_BaseColor.dds
+    - fantasy_village\Texture\T_grass_Normal.dds
+    - fantasy_village\Texture\T_ground_BaseColor.dds
+    - fantasy_village\Texture\T_ground_Normal.dds
+    - fantasy_village\Texture\T_jug_BaseColor.dds
+    - fantasy_village\Texture\T_jug_Normal.dds
+    - fantasy_village\Texture\T_lamppost_BaseColor.dds
+    - fantasy_village\Texture\T_lamppost_Normal.dds
+    - fantasy_village\Texture\T_landscape_01_Mask.dds
+    - fantasy_village\Texture\T_market_tent_01_BaseColor.dds
+    - fantasy_village\Texture\T_market_tent_01_Normal.dds
+    - fantasy_village\Texture\T_market_tent_02_BaseColor.dds
+    - fantasy_village\Texture\T_plants_BaseColor.dds
+    - fantasy_village\Texture\T_plants_Mask.dds
+    - fantasy_village\Texture\T_plaster_BaseColor.dds
+    - fantasy_village\Texture\T_plaster_Mask.dds
+    - fantasy_village\Texture\T_plaster_Normal.dds
+    - fantasy_village\Texture\T_road_tiles_01_BaseColor.dds
+    - fantasy_village\Texture\T_road_tiles_01_Normal.dds
+    - fantasy_village\Texture\T_roof_01_BaseColor.dds
+    - fantasy_village\Texture\T_roof_01_Normal.dds
+    - fantasy_village\Texture\T_rope_BaseColor.dds
+    - fantasy_village\Texture\T_rope_Normal.dds
+    - fantasy_village\Texture\T_sky_Mask.dds
+    - fantasy_village\Texture\T_stone_road_BaseColor.dds
+    - fantasy_village\Texture\T_stone_road_ground_BaseColor.dds
+    - fantasy_village\Texture\T_stone_road_ground_Normal.dds
+    - fantasy_village\Texture\T_stone_road_Normal.dds
+    - fantasy_village\Texture\T_stone_surface_BaseColor.dds
+    - fantasy_village\Texture\T_stone_surface_Normal.dds
+    - fantasy_village\Texture\T_vine_BaseColor.dds
+    - fantasy_village\Texture\T_wallpaper_01_BaseColor.dds
+    - fantasy_village\Texture\T_wallpaper_01_Normal.dds
+    - fantasy_village\Texture\T_window_door_BaseColor.dds
+    - fantasy_village\Texture\T_window_door_MaskRGB.dds
+    - fantasy_village\Texture\T_window_door_Normal.dds
     - fantasy_village\Texture\T_wood_BaseColor.dds
+    - fantasy_village\Texture\T_wood_Normal.dds
+    - fantasy_village\Texture\T_wooden_board_01_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_board_01_Normal.dds
     - fantasy_village\Texture\T_wooden_board_02_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_board_02_Normal.dds
+    - fantasy_village\Texture\T_wooden_board_03_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_board_03_Normal.dds
+    - fantasy_village\Texture\T_wooden_door_01_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_door_01_Normal.dds
+    - fantasy_village\Texture\T_wooden_door_02_BaseColor.dds
+    - fantasy_village\Texture\T_wooden_door_02_Normal.dds
 Material:
+    - fantasy_village\Material\MI_bark_01_Inst.mto
+    - fantasy_village\Material\MI_bench_chair_01_Inst.mto
+    - fantasy_village\Material\MI_brick_01_Inst.mto
+    - fantasy_village\Material\MI_brick_02_Inst.mto
+    - fantasy_village\Material\MI_brick_03_Inst.mto
+    - fantasy_village\Material\MI_brick_04_Inst.mto
+    - fantasy_village\Material\MI_brick_05_Inst.mto
+    - fantasy_village\Material\MI_brick_06_Inst.mto
+    - fantasy_village\Material\MI_brick_07_Inst.mto
+    - fantasy_village\Material\MI_brick_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_building_concrete_01_Inst.mto
+    - fantasy_village\Material\MI_building_concrete_02_Inst.mto
+    - fantasy_village\Material\MI_building_concrete_03_Inst.mto
     - fantasy_village\Material\MI_building_wood_01_Inst.mto
+    - fantasy_village\Material\MI_building_wood_02_Inst.mto
+    - fantasy_village\Material\MI_concrete_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_concrete_WPO_02_Inst.mto
+    - fantasy_village\Material\MI_door_01_Inst.mto
+    - fantasy_village\Material\MI_door_02_Inst.mto
+    - fantasy_village\Material\MI_flags_01_Inst.mto
+    - fantasy_village\Material\MI_flags_02_Inst.mto
+    - fantasy_village\Material\MI_flags_03_Inst.mto
+    - fantasy_village\Material\MI_flags_04_Inst.mto
+    - fantasy_village\Material\MI_flags_05_Inst.mto
+    - fantasy_village\Material\MI_flags_06_Inst.mto
+    - fantasy_village\Material\MI_floor_tiles_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_foliage_01_Inst.mto
+    - fantasy_village\Material\MI_foliage_02_Inst.mto
+    - fantasy_village\Material\MI_foliage_03_Inst.mto
+    - fantasy_village\Material\MI_foliage_04_Inst.mto
+    - fantasy_village\Material\MI_fountain_01_Inst.mto
+    - fantasy_village\Material\MI_fountain_water_01_Inst.mto
+    - fantasy_village\Material\MI_fruits_01_Inst.mto
+    - fantasy_village\Material\MI_glass_01_Inst.mto
+    - fantasy_village\Material\MI_glass_02_Inst.mto
+    - fantasy_village\Material\MI_grass_01_Inst.mto
+    - fantasy_village\Material\MI_ground_01_Inst.mto
+    - fantasy_village\Material\MI_jug_01_Inst.mto
+    - fantasy_village\Material\MI_lamppost_01_Inst.mto
+    - fantasy_village\Material\MI_lamppost_02_Inst.mto
+    - fantasy_village\Material\MI_landscape.mto
+    - fantasy_village\Material\MI_market_tent_01_Inst.mto
+    - fantasy_village\Material\MI_market_tent_02_Inst.mto
+    - fantasy_village\Material\MI_plants_01_Inst.mto
+    - fantasy_village\Material\MI_plants_02_Inst.mto
+    - fantasy_village\Material\MI_plaster_01_Inst.mto
+    - fantasy_village\Material\MI_plaster_02_Inst.mto
+    - fantasy_village\Material\MI_plaster_03_Inst.mto
+    - fantasy_village\Material\MI_plaster_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_road_tiles_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_roof_01_Inst.mto
+    - fantasy_village\Material\MI_roof_02_Inst.mto
+    - fantasy_village\Material\MI_rope_01_Inst.mto
+    - fantasy_village\Material\MI_rope_02_Inst.mto
+    - fantasy_village\Material\MI_stone_road_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_stone_surface_01_Inst.mto
+    - fantasy_village\Material\MI_vine_01_Inst.mto
+    - fantasy_village\Material\MI_wallpaper_01_Inst.mto
+    - fantasy_village\Material\MI_water_01_Inst.mto
+    - fantasy_village\Material\MI_water_noise_01_Inst.mto
+    - fantasy_village\Material\MI_window_door_01_Inst.mto
     - fantasy_village\Material\MI_wooden_board_01_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_02_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_03_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_WPO_01_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_WPO_02_Inst.mto
+    - fantasy_village\Material\MI_wooden_board_WPO_03_Inst.mto
 PipelineSet:
     - EngineComponent\Material\Default.pst
 MeshInstance:
     -
-        Mesh: fantasy_village\Building\SM_balcony_02.mesh
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
         WorldMatrix:
-            - [-1, 0, -8.74228E-08, 0]
-            - [8.742278E-08, -1.192093E-07, -1, 0]
-            - [0, -1, -1.192093E-07, 0]
+            - [-2.861023E-06, 1, -5.960464E-08, -8.25]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -12.5]
     -
-        Mesh: fantasy_village\Building\SM_balcony_02.mesh
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
         WorldMatrix:
-            - [-1, 0, -8.74228E-08, 0]
-            - [8.742278E-08, -1.192093E-07, -1, 0]
-            - [0, -1, -1.192093E-07, 10]
+            - [-1, 0, -8.74228E-08, -26.75]
+            - [8.742278E-08, -1.192093E-07, -1, -0.75]
+            - [0, -1, -1.192093E-07, -18.5]
     -
-        Mesh: fantasy_village\Building\SM_balcony_01.mesh
+        Mesh : fantasy_village\Building\SM_border_01.mesh
         WorldMatrix:
-            - [-1, 0, -8.74228E-08, 10]
+            - [-1, 0, -8.74228E-08, -23.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -15.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -28.75]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -8.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -22.75]
+            - [8.742278E-08, -1.192093E-07, -1, -0.75]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -8.25]
+            - [8.742278E-08, -1.192093E-07, -1, 2]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -10.75]
+            - [8.742278E-08, -1.192093E-07, -1, -0.75]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -9.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -13.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -28.75]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -16.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -21.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -28.75]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -0.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -8.25]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -0.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -28.75]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -4.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -27.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -8.25]
+            - [8.742278E-08, -1.192093E-07, -1, 2]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -18.75]
+            - [8.742278E-08, -1.192093E-07, -1, -0.75]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -8.25]
             - [8.742278E-08, -1.192093E-07, -1, 0]
-            - [0, -1, -1.192093E-07, 0]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -19.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -17.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -28.75]
+            - [8.742278E-08, -1.192093E-07, -1, 0]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -28.75]
+            - [8.742278E-08, -1.192093E-07, -1, 2]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -14.75]
+            - [8.742278E-08, -1.192093E-07, -1, -0.75]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_wall_door_03.mesh
+        WorldMatrix:
+            - [1, -5.7109E-06, 8.742315E-08, -16.5]
+            - [8.742317E-08, -1.192093E-07, -1, 3.5]
+            - [5.710901E-06, 1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_building_part_02.mesh
+        WorldMatrix:
+            - [-2.861023E-06, -1, -2.980232E-08, -12.25]
+            - [2.980232E-08, 5.960464E-08, -1, 5]
+            - [1, -2.861023E-06, 5.960464E-08, -7]
+    -
+        Mesh : fantasy_village\Building\SM_wall_02.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 3.5]
+            - [1, 8.463861E-06, 0, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_02.mesh
+        WorldMatrix:
+            - [-2.861023E-06, -1, -2.980232E-08, -10]
+            - [2.980232E-08, 5.960464E-08, -1, 3.5]
+            - [1, -2.861023E-06, 5.960464E-08, -9]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_02.mesh
+        WorldMatrix:
+            - [-2.861023E-06, -1, -2.980232E-08, -10]
+            - [2.980232E-08, 5.960464E-08, -1, 3.5]
+            - [1, -2.861023E-06, 5.960464E-08, -5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -10]
+            - [8.742278E-08, -1.192093E-07, -1, 3.25]
+            - [0, -1, -1.192093E-07, -11.25]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -10]
+            - [8.742278E-08, -1.192093E-07, -1, 3.25]
+            - [0, -1, -1.192093E-07, -2.75]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -12.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_02.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 3.5]
+            - [1, 8.463861E-06, 0, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -12.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -12.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_02.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 3.5]
+            - [1, 8.463861E-06, 0, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_02.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 3.5]
+            - [1, 8.463861E-06, 0, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -12.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_window_12.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -16.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 0.75]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -21.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -3.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -22.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_07.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -22.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [1, 5.7109E-06, 8.742315E-08, -21.5]
+            - [8.742317E-08, -1.192093E-07, -1, 3.5]
+            - [-5.710901E-06, 1, -1.192093E-07, -11.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 3.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-3.099442E-06, -1, -5.960466E-08, -20.5]
+            - [5.960466E-08, 0, -1, 3.5]
+            - [1, -2.980233E-06, 0, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-3.099442E-06, -1, -5.960466E-08, -22.5]
+            - [5.960466E-08, 0, -1, 3.5]
+            - [1, -2.980233E-06, 0, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-3.099442E-06, -1, -5.960466E-08, -22.5]
+            - [5.960466E-08, 0, -1, 3.5]
+            - [1, -2.980233E-06, 0, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-3.099442E-06, -1, -5.960466E-08, -20.5]
+            - [5.960466E-08, 0, -1, 3.5]
+            - [1, -2.980233E-06, 0, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -21.75]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -11.407]
+    -
+        Mesh : fantasy_village\Building\SM_border_02.mesh
+        WorldMatrix:
+            - [1, -5.7109E-06, 8.742315E-08, -21.75]
+            - [8.742317E-08, -1.192093E-07, -1, 3.5]
+            - [5.710901E-06, 1, -1.192093E-07, -3.129]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [1, 5.710899E-06, 8.742293E-08, -14.5]
+            - [8.742295E-08, -1.192093E-07, -1, 3.5]
+            - [-5.7109E-06, 1, -1.192093E-07, 0.75]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [1, 5.710899E-06, 8.742293E-08, -18.5]
+            - [8.742295E-08, -1.192093E-07, -1, 3.5]
+            - [-5.7109E-06, 1, -1.192093E-07, 0.75]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-1, -2.318077E-07, -8.742281E-08, -18.5]
+            - [8.742279E-08, -1.192093E-07, -1, 3.5]
+            - [2.318077E-07, -1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_border_07.mesh
+        WorldMatrix:
+            - [-1, -2.318077E-07, -8.742281E-08, -14.5]
+            - [8.742279E-08, -1.192093E-07, -1, 3.5]
+            - [2.318077E-07, -1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_block_03.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -12.25]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -15.5]
+    -
+        Mesh : fantasy_village\Building\SM_block_03.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -20.75]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -15.5]
+    -
+        Mesh : fantasy_village\Building\SM_block_03.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -12.25]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1]
+    -
+        Mesh : fantasy_village\Building\SM_block_03.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -20.75]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1]
+    -
+        Mesh : fantasy_village\Building\SM_border_06.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -16.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -15.75]
+    -
+        Mesh : fantasy_village\Building\SM_door_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -15.8]
+            - [8.742278E-08, -1.192093E-07, -1, 3.75]
+            - [0, -1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_doorway_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -16.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_window_13.mesh
+        WorldMatrix:
+            - [1, -5.710899E-06, 8.742293E-08, -16.5]
+            - [8.742295E-08, -1.192093E-07, -1, 7.5]
+            - [5.7109E-06, 1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 7.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 7.5]
+            - [1, 8.463861E-06, 0, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_window_13.mesh
+        WorldMatrix:
+            - [-1, 1.133751E-05, -8.742293E-08, -16.5]
+            - [8.74229E-08, -1.192093E-07, -1, 7.5]
+            - [-1.13375E-05, -1, -1.192093E-07, 0.75]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 7.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_building_part_02.mesh
+        WorldMatrix:
+            - [8.344652E-06, 1, 5.960466E-08, -22.5]
+            - [5.960466E-08, 0, -1, 7.5]
+            - [-1, 8.463861E-06, -2.384186E-07, -7.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -21.5]
+            - [8.742278E-08, -1.192093E-07, -1, 7.5]
+            - [0, -1, -1.192093E-07, -3.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [1, 5.7109E-06, 8.742315E-08, -21.5]
+            - [8.742317E-08, -1.192093E-07, -1, 7.5]
+            - [-5.710901E-06, 1, -1.192093E-07, -11.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [1, 5.7109E-06, 8.742315E-08, -21.5]
+            - [8.742317E-08, -1.192093E-07, -1, 11.5]
+            - [-5.710901E-06, 1, -1.192093E-07, -11.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -21.5]
+            - [8.742278E-08, -1.192093E-07, -1, 11.5]
+            - [0, -1, -1.192093E-07, -3.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_06.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 7.5]
+            - [1, 8.463861E-06, 0, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_window_10.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 11.5]
+            - [1, 8.463861E-06, 0, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [8.344652E-06, -1, 5.960466E-08, -12.5]
+            - [5.960466E-08, -2.384186E-07, -1, 11.5]
+            - [1, 8.463861E-06, 0, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_roof_05.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 15.5]
+            - [-1, -2.801418E-06, -1.192093E-07, -7.25]
+    -
+        Mesh : fantasy_village\Building\SM_building_part_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, -1, -5.960464E-08, -12.5]
+            - [5.960464E-08, 0, -1, 15.5]
+            - [1, -2.801418E-06, 0, -7]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [-1.454353E-05, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 11.5]
+            - [-1, -1.448393E-05, -1.192093E-07, -1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [-1.454353E-05, 1, -5.960464E-08, -20.5]
+            - [5.960464E-08, -1.192093E-07, -1, 11.5]
+            - [-1, -1.448393E-05, -1.192093E-07, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [-1.454353E-05, 1, -5.960464E-08, -22.5]
+            - [5.960464E-08, -1.192093E-07, -1, 11.5]
+            - [-1, -1.448393E-05, -1.192093E-07, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [-1.454353E-05, 1, -5.960464E-08, -22.5]
+            - [5.960464E-08, -1.192093E-07, -1, 11.5]
+            - [-1, -1.448393E-05, -1.192093E-07, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_building_part_05.mesh
+        WorldMatrix:
+            - [1, -5.7109E-06, 8.742315E-08, -16.5]
+            - [8.742317E-08, -1.192093E-07, -1, 11.5]
+            - [5.710901E-06, 1, -1.192093E-07, -15.25]
+    -
+        Mesh : fantasy_village\Building\SM_roof_03.mesh
+        WorldMatrix:
+            - [0.8750006, -5.7109E-06, 8.742315E-08, -16.5]
+            - [7.649529E-08, -1.192093E-07, -1, 15.25]
+            - [4.997039E-06, 1, -1.192093E-07, -13.25]
+    -
+        Mesh : fantasy_village\Building\SM_roof_02.mesh
+        WorldMatrix:
+            - [0.8750006, -5.7109E-06, 8.742315E-08, -16.5]
+            - [7.649529E-08, -1.192093E-07, -1, 15.25]
+            - [4.997039E-06, 1, -1.192093E-07, -9.25]
+    -
+        Mesh : fantasy_village\Building\SM_roof_01.mesh
+        WorldMatrix:
+            - [-0.8750002, 2.318077E-07, -8.742281E-08, -16.5]
+            - [7.649494E-08, -1.192093E-07, -1, 15.25]
+            - [-2.028317E-07, -1, -1.192093E-07, -0.25]
+    -
+        Mesh : fantasy_village\Building\SM_roof_02.mesh
+        WorldMatrix:
+            - [0.8750006, -5.7109E-06, 8.742315E-08, -16.5]
+            - [7.649529E-08, -1.192093E-07, -1, 15.25]
+            - [4.997039E-06, 1, -1.192093E-07, -5.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_corner_01.mesh
+        WorldMatrix:
+            - [-3.099442E-06, -1, -5.960466E-08, -12.5]
+            - [5.960466E-08, 0, -1, 11.5]
+            - [1, -2.980233E-06, 0, 1.75]
+    -
+        Mesh : fantasy_village\Building\SM_wooden_base_02.mesh
+        WorldMatrix:
+            - [-1, 1.133751E-05, -8.742293E-08, -14.75]
+            - [8.74229E-08, -1.192093E-07, -1, 11.42]
+            - [-1.13375E-05, -1, -1.192093E-07, 1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wooden_base_04.mesh
+        WorldMatrix:
+            - [1, 1.133751E-05, -8.742293E-08, -19]
+            - [-8.74229E-08, -1.192093E-07, -1, 11.42]
+            - [1.13375E-05, -1, -1.192093E-07, 1.25]
+    -
+        Mesh : fantasy_village\Building\SM_wall_corner_01.mesh
+        WorldMatrix:
+            - [-1, 2.318077E-07, -8.742281E-08, -20.5]
+            - [8.742279E-08, -1.192093E-07, -1, 11.5]
+            - [-2.318077E-07, -1, -1.192093E-07, 1.75]
+    -
+        Mesh : fantasy_village\Building\SM_wall_01.mesh
+        WorldMatrix:
+            - [-1, -1.169575E-05, -8.742293E-08, -15.5]
+            - [8.74229E-08, -1.192093E-07, -1, 11.5]
+            - [1.169575E-05, -1, -1.192093E-07, 1.75]
+    -
+        Mesh : fantasy_village\Building\SM_wall_08.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -18.5]
+            - [8.742278E-08, -1.192093E-07, -1, 11.5]
+            - [0, -1, -1.192093E-07, 1.75]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -8.25]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -16.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_column_02.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -28.75]
+            - [8.742278E-08, -1.192093E-07, -1, 2]
+            - [0, -1, -1.192093E-07, -18.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -8.25]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -4.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -8.25]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -8.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -25.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]
+    -
+        Mesh : fantasy_village\Building\SM_foundation_wall_01.mesh
+        WorldMatrix:
+            - [-2.861023E-06, 1, -5.960464E-08, -28.75]
+            - [5.960464E-08, -1.192093E-07, -1, -0.75]
+            - [-1, -2.801418E-06, -1.192093E-07, -12.5]
+    -
+        Mesh : fantasy_village\Building\SM_floor_01.mesh
+        WorldMatrix:
+            - [-5.187501, 0, -8.74228E-08, -18.5]
+            - [4.535057E-07, -5.960466E-07, -1, 3.25]
+            - [0, -5.000001, -1.192093E-07, -8.5]
+    -
+        Mesh : fantasy_village\Building\SM_border_01.mesh
+        WorldMatrix:
+            - [-1, 0, -8.74228E-08, -11.5]
+            - [8.742278E-08, -1.192093E-07, -1, 3.5]
+            - [0, -1, -1.192093E-07, 1.5]

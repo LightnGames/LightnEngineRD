@@ -1049,7 +1049,6 @@ struct ShaderResourceViewDesc {
 
 struct ResourceTransitionBarrier {
 	Resource* _resource = nullptr;
-	u32 _subresource = 0;
 	ResourceStates _stateBefore;
 	ResourceStates _stateAfter;
 };

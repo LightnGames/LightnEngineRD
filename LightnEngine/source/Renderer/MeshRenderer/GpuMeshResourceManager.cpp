@@ -100,6 +100,7 @@ void GpuMeshResourceManager::update() {
 	}
 
 	// 削除されたメッシュをGPUから削除
+#define ENABLE_ZERO_CLEAR 0
 	const UpdateInfos<MeshGeometry>* meshDestroyInfos = meshScene->getDestroyInfos();
 	u32 destroyMeshCount = meshDestroyInfos->getUpdateCount();
 	auto destroyMeshes = meshDestroyInfos->getObjects();
@@ -112,12 +113,14 @@ void GpuMeshResourceManager::update() {
 		u32 subMeshIndex = meshPool->getSubMeshGeometryIndex(mesh->getSubMesh());
 
 		// メモリクリアをアップロード
+#if ENABLE_ZERO_CLEAR
 		gpu::Mesh* gpuMesh = vramUpdater->enqueueUpdate<gpu::Mesh>(&_meshGpuBuffer, meshIndex, 1);
 		gpu::LodMesh* gpuLodMeshes = vramUpdater->enqueueUpdate<gpu::LodMesh>(&_lodMeshGpuBuffer, lodMeshIndex, lodMeshCount);
 		gpu::SubMesh* gpuSubMeshes = vramUpdater->enqueueUpdate<gpu::SubMesh>(&_subMeshGpuBuffer, subMeshIndex, subMeshCount);
 		memset(gpuMesh, 0, sizeof(gpu::Mesh));
 		memset(gpuLodMeshes, 0, sizeof(gpu::LodMesh) * lodMeshCount);
 		memset(gpuSubMeshes, 0, sizeof(gpu::SubMesh) * subMeshCount);
+#endif
 	}
 }
 

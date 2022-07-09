@@ -30,9 +30,12 @@ public:
 private:
 	void updateMeshStreaming();
 	void updateTextureStreaming();
-	void streamTexture(u32 materialIndex);
+	void computeTextureStreamingMipLevels(u32 materialIndex);
 
 private:
+	static constexpr u8 INVALID_TEXTURE_STREAMING_LEVEL = UINT8_MAX;
+	static constexpr u16 INVALID_MESH_STREAMING_LEVEL = UINT16_MAX;
+
 	u32* _meshLodMinLevels = nullptr;
 	u32* _meshLodMaxLevels = nullptr;
 	u32* _meshScreenPersentages = nullptr;

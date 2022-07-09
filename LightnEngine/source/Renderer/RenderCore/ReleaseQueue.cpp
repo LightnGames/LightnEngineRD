@@ -4,12 +4,18 @@ namespace ltn {
 namespace {
 ReleaseQueue g_releaseQueue;
 }
+void ReleaseQueue::terminate() {
+	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
+		update();
+	}
+}
+
 void ReleaseQueue::update() {
 	_frameQueues[_currentFrameQueueIndex].execureRelease();
 	_currentFrameQueueIndex = (_currentFrameQueueIndex + 1) % rhi::BACK_BUFFER_COUNT;
 }
 
-void ReleaseQueue::enqueue(rhi::Resource& resource) {
+void ReleaseQueue::enqueue(GpuResource resource) {
 	getCurrentFrameQueue()->enqueue(resource);
 }
 
@@ -22,11 +28,11 @@ ReleaseQueue* ReleaseQueue::Get() {
 }
 
 FrameQueue* ReleaseQueue::getCurrentFrameQueue() {
-	u32 enqueueFrameIndex = (_currentFrameQueueIndex - 1) % rhi::BACK_BUFFER_COUNT;
+	u32 enqueueFrameIndex = (_currentFrameQueueIndex + 1) % rhi::BACK_BUFFER_COUNT;
 	return &_frameQueues[enqueueFrameIndex];
 }
 
-void FrameQueue::enqueue(rhi::Resource& resource) {
+void FrameQueue::enqueue(GpuResource resource) {
 	_resources[_resourceCount++] = resource;
 }
 

@@ -10,8 +10,8 @@ class Material;
 class Level {
 public:
 	struct LevelHeader {
-		u32 _meshCount = 0;
 		u32 _meshGeometryCount = 0;
+		u32 _meshCount = 0;
 		u32 _textureCount = 0;
 		u32 _shaderSetCount = 0;
 		u32 _materialCount = 0;

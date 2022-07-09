@@ -129,13 +129,13 @@ void MeshInstanceScene::destroyMeshInstances(MeshInstance* meshInstances) {
 }
 
 void MeshInstance::setMaterial(u16 materialSlotIndex, const Material* material) {
-	UpdateInfos<SubMeshInstance>* subMeshInstanceUpdateInfos = MeshInstanceScene::Get()->getSubMeshInstanceUpdateInfos();
+	//UpdateInfos<SubMeshInstance>* subMeshInstanceUpdateInfos = MeshInstanceScene::Get()->getSubMeshInstanceUpdateInfos();
 	const SubMeshGeometry* subMeshes = _mesh->getSubMesh();
 	u32 subMeshCount = _mesh->getSubMeshCount();
 	for (u32 i = 0; i < subMeshCount; ++i) {
 		if (subMeshes[i]._materialSlotIndex == materialSlotIndex) {
 			_subMeshInstances[i].setMaterial(material);
-			subMeshInstanceUpdateInfos->push(&_subMeshInstances[i]);
+			//subMeshInstanceUpdateInfos->push(&_subMeshInstances[i]);
 		}
 	}
 }

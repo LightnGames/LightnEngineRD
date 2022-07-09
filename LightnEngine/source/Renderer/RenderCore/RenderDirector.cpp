@@ -34,6 +34,11 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			continue;
 		}
 
+		// カリング結果リセット
+		{
+			renderViewScene->resetCullingResult(commandList, i);
+		}
+
 		// LOD 情報計算
 		{
 			MeshRenderer::ComputeLodDesc desc;
@@ -47,6 +52,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			MeshRenderer::CullingDesc desc;
 			desc._commandList = commandList;
 			desc._viewCbv = renderViewScene->getViewCbv(i);
+			desc._cullingResultUav = renderViewScene->getCullingResultUav(i);
 			meshRenderer->culling(desc);
 		}
 

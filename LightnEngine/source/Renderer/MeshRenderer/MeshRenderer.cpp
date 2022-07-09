@@ -10,7 +10,7 @@
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/VramUpdater.h>
-#include <Renderer/RenderCore/MeshLodStreamingManager.h>
+#include <Renderer/RenderCore/LodStreamingManager.h>
 
 namespace ltn {
 namespace {
@@ -33,7 +33,7 @@ void MeshRenderer::initialize() {
 		rhi::DescriptorRange meshLodStreamRangeSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
 		rhi::DescriptorRange hizSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
 		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
-		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);
+		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
 
 		rhi::RootParameter rootParameters[GpuCullingRootParam::COUNT] = {};
 		rootParameters[GpuCullingRootParam::CULLING_INFO].initializeDescriptorTable(1, &cullingInfoCbvRange, rhi::SHADER_VISIBILITY_ALL);
@@ -270,6 +270,7 @@ void MeshRenderer::culling(const CullingDesc& desc) {
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::GEOMETRY_GLOBA_OFFSET, geometryGlobalOffsetSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_LOD_STREAM_RANGE, meshLodStreamRangeSrv);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_RESULT, desc._cullingResultUav);
 
 	u32 meshInstanceReserveCount = GpuMeshInstanceManager::Get()->getMeshInstanceReserveCount();
 	u32 dispatchCount = RoundDivUp(meshInstanceReserveCount, 128u);

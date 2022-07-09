@@ -11,7 +11,11 @@ public:
 
 	void streamTexture(const Texture* texture, u32 currentStreamMipLevel, u32 targetStreamMipLevel);
 
+	// テクスチャを生成した直後に SRV を生成するとデータコピー完了まで真っ黒なテクスチャになるので遅延更新リストに登録
+	void requestCreateSrv(u32 textureIndex);
+
 	rhi::GpuDescriptorHandle getTextureGpuSrv() const { return _textureSrv._firstHandle._gpuHandle; }
+	const GpuTexture* getTexture(u32 index) const { return &_textures[index]; }
 
 	static GpuTextureManager* Get();
 
@@ -25,5 +29,11 @@ private:
 	DescriptorHandles _textureSrv;
 	GpuTexture* _textures = nullptr;
 	u8* _textureEnabledFlags = nullptr;
+
+	// SRV 遅延更新用情報
+	static constexpr u32 REQUESTED_CREATE_SRV_CAPACITY = 128;
+	static constexpr u32 REQUESTED_INVALID_INDEX = UINT32_MAX;
+	u32 _requestedCreateSrvIndices[REQUESTED_CREATE_SRV_CAPACITY] = {};
+	u8 _requestedCreateSrvTimers[REQUESTED_CREATE_SRV_CAPACITY] = {};
 };
 }

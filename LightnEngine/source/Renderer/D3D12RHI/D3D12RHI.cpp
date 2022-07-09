@@ -682,8 +682,9 @@ void CommandList::transitionBarriers(ResourceTransitionBarrier* barriers, u32 co
 		barrier.Transition.StateBefore = toD3d12(sourceBarrier._stateBefore);
 		barrier.Transition.StateAfter = toD3d12(sourceBarrier._stateAfter);
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		_commandList->ResourceBarrier(1, &barrier);
 	}
-	_commandList->ResourceBarrier(count, barriersD3d12);
+	//_commandList->ResourceBarrier(count, barriersD3d12);
 }
 
 void CommandList::copyBufferRegion(Resource* dstBuffer, u64 dstOffset, Resource* srcBuffer, u64 srcOffset, u64 numBytes) {
@@ -890,10 +891,9 @@ u32 GetTextureBufferAligned(u32 sizeInByte) {
 void PipelineState::iniaitlize(const GraphicsPipelineStateDesc& desc) {
 	ID3D12Device2* device = toD3d12(desc._device);
 
-	//auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	//depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
-	//depthStencilDesc.DepthWriteMask = toD3d12(desc._depthWriteMask);
-	auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC();
+	auto depthStencilDesc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	depthStencilDesc.DepthFunc = toD3d12(desc._depthComparisonFunc);
+	depthStencilDesc.DepthWriteMask = toD3d12(desc._depthWriteMask);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout.NumElements = desc._inputElementCount;

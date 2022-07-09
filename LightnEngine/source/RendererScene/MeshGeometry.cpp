@@ -168,6 +168,7 @@ void MeshGeometryPool::initialize(const InitializetionDesc& desc) {
 		_lodMeshGeometries = allocation.allocateObjects<LodMeshGeometry>(desc._lodMeshCount);
 		_subMeshGeometries = allocation.allocateObjects<SubMeshGeometry>(desc._subMeshCount);
 		_assetPathHashes = allocation.allocateObjects<u64>(desc._meshCount);
+		_enabledFlags = allocation.allocateClearedObjects<u8>(desc._meshCount);
 		_assetPaths = allocation.allocateObjects<char*>(desc._meshCount);
 		_meshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshCount);
 		_lodMeshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._lodMeshCount);
@@ -187,23 +188,28 @@ MeshGeometry* MeshGeometryPool::allocateMeshGeometry(const AllocationDesc& desc)
 	VirtualArray::AllocationInfo lodMeshAllocationInfo = _lodMeshAllocations.allocation(desc._lodMeshCount);
 	VirtualArray::AllocationInfo subMeshAllocationInfo = _subMeshAllocations.allocation(desc._subMeshCount);
 
-	_meshAllocationInfos[meshAllocationInfo._offset] = meshAllocationInfo;
-	_lodMeshAllocationInfos[meshAllocationInfo._offset] = lodMeshAllocationInfo;
-	_subMeshAllocationInfos[meshAllocationInfo._offset] = subMeshAllocationInfo;
+	u32 meshAllocationOffset = u32(meshAllocationInfo._offset);
+	_meshAllocationInfos[meshAllocationOffset] = meshAllocationInfo;
+	_lodMeshAllocationInfos[meshAllocationOffset] = lodMeshAllocationInfo;
+	_subMeshAllocationInfos[meshAllocationOffset] = subMeshAllocationInfo;
+	_enabledFlags[meshAllocationOffset] = 1;
 
-	MeshGeometry* mesh = &_meshGeometries[meshAllocationInfo._offset];
+	MeshGeometry* mesh = &_meshGeometries[meshAllocationOffset];
 	mesh->setLodMeshGeometries(&_lodMeshGeometries[lodMeshAllocationInfo._offset]);
 	mesh->setSubMeshGeometries(&_subMeshGeometries[subMeshAllocationInfo._offset]);
-	mesh->setAssetPathHashPtr(&_assetPathHashes[meshAllocationInfo._offset]);
-	mesh->setAssetPathPtr(&_assetPaths[meshAllocationInfo._offset]);
+	mesh->setAssetPathHashPtr(&_assetPathHashes[meshAllocationOffset]);
+	mesh->setAssetPathPtr(&_assetPaths[meshAllocationOffset]);
 	return mesh;
 }
 
 void MeshGeometryPool::freeMeshGeometry(const MeshGeometry* mesh) {
 	u32 meshIndex = getMeshGeometryIndex(mesh);
+	LTN_ASSERT(_enabledFlags[meshIndex] == 1);
+
 	_meshAllocations.freeAllocation(_meshAllocationInfos[meshIndex]);
 	_lodMeshAllocations.freeAllocation(_lodMeshAllocationInfos[meshIndex]);
 	_subMeshAllocations.freeAllocation(_subMeshAllocationInfos[meshIndex]);
+	_enabledFlags[meshIndex] = 0;
 	Memory::freeObjects(_assetPaths[getMeshGeometryIndex(mesh)]);
 }
 

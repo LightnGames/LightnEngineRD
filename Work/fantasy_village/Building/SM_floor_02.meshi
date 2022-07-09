@@ -1,0 +1,4 @@
+Mesh : fantasy_village\Building\SM_floor_02.meshg
+Material :
+    MI_plaster_WPO_01_Inst : fantasy_village\Material\MI_plaster_WPO_01_Inst.mto
+    MI_wooden_board_WPO_01_Inst : fantasy_village\Material\MI_wooden_board_WPO_01_Inst.mto

@@ -43,6 +43,8 @@ public:
 	u32 getSizeInByte() const { return _sizeInByte; }
 	u64 getGpuVirtualAddress() const { return _resource.getGpuVirtualAddress(); }
 
+	bool isVaild() const { return _desc._width != 0; }
+
 protected:
 	u32 _sizeInByte = 0;
 	rhi::ResourceDesc _desc;
