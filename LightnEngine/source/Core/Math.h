@@ -76,6 +76,10 @@ struct Vector3 {
 		return DirectX::XMVectorGetX(DirectX::XMVector3Length(_v));
 	}
 
+	Vector3 normalize() const {
+		return DirectX::XMVector3Normalize(_v);
+	}
+
 	Float3 getFloat3() const {
 		Float3 result;
 		DirectX::XMStoreFloat3(&result, _v);
@@ -90,6 +94,10 @@ struct Vector3 {
 		return DirectX::XMVectorMax(_v, v._v);
 	}
 
+	static f32 Dot(const Vector3& v1, const Vector3& v2) {
+		return DirectX::XMVectorGetX(DirectX::XMVector3Dot(v1._v, v2._v));
+	}
+
 	static Vector3 Zero() {
 		return DirectX::g_XMZero.v;
 	}
@@ -98,12 +106,29 @@ struct Vector3 {
 		return DirectX::g_XMOne3.v;
 	}
 
+	static Vector3 Right() {
+		return DirectX::g_XMIdentityR0.v;
+	}
+
+	static Vector3 Up() {
+		return DirectX::g_XMIdentityR1.v;
+	}
+
+	static Vector3 Forward() {
+		return DirectX::g_XMIdentityR2.v;
+	}
+
 	static Vector3 FltMax() {
 		return DirectX::g_XMFltMax.v;
 	}
 
 	Vector _v;
 };
+
+static Float4 MakeFloat4(const Vector3& v, f32 w) {
+	Float3 f = v.getFloat3();
+	return Float4(f.x, f.y, f.z, w);
+}
 
 struct Vector4 {
 	Vector4() {

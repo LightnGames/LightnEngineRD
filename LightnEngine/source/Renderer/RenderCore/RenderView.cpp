@@ -237,6 +237,23 @@ void RenderViewScene::updateGpuView(const View& view, u32 viewIndex) {
 	gpuView->_viewPortSize[0] = view.getWidth();
 	gpuView->_viewPortSize[1] = view.getHeight();
 	gpuView->_upDirection = camera->_worldMatrix.getCol(1).getFloat3();
+
+	// ビューフラスタムの平面情報
+	Matrix4 cameraMatrix = camera->_worldMatrix;
+	Vector3 sideForward = Vector3::Forward() * fovHalfTan * aspectRate;
+	Vector3 forward = Vector3::Forward() * fovHalfTan;
+	Vector3 rightNormal = Matrix4::transformNormal(Vector3::Right() + sideForward, cameraMatrix).normalize();
+	Vector3 leftNormal = Matrix4::transformNormal(-Vector3::Right() + sideForward, cameraMatrix).normalize();
+	Vector3 buttomNormal = Matrix4::transformNormal(Vector3::Up() + forward, cameraMatrix).normalize();
+	Vector3 topNormal = Matrix4::transformNormal(-Vector3::Up() + forward, cameraMatrix).normalize();
+	Vector3 nearNormal = Matrix4::transformNormal(Vector3::Forward(), cameraMatrix).normalize();
+	Vector3 farNormal = Matrix4::transformNormal(-Vector3::Forward(), cameraMatrix).normalize();
+	gpuView->_frustumPlanes[0] = MakeFloat4(rightNormal, Vector3::Dot(rightNormal, cameraPosition));
+	gpuView->_frustumPlanes[1] = MakeFloat4(leftNormal, Vector3::Dot(leftNormal, cameraPosition));
+	gpuView->_frustumPlanes[2] = MakeFloat4(buttomNormal, Vector3::Dot(buttomNormal, cameraPosition));
+	gpuView->_frustumPlanes[3] = MakeFloat4(topNormal, Vector3::Dot(topNormal, cameraPosition));
+	gpuView->_frustumPlanes[4] = MakeFloat4(nearNormal, Vector3::Dot(nearNormal, cameraPosition) + nearClip);
+	gpuView->_frustumPlanes[5] = MakeFloat4(farNormal, Vector3::Dot(farNormal, cameraPosition) - farClip);
 }
 
 void RenderViewScene::showCullingResultStatus(u32 viewIndex) const {

@@ -40,7 +40,7 @@ struct CullingResult
 #define OFFSET_passOcclusionCullingTriangleCount (UINT32_SIZE_IN_BYTE * 11)
 
 ConstantBuffer<CullingInfo> _cullingInfo : register(b0);
-ConstantBuffer<ViewInfo> _viewInfo : register(b2);
+ConstantBuffer<ViewInfo> _viewInfo : register(b1);
 
 ByteAddressBuffer _meshes : register(t0);
 ByteAddressBuffer _lodMeshes : register(t1);
@@ -60,6 +60,33 @@ RWByteAddressBuffer _indirectArguments : register(u0);
 RWByteAddressBuffer _countBuffer : register(u1);
 RWByteAddressBuffer _indirectArgumentSubInfos : register(u2);
 RWByteAddressBuffer _cullingResult : register(u3);
+
+// 平面の法線方向に最も近いAABBのコーナーポイントを探す
+float3 getPositivePoint(float3 boundsMin, float3 boundsMax, float3 planeNormal)
+{
+    float3 result = boundsMin;
+    float3 size = boundsMax - boundsMin;
+
+    result.x += planeNormal.x > 0.0 ? size.x : 0.0;
+    result.y += planeNormal.y > 0.0 ? size.y : 0.0;
+    result.z += planeNormal.z > 0.0 ? size.z : 0.0;
+    return result;
+}
+
+bool doFrustumCulling(float3 boundMin, float3 boundsMax, ViewInfo viewInfo) {
+    [unroll]
+    for (uint i = 0; i < FRUSTUM_PLANE_COUNT; ++i) {
+        float4 planeNormal = viewInfo._frustumPlanes[i];
+        float3 positivePoint = getPositivePoint(boundMin, boundsMax, planeNormal.xyz);
+        float length = dot(planeNormal.xyz, positivePoint) - planeNormal.w;
+
+        if (length < 0) {
+            return false;
+        }
+    }
+    
+    return true;
+}
 
 [numthreads(128, 1, 1)]
 void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID) {
@@ -82,12 +109,25 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint meshLodLevelMax = (meshLodStreamRange >> 16) & 0x0000ffff; // 上位 16bit
     lodLevel = clamp(lodLevel, meshLodLevelMin, meshLodLevelMax);
     
-    
     // Lod Level が Lod 数より大きい場合はカリング
     if (lodLevel >= mesh._lodMeshCount)
     {
         return;
     }
+
+    float3 boundsMin = meshInstance._aabbMin;
+    float3 boundsMax = meshInstance._aabbMax;
+    bool passCulling = true;
+    bool passFrustum = false;
+    bool passOcclusion = false;
+    bool testFrustum = false;
+    bool testOcclusion = false;
+#define UBER_FRUSTUM 1
+#if UBER_FRUSTUM
+    passFrustum = doFrustumCulling(boundsMin, boundsMax, _viewInfo);
+    testFrustum = true;
+    passCulling = passFrustum;
+#endif
 	
     uint lodMeshOffset = mesh._lodMeshOffset + lodLevel;
     LodMesh lodMesh = _lodMeshes.Load<LodMesh>(sizeof(LodMesh) * lodMeshOffset);
@@ -104,13 +144,19 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         }
     
         uint dummy;
-        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingMeshInstanceCount, 1, dummy);
-        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
-        _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingTriangleCount, triangleCount, dummy);
+        if (testFrustum)
+        {
+            _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingMeshInstanceCount, 1, dummy);
+            _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
+            _cullingResult.InterlockedAdd(OFFSET_testFrustumCullingTriangleCount, triangleCount, dummy);
+        }
     
-        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingMeshInstanceCount, 1, dummy);
-        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
-        _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingTriangleCount, triangleCount, dummy);
+        if (passFrustum)
+        {
+            _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingMeshInstanceCount, 1, dummy);
+            _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
+            _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingTriangleCount, triangleCount, dummy);
+        }
     }
     
     uint lodMeshInstanceOffset = meshInstance._lodMeshInstanceOffset + lodLevel;
