@@ -101,6 +101,7 @@ struct CommandList:public CommandListBase {
 	 void setViewports(u32 count, const ViewPort* viewPorts) override;
 	 void setScissorRects(u32 count, const Rect* scissorRects) override;
 	 void setRenderTargets(u32 count, CpuDescriptorHandle* rtvHandles, CpuDescriptorHandle* dsvHandle) override;
+	 void setRenderTargets(u32 count, CpuDescriptorHandle rtvHandles, CpuDescriptorHandle* dsvHandle) override;
 	 void clearRenderTargetView(CpuDescriptorHandle rtvHandle, f32 clearColor[4]) override;
 	 void clearDepthStencilView(CpuDescriptorHandle depthStencilView, ClearFlags clearFlags, f32 depth, u8 stencil, u32 numRects, const Rect* rects) override;
 	 void setPipelineState(PipelineState* pipelineState) override;

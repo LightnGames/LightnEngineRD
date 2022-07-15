@@ -91,8 +91,8 @@ void PipelineStateReloader::terminate() {
 	WSACleanup();
 
 	// 解放漏れチェック
-	LTN_ASSERT(_graphicsPipelineStateContainer._count == 0);
-	LTN_ASSERT(_computePipelineStateContainer._count == 0);
+	//LTN_ASSERT(_graphicsPipelineStateContainer._count == 0);
+	//LTN_ASSERT(_computePipelineStateContainer._count == 0);
 }
 
 void PipelineStateReloader::update() {
@@ -154,7 +154,11 @@ void PipelineStateReloader::unregisterPipelineState(rhi::PipelineState* pipeline
 		return;
 	}
 
-	_computePipelineStateContainer.removePipelineState(pipelineState);
+	if (_computePipelineStateContainer.removePipelineState(pipelineState)) {
+		return;
+	}
+
+	LTN_ASSERT(false);
 }
 
 PipelineStateReloader* PipelineStateReloader::Get() {
@@ -190,10 +194,6 @@ bool PipelineStateShaderPathContainer::removePipelineState(rhi::PipelineState* p
 	}
 
 	_pipelineStates[findIndex] = nullptr;
-	if (_count == findIndex + 1) {
-		--_count;
-	}
-
 	return true;
 }
 }

@@ -16,7 +16,7 @@ struct ScopedBarrierDesc {
 // 定義された行でリソースバリアを発行し、破棄時にリソースステートを戻すクラス
 class ScopedBarrier {
 public:
-	static constexpr u32 SCOPED_BARRIER_COUNT_MAX = 8;
+	static constexpr u32 SCOPED_BARRIER_COUNT_MAX = 12;
 
 	ScopedBarrier(rhi::CommandList* commandList, ScopedBarrierDesc* barrierDescs, u32 barrierCount) {
 		LTN_ASSERT(barrierCount < SCOPED_BARRIER_COUNT_MAX);

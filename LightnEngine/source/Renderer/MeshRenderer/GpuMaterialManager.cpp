@@ -48,8 +48,10 @@ void GpuMaterialManager::initialize() {
 	}
 
 	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
-		_defaultRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		_defaultPipelineStates = allocation.allocateClearedObjects<rhi::PipelineState>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_geometryPassRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_shadingPassRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_geometryPassPipelineStates = allocation.allocateClearedObjects<rhi::PipelineState>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_shadingPassPipelineStates = allocation.allocateClearedObjects<rhi::PipelineState>(PipelineSetScene::PIPELINE_SET_CAPACITY);
 		});
 }
 
@@ -74,24 +76,57 @@ void GpuMaterialManager::update() {
 		u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(pipelineSet);
 		rhi::Device* device = DeviceManager::Get()->getDevice();
 
-		// ルートシグネチャ
+		// ジオメトリ ルートシグネチャ
 		{
 			rhi::DescriptorRange viewInfoCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 			rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-			rhi::DescriptorRange materialParameterSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-			rhi::DescriptorRange indirectArgumentSubInfoSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
-			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
-			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
-			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
+			rhi::DescriptorRange indirectArgumentSubInfoSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 
-			rhi::RootParameter rootParameters[DefaultRootParam::COUNT] = {};
-			rootParameters[DefaultRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::MATERIAL_PARAMETER].initializeDescriptorTable(1, &materialParameterSrvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::INDIRECT_ARGUMENT_SUB_INFO].initializeDescriptorTable(1, &indirectArgumentSubInfoSrvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &meshInstanceLodLevelSrvRange, rhi::SHADER_VISIBILITY_ALL);
-			rootParameters[DefaultRootParam::MATERIAL_SCREEN_PERSENTAGE].initializeDescriptorTable(1, &materialScreenPersentageSrvRange, rhi::SHADER_VISIBILITY_ALL);
+			rhi::RootParameter rootParameters[GeometryRootParam::COUNT] = {};
+			rootParameters[GeometryRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_VERTEX);
+			rootParameters[GeometryRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_VERTEX);
+			rootParameters[GeometryRootParam::INDIRECT_ARGUMENT_SUB_INFO].initializeDescriptorTable(1, &indirectArgumentSubInfoSrvRange, rhi::SHADER_VISIBILITY_ALL);
+
+			rhi::RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc._device = device;
+			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+			rootSignatureDesc._parameters = rootParameters;
+			rootSignatureDesc._flags = rhi::ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+			rhi::RootSignature& rootSignature = _geometryPassRootSignatures[pipelineSetIndex];
+			rootSignature.iniaitlize(rootSignatureDesc);
+			rootSignature.setName("RootSigScreenTriangle");
+		}
+
+		// シェーディング ルートシグネチャ
+		{
+			rhi::DescriptorRange shadingInfoCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+			rhi::DescriptorRange pipelineSetRangeCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
+
+			rhi::DescriptorRange viewInfoCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+			rhi::DescriptorRange materialParameterSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+			rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
+			rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
+			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
+			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
+			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 6);
+			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
+			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
+
+			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
+			rootParameters[ShadingRootParam::SHADING_INFO].initializeDescriptorTable(1, &shadingInfoCbvRange, rhi::SHADER_VISIBILITY_VERTEX);
+			rootParameters[ShadingRootParam::PIPELINE_SET_RANGE].initializeDescriptorTable(1, &pipelineSetRangeCbvRange, rhi::SHADER_VISIBILITY_VERTEX);
+			rootParameters[ShadingRootParam::PIPELINE_SET_INFO].initializeConstant(0, 1, rhi::SHADER_VISIBILITY_VERTEX);
+
+			rootParameters[ShadingRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MATERIAL_PARAMETER].initializeDescriptorTable(1, &materialParameterSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MESH].initializeDescriptorTable(1, &meshSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &meshInstanceLodLevelSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::VERTEX_RESOURCE].initializeDescriptorTable(1, &vertexResourceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttibuteSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 
 			rhi::StaticSamplerDesc staticSamplerDescs[2];
 			{
@@ -133,43 +168,84 @@ void GpuMaterialManager::update() {
 			rootSignatureDesc._parameters = rootParameters;
 			rootSignatureDesc._numStaticSamplers = LTN_COUNTOF(staticSamplerDescs);
 			rootSignatureDesc._staticSamplers = staticSamplerDescs;
-			rootSignatureDesc._flags = rhi::ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-			rhi::RootSignature& rootSignature = _defaultRootSignatures[pipelineSetIndex];
+			rhi::RootSignature& rootSignature = _shadingPassRootSignatures[pipelineSetIndex];
 			rootSignature.iniaitlize(rootSignatureDesc);
 			rootSignature.setName("RootSigScreenTriangle");
 		}
 
-		// パイプラインステート
+		// ジオメトリ パイプラインステート
 		{
+			AssetPath pixelShaderPath("EngineComponent\\Shader\\VisibilityBuffer\\GeometryPass.pso");
+			rhi::ShaderBlob pixelShader;
+			pixelShader.initialize(pixelShaderPath.get());
+
 			const Shader* vertexShader = pipelineSet->getVertexShader();
-			const Shader* pixelShader = pipelineSet->getPixelShader();
 			u32 vertexShaderIndex = shaderScene->getShaderIndex(vertexShader);
-			u32 pixelShaderIndex = shaderScene->getShaderIndex(pixelShader);
 
 			rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
 			pipelineStateDesc._device = device;
 			pipelineStateDesc._vs = gpuShaderScene->getShader(vertexShaderIndex)->getShaderByteCode();
-			pipelineStateDesc._ps = gpuShaderScene->getShader(pixelShaderIndex)->getShaderByteCode();
-			pipelineStateDesc._numRenderTarget = 1;
-			pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+			pipelineStateDesc._ps = pixelShader.getShaderByteCode();
 			pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			pipelineStateDesc._rootSignature = &_defaultRootSignatures[pipelineSetIndex];
+			pipelineStateDesc._rootSignature = &_geometryPassRootSignatures[pipelineSetIndex];
 			pipelineStateDesc._sampleDesc._count = 1;
 			pipelineStateDesc._inputElements = inputElements;
 			pipelineStateDesc._inputElementCount = LTN_COUNTOF(inputElements);
-			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_LESS;
+			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_LESS_EQUAL;
 			pipelineStateDesc._dsvFormat = rhi::FORMAT_D32_FLOAT;
 
-			rhi::PipelineState& pipelineState = _defaultPipelineStates[pipelineSetIndex];
+			pipelineStateDesc._numRenderTarget = 2;
+			rhi::Format* visibilityBufferGeometryRtvFormats = pipelineStateDesc._rtvFormats;
+			visibilityBufferGeometryRtvFormats[0] = rhi::FORMAT_R32G32_UINT;
+			visibilityBufferGeometryRtvFormats[1] = rhi::FORMAT_R8_UINT;
+
+			rhi::PipelineState& pipelineState = _geometryPassPipelineStates[pipelineSetIndex];
 			pipelineState.iniaitlize(pipelineStateDesc);
-			pipelineState.setName("PsoScreenTriangle");
+			pipelineState.setName("PsoGeometry");
 
 			PipelineStateReloader::GraphicsPipelineStateRegisterDesc reloaderDesc = {};
 			reloaderDesc._desc = pipelineStateDesc;
 			reloaderDesc._shaderPathHashes[0] = vertexShader->_assetPathHash;
+			reloaderDesc._shaderPathHashes[1] = 0;
+			PipelineStateReloader::Get()->registerPipelineState(&_geometryPassPipelineStates[pipelineSetIndex], reloaderDesc);
+
+			pixelShader.terminate();
+		}
+
+		// シェーディング パイプラインステート
+		{
+			AssetPath vertexShaderPath("EngineComponent\\Shader\\VisibilityBuffer\\ShadingQuad.vso");
+			rhi::ShaderBlob vertexShader;
+			vertexShader.initialize(vertexShaderPath.get());
+
+			const Shader* pixelShader = pipelineSet->getPixelShader();
+			u32 pixelShaderIndex = shaderScene->getShaderIndex(pixelShader);
+
+			rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
+			pipelineStateDesc._device = device;
+			pipelineStateDesc._vs = vertexShader.getShaderByteCode();
+			pipelineStateDesc._ps = gpuShaderScene->getShader(pixelShaderIndex)->getShaderByteCode();
+			pipelineStateDesc._numRenderTarget = 1;
+			pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+			pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			pipelineStateDesc._rootSignature = &_shadingPassRootSignatures[pipelineSetIndex];
+			pipelineStateDesc._sampleDesc._count = 1;
+			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_EQUAL;
+			pipelineStateDesc._dsvFormat = rhi::FORMAT_D16_UNORM;
+			pipelineStateDesc._depthWriteMask = rhi::DEPTH_WRITE_MASK_ZERO;
+
+			rhi::PipelineState& pipelineState = _shadingPassPipelineStates[pipelineSetIndex];
+			pipelineState.iniaitlize(pipelineStateDesc);
+			pipelineState.setName("PsoShading");
+
+			PipelineStateReloader::GraphicsPipelineStateRegisterDesc reloaderDesc = {};
+			reloaderDesc._desc = pipelineStateDesc;
+			reloaderDesc._shaderPathHashes[0] = 0;
 			reloaderDesc._shaderPathHashes[1] = pixelShader->_assetPathHash;
-			PipelineStateReloader::Get()->registerPipelineState(&_defaultPipelineStates[pipelineSetIndex], reloaderDesc);
+			PipelineStateReloader::Get()->registerPipelineState(&_shadingPassPipelineStates[pipelineSetIndex], reloaderDesc);
+
+			vertexShader.terminate();
 		}
 	}
 
@@ -181,10 +257,13 @@ void GpuMaterialManager::update() {
 		const PipelineSet* pipelineSet = destroyPipelineSets[i];
 		u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(pipelineSet);
 
-		PipelineStateReloader::Get()->unregisterPipelineState(&_defaultPipelineStates[pipelineSetIndex]);
+		PipelineStateReloader::Get()->unregisterPipelineState(&_geometryPassPipelineStates[pipelineSetIndex]);
+		PipelineStateReloader::Get()->unregisterPipelineState(&_shadingPassPipelineStates[pipelineSetIndex]);
 
-		_defaultPipelineStates[pipelineSetIndex].terminate();
-		_defaultRootSignatures[pipelineSetIndex].terminate();
+		_geometryPassPipelineStates[pipelineSetIndex].terminate();
+		_shadingPassPipelineStates[pipelineSetIndex].terminate();
+		_geometryPassRootSignatures[pipelineSetIndex].terminate();
+		_shadingPassRootSignatures[pipelineSetIndex].terminate();
 	}
 
 	updateMaterialParameters();

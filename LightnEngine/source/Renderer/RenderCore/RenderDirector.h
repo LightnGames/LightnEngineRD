@@ -1,5 +1,6 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
+#include <Renderer/MeshRenderer/IndirectArgumentResource.h>
 
 namespace ltn {
 class RenderDirector{
@@ -10,5 +11,6 @@ public:
 
 	static RenderDirector* Get();
 private:
+	IndirectArgumentResource _indirectArgumentResource;
 };
 }

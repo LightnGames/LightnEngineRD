@@ -44,8 +44,15 @@ public:
 	rhi::VertexBufferView getNormalTangentVertexBufferView() const;
 	rhi::VertexBufferView getTexcoordVertexBufferView() const;
 	rhi::IndexBufferView getIndexBufferView() const;
+	GpuBuffer* getGeometryGlobalOffsetGpuBuffer() { return &_geometryGlobalOffsetGpuBuffer; }
+	GpuBuffer* getPositionVertexGpuBuffer() { return &_vertexPositionGpuBuffer; }
+	GpuBuffer* getNormalTangentVertexGpuBuffer() { return &_vertexNormalTangentGpuBuffer; }
+	GpuBuffer* getTexcoordVertexGpuBuffer() { return &_vertexTexcoordGpuBuffer; }
+	GpuBuffer* getIndexGpuBuffer() { return &_indexGpuBuffer; }
+
 	rhi::GpuDescriptorHandle getGeometryGlobalOffsetGpuSrv() const { return _geometryGlobalOffsetSrv._gpuHandle; }
 	rhi::GpuDescriptorHandle getMeshLodStreamRangeGpuSrv() const { return _meshLodStreamRangeSrv._gpuHandle; }
+	rhi::GpuDescriptorHandle getVertexResourceGpuSrv() const { return _vertexResourceSrv._firstHandle._gpuHandle; }
 
 	static GeometryResourceManager* Get();
 
@@ -62,6 +69,7 @@ private:
 	VirtualArray _indexAllocations;
 	DescriptorHandle _geometryGlobalOffsetSrv;
 	DescriptorHandle _meshLodStreamRangeSrv;
+	DescriptorHandles _vertexResourceSrv;
 
 	// num lod meshes
 	GeometryAllocationInfo* _geometryAllocationInfos = nullptr;

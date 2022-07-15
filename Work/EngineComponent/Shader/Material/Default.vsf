@@ -2,34 +2,21 @@
 #include "../MeshRenderer/MeshDef.sfh"
 #include "ShaderInput.sfh"
 
-ConstantBuffer<ViewInfo> _sceneInfo : register(b0);
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 ByteAddressBuffer _meshInstances : register(t0);
-ByteAddressBuffer _materialParameters : register(t1);
-ByteAddressBuffer _indirectArgumentSubInfos : register(t2);
-
-// 32bit uint -> 16bit float2
-float2 unpackTexCoords(uint packed)
-{
-    uint x = (packed.x >> 0) & 0xffff;
-    uint y = (packed.x >> 16) & 0xffff;
-    float div = UINT16_MAX / 8.0;
-    return (float2(x, y) / div) - 4.0;
-}
+ByteAddressBuffer _indirectArgumentSubInfos : register(t1);
 
 VertexOut main(VSInput input)
 {
     IndirectArgumentSubInfo subInfo = _indirectArgumentSubInfos.Load<IndirectArgumentSubInfo>(sizeof(IndirectArgumentSubInfo) * input._instanceIndex);
-    MeshInstance meshInstance = _meshInstances.Load<MeshInstance>(sizeof(MeshInstance) * subInfo._meshInstanceIndex);
+    MeshInstance meshInstance = getMeshInstance(_meshInstances, subInfo._meshInstanceIndex);
     float4 worldPos = float4(mul(float4(input._position, 1), meshInstance._worldMatrix), 1);
     //float4 worldPos = float4(input._position, 1);
     
     VertexOut vertexOut;
-    vertexOut._position = mul(worldPos, _sceneInfo._matrixViewProj);
-    vertexOut._positionNdc = float4(input._position, 1);
-    vertexOut._texcoord = unpackTexCoords(input._texcoord);
+    vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
     vertexOut._meshInstanceIndex = subInfo._meshInstanceIndex;
-    vertexOut._worldPosition = worldPos.xyz;
-    vertexOut._materialParameterOffset = subInfo._materialParameterOffset;
-    vertexOut._materialIndex = subInfo._materialIndex;
+    vertexOut._materialParameterOffset = subInfo._materialParameterOffset / 4;
+    vertexOut._triangleOffset = subInfo._triangleOffset;
     return vertexOut;
 }

@@ -171,16 +171,10 @@ void RenderViewScene::update() {
 	}
 }
 
-void RenderViewScene::setUpView(rhi::CommandList* commandList, const View& view, u32 viewIndex) {
+void RenderViewScene::setViewports(rhi::CommandList* commandList, const View& view, u32 viewIndex) {
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "SetUpView");
-	f32 clearColor[4] = {};
-	rhi::CpuDescriptorHandle rtv = _viewRtv.get(viewIndex)._cpuHandle;
-	rhi::CpuDescriptorHandle dsv = _viewDsv.get(viewIndex)._cpuHandle;
 	rhi::ViewPort viewPort = createViewPort(view);
 	rhi::Rect scissorRect = createScissorRect(view);
-	commandList->setRenderTargets(1, &rtv, &dsv);
-	commandList->clearRenderTargetView(rtv, clearColor);
-	commandList->clearDepthStencilView(dsv, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	commandList->setViewports(1, &viewPort);
 	commandList->setScissorRects(1, &scissorRect);
 }

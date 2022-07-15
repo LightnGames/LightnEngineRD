@@ -35,5 +35,6 @@ private:
 	static constexpr u32 REQUESTED_INVALID_INDEX = UINT32_MAX;
 	u32 _requestedCreateSrvIndices[REQUESTED_CREATE_SRV_CAPACITY] = {};
 	u8 _requestedCreateSrvTimers[REQUESTED_CREATE_SRV_CAPACITY] = {};
+	GpuTexture _defaultBlackTexture;
 };
 }

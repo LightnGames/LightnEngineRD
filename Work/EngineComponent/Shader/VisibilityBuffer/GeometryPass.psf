@@ -1,0 +1,17 @@
+#include "../Material/ShaderInput.sfh"
+
+struct OutputPS
+{
+    uint2 _triangleId : SV_Target0;
+    uint _shaderId : SV_Target1;
+};
+
+OutputPS main(VertexOut input, uint primitiveId : SV_PrimitiveID)
+{
+    uint triangleId = input._triangleOffset + primitiveId;
+    uint packedAttribute = (input._materialParameterOffset << 18) | input._meshInstanceIndex;
+    OutputPS output;
+    output._triangleId = uint2(triangleId, packedAttribute);
+    output._shaderId = 0;
+    return output;
+}

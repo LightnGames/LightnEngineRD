@@ -47,6 +47,7 @@ struct IndirectArgumentSubInfo
     uint _meshInstanceIndex;
     uint _materialIndex;
     uint _materialParameterOffset;
+    uint _triangleOffset;
 };
 
 struct GeometryGlobalOffsetInfo
@@ -59,3 +60,53 @@ struct CullingInfo
 {
     uint _meshInstanceReserveCount;
 };
+
+uint loadUint(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<uint>(sizeof(uint) * index);
+}
+
+float2 loadFloat2(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<float2>(sizeof(float2) * index);
+}
+
+float3 loadFloat3(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<float3>(sizeof(float3) * index);
+}
+
+GeometryGlobalOffsetInfo getGeometryGlobalOffsetInfo(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<GeometryGlobalOffsetInfo>(sizeof(GeometryGlobalOffsetInfo) * index);
+}
+
+Mesh getMesh(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<Mesh>(sizeof(Mesh) * index);
+}
+
+LodMesh getLodMesh(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<LodMesh>(sizeof(LodMesh) * index);
+}
+
+SubMesh getSubMesh(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<SubMesh>(sizeof(SubMesh) * index);
+}
+
+MeshInstance getMeshInstance(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<MeshInstance>(sizeof(MeshInstance) * index);
+}
+
+LodMeshInstance getLodMeshInstance(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<LodMeshInstance>(sizeof(LodMeshInstance) * index);
+}
+
+SubMeshInstance getSubMeshInstance(ByteAddressBuffer buffer, uint index)
+{
+    return buffer.Load<SubMeshInstance>(sizeof(SubMeshInstance) * index);
+}

@@ -1,0 +1,453 @@
+#include <Renderer/RenderCore/DeviceManager.h>
+#include <Renderer/RenderCore/VramUpdater.h>
+#include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/RendererUtility.h>
+#include <Renderer/RenderCore/LodStreamingManager.h>
+#include <Renderer/MeshRenderer/GpuMaterialManager.h>
+#include <Renderer/MeshRenderer/GeometryResourceManager.h>
+#include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
+#include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
+#include <Renderer/MeshRenderer/GpuTextureManager.h>
+#include <Renderer/MeshRenderer/IndirectArgumentResource.h>
+#include <Renderer/AssetReloader/PipelineStateReloader.h>
+#include <RendererScene/View.h>
+#include <Application/Application.h>
+#include "VisibilityBufferRenderer.h"
+
+namespace ltn {
+namespace {
+VisiblityBufferRenderer g_visibilityBufferRenderer;
+}
+
+void VisiblityBufferRenderer::initialize() {
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	Application* app = ApplicationSysytem::Get()->getApplication();
+
+	u32 screenWidth = app->getScreenWidth();
+	u32 screenHeight = app->getScreenHeight();
+	u32 shaderRangeWidth = u64(screenWidth / SHADER_RANGE_TILE_SIZE) + 1;
+	u32 shaderRangeHeight = u64(screenHeight / SHADER_RANGE_TILE_SIZE) + 1;
+	_shadingQuadCount = shaderRangeWidth * shaderRangeHeight;
+
+	// Texture
+	{
+		GpuTextureDesc desc = {};
+		desc._device = device;
+		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._format = rhi::FORMAT_R32G32_UINT;
+		desc._width = u64(screenWidth);
+		desc._height = u64(screenHeight);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		desc._initialState = rhi::RESOURCE_STATE_RENDER_TARGET;
+		{
+			rhi::ClearValue optimizedClearValue = {};
+			optimizedClearValue._format = desc._format;
+			optimizedClearValue._color[0] = 0.0f;
+			desc._optimizedClearValue = &optimizedClearValue;
+		}
+
+		_triangleIdTexture.initialize(desc);
+		_triangleIdTexture.setName("VisiblityBufferTriangleID");
+
+		{
+			desc._format = rhi::FORMAT_R8_UINT;
+			rhi::ClearValue optimizedClearValue = {};
+			optimizedClearValue._format = desc._format;
+			optimizedClearValue._color[0] = f32(UINT8_MAX);
+
+			desc._optimizedClearValue = &optimizedClearValue;
+			_triangleShaderIdTexture.initialize(desc);
+			_triangleShaderIdTexture.setName("VisiblityBufferTriangleShaderID");
+		}
+	}
+
+	// Shader range
+	{
+		GpuBufferDesc desc = {};
+		desc._device = device;
+		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._sizeInByte = _shadingQuadCount * sizeof(u32);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		_shaderRangeBuffer[0].initialize(desc);
+		_shaderRangeBuffer[1].initialize(desc);
+		_shaderRangeBuffer[0].setName("VisiblityBufferShaderRangeMin");
+		_shaderRangeBuffer[1].setName("VisiblityBufferShaderRangeMax");
+	}
+
+	// Shader id depth
+	{
+		GpuTextureDesc desc = {};
+		desc._device = device;
+		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._format = rhi::FORMAT_D16_UNORM;
+		desc._width = u64(screenWidth);
+		desc._height = u64(screenHeight);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
+		_shaderIdDepth.initialize(desc);
+		_shaderIdDepth.setName("VisiblityBufferShaderIDDepth");
+	}
+
+	// Constant buffer
+	{
+		GpuBufferDesc desc = {};
+		desc._device = device;
+		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(BuildShaderIdConstant));
+		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		_buildShaderIdConstantBuffer.initialize(desc);
+		_buildShaderIdConstantBuffer.setName("VisibilityBufferBuildShaderIDConstant");
+
+		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(ShadingConstant));
+		_shadingConstantBuffer.initialize(desc);
+		_shadingConstantBuffer.setName("VisibilityBufferShadingConstant");
+
+		VramUpdater* vramUpdater = VramUpdater::Get();
+		{
+			BuildShaderIdConstant* constant = vramUpdater->enqueueUpdate<BuildShaderIdConstant>(&_buildShaderIdConstantBuffer, 0, 1);
+			constant->_resolution[0] = shaderRangeWidth;
+			constant->_resolution[1] = shaderRangeHeight;
+		}
+
+		{
+			ShadingConstant* constant = vramUpdater->enqueueUpdate<ShadingConstant>(&_shadingConstantBuffer, 0, 1);
+			constant->_quadNdcSize[0] = f32(SHADER_RANGE_TILE_SIZE) / screenWidth;
+			constant->_quadNdcSize[1] = f32(SHADER_RANGE_TILE_SIZE) / screenHeight;
+			constant->_shaderRangeResolution[0] = shaderRangeWidth;
+			constant->_shaderRangeResolution[1] = shaderRangeHeight;
+		}
+	}
+
+	// RTV
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getRtvAllocator();
+		_triangleIdRtv = allocator->allocate(2);
+		device->createRenderTargetView(_triangleIdTexture.getResource(), _triangleIdRtv.get(0)._cpuHandle);
+		device->createRenderTargetView(_triangleShaderIdTexture.getResource(), _triangleIdRtv.get(1)._cpuHandle);
+	}
+
+	// DSV
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getDsvAllocator();
+		_shaderIdDsv = allocator->allocate();
+		device->createDepthStencilView(_shaderIdDepth.getResource(), _shaderIdDsv._cpuHandle);
+	}
+
+	// デスクリプター
+	{
+		// GPU visible
+		{
+			DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
+			_triangleIdSrv = allocator->allocate();
+			_shaderRangeSrv = allocator->allocate(2);
+			_shaderIdSrv = allocator->allocate();
+			_shaderRangeUav = allocator->allocate(2);
+			_buildShaderIdCbv = allocator->allocate();
+			_shadingCbv = allocator->allocate();
+		}
+
+		// CPU visible
+		{
+			DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavCpuAllocator();
+			_shaderRangeCpuUav = allocator->allocate(2);
+		}
+
+		// SRV
+		{
+			rhi::ShaderResourceViewDesc desc = {};
+			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
+			desc._buffer._numElements = _shaderRangeBuffer[0].getU32ElementCount();
+			device->createShaderResourceView(_shaderRangeBuffer[0].getResource(), &desc, _shaderRangeSrv.get(0)._cpuHandle);
+			device->createShaderResourceView(_shaderRangeBuffer[1].getResource(), &desc, _shaderRangeSrv.get(1)._cpuHandle);
+
+			device->createShaderResourceView(_triangleIdTexture.getResource(), nullptr, _triangleIdSrv._cpuHandle);
+			device->createShaderResourceView(_triangleShaderIdTexture.getResource(), nullptr, _shaderIdSrv._cpuHandle);
+		}
+
+		// UAV
+		{
+			rhi::UnorderedAccessViewDesc desc = {};
+			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
+			desc._buffer._numElements = _shaderRangeBuffer[0].getU32ElementCount();
+			device->createUnorderedAccessView(_shaderRangeBuffer[0].getResource(), nullptr, &desc, _shaderRangeUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_shaderRangeBuffer[1].getResource(), nullptr, &desc, _shaderRangeUav.get(1)._cpuHandle);
+
+			device->createUnorderedAccessView(_shaderRangeBuffer[0].getResource(), nullptr, &desc, _shaderRangeCpuUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_shaderRangeBuffer[1].getResource(), nullptr, &desc, _shaderRangeCpuUav.get(1)._cpuHandle);
+		}
+
+		// CBV
+		{
+			rhi::ConstantBufferViewDesc desc;
+			desc._bufferLocation = _buildShaderIdConstantBuffer.getGpuVirtualAddress();
+			desc._sizeInBytes = _buildShaderIdConstantBuffer.getSizeInByte();
+			device->createConstantBufferView(desc, _buildShaderIdCbv._cpuHandle);
+
+			desc._bufferLocation = _shadingConstantBuffer.getGpuVirtualAddress();
+			desc._sizeInBytes = _shadingConstantBuffer.getSizeInByte();
+			device->createConstantBufferView(desc, _shadingCbv._cpuHandle);
+		}
+	}
+
+	// Shader
+	{
+		// root signature
+		{
+			rhi::DescriptorRange constantCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+			rhi::DescriptorRange triangleIdSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+			rhi::DescriptorRange shaderRangeUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+
+			rhi::RootParameter rootParameters[VisibilityBufferBuildShaderIdRootParam::COUNT] = {};
+			rootParameters[VisibilityBufferBuildShaderIdRootParam::CONSTANT].initializeDescriptorTable(1, &constantCbvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[VisibilityBufferBuildShaderIdRootParam::TRIANGLE_ID].initializeDescriptorTable(1, &triangleIdSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[VisibilityBufferBuildShaderIdRootParam::SHADER_RANGE].initializeDescriptorTable(1, &shaderRangeUavRange, rhi::SHADER_VISIBILITY_PIXEL);
+
+			rhi::RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc._device = device;
+			rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+			rootSignatureDesc._parameters = rootParameters;
+			_buildShaderIdRootSignature.iniaitlize(rootSignatureDesc);
+			_buildShaderIdRootSignature.setName("VisibilityBufferBuildShaderIDRootSignature");
+		}
+
+		// pipeline state
+		{
+			AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
+			rhi::ShaderBlob vertexShader;
+			vertexShader.initialize(vertexShaderPath.get());
+
+			AssetPath pixelShaderPath("EngineComponent\\Shader\\VisibilityBuffer\\BuildShaderId.pso");
+			rhi::ShaderBlob pixelShader;
+			pixelShader.initialize(pixelShaderPath.get());
+
+			rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
+			pipelineStateDesc._device = device;
+			pipelineStateDesc._vs = vertexShader.getShaderByteCode();
+			pipelineStateDesc._ps = pixelShader.getShaderByteCode();
+			pipelineStateDesc._dsvFormat = rhi::FORMAT_D16_UNORM;
+			pipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_ALWAYS;
+			pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			pipelineStateDesc._rootSignature = &_buildShaderIdRootSignature;
+			pipelineStateDesc._sampleDesc._count = 1;
+			_buildShaderIdPipelineState.iniaitlize(pipelineStateDesc);
+			_buildShaderIdPipelineState.setName("BuildShaderIdPSO");
+
+			vertexShader.terminate();
+			pixelShader.terminate();
+		}
+	}
+
+	// コマンドシグネチャ
+	{
+		rhi::IndirectArgumentDesc argumentDescs[1] = {};
+		argumentDescs[0]._type = rhi::INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		rhi::CommandSignatureDesc desc = {};
+		desc._device = device;
+		desc._byteStride = sizeof(rhi::DrawIndexedArguments);
+		desc._argumentDescs = argumentDescs;
+		desc._numArgumentDescs = LTN_COUNTOF(argumentDescs);
+		_commandSignature.initialize(desc);
+	}
+}
+
+void VisiblityBufferRenderer::terminate() {
+	_triangleIdTexture.terminate();
+	_triangleShaderIdTexture.terminate();
+	_shaderIdDepth.terminate();
+	_shaderRangeBuffer[0].terminate();
+	_shaderRangeBuffer[1].terminate();
+	_shadingConstantBuffer.terminate();
+	_buildShaderIdConstantBuffer.terminate();
+	_buildShaderIdPipelineState.terminate();
+	_buildShaderIdRootSignature.terminate();
+
+	_commandSignature.terminate();
+
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getRtvAllocator();
+		allocator->free(_triangleIdRtv);
+	}
+
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getDsvAllocator();
+		allocator->free(_shaderIdDsv);
+	}
+
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
+		allocator->free(_triangleIdSrv);
+		allocator->free(_shaderIdSrv);
+		allocator->free(_shaderRangeSrv);
+		allocator->free(_shaderRangeUav);
+		allocator->free(_buildShaderIdCbv);
+		allocator->free(_shadingCbv);
+	}
+
+	{
+		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavCpuAllocator();
+		allocator->free(_shaderRangeCpuUav);
+	}
+}
+
+void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdDesc& desc) {
+	rhi::CommandList* commandList = desc._commandList;
+
+	ScopedBarrierDesc barriers[] = {
+	    ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+	    ScopedBarrierDesc(&_triangleShaderIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+	    ScopedBarrierDesc(&_shaderRangeBuffer[0], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+	    ScopedBarrierDesc(&_shaderRangeBuffer[1], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+	};
+	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
+
+	// clear shader range min
+	{
+		u32 clearValues[4] = { UINT32_MAX };
+		rhi::GpuDescriptorHandle gpuHandle = _shaderRangeUav.get(0)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuHandle = _shaderRangeCpuUav.get(0)._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, _shaderRangeBuffer[0].getResource(), clearValues, 0, nullptr);
+	}
+
+	// clear shader range max
+	{
+		u32 clearValues[4] = { 0 };
+		rhi::GpuDescriptorHandle gpuHandle = _shaderRangeUav.get(1)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuHandle = _shaderRangeCpuUav.get(1)._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, _shaderRangeBuffer[1].getResource(), clearValues, 0, nullptr);
+	}
+
+	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->setRenderTargets(0, nullptr, &_shaderIdDsv._cpuHandle);
+	commandList->setGraphicsRootSignature(&_buildShaderIdRootSignature);
+	commandList->setPipelineState(&_buildShaderIdPipelineState);
+	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::CONSTANT, _buildShaderIdCbv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::TRIANGLE_ID, _shaderIdSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::SHADER_RANGE, _shaderRangeUav._firstHandle._gpuHandle);
+	commandList->drawInstanced(3, 1, 0, 0);
+}
+
+void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
+	rhi::CommandList* commandList = desc._commandList;
+
+	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
+	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
+	ScopedBarrierDesc barriers[] = {
+		ScopedBarrierDesc(&_shaderIdDepth, rhi::RESOURCE_STATE_DEPTH_READ),
+		ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(geometryResourceManager->getPositionVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(geometryResourceManager->getTexcoordVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(geometryResourceManager->getNormalTangentVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(geometryResourceManager->getIndexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(geometryResourceManager->getGeometryGlobalOffsetGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(lodStreamingManager->getMeshInstanceLodLevelGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+	};
+	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
+
+	rhi::GpuDescriptorHandle vertexResourceSrv = geometryResourceManager->getVertexResourceGpuSrv();
+	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = geometryResourceManager->getGeometryGlobalOffsetGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
+	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
+	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
+	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();
+
+	f32 clearColor[4] = {};
+	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
+	commandList->setRenderTargets(1, &rtv, &_shaderIdDsv._cpuHandle);
+	commandList->clearRenderTargetView(rtv, clearColor);
+	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	for (u32 i = 0; i < desc._pipelineStateCount; ++i) {
+		if (desc._enabledFlags[i] == 0) {
+			continue;
+		}
+
+		DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Shading Shader %d", i);
+
+		commandList->setGraphicsRootSignature(&desc._rootSignatures[i]);
+		commandList->setPipelineState(&desc._pipelineStates[i]);
+
+		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::PIPELINE_SET_INFO, 1, &i, 0);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_INFO, desc._viewCbv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADING_INFO, _shadingCbv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, _shaderRangeSrv._firstHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, _triangleIdSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VERTEX_RESOURCE, vertexResourceSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE, meshInstanceSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH, meshSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURE, textureSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER, materialParameterSrv);
+
+		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
+	}
+}
+
+void VisiblityBufferRenderer::clearShaderId(const ClearShaderIdDesc& desc) {
+	rhi::CommandList* commandList = desc._commandList;
+	f32 clearColor[4] = { UINT8_MAX };
+	commandList->clearRenderTargetView(_triangleIdRtv.get(1)._cpuHandle, clearColor);
+}
+
+
+void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
+	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
+	GpuMeshInstanceManager* gpuMeshInstanceManager = GpuMeshInstanceManager::Get();
+	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
+
+	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
+	rhi::VertexBufferView vertexBufferViews[4];
+	vertexBufferViews[0] = geometryResourceManager->getPositionVertexBufferView();
+	vertexBufferViews[1] = geometryResourceManager->getNormalTangentVertexBufferView();
+	vertexBufferViews[2] = geometryResourceManager->getTexcoordVertexBufferView();
+	vertexBufferViews[3] = gpuMeshInstanceManager->getMeshInstanceIndexVertexBufferView();
+
+	IndirectArgumentResource* indirectArgumentResource = desc._indirectArgumentResource;
+	rhi::GpuDescriptorHandle indirectArgumentSubInfoSrv = indirectArgumentResource->_indirectArgumentSubInfoSrv._gpuHandle;
+	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
+	const u32* indirectArgumentCounts = gpuMeshInstanceManager->getPipelineSetSubMeshInstanceCounts();
+	const u32* indirectArgumentOffsets = gpuMeshInstanceManager->getPipelineSetSubMeshInstanceOffsets();
+	rhi::CommandList* commandList = desc._commandList;
+	rhi::Resource* indirectArgumentBuffer = indirectArgumentResource->_indirectArgumentGpuBuffer.getResource();
+	rhi::Resource* indirectArgumentCountBuffer = indirectArgumentResource->_indirectArgumentCountGpuBuffer.getResource();
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Render");
+
+	rhi::CpuDescriptorHandle dsv = desc._viewDsv;
+	commandList->setRenderTargets(2, _triangleIdRtv._firstHandle._cpuHandle, &dsv);
+	commandList->clearDepthStencilView(dsv, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	for (u32 i = 0; i < desc._pipelineStateCount; ++i) {
+		if (desc._enabledFlags[i] == 0) {
+			continue;
+		}
+
+		commandList->setGraphicsRootSignature(&desc._rootSignatures[i]);
+		commandList->setPipelineState(&desc._pipelineStates[i]);
+
+		commandList->setGraphicsRootDescriptorTable(GeometryRootParam::VIEW_INFO, desc._viewCbv);
+		commandList->setGraphicsRootDescriptorTable(GeometryRootParam::MESH_INSTANCE, meshInstanceSrv);
+		commandList->setGraphicsRootDescriptorTable(GeometryRootParam::INDIRECT_ARGUMENT_SUB_INFO, indirectArgumentSubInfoSrv);
+
+		commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
+		commandList->setIndexBuffer(&indexBufferView);
+
+		u32 count = indirectArgumentCounts[i];
+		u32 offset = sizeof(gpu::IndirectArgument) * indirectArgumentOffsets[i];
+		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, indirectArgumentCountBuffer, 0);
+	}
+}
+
+VisiblityBufferRenderer* VisiblityBufferRenderer::Get() {
+	return &g_visibilityBufferRenderer;
+}
+};

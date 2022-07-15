@@ -76,6 +76,7 @@ struct CommandListBase {
 	virtual void setViewports(u32 count, const ViewPort* viewPorts) = 0;
 	virtual void setScissorRects(u32 count, const Rect* scissorRects) = 0;
 	virtual void setRenderTargets(u32 count, CpuDescriptorHandle* rtvHandles, CpuDescriptorHandle* dsvHandle) = 0;
+	virtual void setRenderTargets(u32 count, CpuDescriptorHandle rtvHandles, CpuDescriptorHandle* dsvHandle) = 0;
 	virtual void clearRenderTargetView(CpuDescriptorHandle rtvHandle, f32 clearColor[4]) = 0;
 	virtual void clearDepthStencilView(CpuDescriptorHandle depthStencilView, ClearFlags clearFlags, f32 depth, u8 stencil, u32 numRects, const Rect* rects) = 0;
 	virtual void setPipelineState(PipelineState* pipelineState) = 0;

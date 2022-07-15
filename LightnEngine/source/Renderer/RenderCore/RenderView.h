@@ -44,10 +44,13 @@ public:
 	void terminate();
 	void update();
 
-	void setUpView(rhi::CommandList* commandList, const View& view, u32 viewIndex);
+	void setViewports(rhi::CommandList* commandList, const View& view, u32 viewIndex);
 	void resetCullingResult(rhi::CommandList* commandList, u32 viewIndex);
 
 	GpuTexture* getViewColorTexture(u32 index) { return &_viewColorTextures[index]; }
+	rhi::CpuDescriptorHandle getViewCpuRtv(u32 index) const { return _viewRtv.get(index)._cpuHandle; }
+	rhi::CpuDescriptorHandle getViewCpuDsv(u32 index) const { return _viewDsv.get(index)._cpuHandle; }
+
 	rhi::GpuDescriptorHandle getViewCbv(u32 index) const { return _viewCbv.get(index)._gpuHandle; }
 	rhi::GpuDescriptorHandle getViewRtv(u32 index) const { return _viewRtv.get(index)._gpuHandle; }
 	rhi::GpuDescriptorHandle getViewDsv(u32 index) const { return _viewDsv.get(index)._gpuHandle; }

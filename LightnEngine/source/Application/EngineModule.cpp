@@ -7,9 +7,11 @@
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
-#include <Renderer/MeshRenderer/MeshRenderer.h>
+#include <Renderer/MeshRenderer/GpuCulling.h>
+#include <Renderer/MeshRenderer/ComputeLod.h>
 #include <Renderer/MeshRenderer/GpuMeshInstanceManager.h>
 #include <Renderer/MeshRenderer/GpuTextureManager.h>
+#include <Renderer/MeshRenderer/VisibilityBufferRenderer.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
 #include <Renderer/RenderCore/LodStreamingManager.h>
@@ -33,7 +35,7 @@ void update() {
 	GpuMeshResourceManager::Get()->update();
 	GeometryResourceManager::Get()->update();
 	GpuMaterialManager::Get()->update();
-	MeshRenderer::Get()->update();
+	GpuCulling::Get()->update();
 	Renderer::Get()->update();
 	TextureScene::Get()->lateUpdate();
 	MaterialScene::Get()->lateUpdate();
@@ -73,7 +75,9 @@ void EngineModuleManager::run() {
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	GpuMaterialManager* gpuMaterialManager = GpuMaterialManager::Get();
 	LodStreamingManager* meshLodStreamingManager = LodStreamingManager::Get();
-	MeshRenderer* meshRenderer = MeshRenderer::Get();
+	GpuCulling* gpuCulling = GpuCulling::Get();
+	ComputeLod* computeLod = ComputeLod::Get();
+	VisiblityBufferRenderer* visibilityBufferRenderer = VisiblityBufferRenderer::Get();
 	CommonResource* commonResource = CommonResource::Get();
 
 	{
@@ -98,7 +102,9 @@ void EngineModuleManager::run() {
 		geometryResourceManager->initialize();
 		gpuMaterialManager->initialize();
 		meshLodStreamingManager->initialize();
-		meshRenderer->initialize();
+		gpuCulling->initialize();
+		computeLod->initialize();
+		visibilityBufferRenderer->initialize();
 
 		commonResource->initialize();
 		editorCamera.initialize();
@@ -127,7 +133,9 @@ void EngineModuleManager::run() {
 		app.terminate();
 		gpuMaterialManager->terminate();
 		gpuMeshInstanceManager->terminate();
-		meshRenderer->terminate();
+		visibilityBufferRenderer->terminate();
+		computeLod->terminate();
+		gpuCulling->terminate();
 		gpuShaderScene->terminate();
 		renderViewScene->terminate();
 		gpuTextureManager->terminate();

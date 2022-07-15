@@ -96,13 +96,13 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         return;
     }
     
-    MeshInstance meshInstance = _meshInstances.Load<MeshInstance>(sizeof(MeshInstance) * meshInstanceIndex);
+    MeshInstance meshInstance = getMeshInstance(_meshInstances, meshInstanceIndex);
     if (meshInstance._stateFlags == 0)
     {
         return;
     }
     
-    Mesh mesh = _meshes.Load<Mesh>(sizeof(Mesh) * meshInstance._meshIndex);
+    Mesh mesh = getMesh(_meshes, meshInstance._meshIndex);
     uint lodLevel = _meshInstanceLodLevels.Load(UINT32_SIZE_IN_BYTE * meshInstanceIndex);
     uint meshLodStreamRange = _meshLodStreamRanges.Load(UINT32_SIZE_IN_BYTE * meshInstance._meshIndex);
     uint meshLodLevelMin = meshLodStreamRange & 0x0000ffff; // ‰ºˆÊ 16bit
@@ -130,16 +130,16 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
 #endif
 	
     uint lodMeshOffset = mesh._lodMeshOffset + lodLevel;
-    LodMesh lodMesh = _lodMeshes.Load<LodMesh>(sizeof(LodMesh) * lodMeshOffset);
+    LodMesh lodMesh = getLodMesh(_lodMeshes, lodMeshOffset);
     uint subMeshCount = lodMesh._subMeshCount;
-    GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = _geometryGlobalOffsets.Load<GeometryGlobalOffsetInfo>(sizeof(GeometryGlobalOffsetInfo) * lodMeshOffset);
+    GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = getGeometryGlobalOffsetInfo(_geometryGlobalOffsets, lodMeshOffset);
     
     {
         uint triangleCount = 0;
         for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
         {
             uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
-            SubMesh subMesh = _subMeshes.Load<SubMesh>(sizeof(SubMesh) * subMeshOffset);
+            SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
             triangleCount += subMesh._indexCount / 3;
         }
     
@@ -160,13 +160,13 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     }
     
     uint lodMeshInstanceOffset = meshInstance._lodMeshInstanceOffset + lodLevel;
-    LodMeshInstance lodMeshInstance = _lodMeshInstances.Load<LodMeshInstance>(sizeof(LodMeshInstance) * lodMeshInstanceOffset);
+    LodMeshInstance lodMeshInstance = getLodMeshInstance(_lodMeshInstances, lodMeshInstanceOffset);
     for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
     {
         uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
         uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
-        SubMesh subMesh = _subMeshes.Load<SubMesh>(sizeof(SubMesh) * subMeshOffset);
-        SubMeshInstance subMeshInstance = _subMeshInstances.Load<SubMeshInstance>(sizeof(SubMeshInstance) * subMeshInstanceIndex);
+        SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
+        SubMeshInstance subMeshInstance = getSubMeshInstance(_subMeshInstances, subMeshInstanceIndex);
         
         uint indirectArgumentMaterialArrayOffset = 0;
         uint currentCountIndex = 0;
@@ -187,6 +187,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         subInfo._meshInstanceIndex = meshInstanceIndex;
         subInfo._materialIndex = subMeshInstance._materialIndex;
         subInfo._materialParameterOffset = subMeshInstance._materialParameterOffset;
+        subInfo._triangleOffset = arguments._startIndexLocation / 3;
         _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * indirectArgumentOffset, subInfo);
     }
 }

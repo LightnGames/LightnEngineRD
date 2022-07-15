@@ -13,20 +13,6 @@ namespace {
 GpuTextureManager g_gpuTextureManager;
 }
 
-void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format) {
-	rhi::Device* device = DeviceManager::Get()->getDevice();
-	u32 mipLevel = u32(std::log2(Max(width, height)) + 1);
-	GpuTextureDesc textureDesc = {};
-	textureDesc._device = device;
-	textureDesc._format = format;
-	textureDesc._width = width;
-	textureDesc._height = height;
-	textureDesc._mipLevels = mipLevel;
-	textureDesc._initialState = rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	textureDesc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-	gpuTexture.initialize(textureDesc);
-}
-
 void GpuTextureManager::initialize() {
 	CpuScopedPerf scopedPerf("GpuTextureManager");
 	_textures = Memory::allocObjects<GpuTexture>(TextureScene::TEXTURE_CAPACITY);
@@ -34,12 +20,20 @@ void GpuTextureManager::initialize() {
 	for (u32 i = 0; i < REQUESTED_CREATE_SRV_CAPACITY; ++i) {
 		_requestedCreateSrvIndices[i] = REQUESTED_INVALID_INDEX;
 	}
+
+	createEmptyTexture(_defaultBlackTexture, 8, 8, rhi::FORMAT_BC1_UNORM_SRGB);
+
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	for (u32 i = 0; i < REQUESTED_CREATE_SRV_CAPACITY; ++i) {
+		device->createShaderResourceView(_defaultBlackTexture.getResource(), nullptr, _textureSrv.get(i)._cpuHandle);
+	}
 }
 
 void GpuTextureManager::terminate() {
 	update();
 	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_textureSrv);
 	Memory::freeObjects(_textures);
+	_defaultBlackTexture.terminate();
 }
 
 void GpuTextureManager::update() {
@@ -79,6 +73,20 @@ void GpuTextureManager::update() {
 			_requestedCreateSrvIndices[i] = REQUESTED_INVALID_INDEX;
 		}
 	}
+}
+
+void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format) {
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	u32 mipLevel = u32(std::log2(Max(width, height)) + 1);
+	GpuTextureDesc textureDesc = {};
+	textureDesc._device = device;
+	textureDesc._format = format;
+	textureDesc._width = width;
+	textureDesc._height = height;
+	textureDesc._mipLevels = mipLevel;
+	textureDesc._initialState = rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	textureDesc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+	gpuTexture.initialize(textureDesc);
 }
 
 void GpuTextureManager::streamTexture(const Texture* texture, u32 currentStreamMipLevel, u32 targetStreamMipLevel) {

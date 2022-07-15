@@ -4,15 +4,29 @@
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 
 namespace ltn {
-struct DefaultRootParam {
+struct ShadingRootParam {
+	enum {
+		SHADING_INFO,
+		PIPELINE_SET_INFO,
+		PIPELINE_SET_RANGE,
+		VIEW_INFO,
+		MATERIAL_PARAMETER,
+		MESH,
+		MESH_INSTANCE,
+		MESH_INSTANCE_LOD_LEVEL,
+		GEOMETRY_GLOBAL_OFFSET,
+		VERTEX_RESOURCE,
+		TRIANGLE_ATTRIBUTE,
+		TEXTURE,
+		COUNT
+	};
+};
+
+struct GeometryRootParam {
 	enum {
 		VIEW_INFO,
 		MESH_INSTANCE,
-		MATERIAL_PARAMETER,
 		INDIRECT_ARGUMENT_SUB_INFO,
-		TEXTURE,
-		MESH_INSTANCE_LOD_LEVEL,
-		MATERIAL_SCREEN_PERSENTAGE,
 		COUNT
 	};
 };
@@ -23,8 +37,10 @@ public:
 	void terminate();
 	void update();
 
-	rhi::RootSignature* getDefaultRootSignatures() { return _defaultRootSignatures; }
-	rhi::PipelineState* getDefaultPipelineStates() { return _defaultPipelineStates; }
+	rhi::RootSignature* getGeometryPassRootSignatures() { return _geometryPassRootSignatures; }
+	rhi::RootSignature* getShadingPassRootSignatures() { return _shadingPassRootSignatures; }
+	rhi::PipelineState* getGeometryPassPipelineStates() { return _geometryPassPipelineStates; }
+	rhi::PipelineState* getShadingPassPipelineStates() { return _shadingPassPipelineStates; }
 	rhi::GpuDescriptorHandle getParameterGpuSrv() { return _parameterSrv._gpuHandle; }
 
 	static GpuMaterialManager* Get();
@@ -33,8 +49,11 @@ private:
 	void updateMaterialParameters();
 
 private:
-	rhi::RootSignature* _defaultRootSignatures = nullptr;
-	rhi::PipelineState* _defaultPipelineStates = nullptr;
+	rhi::RootSignature* _geometryPassRootSignatures = nullptr;
+	rhi::PipelineState* _geometryPassPipelineStates = nullptr;
+	rhi::RootSignature* _shadingPassRootSignatures = nullptr;
+	rhi::PipelineState* _shadingPassPipelineStates = nullptr;
+	rhi::PipelineState* _debugVisualizePipelineStates = nullptr;
 
 	GpuBuffer _parameterGpuBuffer;
 	DescriptorHandle _parameterSrv;
