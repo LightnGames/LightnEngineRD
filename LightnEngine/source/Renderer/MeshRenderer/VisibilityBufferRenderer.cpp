@@ -417,8 +417,8 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	const u32* indirectArgumentCounts = gpuMeshInstanceManager->getPipelineSetSubMeshInstanceCounts();
 	const u32* indirectArgumentOffsets = gpuMeshInstanceManager->getPipelineSetSubMeshInstanceOffsets();
 	rhi::CommandList* commandList = desc._commandList;
-	rhi::Resource* indirectArgumentBuffer = indirectArgumentResource->_indirectArgumentGpuBuffer.getResource();
-	rhi::Resource* indirectArgumentCountBuffer = indirectArgumentResource->_indirectArgumentCountGpuBuffer.getResource();
+	rhi::Resource* indirectArgumentBuffer = indirectArgumentResource->_indirectArgumentGpuBuffer->getResource();
+	rhi::Resource* indirectArgumentCountBuffer = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Render");
 
 	rhi::CpuDescriptorHandle dsv = desc._viewDsv;

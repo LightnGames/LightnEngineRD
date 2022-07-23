@@ -1010,6 +1010,11 @@ struct MemoryRange {
 	u64 _end = 0;
 };
 
+struct ResourceAllocationInfo {
+	u64 _sizeInBytes = 0;
+	u64 _alignment = 0;
+};
+
 struct ConstantBufferViewDesc {
 	u64 _bufferLocation = 0;
 	u32 _sizeInBytes = 0;
@@ -1051,6 +1056,11 @@ struct ResourceTransitionBarrier {
 	Resource* _resource = nullptr;
 	ResourceStates _stateBefore;
 	ResourceStates _stateAfter;
+};
+
+struct ResourceAliasingBarrier {
+	Resource* _resourceBefore = nullptr;
+	Resource* _resourceAfter = nullptr;
 };
 
 struct CpuDescriptorHandle {
@@ -1136,5 +1146,7 @@ struct DrawArguments {
 	u32 _startVertexLocation;
 	u32 _startInstanceLocation;
 };
+
+constexpr u32 DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT = 65536;
 }
 }

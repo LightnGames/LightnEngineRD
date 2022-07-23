@@ -125,9 +125,9 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	IndirectArgumentResource* indirectArgumentResource = desc._indirectArgumentResource;
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
 	ScopedBarrierDesc barriers[] = {
-		ScopedBarrierDesc(&indirectArgumentResource->_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-		ScopedBarrierDesc(&indirectArgumentResource->_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-		ScopedBarrierDesc(&indirectArgumentResource->_indirectArgumentSubInfoGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentSubInfoGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
 		ScopedBarrierDesc(lodStreamingManager->getMeshInstanceLodLevelGpuBuffer(), rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
@@ -137,7 +137,7 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 		u32 clearValues[4] = {};
 		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(1)._gpuHandle;
 		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCountCpuUav._cpuHandle;
-		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentCountGpuBuffer.getResource();
+		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
 	}
 

@@ -7,17 +7,19 @@
 #include <RendererScene/Material.h>
 #include <RendererScene/View.h>
 
+#include <Renderer/RenderCore/DeviceManager.h>
+#include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/ReleaseQueue.h>
+
 namespace ltn {
 namespace {
 RenderDirector g_renderDirector;
 }
 
 void RenderDirector::initialize() {
-	_indirectArgumentResource.initialize();
 }
 
 void RenderDirector::terminate() {
-	_indirectArgumentResource.terminate();
 }
 
 void RenderDirector::render(rhi::CommandList* commandList) {
@@ -38,6 +40,11 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 	for (u32 i = 0; i < viewCount; ++i) {
 		if (viewEnabledFlags[i] == 0) {
 			continue;
+		}
+
+		// フレームリソース初期化
+		{
+			_indirectArgumentResource.setUpFrameResource(commandList);
 		}
 
 		// カリング結果リセット

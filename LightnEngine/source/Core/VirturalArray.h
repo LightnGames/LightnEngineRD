@@ -10,8 +10,14 @@ namespace ltn {
 // D3D12MA ÇÃ VirtualAllocator ÇÃÉâÉbÉpÅ[
 class LTN_API VirtualArray {
 public:
+	enum ArrayType {
+		ARRAY_TYPE_DEFAULT = 0,
+		ARRAY_TYPE_LINER
+	};
+
 	struct Desc {
 		u64 _size = 0;
+		ArrayType _type = ARRAY_TYPE_DEFAULT;
 	};
 
 	struct AllocationInfo {

@@ -22,6 +22,8 @@ public:
 	void terminate()  override;
 
 	void createResource(ResourceDesc desc, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource)  override;
+	void createAliasingResource(ResourceDesc desc, u64 allocationLocalOffset, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource) override;
+	void allocateMemory(u32 sizeInByte, VideoMemoryAllocation* allocation) override;
 
 	D3D12MA::Allocator* _allocator = nullptr;
 };

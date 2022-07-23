@@ -1,54 +1,55 @@
 #include "IndirectArgumentResource.h"
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/FrameResourceAllocator.h>
 
 namespace ltn {
-void IndirectArgumentResource::initialize() {
+void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList) {
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 
 	// GPU リソース初期化
 	{
-		GpuBufferDesc desc = {};
-		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-		desc._device = device;
-		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgument);
+		FrameBufferAllocator* frameBufferAllocator = FrameBufferAllocator::Get();
+		FrameBufferAllocator::BufferCreatationDesc desc = {};
 		desc._initialState = rhi::RESOURCE_STATE_INDIRECT_ARGUMENT;
+		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgument);
 		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		_indirectArgumentGpuBuffer.initialize(desc);
-		_indirectArgumentGpuBuffer.setName("IndirectArguments");
+		_indirectArgumentGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
+		_indirectArgumentGpuBuffer->setName("IndirectArguments");
 
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(u32);
-		_indirectArgumentCountGpuBuffer.initialize(desc);
-		_indirectArgumentCountGpuBuffer.setName("IndirectArgumentCounts");
+		_indirectArgumentCountGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
+		_indirectArgumentCountGpuBuffer->setName("IndirectArgumentCounts");
 
 		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgumentSubInfo);
-		_indirectArgumentSubInfoGpuBuffer.initialize(desc);
-		_indirectArgumentSubInfoGpuBuffer.setName("IndirectArgumentSubInfos");
+		_indirectArgumentSubInfoGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
+		_indirectArgumentSubInfoGpuBuffer->setName("IndirectArgumentSubInfos");
+
 	}
 
 	// Descriptor
 	{
-		DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-		_indirectArgumentUav = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(3);
-		_indirectArgumentCountCpuUav = descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->allocate();
-		_indirectArgumentSubInfoSrv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate();
+		FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
+		_indirectArgumentUav = descriptorAllocator->allocateSrvCbvUavGpu(3);
+		_indirectArgumentCountCpuUav = descriptorAllocator->allocateSrvCbvUavCpu();
+		_indirectArgumentSubInfoSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 
 		// UAV
 		{
 			rhi::UnorderedAccessViewDesc desc = {};
 			desc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
-			desc._buffer._numElements = _indirectArgumentGpuBuffer.getU32ElementCount();
+			desc._buffer._numElements = _indirectArgumentGpuBuffer->getU32ElementCount();
 			desc._format = rhi::FORMAT_R32_TYPELESS;
 			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
-			device->createUnorderedAccessView(_indirectArgumentGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_indirectArgumentGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(0)._cpuHandle);
 
-			desc._buffer._numElements = _indirectArgumentCountGpuBuffer.getU32ElementCount();
-			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(1)._cpuHandle);
-			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentCountCpuUav._cpuHandle);
+			desc._buffer._numElements = _indirectArgumentCountGpuBuffer->getU32ElementCount();
+			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(1)._cpuHandle);
+			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentCountCpuUav._cpuHandle);
 
-			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer.getU32ElementCount();
-			device->createUnorderedAccessView(_indirectArgumentSubInfoGpuBuffer.getResource(), nullptr, &desc, _indirectArgumentUav.get(2)._cpuHandle);
+			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer->getU32ElementCount();
+			device->createUnorderedAccessView(_indirectArgumentSubInfoGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(2)._cpuHandle);
 		}
 
 		// SRV
@@ -57,21 +58,16 @@ void IndirectArgumentResource::initialize() {
 			desc._format = rhi::FORMAT_R32_TYPELESS;
 			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
 			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
-			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer.getU32ElementCount();
-			device->createShaderResourceView(_indirectArgumentSubInfoGpuBuffer.getResource(), &desc, _indirectArgumentSubInfoSrv._cpuHandle);
+			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer->getU32ElementCount();
+			device->createShaderResourceView(_indirectArgumentSubInfoGpuBuffer->getResource(), &desc, _indirectArgumentSubInfoSrv._cpuHandle);
 		}
 	}
-}
-void IndirectArgumentResource::terminate() {
-	_indirectArgumentGpuBuffer.terminate();
-	_indirectArgumentCountGpuBuffer.terminate();
-	_indirectArgumentSubInfoGpuBuffer.terminate();
-
-	{
-		DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-		descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_indirectArgumentUav);
-		descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_indirectArgumentSubInfoSrv);
-		descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->free(_indirectArgumentCountCpuUav);
-	}
+	
+	// エイリアシングバリア
+	rhi::ResourceAliasingBarrier aliasingBarriers[3];
+	aliasingBarriers[0]._resourceAfter = _indirectArgumentGpuBuffer->getResource();
+	aliasingBarriers[1]._resourceAfter = _indirectArgumentCountGpuBuffer->getResource();
+	aliasingBarriers[2]._resourceAfter = _indirectArgumentSubInfoGpuBuffer->getResource();
+	commandList->aliasingBarriers(aliasingBarriers, LTN_COUNTOF(aliasingBarriers));
 }
 }

@@ -15,13 +15,12 @@ struct IndirectArgumentSubInfo {
 }
 
 struct IndirectArgumentResource {
-	void initialize();
-	void terminate();
+	void setUpFrameResource(rhi::CommandList* commandList);
 
 	static constexpr u32 INDIRECT_ARGUMENT_CAPACITY = 1024 * 64;
-	GpuBuffer _indirectArgumentGpuBuffer;
-	GpuBuffer _indirectArgumentCountGpuBuffer;
-	GpuBuffer _indirectArgumentSubInfoGpuBuffer;
+	GpuBuffer* _indirectArgumentGpuBuffer = nullptr;
+	GpuBuffer* _indirectArgumentCountGpuBuffer = nullptr;
+	GpuBuffer* _indirectArgumentSubInfoGpuBuffer = nullptr;
 	DescriptorHandles _indirectArgumentUav;
 	DescriptorHandle _indirectArgumentCountCpuUav;
 	DescriptorHandle _indirectArgumentSubInfoSrv;

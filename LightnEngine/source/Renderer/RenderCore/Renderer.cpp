@@ -12,6 +12,7 @@
 #include <Renderer/RenderCore/RenderDirector.h>
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuTimerManager.h>
+#include <Renderer/RenderCore/FrameResourceAllocator.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -53,7 +54,7 @@ void Renderer::initialize() {
 	descriptorAllocatorDesc._device = device;
 	descriptorAllocatorDesc._rtvCount = 16;
 	descriptorAllocatorDesc._dsvCount = 16;
-	descriptorAllocatorDesc._srvCbvUavCpuCount = 128;
+	descriptorAllocatorDesc._srvCbvUavCpuCount = 1024;
 	descriptorAllocatorDesc._srvCbvUavGpuCount = 1024 * 2;
 	DescriptorAllocatorGroup::Get()->initialize(descriptorAllocatorDesc);
 
@@ -81,6 +82,10 @@ void Renderer::initialize() {
 
 	// GPU タイムスタンプマネージャー
 	GpuTimerManager::Get()->initialize();
+
+	// フレームアロケーター
+	FrameBufferAllocator::Get()->initialize();
+	FrameDescriptorAllocator::Get()->initialize();
 
 	// スワップチェーンのバックバッファを取得
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
@@ -122,6 +127,9 @@ void Renderer::initialize() {
 void Renderer::terminate() {
 	RenderDirector::Get()->terminate();
 
+	FrameBufferAllocator::Get()->terminate();
+	FrameDescriptorAllocator::Get()->terminate();
+
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
@@ -148,6 +156,8 @@ void Renderer::update() {
 	GpuTimerManager::Get()->update(_frameIndex);
 	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();
+	FrameBufferAllocator::Get()->reset();
+	FrameDescriptorAllocator::Get()->reset();
 }
 
 void Renderer::render() {

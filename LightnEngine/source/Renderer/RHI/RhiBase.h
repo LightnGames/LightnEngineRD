@@ -34,6 +34,7 @@ struct DeviceBase {
 	virtual void createUnorderedAccessView(Resource* resource, Resource* counterResource, const UnorderedAccessViewDesc* desc, CpuDescriptorHandle destDescriptor) = 0;
 	virtual void getCopyableFootprints(const ResourceDesc* resourceDesc, u32 firstSubresource, u32 numSubresources, u64 baseOffset, PlacedSubresourceFootprint* layouts, u32* numRows, u64* rowSizeInBytes, u64* totalBytes) = 0;
 	virtual u8 getFormatPlaneCount(Format format) = 0;
+	virtual ResourceAllocationInfo getResourceAllocationInfo(u32 visibleMask, u32 numResourceDescs, const ResourceDesc* resourceDescs) = 0;
 };
 
 struct SwapChainBase {
@@ -69,6 +70,7 @@ struct CommandListBase {
 	virtual void reset() = 0;
 	virtual void transitionBarrierSimple(Resource* resource, ResourceStates currentState, ResourceStates nextState) = 0;
 	virtual void transitionBarriers(ResourceTransitionBarrier* barriers, u32 count) = 0;
+	virtual void aliasingBarriers(ResourceAliasingBarrier* barriers, u32 count) = 0;
 	virtual void copyBufferRegion(Resource* dstBuffer, u64 dstOffset, Resource* srcBuffer, u64 srcOffset, u64 numBytes) = 0;
 	virtual void copyResource(Resource* dstResource, Resource* srcResource) = 0;
 	virtual void copyTextureRegion(const TextureCopyLocation* dst, u32 dstX, u32 dstY, u32 dstZ, const TextureCopyLocation* src, const Box* srcBox) = 0;

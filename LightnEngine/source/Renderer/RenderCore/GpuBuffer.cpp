@@ -20,6 +20,12 @@ void GpuBuffer::initialize(const GpuBufferDesc& desc) {
 		desc._allocator->createResource(bufferDesc, desc._initialState, nullptr, &_allocation, &_resource);
 		return;
 	}
+
+	if (desc._aliasingMemoryAllocation != nullptr) {
+		desc._allocator->createAliasingResource(bufferDesc, desc._offsetSizeInByte, desc._initialState, nullptr, &_allocation, &_resource);
+		return;
+	}
+
 	desc._device->createCommittedResource(desc._heapType, rhi::HEAP_FLAG_NONE, bufferDesc, desc._initialState, nullptr, &_resource);
 }
 
@@ -36,5 +42,13 @@ void GpuBuffer::initialize(const GpuDynamicBufferDesc& desc) {
 	_desc = bufferDesc;
 	_currentState = rhi::RESOURCE_STATE_GENERIC_READ;
 	_sizeInByte = desc._sizeInByte;
+}
+
+void GpuAliasingMemoryAllocation::initialize(rhi::VideoMemoryAllocator* allocator, u32 sizeInByte) {
+	allocator->allocateMemory(sizeInByte, &_allocation);
+}
+
+void GpuAliasingMemoryAllocation::terminate() {
+	_allocation.terminate();
 }
 }

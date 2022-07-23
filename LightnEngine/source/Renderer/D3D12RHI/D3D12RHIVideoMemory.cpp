@@ -34,6 +34,31 @@ void VideoMemoryAllocator::createResource(ResourceDesc desc, ResourceStates init
 		IID_PPV_ARGS(&resource->_resource));
 }
 
+void VideoMemoryAllocator::createAliasingResource(ResourceDesc desc, u64 allocationLocalOffset, ResourceStates initialState, const ClearValue* optimizedClearValue, VideoMemoryAllocation* allocation, Resource* resource) {
+	D3D12_RESOURCE_DESC d3d12ResourceDesc = toD3d12(desc);
+	HRESULT hr = _allocator->CreateAliasingResource(
+		allocation->_allocation,
+		allocationLocalOffset,
+		&d3d12ResourceDesc,
+		toD3d12(initialState),
+		toD3d12(optimizedClearValue),
+		IID_PPV_ARGS(&resource->_resource));
+}
+
+void VideoMemoryAllocator::allocateMemory(u32 sizeInByte, VideoMemoryAllocation* allocation) {
+	D3D12_RESOURCE_ALLOCATION_INFO finalAllocInfo = {};
+	finalAllocInfo.Alignment = 65536; // 64kb
+	finalAllocInfo.SizeInBytes = sizeInByte;
+	LTN_ASSERT((finalAllocInfo.SizeInBytes % finalAllocInfo.Alignment) == 0);
+
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	D3D12MA::Allocation*& alloc = allocation->_allocation;
+	HRESULT hr = _allocator->AllocateMemory(&allocDesc, &finalAllocInfo, &alloc);
+	LTN_ASSERT(alloc != NULL && alloc->GetHeap() != NULL);
+}
+
 bool VideoMemoryAllocation::isAllocated() const {
 	return _allocation != nullptr;
 }

@@ -479,6 +479,21 @@ u8 Device::getFormatPlaneCount(Format format) {
 	return formatInfo.PlaneCount;
 }
 
+ResourceAllocationInfo Device::getResourceAllocationInfo(u32 visibleMask, u32 numResourceDescs, const ResourceDesc* resourceDescs) {
+	D3D12_RESOURCE_DESC d3dDescs[4];
+	LTN_ASSERT(numResourceDescs < LTN_COUNTOF(d3dDescs));
+
+	for (u32 i = 0; i < numResourceDescs; ++i) {
+		d3dDescs[i] = toD3d12(resourceDescs[i]);
+	}
+
+	D3D12_RESOURCE_ALLOCATION_INFO info = _device->GetResourceAllocationInfo(visibleMask, numResourceDescs, d3dDescs);
+	ResourceAllocationInfo result;
+	result._alignment = info.Alignment;
+	result._sizeInBytes = info.SizeInBytes;
+	return result;
+}
+
 void SwapChain::initialize(const SwapChainDesc& desc) {
 	IDXGIFactory4* factory = desc._factory->_factory;
 	ID3D12CommandQueue* commandQueue = desc._commandQueue->_commandQueue;
@@ -682,9 +697,23 @@ void CommandList::transitionBarriers(ResourceTransitionBarrier* barriers, u32 co
 		barrier.Transition.StateBefore = toD3d12(sourceBarrier._stateBefore);
 		barrier.Transition.StateAfter = toD3d12(sourceBarrier._stateAfter);
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		_commandList->ResourceBarrier(1, &barrier);
 	}
-	//_commandList->ResourceBarrier(count, barriersD3d12);
+	_commandList->ResourceBarrier(count, barriersD3d12);
+}
+
+void CommandList::aliasingBarriers(ResourceAliasingBarrier* barriers, u32 count) {
+	constexpr u32 BARRIER_COUNT_MAX = 32;
+	LTN_ASSERT(count > 0);
+	LTN_ASSERT(count < BARRIER_COUNT_MAX);
+	D3D12_RESOURCE_BARRIER barriersD3d12[BARRIER_COUNT_MAX] = {};
+	for (u32 barrierIndex = 0; barrierIndex < count; ++barrierIndex) {
+		ResourceAliasingBarrier& sourceBarrier = barriers[barrierIndex];
+		D3D12_RESOURCE_BARRIER& barrier = barriersD3d12[barrierIndex];
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+		barrier.Aliasing.pResourceBefore = toD3d12(sourceBarrier._resourceBefore);
+		barrier.Aliasing.pResourceAfter = toD3d12(sourceBarrier._resourceAfter);
+	}
+	_commandList->ResourceBarrier(count, barriersD3d12);
 }
 
 void CommandList::copyBufferRegion(Resource* dstBuffer, u64 dstOffset, Resource* srcBuffer, u64 srcOffset, u64 numBytes) {
