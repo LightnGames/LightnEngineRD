@@ -10,6 +10,7 @@
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
+#include <Renderer/MeshRenderer/IndirectArgumentResource.h>
 
 namespace ltn {
 namespace {
@@ -37,6 +38,9 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 	rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
 	commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
 
+	IndirectArgumentResource indirectArgumentResource;
+	RenderViewFrameResource renderViewFrameResource;
+
 	for (u32 i = 0; i < viewCount; ++i) {
 		if (viewEnabledFlags[i] == 0) {
 			continue;
@@ -44,12 +48,13 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 
 		// フレームリソース初期化
 		{
-			_indirectArgumentResource.setUpFrameResource(commandList);
+			indirectArgumentResource.setUpFrameResource(commandList);
+			renderViewFrameResource.setUpFrameResource(&views[i], commandList);
 		}
 
 		// カリング結果リセット
 		{
-			renderViewScene->resetCullingResult(commandList, i);
+			renderViewScene->resetCullingResult(commandList, &renderViewFrameResource, i);
 		}
 
 		// LOD 情報計算
@@ -66,8 +71,8 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			GpuCulling::CullingDesc desc;
 			desc._commandList = commandList;
 			desc._viewCbv = renderViewScene->getViewCbv(i);
-			desc._cullingResultUav = renderViewScene->getCullingResultUav(i);
-			desc._indirectArgumentResource = &_indirectArgumentResource;
+			desc._cullingResultUav = renderViewFrameResource._cullingResultUav._gpuHandle;
+			desc._indirectArgumentResource = &indirectArgumentResource;
 			gpuCulling->gpuCulling(desc);
 		}
 
@@ -86,12 +91,12 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			VisiblityBufferRenderer::GeometryPassDesc desc;
 			desc._commandList = commandList;
 			desc._viewCbv = renderViewScene->getViewCbv(i);
-			desc._viewDsv = renderViewScene->getViewCpuDsv(i);
+			desc._viewDsv = renderViewFrameResource._viewDsv._cpuHandle;
 			desc._rootSignatures = materialManager->getGeometryPassRootSignatures();
 			desc._pipelineStates = materialManager->getGeometryPassPipelineStates();
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
-			desc._indirectArgumentResource = &_indirectArgumentResource;
+			desc._indirectArgumentResource = &indirectArgumentResource;
 			visibilityBufferRenderer->geometryPass(desc);
 		}
 
@@ -107,12 +112,16 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			VisiblityBufferRenderer::ShadingPassDesc desc;
 			desc._commandList = commandList;
 			desc._viewCbv = renderViewScene->getViewCbv(i);
-			desc._viewRtv = renderViewScene->getViewCpuRtv(i);
+			desc._viewRtv = renderViewFrameResource._viewRtv._cpuHandle;
 			desc._rootSignatures = materialManager->getShadingPassRootSignatures();
 			desc._pipelineStates = materialManager->getShadingPassPipelineStates();
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			visibilityBufferRenderer->shadingPass(desc);
+		}
+
+		if (i == 0) {
+			renderViewScene->setMainViewGpuTexture(renderViewFrameResource._viewColorTexture);
 		}
 	}
 }

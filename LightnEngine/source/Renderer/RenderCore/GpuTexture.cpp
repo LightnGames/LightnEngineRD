@@ -20,10 +20,17 @@ void GpuTexture::initialize(const GpuTextureDesc& desc) {
 	_currentState = desc._initialState;
 	_desc = textureDesc;
 
+	if (desc._aliasingMemoryAllocation != nullptr) {
+		LTN_ASSERT(desc._allocator != nullptr);
+		desc._allocator->createAliasingResource(textureDesc, desc._offsetSizeInByte, desc._initialState, desc._optimizedClearValue, desc._aliasingMemoryAllocation, &_resource);
+		return;
+	}
+
 	if (desc._allocator != nullptr) {
 		desc._allocator->createResource(textureDesc, desc._initialState, desc._optimizedClearValue, &_allocation, &_resource);
 		return;
 	}
+
 	desc._device->createCommittedResource(rhi::HEAP_TYPE_DEFAULT, rhi::HEAP_FLAG_NONE, textureDesc, desc._initialState, desc._optimizedClearValue, &_resource);
 }
 }

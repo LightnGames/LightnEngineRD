@@ -30,7 +30,7 @@ DescriptorHandle DescriptorAllocator::allocate() {
 
 DescriptorHandles DescriptorAllocator::allocate(u32 count) {
 	VirtualArray::AllocationInfo allocationInfo = _allocationInfo.allocation(count);
-	u32 offset = static_cast<u32>(allocationInfo._offset) * _incrementSize;
+	u32 offset = u32(allocationInfo._offset) * _incrementSize;
 	DescriptorHandles descriptors = {};
 	descriptors._descriptorCount = count;
 	descriptors._incrementSize = _incrementSize;

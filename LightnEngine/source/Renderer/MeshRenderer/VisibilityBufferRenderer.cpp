@@ -419,7 +419,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
 	rhi::Resource* indirectArgumentBuffer = indirectArgumentResource->_indirectArgumentGpuBuffer->getResource();
 	rhi::Resource* indirectArgumentCountBuffer = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
-	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Render");
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "GeometryPass");
 
 	rhi::CpuDescriptorHandle dsv = desc._viewDsv;
 	commandList->setRenderTargets(2, _triangleIdRtv._firstHandle._cpuHandle, &dsv);

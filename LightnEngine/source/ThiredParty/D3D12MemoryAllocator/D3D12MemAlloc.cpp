@@ -6931,9 +6931,11 @@ HRESULT AllocatorPimpl::CreateAliasingResource(
     const UINT64 existingSize = pAllocation->GetSize();
     const UINT64 newOffset = existingOffset + AllocationLocalOffset;
 
+    bool size = AllocationLocalOffset + resAllocInfo.SizeInBytes > existingSize;
+    bool align = newOffset % resAllocInfo.Alignment != 0;
     if (existingHeap == NULL ||
-        AllocationLocalOffset + resAllocInfo.SizeInBytes > existingSize ||
-        newOffset % resAllocInfo.Alignment != 0)
+        size||
+        align)
     {
         return E_INVALIDARG;
     }

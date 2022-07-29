@@ -10,7 +10,7 @@ struct GpuBufferDesc {
 	rhi::ResourceFlags _flags = rhi::RESOURCE_FLAG_NONE;
 	rhi::HeapType _heapType = rhi::HEAP_TYPE_DEFAULT;
 	rhi::VideoMemoryAllocator* _allocator = nullptr;
-	GpuAliasingMemoryAllocation* _aliasingMemoryAllocation = nullptr;
+	rhi::VideoMemoryAllocation* _aliasingMemoryAllocation = nullptr;
 	u32 _sizeInByte = 0;
 	u32 _offsetSizeInByte = 0;
 };

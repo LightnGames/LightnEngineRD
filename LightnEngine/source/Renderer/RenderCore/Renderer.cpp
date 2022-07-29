@@ -52,8 +52,8 @@ void Renderer::initialize() {
 	// デスクリプタアロケーター
 	DescriptorAllocatorGroup::Desc descriptorAllocatorDesc = {};
 	descriptorAllocatorDesc._device = device;
-	descriptorAllocatorDesc._rtvCount = 16;
-	descriptorAllocatorDesc._dsvCount = 16;
+	descriptorAllocatorDesc._rtvCount = 1024;
+	descriptorAllocatorDesc._dsvCount = 1024;
 	descriptorAllocatorDesc._srvCbvUavCpuCount = 1024;
 	descriptorAllocatorDesc._srvCbvUavGpuCount = 1024 * 2;
 	DescriptorAllocatorGroup::Get()->initialize(descriptorAllocatorDesc);
@@ -182,7 +182,7 @@ void Renderer::render() {
 	{
 		DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "CopyBackBuffer");
 		RenderViewScene* renderViewScene = RenderViewScene::Get();
-		GpuTexture* mainViewTexture = renderViewScene->getViewColorTexture(0);
+		GpuTexture* mainViewTexture = renderViewScene->getMainViewTexture();
 		GpuTexture* backBuffer = &_backBuffers[_frameIndex];
 
 		ScopedBarrierDesc barriers[] = {

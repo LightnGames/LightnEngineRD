@@ -38,6 +38,20 @@ struct CullingResult {
 };
 }
 
+struct RenderViewFrameResource {
+	void setUpFrameResource(const View* view, rhi::CommandList* commandList);
+
+	GpuBuffer* _cullingResultGpuBuffer = nullptr;
+	GpuTexture* _viewColorTexture = nullptr;
+	GpuTexture* _viewDepthTexture = nullptr;
+	DescriptorHandle _viewRtv;
+	DescriptorHandle _viewDsv;
+	DescriptorHandle _viewSrv;
+	DescriptorHandle _viewDepthSrv;
+	DescriptorHandle _cullingResultUav;
+	DescriptorHandle _cullingResultCpuUav;
+};
+
 class RenderViewScene {
 public:
 	void initialize();
@@ -45,20 +59,14 @@ public:
 	void update();
 
 	void setViewports(rhi::CommandList* commandList, const View& view, u32 viewIndex);
-	void resetCullingResult(rhi::CommandList* commandList, u32 viewIndex);
-
-	GpuTexture* getViewColorTexture(u32 index) { return &_viewColorTextures[index]; }
-	rhi::CpuDescriptorHandle getViewCpuRtv(u32 index) const { return _viewRtv.get(index)._cpuHandle; }
-	rhi::CpuDescriptorHandle getViewCpuDsv(u32 index) const { return _viewDsv.get(index)._cpuHandle; }
+	void resetCullingResult(rhi::CommandList* commandList, RenderViewFrameResource* frameResource, u32 viewIndex);
 
 	rhi::GpuDescriptorHandle getViewCbv(u32 index) const { return _viewCbv.get(index)._gpuHandle; }
-	rhi::GpuDescriptorHandle getViewRtv(u32 index) const { return _viewRtv.get(index)._gpuHandle; }
-	rhi::GpuDescriptorHandle getViewDsv(u32 index) const { return _viewDsv.get(index)._gpuHandle; }
-	rhi::GpuDescriptorHandle getViewSrv(u32 index) const { return _viewSrv.get(index)._gpuHandle; }
-	rhi::GpuDescriptorHandle getViewDepthSrv(u32 index) const { return _viewDepthSrv.get(index)._gpuHandle; }
-	rhi::GpuDescriptorHandle getCullingResultUav(u32 index) const { return _cullingResultUav.get(index)._gpuHandle; }
 	rhi::ViewPort createViewPort(const View& view) const { return { 0,0, f32(view.getWidth()), f32(view.getHeight()), 0, 1 }; }
 	rhi::Rect createScissorRect(const View& view) const { return { 0,0, l32(view.getWidth()), l32(view.getHeight()) }; }
+
+	void setMainViewGpuTexture(GpuTexture* texture) { _mainViewTexture = texture; }
+	GpuTexture* getMainViewTexture() { return _mainViewTexture; }
 
 	static RenderViewScene* Get();
 
@@ -67,18 +75,10 @@ private:
 	void showCullingResultStatus(u32 viewIndex) const;
 
 private:
-	GpuBuffer _cullingResultGpuBuffers[ViewScene::VIEW_COUNT_MAX];
+	GpuTexture* _mainViewTexture = nullptr;
 	GpuBuffer _cullingResultReadbackBuffer[ViewScene::VIEW_COUNT_MAX];
-	GpuTexture _viewColorTextures[ViewScene::VIEW_COUNT_MAX];
-	GpuTexture _viewDepthTextures[ViewScene::VIEW_COUNT_MAX];
 	GpuBuffer _viewConstantBuffers[ViewScene::VIEW_COUNT_MAX];
 	DescriptorHandles _viewCbv;
-	DescriptorHandles _viewRtv;
-	DescriptorHandles _viewDsv;
-	DescriptorHandles _viewSrv;
-	DescriptorHandles _viewDepthSrv;
-	DescriptorHandles _cullingResultUav;
-	DescriptorHandles _cullingResultCpuUav;
 
 	gpu::CullingResult _cullingResult[ViewScene::VIEW_COUNT_MAX];
 };

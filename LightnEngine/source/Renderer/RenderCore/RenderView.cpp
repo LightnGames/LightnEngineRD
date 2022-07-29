@@ -4,6 +4,7 @@
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
 #include <Renderer/RenderCore/RendererUtility.h>
+#include <Renderer/RenderCore/FrameResourceAllocator.h>
 #include <RendererScene/View.h>
 #include <ThiredParty/ImGui/imgui.h>
 
@@ -15,24 +16,12 @@ void RenderViewScene::initialize() {
 	// デスクリプタのみ初期化時に確保しておく
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
 	_viewCbv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_viewSrv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_viewRtv = descriptorAllocatorGroup->getRtvAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_viewDsv = descriptorAllocatorGroup->getDsvAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_viewDepthSrv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_cullingResultUav = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
-	_cullingResultCpuUav = descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
 }
 
 void RenderViewScene::terminate() {
 	update();
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
 	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_viewCbv);
-	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_viewSrv);
-	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_viewDepthSrv);
-	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_cullingResultUav);
-	descriptorAllocatorGroup->getSrvCbvUavCpuAllocator()->free(_cullingResultCpuUav);
-	descriptorAllocatorGroup->getRtvAllocator()->free(_viewRtv);
-	descriptorAllocatorGroup->getDsvAllocator()->free(_viewDsv);
 }
 
 void RenderViewScene::update() {
@@ -49,44 +38,6 @@ void RenderViewScene::update() {
 			rhi::Device* device = DeviceManager::Get()->getDevice();
 			const View& view = views[i];
 
-			// カラーテクスチャ
-			{
-				rhi::ClearValue optimizedClearValue = {};
-				optimizedClearValue._format = rhi::BACK_BUFFER_FORMAT;
-
-				GpuTextureDesc desc = {};
-				desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-				desc._device = device;
-				desc._format = rhi::BACK_BUFFER_FORMAT;
-				desc._optimizedClearValue = &optimizedClearValue;
-				desc._width = view.getWidth();
-				desc._height = view.getHeight();
-				desc._flags = rhi::RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-				desc._initialState = rhi::RESOURCE_STATE_RENDER_TARGET;
-				_viewColorTextures[i].initialize(desc);
-				_viewColorTextures[i].setName("ViewColor[%d]", i);
-			}
-
-			// デプステクスチャ
-			{
-				rhi::ClearValue depthOptimizedClearValue = {};
-				depthOptimizedClearValue._format = rhi::FORMAT_D32_FLOAT;
-				depthOptimizedClearValue._depthStencil._depth = 1.0f;
-				depthOptimizedClearValue._depthStencil._stencil = 0;
-
-				GpuTextureDesc desc = {};
-				desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-				desc._device = device;
-				desc._format = rhi::FORMAT_D32_FLOAT;
-				desc._optimizedClearValue = &depthOptimizedClearValue;
-				desc._width = view.getWidth();
-				desc._height = view.getHeight();
-				desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-				desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
-				_viewDepthTextures[i].initialize(desc);
-				_viewDepthTextures[i].setName("ViewDepth[%d]", i);
-			}
-
 			// 定数バッファ
 			{
 				GpuBufferDesc desc = {};
@@ -100,21 +51,13 @@ void RenderViewScene::update() {
 
 			// カリング結果
 			{
+				// MEMO: サイズが小さくてアライメント的に不利かもしれない
 				GpuBufferDesc desc = {};
 				desc._device = device;
-				desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-				desc._heapType = rhi::HEAP_TYPE_DEFAULT;
-				desc._initialState = rhi::RESOURCE_STATE_UNORDERED_ACCESS;
-				desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-				desc._sizeInByte = sizeof(gpu::CullingResult);
-				_cullingResultGpuBuffers[i].initialize(desc);
-				_cullingResultGpuBuffers[i].setName("CullingResult[%d]", i);
-
-				// MEMO: サイズが小さくてアライメント的に不利かもしれない
+				desc._sizeInByte = GetAligned(sizeof(gpu::CullingResult), rhi::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 				desc._initialState = rhi::RESOURCE_STATE_COPY_DEST;
 				desc._heapType = rhi::HEAP_TYPE_READBACK;
 				desc._flags = rhi::RESOURCE_FLAG_NONE;
-				desc._allocator = nullptr;
 				_cullingResultReadbackBuffer[i].initialize(desc);
 				_cullingResultReadbackBuffer[i].setName("CullingResultReadback[%d]", i);
 			}
@@ -125,27 +68,6 @@ void RenderViewScene::update() {
 				desc._bufferLocation = _viewConstantBuffers[i].getGpuVirtualAddress();
 				desc._sizeInBytes = _viewConstantBuffers[i].getSizeInByte();
 				device->createConstantBufferView(desc, _viewCbv.get(i)._cpuHandle);
-			}
-
-			// デスクリプター
-			{
-				device->createDepthStencilView(_viewDepthTextures[i].getResource(), _viewDsv.get(i)._cpuHandle);
-				device->createRenderTargetView(_viewColorTextures[i].getResource(), _viewRtv.get(i)._cpuHandle);
-				device->createShaderResourceView(_viewColorTextures[i].getResource(), nullptr, _viewSrv.get(i)._cpuHandle);
-
-				rhi::ShaderResourceViewDesc srvDesc = {};
-				srvDesc._format = rhi::FORMAT_R32_FLOAT;
-				srvDesc._viewDimension = rhi::SRV_DIMENSION_TEXTURE2D;
-				srvDesc._texture2D._mipLevels = 1;
-				device->createShaderResourceView(_viewDepthTextures[i].getResource(), &srvDesc, _viewDepthSrv.get(i)._cpuHandle);
-
-				rhi::UnorderedAccessViewDesc uavDesc = {};
-				uavDesc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
-				uavDesc._format = rhi::FORMAT_R32_TYPELESS;
-				uavDesc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
-				uavDesc._buffer._numElements = _cullingResultGpuBuffers[i].getU32ElementCount();
-				device->createUnorderedAccessView(_cullingResultGpuBuffers[i].getResource(), nullptr, &uavDesc, _cullingResultUav.get(i)._cpuHandle);
-				device->createUnorderedAccessView(_cullingResultGpuBuffers[i].getResource(), nullptr, &uavDesc, _cullingResultCpuUav.get(i)._cpuHandle);
 			}
 
 			// 初期化時は Gpu ビュー情報も初期化
@@ -159,10 +81,7 @@ void RenderViewScene::update() {
 
 		// ビュー破棄
 		if (stateFlags[i] & View::VIEW_STATE_DESTROY) {
-			_viewColorTextures[i].terminate();
-			_viewDepthTextures[i].terminate();
 			_viewConstantBuffers[i].terminate();
-			_cullingResultGpuBuffers[i].terminate();
 			_cullingResultReadbackBuffer[i].terminate();
 		}
 
@@ -179,15 +98,15 @@ void RenderViewScene::setViewports(rhi::CommandList* commandList, const View& vi
 	commandList->setScissorRects(1, &scissorRect);
 }
 
-void RenderViewScene::resetCullingResult(rhi::CommandList* commandList, u32 viewIndex) {
+void RenderViewScene::resetCullingResult(rhi::CommandList* commandList, RenderViewFrameResource* frameResource, u32 viewIndex) {
 	// カリング結果をリードバックバッファにコピー
 	GpuBuffer& readbackBuffer = _cullingResultReadbackBuffer[viewIndex];
 	{
 		ScopedBarrierDesc barriers[] = {
-	        ScopedBarrierDesc(&_cullingResultGpuBuffers[viewIndex], rhi::RESOURCE_STATE_COPY_SOURCE),
+			ScopedBarrierDesc(frameResource->_cullingResultGpuBuffer, rhi::RESOURCE_STATE_COPY_SOURCE),
 		};
 		ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
-		commandList->copyResource(readbackBuffer.getResource(), _cullingResultGpuBuffers[viewIndex].getResource());
+		commandList->copyResource(readbackBuffer.getResource(), frameResource->_cullingResultGpuBuffer->getResource());
 	}
 
 	// リードバックバッファから CPU メモリにコピー
@@ -197,9 +116,9 @@ void RenderViewScene::resetCullingResult(rhi::CommandList* commandList, u32 view
 
 	// クリア
 	u32 clearValues[4] = {};
-	rhi::GpuDescriptorHandle gpuDescriptor = _cullingResultUav.get(viewIndex)._gpuHandle;
-	rhi::CpuDescriptorHandle cpuDescriptor = _cullingResultCpuUav.get(viewIndex)._cpuHandle;
-	rhi::Resource* resource = _cullingResultGpuBuffers[viewIndex].getResource();
+	rhi::GpuDescriptorHandle gpuDescriptor = frameResource->_cullingResultUav._gpuHandle;
+	rhi::CpuDescriptorHandle cpuDescriptor = frameResource->_cullingResultCpuUav._cpuHandle;
+	rhi::Resource* resource = frameResource->_cullingResultGpuBuffer->getResource();
 	commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
 }
 
@@ -269,5 +188,80 @@ void RenderViewScene::showCullingResultStatus(u32 viewIndex) const {
 	ImGui::Text(FORMAT, "PassFrustumCulling", ThreeDigiets(cullingResult._passFrustumCullingTriangleCount).get());
 	ImGui::Text(FORMAT, "PassOcclusionCulling", ThreeDigiets(cullingResult._passOcclusionCullingTriangleCount).get());
 	ImGui::End();
+}
+
+void RenderViewFrameResource::setUpFrameResource(const View* view, rhi::CommandList* commandList) {
+	FrameBufferAllocator* bufferAllocator = FrameBufferAllocator::Get();
+	// カラーテクスチャ
+	{
+		rhi::ClearValue optimizedClearValue = {};
+		optimizedClearValue._format = rhi::BACK_BUFFER_FORMAT;
+
+		FrameBufferAllocator::TextureCreatationDesc desc;
+		desc._format = rhi::BACK_BUFFER_FORMAT;
+		desc._optimizedClearValue = &optimizedClearValue;
+		desc._width = view->getWidth();
+		desc._height = view->getHeight();
+		desc._initialState = rhi::RESOURCE_STATE_RENDER_TARGET;
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		_viewColorTexture = bufferAllocator->createGpuTexture(desc);
+		_viewColorTexture->setName("ViewColor");
+	}
+
+	// デプステクスチャ
+	{
+		rhi::ClearValue depthOptimizedClearValue = {};
+		depthOptimizedClearValue._format = rhi::FORMAT_D32_FLOAT;
+		depthOptimizedClearValue._depthStencil._depth = 1.0f;
+		depthOptimizedClearValue._depthStencil._stencil = 0;
+
+		FrameBufferAllocator::TextureCreatationDesc desc;
+		desc._format = rhi::FORMAT_D32_FLOAT;
+		desc._optimizedClearValue = &depthOptimizedClearValue;
+		desc._width = view->getWidth();
+		desc._height = view->getHeight();
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
+		_viewDepthTexture = bufferAllocator->createGpuTexture(desc);
+		_viewDepthTexture->setName("ViewDepth");
+	}
+
+	// カリング結果バッファ
+	{
+		FrameBufferAllocator* frameBufferAllocator = FrameBufferAllocator::Get();
+		FrameBufferAllocator::BufferCreatationDesc desc = {};
+		desc._initialState = rhi::RESOURCE_STATE_UNORDERED_ACCESS;
+		desc._sizeInByte = sizeof(gpu::CullingResult);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		_cullingResultGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
+		_cullingResultGpuBuffer->setName("ViewCullingResult");
+	}
+
+	FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
+	_viewRtv = descriptorAllocator->allocateRtvGpu();
+	_viewDsv = descriptorAllocator->allocateDsvGpu();
+	_viewSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+	_viewDepthSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+	_cullingResultUav = descriptorAllocator->allocateSrvCbvUavGpu();
+	_cullingResultCpuUav = descriptorAllocator->allocateSrvCbvUavCpu();
+
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	device->createDepthStencilView(_viewDepthTexture->getResource(), _viewDsv._cpuHandle);
+	device->createRenderTargetView(_viewColorTexture->getResource(), _viewRtv._cpuHandle);
+	device->createShaderResourceView(_viewColorTexture->getResource(), nullptr, _viewSrv._cpuHandle);
+
+	rhi::ShaderResourceViewDesc srvDesc = {};
+	srvDesc._format = rhi::FORMAT_R32_FLOAT;
+	srvDesc._viewDimension = rhi::SRV_DIMENSION_TEXTURE2D;
+	srvDesc._texture2D._mipLevels = 1;
+	device->createShaderResourceView(_viewDepthTexture->getResource(), &srvDesc, _viewDepthSrv._cpuHandle);
+
+	rhi::UnorderedAccessViewDesc uavDesc = {};
+	uavDesc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
+	uavDesc._format = rhi::FORMAT_R32_TYPELESS;
+	uavDesc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
+	uavDesc._buffer._numElements = _cullingResultGpuBuffer->getU32ElementCount();
+	device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultUav._cpuHandle);
+	device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultCpuUav._cpuHandle);
 }
 }

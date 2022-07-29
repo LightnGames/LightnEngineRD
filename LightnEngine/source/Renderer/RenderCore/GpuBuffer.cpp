@@ -16,13 +16,14 @@ void GpuBuffer::initialize(const GpuBufferDesc& desc) {
 	_currentState = desc._initialState;
 	_sizeInByte = desc._sizeInByte;
 
-	if (desc._allocator != nullptr) {
-		desc._allocator->createResource(bufferDesc, desc._initialState, nullptr, &_allocation, &_resource);
+	if (desc._aliasingMemoryAllocation != nullptr) {
+		LTN_ASSERT(desc._allocator != nullptr);
+		desc._allocator->createAliasingResource(bufferDesc, desc._offsetSizeInByte, desc._initialState, nullptr, desc._aliasingMemoryAllocation, &_resource);
 		return;
 	}
 
-	if (desc._aliasingMemoryAllocation != nullptr) {
-		desc._allocator->createAliasingResource(bufferDesc, desc._offsetSizeInByte, desc._initialState, nullptr, &_allocation, &_resource);
+	if (desc._allocator != nullptr) {
+		desc._allocator->createResource(bufferDesc, desc._initialState, nullptr, &_allocation, &_resource);
 		return;
 	}
 
