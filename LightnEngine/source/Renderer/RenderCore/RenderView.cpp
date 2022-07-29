@@ -237,31 +237,34 @@ void RenderViewFrameResource::setUpFrameResource(const View* view, rhi::CommandL
 		_cullingResultGpuBuffer->setName("ViewCullingResult");
 	}
 
-	FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
-	_viewRtv = descriptorAllocator->allocateRtvGpu();
-	_viewDsv = descriptorAllocator->allocateDsvGpu();
-	_viewSrv = descriptorAllocator->allocateSrvCbvUavGpu();
-	_viewDepthSrv = descriptorAllocator->allocateSrvCbvUavGpu();
-	_cullingResultUav = descriptorAllocator->allocateSrvCbvUavGpu();
-	_cullingResultCpuUav = descriptorAllocator->allocateSrvCbvUavCpu();
+	// デスクリプター
+	{
+		FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
+		_viewRtv = descriptorAllocator->allocateRtvGpu();
+		_viewDsv = descriptorAllocator->allocateDsvGpu();
+		_viewSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_viewDepthSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_cullingResultUav = descriptorAllocator->allocateSrvCbvUavGpu();
+		_cullingResultCpuUav = descriptorAllocator->allocateSrvCbvUavCpu();
 
-	rhi::Device* device = DeviceManager::Get()->getDevice();
-	device->createDepthStencilView(_viewDepthTexture->getResource(), _viewDsv._cpuHandle);
-	device->createRenderTargetView(_viewColorTexture->getResource(), _viewRtv._cpuHandle);
-	device->createShaderResourceView(_viewColorTexture->getResource(), nullptr, _viewSrv._cpuHandle);
+		rhi::Device* device = DeviceManager::Get()->getDevice();
+		device->createDepthStencilView(_viewDepthTexture->getResource(), _viewDsv._cpuHandle);
+		device->createRenderTargetView(_viewColorTexture->getResource(), _viewRtv._cpuHandle);
+		device->createShaderResourceView(_viewColorTexture->getResource(), nullptr, _viewSrv._cpuHandle);
 
-	rhi::ShaderResourceViewDesc srvDesc = {};
-	srvDesc._format = rhi::FORMAT_R32_FLOAT;
-	srvDesc._viewDimension = rhi::SRV_DIMENSION_TEXTURE2D;
-	srvDesc._texture2D._mipLevels = 1;
-	device->createShaderResourceView(_viewDepthTexture->getResource(), &srvDesc, _viewDepthSrv._cpuHandle);
+		rhi::ShaderResourceViewDesc srvDesc = {};
+		srvDesc._format = rhi::FORMAT_R32_FLOAT;
+		srvDesc._viewDimension = rhi::SRV_DIMENSION_TEXTURE2D;
+		srvDesc._texture2D._mipLevels = 1;
+		device->createShaderResourceView(_viewDepthTexture->getResource(), &srvDesc, _viewDepthSrv._cpuHandle);
 
-	rhi::UnorderedAccessViewDesc uavDesc = {};
-	uavDesc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
-	uavDesc._format = rhi::FORMAT_R32_TYPELESS;
-	uavDesc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
-	uavDesc._buffer._numElements = _cullingResultGpuBuffer->getU32ElementCount();
-	device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultUav._cpuHandle);
-	device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultCpuUav._cpuHandle);
+		rhi::UnorderedAccessViewDesc uavDesc = {};
+		uavDesc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
+		uavDesc._format = rhi::FORMAT_R32_TYPELESS;
+		uavDesc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
+		uavDesc._buffer._numElements = _cullingResultGpuBuffer->getU32ElementCount();
+		device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultUav._cpuHandle);
+		device->createUnorderedAccessView(_cullingResultGpuBuffer->getResource(), nullptr, &uavDesc, _cullingResultCpuUav._cpuHandle);
+	}
 }
 }
