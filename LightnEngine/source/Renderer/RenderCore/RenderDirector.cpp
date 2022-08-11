@@ -11,6 +11,7 @@
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
 #include <Renderer/MeshRenderer/IndirectArgumentResource.h>
+#include <ThiredParty/ImGui/imgui.h>
 
 namespace ltn {
 namespace {
@@ -21,6 +22,21 @@ void RenderDirector::initialize() {
 }
 
 void RenderDirector::terminate() {
+}
+
+void RenderDirector::update() {
+	ImGui::Begin("DebugVisualize");
+
+	const char* names[] = {
+		"None",
+		"MeshInstanceLodLevels",
+		"MeshInstanceScreenPersentages",
+		"MeshInstanceIndex",
+		"WorldPosition",
+		"Texcoords",
+	};
+	ImGui::Combo("Type", &_debugVisualizeType, names, LTN_COUNTOF(names));
+	ImGui::End();
 }
 
 void RenderDirector::render(rhi::CommandList* commandList) {
@@ -115,6 +131,10 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._viewRtv = renderViewFrameResource._viewRtv._cpuHandle;
 			desc._rootSignatures = materialManager->getShadingPassRootSignatures();
 			desc._pipelineStates = materialManager->getShadingPassPipelineStates();
+			if (_debugVisualizeType > 0) {
+				desc._pipelineStates = materialManager->getDebugShadingPassPipelineStates();
+			}
+			desc._debugVisualizeType = _debugVisualizeType;
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			visibilityBufferRenderer->shadingPass(desc);

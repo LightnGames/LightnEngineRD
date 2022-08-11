@@ -47,7 +47,7 @@ void VisiblityBufferRenderer::initialize() {
 		}
 
 		_triangleIdTexture.initialize(desc);
-		_triangleIdTexture.setName("VisiblityBufferTriangleID");
+		_triangleIdTexture.setName("VisiblityBufferTriangleId");
 
 		{
 			desc._format = rhi::FORMAT_R8_UINT;
@@ -57,7 +57,7 @@ void VisiblityBufferRenderer::initialize() {
 
 			desc._optimizedClearValue = &optimizedClearValue;
 			_triangleShaderIdTexture.initialize(desc);
-			_triangleShaderIdTexture.setName("VisiblityBufferTriangleShaderID");
+			_triangleShaderIdTexture.setName("VisiblityBufferTriangleShaderId");
 		}
 	}
 
@@ -77,16 +77,22 @@ void VisiblityBufferRenderer::initialize() {
 
 	// Shader id depth
 	{
+		rhi::ClearValue depthOptimizedClearValue = {};
+		depthOptimizedClearValue._format = rhi::FORMAT_D16_UNORM;
+		depthOptimizedClearValue._depthStencil._depth = 1.0f;
+		depthOptimizedClearValue._depthStencil._stencil = 0;
+
 		GpuTextureDesc desc = {};
 		desc._device = device;
 		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._optimizedClearValue = &depthOptimizedClearValue;
 		desc._format = rhi::FORMAT_D16_UNORM;
 		desc._width = u64(screenWidth);
 		desc._height = u64(screenHeight);
 		desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
 		_shaderIdDepth.initialize(desc);
-		_shaderIdDepth.setName("VisiblityBufferShaderIDDepth");
+		_shaderIdDepth.setName("VisiblityBufferShaderIdDepth");
 	}
 
 	// Constant buffer
@@ -97,7 +103,7 @@ void VisiblityBufferRenderer::initialize() {
 		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(BuildShaderIdConstant));
 		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 		_buildShaderIdConstantBuffer.initialize(desc);
-		_buildShaderIdConstantBuffer.setName("VisibilityBufferBuildShaderIDConstant");
+		_buildShaderIdConstantBuffer.setName("VisibilityBufferBuildShaderIdConstant");
 
 		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(ShadingConstant));
 		_shadingConstantBuffer.initialize(desc);
@@ -301,10 +307,10 @@ void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
 
 	ScopedBarrierDesc barriers[] = {
-	    ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-	    ScopedBarrierDesc(&_triangleShaderIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-	    ScopedBarrierDesc(&_shaderRangeBuffer[0], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-	    ScopedBarrierDesc(&_shaderRangeBuffer[1], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(&_triangleShaderIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(&_shaderRangeBuffer[0], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(&_shaderRangeBuffer[1], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
@@ -354,13 +360,14 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::GpuDescriptorHandle vertexResourceSrv = geometryResourceManager->getVertexResourceGpuSrv();
 	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = geometryResourceManager->getGeometryGlobalOffsetGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceScreenPersentageSrv = lodStreamingManager->getMeshInstanceScreenPersentageGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
 	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();
 
-	f32 clearColor[4] = {};
 	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
+	f32 clearColor[4] = {};
 	commandList->setRenderTargets(1, &rtv, &_shaderIdDsv._cpuHandle);
 	commandList->clearRenderTargetView(rtv, clearColor);
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -384,9 +391,11 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE, meshInstanceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH, meshSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_SCREEN_PERSENTAGE, meshInstanceScreenPersentageSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURE, textureSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER, materialParameterSrv);
+		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_TYPE, 1, &desc._debugVisualizeType, 0);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}
@@ -394,10 +403,17 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 void VisiblityBufferRenderer::clearShaderId(const ClearShaderIdDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
-	f32 clearColor[4] = { UINT8_MAX };
-	commandList->clearRenderTargetView(_triangleIdRtv.get(1)._cpuHandle, clearColor);
-}
+	{
+		f32 clearColor[4] = {};
+		commandList->clearRenderTargetView(_triangleIdRtv.get(0)._cpuHandle, clearColor);
+	}
 
+	{
+		f32 clearColor[4] = { UINT8_MAX };
+		commandList->clearRenderTargetView(_triangleIdRtv.get(1)._cpuHandle, clearColor);
+	}
+	commandList->clearDepthStencilView(_shaderIdDsv._cpuHandle, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+}
 
 void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
@@ -443,7 +459,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 
 		u32 count = indirectArgumentCounts[i];
 		u32 offset = sizeof(gpu::IndirectArgument) * indirectArgumentOffsets[i];
-		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, indirectArgumentCountBuffer, 0);
+		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, nullptr, 0);
 	}
 }
 

@@ -42,6 +42,7 @@ public:
 		rhi::GpuDescriptorHandle _viewCbv;
 		rhi::CpuDescriptorHandle _viewRtv;
 		u32 _pipelineStateCount = 0;
+		u32 _debugVisualizeType = 0;
 		const u8* _enabledFlags = nullptr;
 	};
 

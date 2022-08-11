@@ -43,7 +43,7 @@ void GpuCulling::initialize() {
 		rootParameters[GpuCullingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSET].initializeDescriptorTable(1, &indirectArgumentOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, rhi::SHADER_VISIBILITY_ALL);
-		rootParameters[GpuCullingRootParam::GEOMETRY_GLOBA_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[GpuCullingRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &lodLevelSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::MESH_LOD_STREAM_RANGE].initializeDescriptorTable(1, &meshLodStreamRangeSrvRange, rhi::SHADER_VISIBILITY_ALL);
 		rootParameters[GpuCullingRootParam::CULLING_RESULT].initializeDescriptorTable(1, &cullingResultUavRange, rhi::SHADER_VISIBILITY_ALL);
@@ -158,7 +158,7 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE, meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSET, indirectArgumentOffsetSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENTS, indirectArgumentResource->_indirectArgumentUav._firstHandle._gpuHandle);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::GEOMETRY_GLOBA_OFFSET, geometryGlobalOffsetSrv);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_LOD_STREAM_RANGE, meshLodStreamRangeSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_RESULT, desc._cullingResultUav);

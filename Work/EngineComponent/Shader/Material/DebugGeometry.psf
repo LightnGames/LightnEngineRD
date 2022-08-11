@@ -1,0 +1,48 @@
+#include "ShadingBase.sfh"
+
+#define DEBUG_VISUALIZE_TYPE_NONE 0
+#define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_LOD_LEVEL 1
+#define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_SCREEN_PERSENTAGE 2
+#define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_INDEX 3
+#define DEBUG_VISUALIZE_TYPE_WORLD_POSITION 4
+#define DEBUG_VISUALIZE_TYPE_TEXCOORDS 5
+
+struct Constant
+{
+    uint _type;
+};
+
+ConstantBuffer<Constant> _constant : register(b1);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t10);
+
+float4 main(float4 position : SV_Position) : SV_TARGET
+{
+    PrimitiveInfo primitiveInfo = getPrimitiveInfo(position.xy);
+    switch (_constant._type)
+    {
+        case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_LOD_LEVEL:
+            {
+                float screenPersentages = float(_meshInstanceLodLevels.Load(primitiveInfo._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(4);
+                return float4(heatMap(1.0 - screenPersentages), 1.0);
+            }
+        case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_SCREEN_PERSENTAGE:
+            {
+                float screenPersentages = float(_meshInstanceScreenPersentages.Load(primitiveInfo._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
+                return float4(heatMap(screenPersentages), 1.0);
+            }
+        case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_INDEX:
+            {
+                return float4(heatMap(primitiveInfo._meshInstanceIndex / 10.0), 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_WORLD_POSITION:
+            {
+                return float4(primitiveInfo._worldPosition / 20.0, 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_TEXCOORDS:
+            {
+                return float4(primitiveInfo._texcoords, 0, 1);
+            }
+    }
+    
+    return float4(0.18, 0.18, 0.18, 1.0);
+}

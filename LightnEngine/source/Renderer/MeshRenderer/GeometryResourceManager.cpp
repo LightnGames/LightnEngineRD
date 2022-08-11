@@ -119,18 +119,7 @@ void GeometryResourceManager::update() {
 	//for (u32 i = 0; i < createMeshCount; ++i) {
 	//	VramUpdater* vramUpdater = VramUpdater::Get();
 	//	const MeshGeometry* mesh = createMeshes[i];
-	//	for (u32 n = 0;n < mesh->getLodMeshCount(); ++n) {
-	//		loadLodMesh(mesh, n, n + 1);
-	//	}
 	//	loadLodMesh(mesh, 0, mesh->getLodMeshCount());
-	//	if (mesh->getLodMeshCount() > 1) {
-	//		loadLodMesh(mesh, 0, 1);
-	//		unloadLodMesh(mesh, 0, 1);
-	//		loadLodMesh(mesh, 0, 1);
-	//	}
-	//	else {
-	//		loadLodMesh(mesh, 0, mesh->getLodMeshCount());
-	//	}
 	//}
 
 	// ƒWƒIƒƒgƒŠî•ñ‚ğíœ

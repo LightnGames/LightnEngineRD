@@ -118,11 +118,11 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     float3 boundsMin = meshInstance._aabbMin;
     float3 boundsMax = meshInstance._aabbMax;
     bool passCulling = true;
-    bool passFrustum = false;
+    bool passFrustum = true;
     bool passOcclusion = false;
-    bool testFrustum = false;
+    bool testFrustum = true;
     bool testOcclusion = false;
-#define UBER_FRUSTUM 1
+#define UBER_FRUSTUM 0
 #if UBER_FRUSTUM
     passFrustum = doFrustumCulling(boundsMin, boundsMax, _viewInfo);
     testFrustum = true;
@@ -134,6 +134,40 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     uint subMeshCount = lodMesh._subMeshCount;
     GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = getGeometryGlobalOffsetInfo(_geometryGlobalOffsets, lodMeshOffset);
     
+    uint lodMeshInstanceOffset = meshInstance._lodMeshInstanceOffset + lodLevel;
+    LodMeshInstance lodMeshInstance = getLodMeshInstance(_lodMeshInstances, lodMeshInstanceOffset);
+    for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
+    {
+        uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
+        uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
+        SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
+        SubMeshInstance subMeshInstance = getSubMeshInstance(_subMeshInstances, subMeshInstanceIndex);
+        
+        uint indirectArgumentMaterialArrayOffset = 0;
+        uint currentCountIndex = 0;
+        _countBuffer.InterlockedAdd(indirectArgumentMaterialArrayOffset, 1, currentCountIndex);
+        //currentCountIndex = subMeshInstanceIndex;
+        
+        uint indirectArgumentMaterialOffset = _indirectArgumentOffsets.Load<uint>(sizeof(uint) * indirectArgumentMaterialArrayOffset);
+        uint indirectArgumentOffset = indirectArgumentMaterialOffset + currentCountIndex;
+		
+        IndirectArgument arguments;
+        arguments._indexCountPerInstance = subMesh._indexCount;
+        arguments._startIndexLocation = geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset;
+        arguments._instanceCount = 1;
+        arguments._startInstanceLocation = indirectArgumentOffset;
+        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset;
+        _indirectArguments.Store(sizeof(IndirectArgument) * indirectArgumentOffset, arguments);
+        
+        IndirectArgumentSubInfo subInfo;
+        subInfo._meshInstanceIndex = meshInstanceIndex;
+        subInfo._materialIndex = subMeshInstance._materialIndex;
+        subInfo._materialParameterOffset = subMeshInstance._materialParameterOffset;
+        subInfo._triangleOffset = arguments._startIndexLocation / 3;
+        _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * indirectArgumentOffset, subInfo);
+    }
+    
+    // カリング情報集計
     {
         uint triangleCount = 0;
         for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
@@ -157,37 +191,5 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
             _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingSubMeshInstanceCount, subMeshCount, dummy);
             _cullingResult.InterlockedAdd(OFFSET_passFrustumCullingTriangleCount, triangleCount, dummy);
         }
-    }
-    
-    uint lodMeshInstanceOffset = meshInstance._lodMeshInstanceOffset + lodLevel;
-    LodMeshInstance lodMeshInstance = getLodMeshInstance(_lodMeshInstances, lodMeshInstanceOffset);
-    for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
-    {
-        uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + subMeshLocalIndex;
-        uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
-        SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
-        SubMeshInstance subMeshInstance = getSubMeshInstance(_subMeshInstances, subMeshInstanceIndex);
-        
-        uint indirectArgumentMaterialArrayOffset = 0;
-        uint currentCountIndex = 0;
-        _countBuffer.InterlockedAdd(indirectArgumentMaterialArrayOffset, 1, currentCountIndex);
-	
-        uint indirectArgumentMaterialOffset = _indirectArgumentOffsets.Load<uint>(sizeof(uint) * indirectArgumentMaterialArrayOffset);
-        uint indirectArgumentOffset = indirectArgumentMaterialOffset + currentCountIndex;
-		
-        IndirectArgument arguments;
-        arguments._indexCountPerInstance = subMesh._indexCount;
-        arguments._startIndexLocation = geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset;
-        arguments._instanceCount = 1;
-        arguments._startInstanceLocation = indirectArgumentOffset;
-        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset;
-        _indirectArguments.Store(sizeof(IndirectArgument) * indirectArgumentOffset, arguments);
-        
-        IndirectArgumentSubInfo subInfo;
-        subInfo._meshInstanceIndex = meshInstanceIndex;
-        subInfo._materialIndex = subMeshInstance._materialIndex;
-        subInfo._materialParameterOffset = subMeshInstance._materialParameterOffset;
-        subInfo._triangleOffset = arguments._startIndexLocation / 3;
-        _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * indirectArgumentOffset, subInfo);
     }
 }

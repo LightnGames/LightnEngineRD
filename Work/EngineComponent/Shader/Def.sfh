@@ -6,3 +6,19 @@
 #define UINT16_MAX 65535
 #define UINT32_MAX 4294967295
 #define POS_NAN 0x7f800000
+
+float3 heatMap(float unormValue)
+{
+    float redValue = min(unormValue * 2.0, 1.0);
+    float blueValue = max((unormValue - 0.5) * 2.0, 0.0);
+    return lerp(float3(1, 0, 0), lerp(float3(0, 1, 0), float3(0, 0, 1), blueValue), redValue);
+}
+
+// 32bit uint -> 16bit float2
+float2 unpackTexCoords(uint packed)
+{
+    uint x = (packed.x >> 0) & 0xffff;
+    uint y = (packed.x >> 16) & 0xffff;
+    float div = UINT16_MAX / 8.0;
+    return (float2(x, y) / div) - 4.0;
+}

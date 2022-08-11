@@ -21,11 +21,10 @@ void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList)
 		_indirectArgumentCountGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
 		_indirectArgumentCountGpuBuffer->setName("IndirectArgumentCounts");
 
-		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		desc._initialState = rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgumentSubInfo);
 		_indirectArgumentSubInfoGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
 		_indirectArgumentSubInfoGpuBuffer->setName("IndirectArgumentSubInfos");
-
 	}
 
 	// Descriptor
@@ -64,10 +63,10 @@ void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList)
 	}
 	
 	// エイリアシングバリア
-	rhi::ResourceAliasingBarrier aliasingBarriers[3];
-	aliasingBarriers[0]._resourceAfter = _indirectArgumentGpuBuffer->getResource();
-	aliasingBarriers[1]._resourceAfter = _indirectArgumentCountGpuBuffer->getResource();
-	aliasingBarriers[2]._resourceAfter = _indirectArgumentSubInfoGpuBuffer->getResource();
-	commandList->aliasingBarriers(aliasingBarriers, LTN_COUNTOF(aliasingBarriers));
+	//rhi::ResourceAliasingBarrier aliasingBarriers[3];
+	//aliasingBarriers[0]._resourceAfter = _indirectArgumentGpuBuffer->getResource();
+	//aliasingBarriers[1]._resourceAfter = _indirectArgumentCountGpuBuffer->getResource();
+	//aliasingBarriers[2]._resourceAfter = _indirectArgumentSubInfoGpuBuffer->getResource();
+	//commandList->aliasingBarriers(aliasingBarriers, LTN_COUNTOF(aliasingBarriers));
 }
 }

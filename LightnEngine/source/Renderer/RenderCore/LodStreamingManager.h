@@ -18,6 +18,7 @@ public:
 	GpuBuffer* getMeshInstanceScreenPersentageGpuBuffer() { return &_meshInstanceScreenPersentageGpuBuffer; }
 	GpuBuffer* getMaterialScreenPesentageGpuBuffer() { return &_materialScreenPersentageGpuBuffer; }
 
+	rhi::GpuDescriptorHandle getMeshInstanceScreenPersentageGpuSrv() const { return _meshInstanceLodLevelSrv.get(1)._gpuHandle; }
 	rhi::GpuDescriptorHandle getMeshInstanceLodLevelGpuSrv() const { return _meshInstanceLodLevelSrv._firstHandle._gpuHandle; }
 	rhi::GpuDescriptorHandle getMeshInstanceLodLevelGpuUav() const { return _meshInstanceLodLevelUav._firstHandle._gpuHandle; }
 	rhi::GpuDescriptorHandle getMeshLodLevelGpuSrv() const { return _meshLodLevelSrv._firstHandle._gpuHandle; }

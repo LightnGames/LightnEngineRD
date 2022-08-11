@@ -9,6 +9,13 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 namespace ltn {
 namespace{
 ImGuiSystem g_imGuiSystem;
+
+
+void GetSettingsFilePath(char* filePath) {
+	char envPath[FILE_PATH_COUNT_MAX];
+	GetEnvPath(envPath);
+	sprintf_s(filePath, FILE_PATH_COUNT_MAX, "%s\\LightnEngine\\Settings\\%s", envPath, "imgui.ini");
+}
 }
 
 void ImGuiSystem::initialize(const Desc& desc) {
@@ -47,11 +54,21 @@ void ImGuiSystem::initialize(const Desc& desc) {
 		_descriptorHeap._descriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 		_descriptorHeap._descriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
+	// Imgui レイアウト読み込み
+	char settingsFilePath[FILE_PATH_COUNT_MAX];
+	GetSettingsFilePath(settingsFilePath);
+	ImGui::LoadIniSettingsFromDisk(settingsFilePath);
+
 	beginFrame();
 }
 
 void ImGuiSystem::terminate() {
 	_descriptorHeap.terminate();
+
+	// Imgui レイアウト 保存
+	char settingsFilePath[FILE_PATH_COUNT_MAX];
+	GetSettingsFilePath(settingsFilePath);
+	ImGui::SaveIniSettingsToDisk(settingsFilePath);
 
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();

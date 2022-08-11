@@ -153,6 +153,7 @@ void Renderer::terminate() {
 }
 
 void Renderer::update() {
+	RenderDirector::Get()->update();
 	GpuTimerManager::Get()->update(_frameIndex);
 	VramUpdater::Get()->update(_frameIndex);
 	PipelineStateReloader::Get()->update();

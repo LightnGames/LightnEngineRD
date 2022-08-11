@@ -4,6 +4,7 @@
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 
 namespace ltn {
+class Shader;
 struct ShadingRootParam {
 	enum {
 		SHADING_INFO,
@@ -14,10 +15,12 @@ struct ShadingRootParam {
 		MESH,
 		MESH_INSTANCE,
 		MESH_INSTANCE_LOD_LEVEL,
+		MESH_INSTANCE_SCREEN_PERSENTAGE,
 		GEOMETRY_GLOBAL_OFFSET,
 		VERTEX_RESOURCE,
 		TRIANGLE_ATTRIBUTE,
 		TEXTURE,
+		DEBUG_TYPE,
 		COUNT
 	};
 };
@@ -41,6 +44,7 @@ public:
 	rhi::RootSignature* getShadingPassRootSignatures() { return _shadingPassRootSignatures; }
 	rhi::PipelineState* getGeometryPassPipelineStates() { return _geometryPassPipelineStates; }
 	rhi::PipelineState* getShadingPassPipelineStates() { return _shadingPassPipelineStates; }
+	rhi::PipelineState* getDebugShadingPassPipelineStates() { return _debugVisualizePipelineStates; }
 	rhi::GpuDescriptorHandle getParameterGpuSrv() { return _parameterSrv._gpuHandle; }
 
 	static GpuMaterialManager* Get();
@@ -55,6 +59,7 @@ private:
 	rhi::PipelineState* _shadingPassPipelineStates = nullptr;
 	rhi::PipelineState* _debugVisualizePipelineStates = nullptr;
 
+	const Shader* _debugVisualizeShader = nullptr;
 	GpuBuffer _parameterGpuBuffer;
 	DescriptorHandle _parameterSrv;
 	ChunkAllocator _chunkAllocator;
