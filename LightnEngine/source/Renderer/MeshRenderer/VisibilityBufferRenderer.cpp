@@ -361,6 +361,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = geometryResourceManager->getGeometryGlobalOffsetGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceScreenPersentageSrv = lodStreamingManager->getMeshInstanceScreenPersentageGpuSrv();
+	rhi::GpuDescriptorHandle meshLodStreamedLevelSrv = geometryResourceManager->getMeshLodStreamRangeGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
@@ -392,6 +393,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH, meshSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_SCREEN_PERSENTAGE, meshInstanceScreenPersentageSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_LOD_STREAMED_LEVEL, meshLodStreamedLevelSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURE, textureSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER, materialParameterSrv);
@@ -459,7 +461,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 
 		u32 count = indirectArgumentCounts[i];
 		u32 offset = sizeof(gpu::IndirectArgument) * indirectArgumentOffsets[i];
-		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, nullptr, 0);
+		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, indirectArgumentCountBuffer, 0);
 	}
 }
 

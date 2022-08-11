@@ -36,13 +36,13 @@ void update() {
 	GeometryResourceManager::Get()->update();
 	GpuMaterialManager::Get()->update();
 	GpuCulling::Get()->update();
-	Renderer::Get()->update();
 	TextureScene::Get()->lateUpdate();
 	MaterialScene::Get()->lateUpdate();
 	MeshInstanceScene::Get()->lateUpdate();
 	MeshGeometryScene::Get()->lateUpdate();
 	ShaderScene::Get()->lateUpdate();
 	ViewScene::Get()->lateUpdate();
+	Renderer::Get()->update();
 }
 
 void render() {

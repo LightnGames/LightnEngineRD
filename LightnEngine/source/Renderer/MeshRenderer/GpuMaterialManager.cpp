@@ -109,10 +109,11 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 			rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
 			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 6);
-			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
-			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+			rhi::DescriptorRange meshLodStreamedLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
+			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 7);
+			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
+			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
 
 			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
@@ -126,6 +127,7 @@ void GpuMaterialManager::update() {
 			rootParameters[ShadingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &meshInstanceLodLevelSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_INSTANCE_SCREEN_PERSENTAGE].initializeDescriptorTable(1, &meshInstanceScreenPersentageSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MESH_LOD_STREAMED_LEVEL].initializeDescriptorTable(1, &meshLodStreamedLevelSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::VERTEX_RESOURCE].initializeDescriptorTable(1, &vertexResourceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttibuteSrvRange, rhi::SHADER_VISIBILITY_PIXEL);

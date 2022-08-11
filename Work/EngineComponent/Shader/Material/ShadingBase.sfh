@@ -10,13 +10,14 @@ ByteAddressBuffer _meshes : register(t1);
 ByteAddressBuffer _lodMeshes : register(t2);
 ByteAddressBuffer _meshInstances : register(t3);
 ByteAddressBuffer _meshInstanceLodLevels : register(t4);
-ByteAddressBuffer _geometryGlobalOffsets : register(t5);
+ByteAddressBuffer _meshLodStreamRanges : register(t5);
+ByteAddressBuffer _geometryGlobalOffsets : register(t6);
 
-ByteAddressBuffer _vertexPositions : register(t6);
-ByteAddressBuffer _vertexTexcoords : register(t7);
-ByteAddressBuffer _vertexIndices : register(t8);
+ByteAddressBuffer _vertexPositions : register(t7);
+ByteAddressBuffer _vertexTexcoords : register(t8);
+ByteAddressBuffer _vertexIndices : register(t9);
 
-Texture2D<uint2> _triangleAttributes : register(t9);
+Texture2D<uint2> _triangleAttributes : register(t10);
 
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
@@ -28,9 +29,16 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     uint meshInstanceIndex = triangleAttributes.y & 0x0000ffff;
     uint materialParameterOffset = (triangleAttributes.y >> 18) & 0x0000ffff;
     uint currentLodLevel = _meshInstanceLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);
-    MeshInstance meshInstance = getMeshInstance(_meshInstances, meshInstanceIndex);
-    Mesh mesh = getMesh(_meshes, meshInstance._meshIndex);
     
+    MeshInstance meshInstance = getMeshInstance(_meshInstances, meshInstanceIndex);
+    
+    // TODO: Gpu カリング時にも同じように LOD レベルをストリーミング範囲でクランプしているのでまとめる
+    uint meshLodStreamRange = _meshLodStreamRanges.Load(UINT32_SIZE_IN_BYTE * meshInstance._meshIndex);
+    uint meshLodLevelMin = meshLodStreamRange & 0x0000ffff; // 下位 16bit
+    uint meshLodLevelMax = (meshLodStreamRange >> 16) & 0x0000ffff; // 上位 16bit
+    currentLodLevel = clamp(currentLodLevel, meshLodLevelMin, meshLodLevelMax);
+    
+    Mesh mesh = getMesh(_meshes, meshInstance._meshIndex);
     uint lodMeshIndex = mesh._lodMeshOffset + currentLodLevel;
     LodMesh lodMesh = getLodMesh(_lodMeshes, lodMeshIndex);
     GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = getGeometryGlobalOffsetInfo(_geometryGlobalOffsets, lodMeshIndex);

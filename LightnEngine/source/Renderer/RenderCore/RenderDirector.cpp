@@ -34,6 +34,7 @@ void RenderDirector::update() {
 		"MeshInstanceIndex",
 		"WorldPosition",
 		"Texcoords",
+		"Primitive",
 	};
 	ImGui::Combo("Type", &_debugVisualizeType, names, LTN_COUNTOF(names));
 	ImGui::End();
