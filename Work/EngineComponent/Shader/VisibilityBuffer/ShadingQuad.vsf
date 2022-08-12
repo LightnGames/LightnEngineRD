@@ -33,24 +33,27 @@ PSInput main(VSInput input)
     uint triangleIndex = input._vertexId / 3;
     float x = 0;
     float y = 0;
-    float2 ndcQuadSize = _shadingInfo._quadNdcSize;
-    float2 ndcHalfQuadSize = ndcQuadSize / 2.0;
+    float2 ndcHalfQuadSize = _shadingInfo._quadNdcSize;
+    float2 ndcQuadSize = ndcHalfQuadSize * 2.0;
     if (triangleIndex == 0)
     {
-        x = input._vertexId % 3 == 0 ? ndcQuadSize.x : -ndcQuadSize.x;
-        y = input._vertexId % 3 == 2 ? ndcQuadSize.y : -ndcQuadSize.y;
+        x = input._vertexId % 3 == 0 ? ndcHalfQuadSize.x : -ndcHalfQuadSize.x;
+        y = input._vertexId % 3 == 2 ? ndcHalfQuadSize.y : -ndcHalfQuadSize.y;
     }
     else
     {
-        x = input._vertexId % 3 == 1 ? -ndcQuadSize.x : ndcQuadSize.x;
-        y = input._vertexId % 3 == 0 ? -ndcQuadSize.y : ndcQuadSize.y;
+        x = input._vertexId % 3 == 1 ? -ndcHalfQuadSize.x : ndcHalfQuadSize.x;
+        y = input._vertexId % 3 == 0 ? -ndcHalfQuadSize.y : ndcHalfQuadSize.y;
     }
     
+    // 左上基準に戻す
+    x += -1.0 + ndcHalfQuadSize.x;
+    y -= -1.0 + ndcHalfQuadSize.y;
+    
+    // クアッドをオフセット
     uint instanceIndex = input._instanceIndex;
-    float2 quadUv = float2(instanceIndex % _shadingInfo._shaderRangeResolution.x, (_shadingInfo._shaderRangeResolution.y - 1) -
-    instanceIndex / _shadingInfo._shaderRangeResolution.x) * 2;
-    x += quadUv.x * ndcQuadSize.x - 1.0 + ndcQuadSize.x;
-    y += quadUv.y * ndcQuadSize.y - 1.0 + ndcQuadSize.y;
+    x += float(instanceIndex % _shadingInfo._shaderRangeResolution.x) * ndcQuadSize.x;
+    y -= float(instanceIndex / _shadingInfo._shaderRangeResolution.x) * ndcQuadSize.y;
     
     // シェーダーインデックスが範囲外の場合、NANをセットしてラスタライズを棄却
     uint2 shaderRange = uint2(_shaderRangeMin.Load(instanceIndex * UINT32_SIZE_IN_BYTE), _shaderRangeMax.Load(instanceIndex * UINT32_SIZE_IN_BYTE));

@@ -305,6 +305,7 @@ void VisiblityBufferRenderer::terminate() {
 
 void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Build Shader Id");
 
 	ScopedBarrierDesc barriers[] = {
 		ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
