@@ -140,7 +140,7 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         uint indirectArgumentMaterialArrayOffset = 0;
         uint currentCountIndex = 0;
         _countBuffer.InterlockedAdd(indirectArgumentMaterialArrayOffset, 1, currentCountIndex);
-        //currentCountIndex = subMeshInstanceIndex;
+        currentCountIndex = subMeshInstanceIndex;
         
         uint indirectArgumentMaterialOffset = _indirectArgumentOffsets.Load<uint>(sizeof(uint) * indirectArgumentMaterialArrayOffset);
         uint indirectArgumentOffset = indirectArgumentMaterialOffset + currentCountIndex;

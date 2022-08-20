@@ -31,7 +31,7 @@ void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList)
 	{
 		FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
 		_indirectArgumentUav = descriptorAllocator->allocateSrvCbvUavGpu(3);
-		_indirectArgumentCountCpuUav = descriptorAllocator->allocateSrvCbvUavCpu();
+		_indirectArgumentCpuUav = descriptorAllocator->allocateSrvCbvUavCpu(2);
 		_indirectArgumentSubInfoSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 
 		// UAV
@@ -42,10 +42,11 @@ void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList)
 			desc._format = rhi::FORMAT_R32_TYPELESS;
 			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
 			device->createUnorderedAccessView(_indirectArgumentGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_indirectArgumentGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentCpuUav.get(0)._cpuHandle);
 
 			desc._buffer._numElements = _indirectArgumentCountGpuBuffer->getU32ElementCount();
 			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(1)._cpuHandle);
-			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentCountCpuUav._cpuHandle);
+			device->createUnorderedAccessView(_indirectArgumentCountGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentCpuUav.get(1)._cpuHandle);
 
 			desc._buffer._numElements = _indirectArgumentSubInfoGpuBuffer->getU32ElementCount();
 			device->createUnorderedAccessView(_indirectArgumentSubInfoGpuBuffer->getResource(), nullptr, &desc, _indirectArgumentUav.get(2)._cpuHandle);

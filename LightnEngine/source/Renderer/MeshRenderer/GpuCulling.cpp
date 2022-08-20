@@ -136,8 +136,16 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	{
 		u32 clearValues[4] = {};
 		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(1)._gpuHandle;
-		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCountCpuUav._cpuHandle;
+		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCpuUav.get(1)._cpuHandle;
 		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
+	}
+
+	{
+		u32 clearValues[4] = {};
+		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(0)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCpuUav.get(0)._cpuHandle;
+		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentGpuBuffer->getResource();
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
 	}
 

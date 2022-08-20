@@ -22,7 +22,7 @@ struct IndirectArgumentResource {
 	GpuBuffer* _indirectArgumentCountGpuBuffer = nullptr;
 	GpuBuffer* _indirectArgumentSubInfoGpuBuffer = nullptr;
 	DescriptorHandles _indirectArgumentUav;
-	DescriptorHandle _indirectArgumentCountCpuUav;
+	DescriptorHandles _indirectArgumentCpuUav;
 	DescriptorHandle _indirectArgumentSubInfoSrv;
 };
 }
