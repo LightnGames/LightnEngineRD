@@ -57,6 +57,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 
 	IndirectArgumentResource indirectArgumentResource;
 	RenderViewFrameResource renderViewFrameResource;
+	VisibilityBufferFrameResource visibilityBufferFrameResource;
 
 	for (u32 i = 0; i < viewCount; ++i) {
 		if (viewEnabledFlags[i] == 0) {
@@ -67,6 +68,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 		{
 			indirectArgumentResource.setUpFrameResource(commandList);
 			renderViewFrameResource.setUpFrameResource(&views[i], commandList);
+			visibilityBufferFrameResource.setUpFrameResource(commandList);
 		}
 
 		// カリング結果リセット
@@ -97,6 +99,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 		{
 			VisiblityBufferRenderer::ClearShaderIdDesc desc;
 			desc._commandList = commandList;
+			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->clearShaderId(desc);
 		}
 
@@ -114,6 +117,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			desc._indirectArgumentResource = &indirectArgumentResource;
+			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->geometryPass(desc);
 		}
 
@@ -121,6 +125,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 		{
 			VisiblityBufferRenderer::BuildShaderIdDesc desc;
 			desc._commandList = commandList;
+			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->buildShaderId(desc);
 		}
 
@@ -138,9 +143,11 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._debugVisualizeType = _debugVisualizeType;
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
+			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->shadingPass(desc);
 		}
 
+		// 0 番ビューをメインビューとして設定
 		if (i == 0) {
 			renderViewScene->setMainViewGpuTexture(renderViewFrameResource._viewColorTexture);
 		}

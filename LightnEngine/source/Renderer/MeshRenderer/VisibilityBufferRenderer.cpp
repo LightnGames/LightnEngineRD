@@ -3,6 +3,7 @@
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/LodStreamingManager.h>
+#include <Renderer/RenderCore/FrameResourceAllocator.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
@@ -28,72 +29,6 @@ void VisiblityBufferRenderer::initialize() {
 	u32 shaderRangeWidth = u64(screenWidth / SHADER_RANGE_TILE_SIZE) + 1;
 	u32 shaderRangeHeight = u64(screenHeight / SHADER_RANGE_TILE_SIZE) + 1;
 	_shadingQuadCount = shaderRangeWidth * shaderRangeHeight;
-
-	// Texture
-	{
-		GpuTextureDesc desc = {};
-		desc._device = device;
-		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-		desc._format = rhi::FORMAT_R32G32_UINT;
-		desc._width = u64(screenWidth);
-		desc._height = u64(screenHeight);
-		desc._flags = rhi::RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		desc._initialState = rhi::RESOURCE_STATE_RENDER_TARGET;
-		{
-			rhi::ClearValue optimizedClearValue = {};
-			optimizedClearValue._format = desc._format;
-			optimizedClearValue._color[0] = 0.0f;
-			desc._optimizedClearValue = &optimizedClearValue;
-		}
-
-		_triangleIdTexture.initialize(desc);
-		_triangleIdTexture.setName("VisiblityBufferTriangleId");
-
-		{
-			desc._format = rhi::FORMAT_R8_UINT;
-			rhi::ClearValue optimizedClearValue = {};
-			optimizedClearValue._format = desc._format;
-			optimizedClearValue._color[0] = f32(UINT8_MAX);
-
-			desc._optimizedClearValue = &optimizedClearValue;
-			_triangleShaderIdTexture.initialize(desc);
-			_triangleShaderIdTexture.setName("VisiblityBufferTriangleShaderId");
-		}
-	}
-
-	// Shader range
-	{
-		GpuBufferDesc desc = {};
-		desc._device = device;
-		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-		desc._sizeInByte = _shadingQuadCount * sizeof(u32);
-		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		_shaderRangeBuffer[0].initialize(desc);
-		_shaderRangeBuffer[1].initialize(desc);
-		_shaderRangeBuffer[0].setName("VisiblityBufferShaderRangeMin");
-		_shaderRangeBuffer[1].setName("VisiblityBufferShaderRangeMax");
-	}
-
-	// Shader id depth
-	{
-		rhi::ClearValue depthOptimizedClearValue = {};
-		depthOptimizedClearValue._format = rhi::FORMAT_D16_UNORM;
-		depthOptimizedClearValue._depthStencil._depth = 1.0f;
-		depthOptimizedClearValue._depthStencil._stencil = 0;
-
-		GpuTextureDesc desc = {};
-		desc._device = device;
-		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
-		desc._optimizedClearValue = &depthOptimizedClearValue;
-		desc._format = rhi::FORMAT_D16_UNORM;
-		desc._width = u64(screenWidth);
-		desc._height = u64(screenHeight);
-		desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-		desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
-		_shaderIdDepth.initialize(desc);
-		_shaderIdDepth.setName("VisiblityBufferShaderIdDepth");
-	}
 
 	// Constant buffer
 	{
@@ -125,68 +60,13 @@ void VisiblityBufferRenderer::initialize() {
 		}
 	}
 
-	// RTV
-	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getRtvAllocator();
-		_triangleIdRtv = allocator->allocate(2);
-		device->createRenderTargetView(_triangleIdTexture.getResource(), _triangleIdRtv.get(0)._cpuHandle);
-		device->createRenderTargetView(_triangleShaderIdTexture.getResource(), _triangleIdRtv.get(1)._cpuHandle);
-	}
-
-	// DSV
-	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getDsvAllocator();
-		_shaderIdDsv = allocator->allocate();
-		device->createDepthStencilView(_shaderIdDepth.getResource(), _shaderIdDsv._cpuHandle);
-	}
-
 	// デスクリプター
 	{
 		// GPU visible
 		{
 			DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-			_triangleIdSrv = allocator->allocate();
-			_shaderRangeSrv = allocator->allocate(2);
-			_shaderIdSrv = allocator->allocate();
-			_shaderRangeUav = allocator->allocate(2);
 			_buildShaderIdCbv = allocator->allocate();
 			_shadingCbv = allocator->allocate();
-		}
-
-		// CPU visible
-		{
-			DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavCpuAllocator();
-			_shaderRangeCpuUav = allocator->allocate(2);
-		}
-
-		// SRV
-		{
-			rhi::ShaderResourceViewDesc desc = {};
-			desc._format = rhi::FORMAT_R32_TYPELESS;
-			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
-			desc._buffer._firstElement = 0;
-			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
-			desc._buffer._numElements = _shaderRangeBuffer[0].getU32ElementCount();
-			device->createShaderResourceView(_shaderRangeBuffer[0].getResource(), &desc, _shaderRangeSrv.get(0)._cpuHandle);
-			device->createShaderResourceView(_shaderRangeBuffer[1].getResource(), &desc, _shaderRangeSrv.get(1)._cpuHandle);
-
-			device->createShaderResourceView(_triangleIdTexture.getResource(), nullptr, _triangleIdSrv._cpuHandle);
-			device->createShaderResourceView(_triangleShaderIdTexture.getResource(), nullptr, _shaderIdSrv._cpuHandle);
-		}
-
-		// UAV
-		{
-			rhi::UnorderedAccessViewDesc desc = {};
-			desc._format = rhi::FORMAT_R32_TYPELESS;
-			desc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
-			desc._buffer._firstElement = 0;
-			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
-			desc._buffer._numElements = _shaderRangeBuffer[0].getU32ElementCount();
-			device->createUnorderedAccessView(_shaderRangeBuffer[0].getResource(), nullptr, &desc, _shaderRangeUav.get(0)._cpuHandle);
-			device->createUnorderedAccessView(_shaderRangeBuffer[1].getResource(), nullptr, &desc, _shaderRangeUav.get(1)._cpuHandle);
-
-			device->createUnorderedAccessView(_shaderRangeBuffer[0].getResource(), nullptr, &desc, _shaderRangeCpuUav.get(0)._cpuHandle);
-			device->createUnorderedAccessView(_shaderRangeBuffer[1].getResource(), nullptr, &desc, _shaderRangeCpuUav.get(1)._cpuHandle);
 		}
 
 		// CBV
@@ -265,11 +145,6 @@ void VisiblityBufferRenderer::initialize() {
 }
 
 void VisiblityBufferRenderer::terminate() {
-	_triangleIdTexture.terminate();
-	_triangleShaderIdTexture.terminate();
-	_shaderIdDepth.terminate();
-	_shaderRangeBuffer[0].terminate();
-	_shaderRangeBuffer[1].terminate();
 	_shadingConstantBuffer.terminate();
 	_buildShaderIdConstantBuffer.terminate();
 	_buildShaderIdPipelineState.terminate();
@@ -278,77 +153,60 @@ void VisiblityBufferRenderer::terminate() {
 	_commandSignature.terminate();
 
 	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getRtvAllocator();
-		allocator->free(_triangleIdRtv);
-	}
-
-	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getDsvAllocator();
-		allocator->free(_shaderIdDsv);
-	}
-
-	{
 		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		allocator->free(_triangleIdSrv);
-		allocator->free(_shaderIdSrv);
-		allocator->free(_shaderRangeSrv);
-		allocator->free(_shaderRangeUav);
 		allocator->free(_buildShaderIdCbv);
 		allocator->free(_shadingCbv);
-	}
-
-	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavCpuAllocator();
-		allocator->free(_shaderRangeCpuUav);
 	}
 }
 
 void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
+	VisibilityBufferFrameResource* frameResource = desc._frameResource;
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Build Shader Id");
 
 	ScopedBarrierDesc barriers[] = {
-		ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-		ScopedBarrierDesc(&_triangleShaderIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-		ScopedBarrierDesc(&_shaderRangeBuffer[0], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-		ScopedBarrierDesc(&_shaderRangeBuffer[1], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(frameResource->_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(frameResource->_triangleShaderIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(frameResource->_shaderRangeBuffer[0], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(frameResource->_shaderRangeBuffer[1], rhi::RESOURCE_STATE_UNORDERED_ACCESS),
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
 	// clear shader range min
 	{
 		u32 clearValues[4] = { UINT32_MAX };
-		rhi::GpuDescriptorHandle gpuHandle = _shaderRangeUav.get(0)._gpuHandle;
-		rhi::CpuDescriptorHandle cpuHandle = _shaderRangeCpuUav.get(0)._cpuHandle;
-		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, _shaderRangeBuffer[0].getResource(), clearValues, 0, nullptr);
+		rhi::GpuDescriptorHandle gpuHandle = frameResource->_shaderRangeUav.get(0)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuHandle = frameResource->_shaderRangeCpuUav.get(0)._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, frameResource->_shaderRangeBuffer[0]->getResource(), clearValues, 0, nullptr);
 	}
 
 	// clear shader range max
 	{
 		u32 clearValues[4] = { 0 };
-		rhi::GpuDescriptorHandle gpuHandle = _shaderRangeUav.get(1)._gpuHandle;
-		rhi::CpuDescriptorHandle cpuHandle = _shaderRangeCpuUav.get(1)._cpuHandle;
-		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, _shaderRangeBuffer[1].getResource(), clearValues, 0, nullptr);
+		rhi::GpuDescriptorHandle gpuHandle = frameResource->_shaderRangeUav.get(1)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuHandle = frameResource->_shaderRangeCpuUav.get(1)._cpuHandle;
+		commandList->clearUnorderedAccessViewUint(gpuHandle, cpuHandle, frameResource->_shaderRangeBuffer[1]->getResource(), clearValues, 0, nullptr);
 	}
 
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->setRenderTargets(0, nullptr, &_shaderIdDsv._cpuHandle);
+	commandList->setRenderTargets(0, nullptr, &frameResource->_shaderIdDsv._cpuHandle);
 	commandList->setGraphicsRootSignature(&_buildShaderIdRootSignature);
 	commandList->setPipelineState(&_buildShaderIdPipelineState);
 	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::CONSTANT, _buildShaderIdCbv._gpuHandle);
-	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::TRIANGLE_ID, _shaderIdSrv._gpuHandle);
-	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::SHADER_RANGE, _shaderRangeUav._firstHandle._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::TRIANGLE_ID, frameResource->_shaderIdSrv._gpuHandle);
+	commandList->setGraphicsRootDescriptorTable(VisibilityBufferBuildShaderIdRootParam::SHADER_RANGE, frameResource->_shaderRangeUav._firstHandle._gpuHandle);
 	commandList->drawInstanced(3, 1, 0, 0);
 }
 
 void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
+	VisibilityBufferFrameResource* frameResource = desc._frameResource;
 
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
 	ScopedBarrierDesc barriers[] = {
-		ScopedBarrierDesc(&_shaderIdDepth, rhi::RESOURCE_STATE_DEPTH_READ),
-		ScopedBarrierDesc(&_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(frameResource->_shaderIdDepth, rhi::RESOURCE_STATE_DEPTH_READ),
+		ScopedBarrierDesc(frameResource->_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getPositionVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getTexcoordVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getNormalTangentVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
@@ -370,7 +228,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
 	f32 clearColor[4] = {};
-	commandList->setRenderTargets(1, &rtv, &_shaderIdDsv._cpuHandle);
+	commandList->setRenderTargets(1, &rtv, &frameResource->_shaderIdDsv._cpuHandle);
 	commandList->clearRenderTargetView(rtv, clearColor);
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -387,8 +245,8 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::PIPELINE_SET_INFO, 1, &i, 0);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_INFO, desc._viewCbv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADING_INFO, _shadingCbv._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, _shaderRangeSrv._firstHandle._gpuHandle);
-		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, _triangleIdSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, frameResource->_shaderRangeSrv._firstHandle._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, frameResource->_triangleIdSrv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VERTEX_RESOURCE, vertexResourceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE, meshInstanceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH, meshSrv);
@@ -406,22 +264,24 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 void VisiblityBufferRenderer::clearShaderId(const ClearShaderIdDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
+	VisibilityBufferFrameResource* frameResource = desc._frameResource;
 	{
 		f32 clearColor[4] = {};
-		commandList->clearRenderTargetView(_triangleIdRtv.get(0)._cpuHandle, clearColor);
+		commandList->clearRenderTargetView(frameResource->_triangleIdRtv.get(0)._cpuHandle, clearColor);
 	}
 
 	{
 		f32 clearColor[4] = { UINT8_MAX };
-		commandList->clearRenderTargetView(_triangleIdRtv.get(1)._cpuHandle, clearColor);
+		commandList->clearRenderTargetView(frameResource->_triangleIdRtv.get(1)._cpuHandle, clearColor);
 	}
-	commandList->clearDepthStencilView(_shaderIdDsv._cpuHandle, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	commandList->clearDepthStencilView(frameResource->_shaderIdDsv._cpuHandle, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 }
 
 void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	GpuMeshInstanceManager* gpuMeshInstanceManager = GpuMeshInstanceManager::Get();
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
+	VisibilityBufferFrameResource* frameResource = desc._frameResource;
 
 	rhi::IndexBufferView indexBufferView = geometryResourceManager->getIndexBufferView();
 	rhi::VertexBufferView vertexBufferViews[4];
@@ -441,7 +301,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "GeometryPass");
 
 	rhi::CpuDescriptorHandle dsv = desc._viewDsv;
-	commandList->setRenderTargets(2, _triangleIdRtv._firstHandle._cpuHandle, &dsv);
+	commandList->setRenderTargets(2, frameResource->_triangleIdRtv._firstHandle._cpuHandle, &dsv);
 	commandList->clearDepthStencilView(dsv, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -468,5 +328,130 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 
 VisiblityBufferRenderer* VisiblityBufferRenderer::Get() {
 	return &g_visibilityBufferRenderer;
+}
+void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* commandList) {
+	FrameBufferAllocator* frameBufferAllocator = FrameBufferAllocator::Get();
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	Application* app = ApplicationSysytem::Get()->getApplication();
+
+	u32 screenWidth = app->getScreenWidth();
+	u32 screenHeight = app->getScreenHeight();
+	u32 shaderRangeWidth = u64(screenWidth / VisiblityBufferRenderer::SHADER_RANGE_TILE_SIZE) + 1;
+	u32 shaderRangeHeight = u64(screenHeight / VisiblityBufferRenderer::SHADER_RANGE_TILE_SIZE) + 1;
+	u32 shadingQuadCount = shaderRangeWidth * shaderRangeHeight;
+
+	// Texture
+	{
+		FrameBufferAllocator::TextureCreatationDesc desc = {};
+		desc._format = rhi::FORMAT_R32G32_UINT;
+		desc._width = u64(screenWidth);
+		desc._height = u64(screenHeight);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		desc._initialState = rhi::RESOURCE_STATE_RENDER_TARGET;
+		{
+			rhi::ClearValue optimizedClearValue = {};
+			optimizedClearValue._format = desc._format;
+			optimizedClearValue._color[0] = 0.0f;
+			desc._optimizedClearValue = &optimizedClearValue;
+
+			_triangleIdTexture = frameBufferAllocator->createGpuTexture(desc);
+			_triangleIdTexture->setName("VisiblityBufferTriangleId");
+		}
+
+		{
+			desc._format = rhi::FORMAT_R8_UINT;
+			rhi::ClearValue optimizedClearValue = {};
+			optimizedClearValue._format = desc._format;
+			optimizedClearValue._color[0] = f32(UINT8_MAX);
+
+			desc._optimizedClearValue = &optimizedClearValue;
+			_triangleShaderIdTexture = frameBufferAllocator->createGpuTexture(desc);
+			_triangleShaderIdTexture->setName("VisiblityBufferTriangleShaderId");
+		}
+	}
+
+	// Shader range
+	{
+		FrameBufferAllocator::BufferCreatationDesc desc = {};
+		desc._sizeInByte = shadingQuadCount * sizeof(u32);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		_shaderRangeBuffer[0] = frameBufferAllocator->createGpuBuffer(desc);
+		_shaderRangeBuffer[1] = frameBufferAllocator->createGpuBuffer(desc);
+		_shaderRangeBuffer[0]->setName("VisiblityBufferShaderRangeMin");
+		_shaderRangeBuffer[1]->setName("VisiblityBufferShaderRangeMax");
+	}
+
+	// Shader id depth
+	{
+		rhi::ClearValue depthOptimizedClearValue = {};
+		depthOptimizedClearValue._format = rhi::FORMAT_D16_UNORM;
+		depthOptimizedClearValue._depthStencil._depth = 1.0f;
+		depthOptimizedClearValue._depthStencil._stencil = 0;
+
+		FrameBufferAllocator::TextureCreatationDesc desc = {};
+		desc._optimizedClearValue = &depthOptimizedClearValue;
+		desc._format = rhi::FORMAT_D16_UNORM;
+		desc._width = u64(screenWidth);
+		desc._height = u64(screenHeight);
+		desc._flags = rhi::RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		desc._initialState = rhi::RESOURCE_STATE_DEPTH_WRITE;
+		_shaderIdDepth = frameBufferAllocator->createGpuTexture(desc);
+		_shaderIdDepth->setName("VisiblityBufferShaderIdDepth");
+	}
+
+	// デスクリプター
+	{
+		FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
+
+		_shaderIdDsv = descriptorAllocator->allocateDsvGpu();
+		_triangleIdRtv = descriptorAllocator->allocateRtvGpu(2);
+		_triangleIdSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_shaderRangeSrv = descriptorAllocator->allocateSrvCbvUavGpu(2);
+		_shaderIdSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_shaderRangeUav = descriptorAllocator->allocateSrvCbvUavGpu(2);
+		_shaderRangeCpuUav = descriptorAllocator->allocateSrvCbvUavCpu(2);
+
+		// RTV
+		{
+			device->createRenderTargetView(_triangleIdTexture->getResource(), _triangleIdRtv.get(0)._cpuHandle);
+			device->createRenderTargetView(_triangleShaderIdTexture->getResource(), _triangleIdRtv.get(1)._cpuHandle);
+		}
+
+		// DSV
+		{
+			device->createDepthStencilView(_shaderIdDepth->getResource(), _shaderIdDsv._cpuHandle);
+		}
+
+		// SRV
+		{
+			rhi::ShaderResourceViewDesc desc = {};
+			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._viewDimension = rhi::SRV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
+			desc._buffer._numElements = _shaderRangeBuffer[0]->getU32ElementCount();
+			device->createShaderResourceView(_shaderRangeBuffer[0]->getResource(), &desc, _shaderRangeSrv.get(0)._cpuHandle);
+			device->createShaderResourceView(_shaderRangeBuffer[1]->getResource(), &desc, _shaderRangeSrv.get(1)._cpuHandle);
+
+			device->createShaderResourceView(_triangleIdTexture->getResource(), nullptr, _triangleIdSrv._cpuHandle);
+			device->createShaderResourceView(_triangleShaderIdTexture->getResource(), nullptr, _shaderIdSrv._cpuHandle);
+		}
+
+		// UAV
+		{
+			rhi::UnorderedAccessViewDesc desc = {};
+			desc._format = rhi::FORMAT_R32_TYPELESS;
+			desc._viewDimension = rhi::UAV_DIMENSION_BUFFER;
+			desc._buffer._firstElement = 0;
+			desc._buffer._flags = rhi::BUFFER_UAV_FLAG_RAW;
+			desc._buffer._numElements = _shaderRangeBuffer[0]->getU32ElementCount();
+			device->createUnorderedAccessView(_shaderRangeBuffer[0]->getResource(), nullptr, &desc, _shaderRangeUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_shaderRangeBuffer[1]->getResource(), nullptr, &desc, _shaderRangeUav.get(1)._cpuHandle);
+
+			device->createUnorderedAccessView(_shaderRangeBuffer[0]->getResource(), nullptr, &desc, _shaderRangeCpuUav.get(0)._cpuHandle);
+			device->createUnorderedAccessView(_shaderRangeBuffer[1]->getResource(), nullptr, &desc, _shaderRangeCpuUav.get(1)._cpuHandle);
+		}
+	}
 }
 };
