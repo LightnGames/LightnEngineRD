@@ -1,6 +1,7 @@
 #include "Win64Application.h"
 #include <Core/Type.h>
 #include <Core/CpuTimerManager.h>
+#include <Core/InputSystem.h>
 #include <Renderer/RenderCore/ImGuiSystem.h>
 #include <Windows.h>
 
@@ -17,6 +18,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam,
 	case WM_PAINT:
 		return false;
 	case WM_MOUSEMOVE:
+		InputSystem::Get()->setMouseEvent(Vector2(LOWORD(lParam), HIWORD(lParam)));
 		return false;
 	case WM_DESTROY:
 		PostQuitMessage(0);

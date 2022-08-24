@@ -27,75 +27,159 @@ static f32 Tan(f32 value) {
 	return tanf(value);
 }
 
-struct Vector3 {
-	Vector3() {
-		_v.v = DirectX::XMVectorZero();
+struct Vector2 : public Vector {
+	Vector2() {
+		v = DirectX::XMVectorZero();
 	}
 
-	Vector3(DirectX::XMVECTOR v) {
-		_v.v = v;
+	Vector2(DirectX::XMVECTOR v1) {
+		v = v1;
+	}
+
+	Vector2(Float2 vector) {
+		v = DirectX::XMLoadFloat2(&vector);
+	}
+
+	Vector2(f32 x, f32 y) {
+		v = DirectX::XMVectorSet(x, y, 0.0f, 1.0f);
+	}
+
+	Vector2 operator +() const {
+		return v;
+	}
+
+	Vector2 operator -() const {
+		return DirectX::XMVectorNegate(v);
+	}
+
+	Vector2 operator *(f32 s) const {
+		return DirectX::XMVectorScale(*this, s);
+	}
+
+	Vector2 operator /(f32 s) const {
+		DirectX::XMVECTOR vS = DirectX::XMVectorReplicate(s);
+		return DirectX::XMVectorDivide(*this, vS);
+	}
+
+	Vector2 operator +(const Vector2& v) const {
+		return DirectX::XMVectorAdd(*this, v);
+	}
+
+	Vector2 operator -(const Vector2& v) const {
+		return DirectX::XMVectorSubtract(*this, v);
+	}
+
+	f32 getX() const {
+		return DirectX::XMVectorGetX(*this);
+	}
+
+	f32 getY() const {
+		return DirectX::XMVectorGetY(*this);
+	}
+};
+
+struct Vector3 : public Vector {
+	Vector3() {
+		v = DirectX::XMVectorZero();
+	}
+
+	Vector3(DirectX::XMVECTOR v1) {
+		v = v1;
 	}
 
 	Vector3(Float3 vector) {
-		_v.v = DirectX::XMLoadFloat3(&vector);
+		v = DirectX::XMLoadFloat3(&vector);
 	}
 
 	Vector3(f32 x, f32 y, f32 z) {
-		_v.v = DirectX::XMVectorSet(x, y, z, 1.0f);
+		v = DirectX::XMVectorSet(x, y, z, 1.0f);
 	}
 
 	Vector3 operator +() const {
-		return _v.v;
+		return v;
 	}
 
 	Vector3 operator -() const {
-		return  DirectX::XMVectorNegate(_v.v);
+		return DirectX::XMVectorNegate(v);
 	}
 
 	Vector3 operator *(f32 s) const {
-		return _v * s;
+		return DirectX::XMVectorScale(*this, s);
 	}
 
 	Vector3 operator /(f32 s) const {
-		return _v / s;
+		DirectX::XMVECTOR vS = DirectX::XMVectorReplicate(s);
+		return DirectX::XMVectorDivide(*this, vS);
 	}
 
 	Vector3 operator +(const Vector3& v) const {
-		return _v.v + v._v;
+		return DirectX::XMVectorAdd(*this, v);
 	}
 
 	Vector3 operator -(const Vector3& v) const {
-		return _v.v - v._v;
+		return DirectX::XMVectorSubtract(*this, v);
 	}
 
-	Vector3 multiply(const Vector3& v) const {
-		return DirectX::XMVectorMultiply(_v, v._v);
+	Vector3 operator *=(f32 s) {
+		*this = *this * s;
+		return v;
+	}
+
+	Vector3 operator /=(f32 s) {
+		*this = *this / s;
+		return v;
+	}
+
+	Vector3 operator +=(const Vector3& v1) {
+		v = v + v1;
+		return v;
+	}
+
+	Vector3 operator -=(const Vector3& v1) {
+		v = v - v1;
+		return v;
+	}
+
+	f32 getX() const {
+		return DirectX::XMVectorGetX(v);
+	}
+
+	f32 getY() const {
+		return DirectX::XMVectorGetY(v);
+	}
+
+	f32 getZ() const {
+		return DirectX::XMVectorGetZ(v);
+	}
+
+	Vector3 multiply(const Vector3& v1) const {
+		return DirectX::XMVectorMultiply(v, v1);
 	}
 
 	f32 length() const {
-		return DirectX::XMVectorGetX(DirectX::XMVector3Length(_v));
+		return DirectX::XMVectorGetX(DirectX::XMVector3Length(v));
 	}
 
 	Vector3 normalize() const {
-		return DirectX::XMVector3Normalize(_v);
+		return DirectX::XMVector3Normalize(v);
 	}
 
 	Float3 getFloat3() const {
 		Float3 result;
-		DirectX::XMStoreFloat3(&result, _v);
+		DirectX::XMStoreFloat3(&result, v);
 		return result;
 	}
 
-	Vector3 min(const Vector3& v) const {
-		return DirectX::XMVectorMin(_v, v._v);
+	Vector3 min(const Vector3& v1) const {
+		return DirectX::XMVectorMin(v, v1);
 	}
 
-	Vector3 max(const Vector3& v) const {
-		return DirectX::XMVectorMax(_v, v._v);
+	Vector3 max(const Vector3& v1) const {
+		return DirectX::XMVectorMax(v, v1);
 	}
 
 	static f32 Dot(const Vector3& v1, const Vector3& v2) {
-		return DirectX::XMVectorGetX(DirectX::XMVector3Dot(v1._v, v2._v));
+		return DirectX::XMVectorGetX(DirectX::XMVector3Dot(v1, v2));
 	}
 
 	static Vector3 Zero() {
@@ -121,8 +205,6 @@ struct Vector3 {
 	static Vector3 FltMax() {
 		return DirectX::g_XMFltMax.v;
 	}
-
-	Vector _v;
 };
 
 static Float4 MakeFloat4(const Vector3& v, f32 w) {
@@ -130,36 +212,34 @@ static Float4 MakeFloat4(const Vector3& v, f32 w) {
 	return Float4(f.x, f.y, f.z, w);
 }
 
-struct Vector4 {
+struct Vector4 :public Vector {
 	Vector4() {
-		_v.v = DirectX::XMVectorZero();
+		v = DirectX::XMVectorZero();
 	}
 
-	Vector4(DirectX::XMVECTOR v) {
-		_v.v = v;
+	Vector4(DirectX::XMVECTOR v1) {
+		v = v1;
 	}
 
 	Vector4(f32 x, f32 y, f32 z, f32 w) {
-		_v.v = DirectX::XMVectorSet(x, y, z, w);
+		v = DirectX::XMVectorSet(x, y, z, w);
 	}
 
 	Vector3 getVector3() const {
-		return _v.v;
+		return v;
 	}
 
 	Float3 getFloat3() const {
 		Float3 result;
-		DirectX::XMStoreFloat3(&result, _v);
+		DirectX::XMStoreFloat3(&result, v);
 		return result;
 	}
 
 	Float4 getFloat4() const {
 		Float4 result;
-		DirectX::XMStoreFloat4(&result, _v);
+		DirectX::XMStoreFloat4(&result, v);
 		return result;
 	}
-
-	Vector _v;
 };
 
 struct Matrix4 {
@@ -239,7 +319,7 @@ struct Matrix4 {
 	}
 
 	static Matrix4 translationFromVector(const Vector3& offset) {
-		return DirectX::XMMatrixTranslationFromVector(offset._v);
+		return DirectX::XMMatrixTranslationFromVector(offset.v);
 	}
 
 	static Matrix4 perspectiveFovLH(f32 fovAngleY, f32 aspectHByW, f32 nearZ, f32 farZ) {
@@ -247,11 +327,11 @@ struct Matrix4 {
 	}
 
 	static Vector3 transform(const Vector3& v, const Matrix4& m) {
-		return DirectX::XMVector3Transform(v._v, m._m);
+		return DirectX::XMVector3Transform(v.v, m._m);
 	}
 
 	static Vector3 transformNormal(const Vector3& v, const Matrix4& m) {
-		return DirectX::XMVector3TransformNormal(v._v, m._m);
+		return DirectX::XMVector3TransformNormal(v.v, m._m);
 	}
 
 	Matrix4 operator *(const Matrix4& m1) const {

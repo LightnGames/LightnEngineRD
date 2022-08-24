@@ -1,6 +1,7 @@
 #include "EngineModule.h"
 #include <Core/CpuTimerManager.h>
 #include <Core/Level.h>
+#include <Core/InputSystem.h>
 #include <Application/Application.h>
 #include <Win64Application/Win64Application.h>
 #include <Renderer/RenderCore/Renderer.h>
@@ -26,6 +27,7 @@
 
 namespace ltn {
 void update() {
+	InputSystem::Get()->update();
 	CpuTimerManager::Get()->update();
 	LodStreamingManager::Get()->update();
 	GpuTextureManager::Get()->update();

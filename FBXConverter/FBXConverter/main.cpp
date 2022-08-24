@@ -1364,12 +1364,12 @@ void exportMesh(const char* fileName) {
 		uint32 subMeshCount = localMaterialNameHashes.size();
 		std::vector<uint32> subMeshMaterialSlotIndices(subMeshCount);
 		std::vector<Subset> subSets(subMeshCount);
-		for (uint32 subSetIndex = 0; subSetIndex < subMeshCount; ++subSetIndex) {
-			subMeshMaterialSlotIndices[subSetIndex] = globalRemapedMaterialIndices[subSetIndex];
+		for (uint32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
+			subMeshMaterialSlotIndices[subMeshIndex] = globalRemapedMaterialIndices[subMeshIndex];
 
-			Subset& subSet = subSets[subSetIndex];
-			subSet.Count = materialIndexSizes[subSetIndex];
-			subSet.Offset = materialIndexOffsets[subSetIndex];
+			Subset& subSet = subSets[subMeshIndex];
+			subSet.Count = materialIndexSizes[subMeshIndex];
+			subSet.Offset = materialIndexOffsets[subMeshIndex];
 			totalIndexCount += subSet.Count;
 		}
 
@@ -1602,17 +1602,6 @@ void exportMesh(const char* fileName) {
 		meshHeader.boundsMin = aabbMin;
 		meshHeader.boundsMax = aabbMax;
 		fout.write(reinterpret_cast<const char*>(&meshHeader), sizeof(meshHeader));
-
-		//fout.write(reinterpret_cast<const char*>(&materialCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&subMeshCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&lodCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&meshletCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&verticesCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&meshletVertexIndexCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&meshletPrimitiveCount), 4);
-		//fout.write(reinterpret_cast<const char*>(&aabbMin), 12);
-		//fout.write(reinterpret_cast<const char*>(&aabbMax), 12);
-		//fout.write(reinterpret_cast<const char*>(&classicIndexCount), 4);
 		fout.write(reinterpret_cast<const char*>(materialNameHashes.data()), materialNameHashesSize);
 		fout.write(reinterpret_cast<const char*>(subMeshInfos.data()), subMeshSize);
 		fout.write(reinterpret_cast<const char*>(lodInfos.data()), lodInfoSize);
@@ -1627,11 +1616,6 @@ void exportMesh(const char* fileName) {
 		exportFilePath.append(".meshgv");
 		std::ofstream fout;
 		fout.open(exportFilePath, std::ios::out | std::ios::binary | std::ios::trunc);
-
-		//fout.write(reinterpret_cast<const char*>(meshletPrimitiveL.data()), meshletPrimitiveSize);
-		//fout.write(reinterpret_cast<const char*>(meshletsL.data()), meshletCullSize);
-		//fout.write(reinterpret_cast<const char*>(m_primitiveIndices.data()), primitiveSize);
-		//fout.write(reinterpret_cast<const char*>(m_uniqueVertexIndices.data()), indicesSize);
 		fout.write(reinterpret_cast<const char*>(positionsL.data()), positionVerticesSize);
 		fout.write(reinterpret_cast<const char*>(normalsAndTangentsL.data()), normalAndTangentVerticesSize);
 		fout.write(reinterpret_cast<const char*>(texcoordsL.data()), texcoordVerticesSize);
