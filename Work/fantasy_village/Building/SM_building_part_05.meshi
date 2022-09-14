@@ -1,9 +1,0 @@
-Mesh : fantasy_village\Building\SM_building_part_05.meshg
-Material :
-    MI_building_wood_01_Inst : fantasy_village\Material\MI_building_wood_01_Inst.mto
-    MI_plaster_01_Inst : fantasy_village\Material\MI_plaster_01_Inst.mto
-    MI_plaster_WPO_01_Inst : fantasy_village\Material\MI_plaster_WPO_01_Inst.mto
-    MI_roof_01_Inst : fantasy_village\Material\MI_roof_01_Inst.mto
-    MI_wallpaper_01_Inst : fantasy_village\Material\MI_wallpaper_01_Inst.mto
-    MI_wooden_board_01_Inst : fantasy_village\Material\MI_wooden_board_01_Inst.mto
-    MI_wooden_board_WPO_02_Inst : fantasy_village\Material\MI_wooden_board_WPO_02_Inst.mto

@@ -1,5 +1,0 @@
-Mesh : fantasy_village\Building\SM_foundation_wall_02.meshg
-Material :
-    MI_brick_01_Inst : fantasy_village\Material\MI_brick_01_Inst.mto
-    MI_building_concrete_01_Inst : fantasy_village\Material\MI_building_concrete_01_Inst.mto
-    MI_building_wood_01_Inst : fantasy_village\Material\MI_building_wood_01_Inst.mto
