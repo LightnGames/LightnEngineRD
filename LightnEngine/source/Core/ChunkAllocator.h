@@ -56,7 +56,7 @@ public:
 	};
 
 	void free() {
-		Memory::freeObjects(_ptr);
+		Memory::deallocObjects(_ptr);
 	}
 
 	u8* _ptr = nullptr;

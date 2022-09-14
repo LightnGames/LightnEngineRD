@@ -6,18 +6,19 @@
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
 
 ByteAddressBuffer _materialParameters : register(t0);
-ByteAddressBuffer _meshes : register(t1);
-ByteAddressBuffer _lodMeshes : register(t2);
-ByteAddressBuffer _meshInstances : register(t3);
-ByteAddressBuffer _meshInstanceLodLevels : register(t4);
-ByteAddressBuffer _meshLodStreamRanges : register(t5);
-ByteAddressBuffer _geometryGlobalOffsets : register(t6);
+ByteAddressBuffer _materialParameterOffsets : register(t1);
+ByteAddressBuffer _meshes : register(t2);
+ByteAddressBuffer _lodMeshes : register(t3);
+ByteAddressBuffer _meshInstances : register(t4);
+ByteAddressBuffer _meshInstanceLodLevels : register(t5);
+ByteAddressBuffer _meshLodStreamRanges : register(t6);
+ByteAddressBuffer _geometryGlobalOffsets : register(t7);
 
-ByteAddressBuffer _vertexPositions : register(t7);
-ByteAddressBuffer _vertexTexcoords : register(t8);
-ByteAddressBuffer _vertexIndices : register(t9);
+ByteAddressBuffer _vertexPositions : register(t8);
+ByteAddressBuffer _vertexTexcoords : register(t9);
+ByteAddressBuffer _vertexIndices : register(t10);
 
-Texture2D<uint2> _triangleAttributes : register(t10);
+Texture2D<uint2> _triangleAttributes : register(t11);
 
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
@@ -27,7 +28,7 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     uint2 triangleAttributes = _triangleAttributes[pixelPosition];
     
     uint meshInstanceIndex = triangleAttributes.y & 0x0000ffff;
-    uint materialParameterOffset = (triangleAttributes.y >> 18) & 0x0000ffff;
+    uint materialIndex = (triangleAttributes.y >> 18) & 0x0000ffff;
     uint currentLodLevel = _meshInstanceLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);
     
     MeshInstance meshInstance = getMeshInstance(_meshInstances, meshInstanceIndex);
@@ -83,7 +84,7 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     
     PrimitiveInfo primitiveInfo;
     primitiveInfo._meshInstanceIndex = meshInstanceIndex;
-    primitiveInfo._materialParameterOffset = materialParameterOffset * UINT32_SIZE_IN_BYTE;
+    primitiveInfo._materialIndex = materialIndex;
     primitiveInfo._worldPosition = worldPosition;
     primitiveInfo._texcoords = texcoords;
     primitiveInfo._ddx = ddx;

@@ -56,9 +56,9 @@ void Level::initialize(const char* levelFilePath) {
 
 		MeshGeometryScene::Get()->createMeshGeometries(descs, _meshGeometries, meshGeometryCount);
 
-		Memory::freeObjects(filePathCounts);
-		Memory::freeObjects(descs);
-		Memory::freeObjects(filePathChunks);
+		Memory::deallocObjects(filePathCounts);
+		Memory::deallocObjects(descs);
+		Memory::deallocObjects(filePathChunks);
 	}
 
 	// テクスチャ
@@ -85,9 +85,9 @@ void Level::initialize(const char* levelFilePath) {
 
 		TextureScene::Get()->createTextures(descs, _textures, textureCount);
 
-		Memory::freeObjects(filePathCounts);
-		Memory::freeObjects(descs);
-		Memory::freeObjects(filePathChunks);
+		Memory::deallocObjects(filePathCounts);
+		Memory::deallocObjects(descs);
+		Memory::deallocObjects(filePathChunks);
 	}
 
 	// マテリアル
@@ -114,9 +114,9 @@ void Level::initialize(const char* levelFilePath) {
 
 		MaterialScene::Get()->createMaterials(descs, _materials, materialCount);
 
-		Memory::freeObjects(filePathCounts);
-		Memory::freeObjects(descs);
-		Memory::freeObjects(filePathChunks);
+		Memory::deallocObjects(filePathCounts);
+		Memory::deallocObjects(descs);
+		Memory::deallocObjects(filePathChunks);
 	}
 
 	// メッシュ
@@ -143,9 +143,9 @@ void Level::initialize(const char* levelFilePath) {
 
 		MeshScene::Get()->createMeshes(descs, _meshes, meshCount);
 
-		Memory::freeObjects(filePathCounts);
-		Memory::freeObjects(descs);
-		Memory::freeObjects(filePathChunks);
+		Memory::deallocObjects(filePathCounts);
+		Memory::deallocObjects(descs);
+		Memory::deallocObjects(filePathChunks);
 	}
 
 	// メッシュインスタンス
@@ -201,8 +201,8 @@ void Level::terminate() {
 	MaterialScene::Get()->destroyMaterials(_materials, _levelHeader._materialCount);
 	MeshScene::Get()->destroyMeshes(_meshes, _levelHeader._meshCount);
 
-	Memory::freeObjects(_meshInstanceCounts);
-	Memory::freeObjects(_meshInstances);
+	Memory::deallocObjects(_meshInstanceCounts);
+	Memory::deallocObjects(_meshInstances);
 
 	_chunkAllocator.free();
 }

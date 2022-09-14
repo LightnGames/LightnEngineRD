@@ -34,10 +34,15 @@ void GpuMaterialManager::initialize() {
 		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		_parameterGpuBuffer.initialize(desc);
 		_parameterGpuBuffer.setName("MaterialParameters");
+
+		desc._sizeInByte = MaterialScene::MATERIAL_CAPACITY * sizeof(u32);
+		_parameterOffsetGpuBuffer.initialize(desc);
+		_parameterOffsetGpuBuffer.setName("MaterialParameterOffsets");
 	}
 
 	{
 		_parameterSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate();
+		_parameterOffsetSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -45,6 +50,9 @@ void GpuMaterialManager::initialize() {
 		desc._buffer._flags = rhi::BUFFER_SRV_FLAG_RAW;
 		desc._buffer._numElements = _parameterGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_parameterGpuBuffer.getResource(), &desc, _parameterSrv._cpuHandle);
+
+		desc._buffer._numElements = _parameterOffsetGpuBuffer.getU32ElementCount();
+		device->createShaderResourceView(_parameterOffsetGpuBuffer.getResource(), &desc, _parameterOffsetSrv._cpuHandle);
 	}
 
 	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
@@ -58,8 +66,10 @@ void GpuMaterialManager::initialize() {
 
 void GpuMaterialManager::terminate() {
 	_parameterGpuBuffer.terminate();
+	_parameterOffsetGpuBuffer.terminate();
 	_chunkAllocator.free();
 	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_parameterSrv);
+	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_parameterOffsetSrv);
 }
 
 void GpuMaterialManager::update() {
@@ -106,14 +116,16 @@ void GpuMaterialManager::update() {
 
 			rhi::DescriptorRange viewInfoCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 			rhi::DescriptorRange materialParameterSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-			rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
-			rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
-			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-			rhi::DescriptorRange meshLodStreamedLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
-			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 7);
-			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
-			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
+			rhi::DescriptorRange materialParameterOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+			rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 2);
+			rhi::DescriptorRange meshInstanceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
+			rhi::DescriptorRange meshInstanceLodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
+			rhi::DescriptorRange meshLodStreamedLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
+			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 8);
+			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
+			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
+			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
 
 			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
@@ -123,11 +135,13 @@ void GpuMaterialManager::update() {
 
 			rootParameters[ShadingRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MATERIAL_PARAMETER].initializeDescriptorTable(1, &materialParameterSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MATERIAL_PARAMETER_OFFSET].initializeDescriptorTable(1, &materialParameterOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH].initializeDescriptorTable(1, &meshSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_INSTANCE].initializeDescriptorTable(1, &meshInstanceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_INSTANCE_LOD_LEVEL].initializeDescriptorTable(1, &meshInstanceLodLevelSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_INSTANCE_SCREEN_PERSENTAGE].initializeDescriptorTable(1, &meshInstanceScreenPersentageSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH_LOD_STREAMED_LEVEL].initializeDescriptorTable(1, &meshLodStreamedLevelSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::MATERIAL_SCREEN_PERSENTAGE].initializeDescriptorTable(1, &materialScreenPersentageSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::VERTEX_RESOURCE].initializeDescriptorTable(1, &vertexResourceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttibuteSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
@@ -287,6 +301,7 @@ void GpuMaterialManager::update() {
 		_shadingPassRootSignatures[pipelineSetIndex].terminate();
 	}
 
+	updateMaterialParameterOffsets();
 	updateMaterialParameters();
 }
 
@@ -304,6 +319,22 @@ void GpuMaterialManager::updateMaterialParameters() {
 
 		u8* gpuMaterialParameters = vramUpdater->enqueueUpdate<u8>(&_parameterGpuBuffer, materialParameterIndex, materialParameterSize);
 		memcpy(gpuMaterialParameters, materialInstance->_parameters, materialParameterSize);
+	}
+}
+
+void GpuMaterialManager::updateMaterialParameterOffsets() {
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	MaterialParameterContainer* materialInstanceScene = MaterialParameterContainer::Get();
+	MaterialScene* materialScene = MaterialScene::Get();
+	auto materialCreateInfos = materialScene->getMaterialCreateInfos();
+	u32 materialCreateCount = materialCreateInfos->getUpdateCount();
+	auto createMaterials = materialCreateInfos->getObjects();
+	for (u32 i = 0; i < materialCreateCount; ++i) {
+		u32 materialIndex = materialScene->getMaterialIndex(createMaterials[i]);
+		u32 materialParameterIndex = materialInstanceScene->getMaterialParameterIndex(createMaterials[i]->getParameters());
+
+		u32* materialParameterOffset = vramUpdater->enqueueUpdate<u32>(&_parameterOffsetGpuBuffer, materialIndex);
+		*materialParameterOffset = materialParameterIndex;
 	}
 }
 

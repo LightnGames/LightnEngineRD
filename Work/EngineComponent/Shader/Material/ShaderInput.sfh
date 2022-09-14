@@ -12,5 +12,5 @@ struct VertexOut
     float4 _position : SV_Position;
     nointerpolation uint _triangleOffset : TRIANGLE_OFFSET;
     nointerpolation uint _meshInstanceIndex : MESH_INSTANCE_INDEX;
-    nointerpolation uint _materialParameterOffset : MATERIAL_PARAMETER_OFFSET;
+    nointerpolation uint _materialIndex : MATERIAL_INDEX;
 };

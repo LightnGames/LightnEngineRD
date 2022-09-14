@@ -210,7 +210,7 @@ void MeshGeometryPool::freeMeshGeometry(const MeshGeometry* mesh) {
 	_lodMeshAllocations.freeAllocation(_lodMeshAllocationInfos[meshIndex]);
 	_subMeshAllocations.freeAllocation(_subMeshAllocationInfos[meshIndex]);
 	_enabledFlags[meshIndex] = 0;
-	Memory::freeObjects(_assetPaths[getMeshGeometryIndex(mesh)]);
+	Memory::deallocObjects(_assetPaths[getMeshGeometryIndex(mesh)]);
 }
 
 const MeshGeometry* MeshGeometryPool::findMeshGeometry(u64 assetPathHash) const {

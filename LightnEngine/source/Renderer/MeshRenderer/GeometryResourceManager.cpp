@@ -96,8 +96,8 @@ void GeometryResourceManager::terminate() {
 	descriptorAllocator->free(_meshLodStreamRangeSrv);
 	descriptorAllocator->free(_vertexResourceSrv);
 
-	Memory::freeObjects(_meshStreamLodRanges);
-	Memory::freeObjects(_geometryAllocationInfos);
+	Memory::deallocObjects(_meshStreamLodRanges);
+	Memory::deallocObjects(_geometryAllocationInfos);
 	_vertexPositionGpuBuffer.terminate();
 	_vertexNormalTangentGpuBuffer.terminate();
 	_vertexTexcoordGpuBuffer.terminate();

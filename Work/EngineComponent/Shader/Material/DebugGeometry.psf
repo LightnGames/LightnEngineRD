@@ -4,9 +4,10 @@
 #define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_LOD_LEVEL 1
 #define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_SCREEN_PERSENTAGE 2
 #define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_INDEX 3
-#define DEBUG_VISUALIZE_TYPE_WORLD_POSITION 4
-#define DEBUG_VISUALIZE_TYPE_TEXCOORDS 5
-#define DEBUG_VISUALIZE_TYPE_PRIMITIVE 6
+#define DEBUG_VISUALIZE_TYPE_MATERIAL_SCREEN_PERSENTAGE 4
+#define DEBUG_VISUALIZE_TYPE_WORLD_POSITION 5
+#define DEBUG_VISUALIZE_TYPE_TEXCOORDS 6
+#define DEBUG_VISUALIZE_TYPE_PRIMITIVE 7
 
 struct Constant
 {
@@ -14,7 +15,8 @@ struct Constant
 };
 
 ConstantBuffer<Constant> _constant : register(b1);
-ByteAddressBuffer _meshInstanceScreenPersentages : register(t11);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t12);
+ByteAddressBuffer _materialScreenPersentages : register(t13);
 
 float4 main(float4 position : SV_Position) : SV_TARGET
 {
@@ -24,16 +26,21 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_LOD_LEVEL:
             {
                 float screenPersentages = float(_meshInstanceLodLevels.Load(primitiveInfo._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(4);
-                return float4(heatMap(1.0 - screenPersentages), 1.0);
+                return float4(heatMap(screenPersentages), 1.0);
             }
         case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_SCREEN_PERSENTAGE:
             {
                 float screenPersentages = float(_meshInstanceScreenPersentages.Load(primitiveInfo._meshInstanceIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
-                return float4(heatMap(screenPersentages), 1.0);
+                return float4(heatMap(1.0 - screenPersentages), 1.0);
             }
         case DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_INDEX:
             {
-                return float4(heatMap(primitiveInfo._meshInstanceIndex / 10.0), 1);
+                return float4(uniqueColor(primitiveInfo._meshInstanceIndex), 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_MATERIAL_SCREEN_PERSENTAGE:
+            {
+                float screenPersentages = float(_materialScreenPersentages.Load(primitiveInfo._materialIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
+                return float4(heatMap(1.0 - screenPersentages), 1.0);
             }
         case DEBUG_VISUALIZE_TYPE_WORLD_POSITION:
             {

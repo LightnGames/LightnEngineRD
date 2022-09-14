@@ -221,10 +221,12 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceScreenPersentageSrv = lodStreamingManager->getMeshInstanceScreenPersentageGpuSrv();
 	rhi::GpuDescriptorHandle meshLodStreamedLevelSrv = geometryResourceManager->getMeshLodStreamRangeGpuSrv();
+	rhi::GpuDescriptorHandle materialScreenPersentageSrv = lodStreamingManager->getMaterialScreenPersentageGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
 	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();
+	rhi::GpuDescriptorHandle materialParameterOffsetSrv = GpuMaterialManager::Get()->getParameterOffsetGpuSrv();
 
 	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
 	f32 clearColor[4] = {};
@@ -253,9 +255,11 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE_SCREEN_PERSENTAGE, meshInstanceScreenPersentageSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_LOD_STREAMED_LEVEL, meshLodStreamedLevelSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_SCREEN_PERSENTAGE, materialScreenPersentageSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURE, textureSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER, materialParameterSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER_OFFSET, materialParameterOffsetSrv);
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_TYPE, 1, &desc._debugVisualizeType, 0);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);

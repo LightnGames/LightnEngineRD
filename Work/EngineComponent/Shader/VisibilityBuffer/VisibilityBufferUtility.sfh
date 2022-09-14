@@ -1,7 +1,7 @@
 struct PrimitiveInfo
 {
     uint _meshInstanceIndex;
-    uint _materialParameterOffset;
+    uint _materialIndex;
     float3 _worldPosition;
     float2 _texcoords;
     float2 _ddx;

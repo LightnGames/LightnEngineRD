@@ -36,7 +36,7 @@ void TextureScene::lateUpdate() {
 		LTN_ASSERT(_textureEnabledFlags[textureIndex] == 1);
 		_textureAllocations.freeAllocation(_textureAllocationInfos[textureIndex]);
 		_textureEnabledFlags[textureIndex] = 0;
-		Memory::freeObjects(_textureAssetPaths[i]);
+		Memory::deallocObjects(_textureAssetPaths[i]);
 
 		_textures[textureIndex] = Texture();
 	}
@@ -51,9 +51,9 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 	_textureAllocationInfos[allocationInfo._offset] = allocationInfo;
 	u32 assetPathLength = StrLength(desc._assetPath) + 1;
 
-	char*& shaderAssetPath = _textureAssetPaths[allocationInfo._offset];
-	shaderAssetPath = Memory::allocObjects<char>(assetPathLength);
-	memcpy(shaderAssetPath, desc._assetPath, assetPathLength);
+	char*& assetPath = _textureAssetPaths[allocationInfo._offset];
+	assetPath = Memory::allocObjects<char>(assetPathLength);
+	memcpy(assetPath, desc._assetPath, assetPathLength);
 
 	Texture* texture = &_textures[allocationInfo._offset];
 	texture->setAssetPath(_textureAssetPaths[allocationInfo._offset]);

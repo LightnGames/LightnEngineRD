@@ -10,7 +10,8 @@ float4 main(float4 position : SV_Position) : SV_TARGET
 {
     PrimitiveInfo primitiveInfo = getPrimitiveInfo(position.xy);
     
-    MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(primitiveInfo._materialParameterOffset);
+    uint materialParameterOffset = _materialParameterOffsets.Load(primitiveInfo._materialIndex * UINT32_SIZE_IN_BYTE);
+    MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(materialParameterOffset);
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._baseColorTextureIndex)];
     
     float3 baseColor = albedoTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;

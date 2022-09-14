@@ -80,7 +80,7 @@ def convert(shader_file_path):
     Popen(cmd)
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1 :
+    if len(sys.argv) == 1:
         glob_dirs = "%s\\**\\*.*" % AssetDevelopmentConfig.WORK_ROOT
         target_paths = glob.glob(glob_dirs, recursive=True)
         for target_path in target_paths:

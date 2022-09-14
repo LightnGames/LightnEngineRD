@@ -93,8 +93,8 @@ void GpuMeshInstanceManager::terminate() {
 	_subMeshInstanceOffsetsGpuBuffer.terminate();
 	_meshInstanceIndexGpuBuffer.terminate();
 
-	Memory::freeObjects(_pipelineSetSubMeshInstanceCounts);
-	Memory::freeObjects(_pipelineSetSubMeshInstanceOffsets);
+	Memory::deallocObjects(_pipelineSetSubMeshInstanceCounts);
+	Memory::deallocObjects(_pipelineSetSubMeshInstanceOffsets);
 }
 
 void GpuMeshInstanceManager::update() {
@@ -179,7 +179,7 @@ void GpuMeshInstanceManager::update() {
 		dynamicData->_aabbMin = boundsAabb._min.getFloat3();
 		dynamicData->_aabbMax = boundsAabb._max.getFloat3();
 		dynamicData->_worldMatrix = meshInstance->getWorldMatrix().getFloat3x4();
-		dynamicData->_boundsRadius = (mesh->getBoundsMax() - mesh->getBoundsMin()).length();
+		dynamicData->_boundsRadius = boundsAabb.getSize().length() / 2.0f;
 	}
 
 	// íœ‚³‚ê‚½ƒƒbƒVƒ…‚ğ GPU ‚©‚çíœ

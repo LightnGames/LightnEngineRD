@@ -74,6 +74,7 @@ public:
 	u32 getLodMeshInstanceIndex(const LodMeshInstance* lodMesh) const { return static_cast<u32>(lodMesh - _lodMeshInstances); }
 	u32 getSubMeshInstanceIndex(const SubMeshInstance* subMesh) const { return static_cast<u32>(subMesh - _subMeshInstances); }
 	MeshInstance* getMeshInstance(u32 index) { return &_meshInstances[index]; }
+	const u8* getEnabledFlags() const { return _meshInstanceEnabledFlags; }
 
 private:
 	VirtualArray _meshInstanceAllocations;
@@ -84,6 +85,7 @@ private:
 	VirtualArray::AllocationInfo* _lodMeshInstanceAllocationInfos = nullptr;
 	VirtualArray::AllocationInfo* _subMeshInstanceAllocationInfos = nullptr;
 	
+	u8* _meshInstanceEnabledFlags = nullptr;
 	MeshInstance* _meshInstances = nullptr;
 	LodMeshInstance* _lodMeshInstances = nullptr;
 	SubMeshInstance* _subMeshInstances = nullptr;

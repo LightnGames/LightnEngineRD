@@ -1,7 +1,10 @@
 #include "MeshInstance.h"
 #include <Core/Memory.h>
 #include <Core/CpuTimerManager.h>
+#include <Core/Aabb.h>
+#include <Renderer/RenderCore/DebugRenderer.h>
 #include <RendererScene/MeshGeometry.h>
+#include <Renderer/RenderCore/ImGuiSystem.h>
 
 namespace ltn {
 namespace {
@@ -27,6 +30,7 @@ void MeshInstancePool::initialize(const InitializetionDesc& desc) {
 		_meshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
 		_lodMeshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
 		_subMeshInstanceAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(desc._meshInstanceCount);
+		_meshInstanceEnabledFlags = allocation.allocateClearedObjects<u8>(desc._meshInstanceCount);
 	});
 }
 
@@ -51,9 +55,11 @@ MeshInstance* MeshInstancePool::allocateMeshInstances(const MeshAllocationDesc& 
 	_subMeshInstanceAllocationInfos[meshAllocationInfo._offset] = subMeshAllocationInfo;
 
 	for (u32 i = 0; i < instanceCount; ++i) {
-		MeshInstance* meshInstance = &_meshInstances[meshAllocationInfo._offset + i];
+		u32 meshInstanceIndex = u32(meshAllocationInfo._offset) + i;
+		MeshInstance* meshInstance = &_meshInstances[meshInstanceIndex];
 		meshInstance->setLodMeshInstances(&_lodMeshInstances[lodMeshAllocationInfo._offset + lodMeshCount * i]);
 		meshInstance->setSubMeshInstances(&_subMeshInstances[subMeshAllocationInfo._offset + subMeshCount * i]);
+		_meshInstanceEnabledFlags[meshInstanceIndex] = 1;
 	}
 
 	return &_meshInstances[meshAllocationInfo._offset];
@@ -66,6 +72,7 @@ void MeshInstancePool::freeMeshInstances(const MeshInstance* meshInstances) {
 	_meshInstanceAllocations.freeAllocation(_meshInstanceAllocationInfos[meshInstanceIndex]);
 	_lodMeshInstanceAllocations.freeAllocation(_lodMeshInstanceAllocationInfos[meshInstanceIndex]);
 	_subMeshInstanceAllocations.freeAllocation(_subMeshInstanceAllocationInfos[meshInstanceIndex]);
+	_meshInstanceEnabledFlags[meshInstanceIndex] = 0;
 }
 
 void MeshInstanceScene::initialize() {
@@ -102,6 +109,25 @@ void MeshInstanceScene::lateUpdate() {
 	_meshInstanceDestroyInfos.reset();
 	_lodMeshInstanceUpdateInfos.reset();
 	_subMeshInstanceUpdateInfos.reset();
+
+	ImGui::Begin("MeshInstance");
+	static bool showBounds = false;
+	ImGui::Checkbox("Show Bounds", &showBounds);
+	if (showBounds) {
+		DebugRenderer* debugRenderer = DebugRenderer::Get();
+		const u8* enabledFlags = _meshInstancePool.getEnabledFlags();
+		for (u32 i = 0; i < MeshInstanceScene::MESH_INSTANCE_CAPACITY; ++i) {
+			if (enabledFlags[i] == 0) {
+				continue;
+			}
+
+			const MeshInstance* meshInstance = _meshInstancePool.getMeshInstance(i);
+			const MeshGeometry* mesh = meshInstance->getMesh();
+			AABB boundsAabb = AABB(mesh->getBoundsMin(), mesh->getBoundsMax()).getTransformedAabb(meshInstance->getWorldMatrix());
+			debugRenderer->drawAabb(boundsAabb._min, boundsAabb._max, Color::Blue());
+		}
+	}
+	ImGui::End();
 }
 
 MeshInstance* MeshInstanceScene::createMeshInstances(const CreatationDesc& desc, u32 instanceCount) {
@@ -116,7 +142,7 @@ MeshInstance* MeshInstanceScene::createMeshInstances(const CreatationDesc& desc,
 		u32 lodCount = desc._mesh->getLodMeshCount();
 		for (u32 lodLevel = 0; lodLevel < lodCount; ++lodLevel) {
 			f32 threshhold = 1.0f - ((lodLevel + 1) / f32(lodCount));
-			meshInstance->getLodMeshInstance(lodLevel)->setLodThreshold(threshhold);
+			meshInstance->getLodMeshInstance(lodLevel)->setLodThreshold(threshhold * 0.01f);
 		}
 		_meshInstanceCreateInfos.push(meshInstance);
 	}

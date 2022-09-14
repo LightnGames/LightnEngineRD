@@ -1379,68 +1379,68 @@ void exportMesh(const char* fileName) {
 		materialSlotIndices.reserve(materialSlotIndices.size() + subMeshMaterialSlotIndices.size());
 		std::copy(subMeshMaterialSlotIndices.begin(), subMeshMaterialSlotIndices.end(), std::back_inserter(materialSlotIndices));
 
-		std::vector<Subset>                     meshletSubsets;
-		std::vector<Meshlet>                    meshlets;
-		std::vector<uint32>                     uniqueVertexIndices;
-		std::vector<PackedTriangle>             primitiveIndices;
-		std::vector<CullData>                   cullData;
+		//std::vector<Subset>                     meshletSubsets;
+		//std::vector<Meshlet>                    meshlets;
+		//std::vector<uint32>                     uniqueVertexIndices;
+		//std::vector<PackedTriangle>             primitiveIndices;
+		//std::vector<CullData>                   cullData;
 
 		// Meshletize our mesh and generate per-meshlet culling data
-		ComputeMeshlets(
-			MESHLT_VERTEX_COUNT_MAX, MESHLET_PRIMITIVE_COUNT_MAX,
-			indices.data(), indexCount,
-			subSets.data(), static_cast<uint32>(subSets.size()),
-			positions.data(), static_cast<uint32>(positions.size()),
-			meshletSubsets,
-			meshlets,
-			uniqueVertexIndices,
-			primitiveIndices
-		);
+		//ComputeMeshlets(
+		//	MESHLT_VERTEX_COUNT_MAX, MESHLET_PRIMITIVE_COUNT_MAX,
+		//	indices.data(), indexCount,
+		//	subSets.data(), static_cast<uint32>(subSets.size()),
+		//	positions.data(), static_cast<uint32>(positions.size()),
+		//	meshletSubsets,
+		//	meshlets,
+		//	uniqueVertexIndices,
+		//	primitiveIndices
+		//);
 
-		cullData.resize(meshlets.size());
-		ComputeCullData(
-			positions.data(), static_cast<uint32_t>(positions.size()),
-			meshlets.data(), static_cast<uint32_t>(meshlets.size()),
-			uniqueVertexIndices.data(),
-			primitiveIndices.data(),
-			CNORM_DEFAULT,
-			cullData.data()
-		);
+		//cullData.resize(meshlets.size());
+		//ComputeCullData(
+		//	positions.data(), static_cast<uint32_t>(positions.size()),
+		//	meshlets.data(), static_cast<uint32_t>(meshlets.size()),
+		//	uniqueVertexIndices.data(),
+		//	primitiveIndices.data(),
+		//	CNORM_DEFAULT,
+		//	cullData.data()
+		//);
 
 		// メッシュレット化したプリミティブインデックスと一致するインデックスバッファ
-		VectorArray<uint32> meshletizedTriangleIndices;
-		meshletizedTriangleIndices.reserve(indexCount);
-		uint32 meshletizedOffset = 0;
-		for (uint32 meshletIndex = 0; meshletIndex < meshlets.size(); ++meshletIndex) {
-			const Meshlet& meshlet = meshlets[meshletIndex];
-			for (uint32 primIndex = 0; primIndex < meshlet.PrimCount; ++primIndex) {
-				uint32 baseOffset = (meshletizedOffset + primIndex) * 3;
-				meshletizedTriangleIndices.push_back(indices[baseOffset]);
-				meshletizedTriangleIndices.push_back(indices[baseOffset + 1]);
-				meshletizedTriangleIndices.push_back(indices[baseOffset + 2]);
-			}
-			meshletizedOffset += meshlet.PrimCount;
-		}
+		//VectorArray<uint32> meshletizedTriangleIndices;
+		//meshletizedTriangleIndices.reserve(indexCount);
+		//uint32 meshletizedOffset = 0;
+		//for (uint32 meshletIndex = 0; meshletIndex < meshlets.size(); ++meshletIndex) {
+		//	const Meshlet& meshlet = meshlets[meshletIndex];
+		//	for (uint32 primIndex = 0; primIndex < meshlet.PrimCount; ++primIndex) {
+		//		uint32 baseOffset = (meshletizedOffset + primIndex) * 3;
+		//		meshletizedTriangleIndices.push_back(indices[baseOffset]);
+		//		meshletizedTriangleIndices.push_back(indices[baseOffset + 1]);
+		//		meshletizedTriangleIndices.push_back(indices[baseOffset + 2]);
+		//	}
+		//	meshletizedOffset += meshlet.PrimCount;
+		//}
 
 		LodInfo& lodInfo = lodInfos[lodIndex];
 		lodInfo.subMeshCount = subMeshCount;
 		lodInfo.vertexCount = uint32(positions.size());
-		lodInfo.indexCount = uint32(meshletizedTriangleIndices.size());
+		lodInfo.indexCount = uint32(indices.size());
 
-		m_meshletSubsets.reserve(m_meshletSubsets.size() + meshletSubsets.size());
-		std::copy(meshletSubsets.begin(), meshletSubsets.end(), std::back_inserter(m_meshletSubsets));
+		//m_meshletSubsets.reserve(m_meshletSubsets.size() + meshletSubsets.size());
+		//std::copy(meshletSubsets.begin(), meshletSubsets.end(), std::back_inserter(m_meshletSubsets));
 
-		m_meshlets.reserve(m_meshlets.size() + meshlets.size());
-		std::copy(meshlets.begin(), meshlets.end(), std::back_inserter(m_meshlets));
+		//m_meshlets.reserve(m_meshlets.size() + meshlets.size());
+		//std::copy(meshlets.begin(), meshlets.end(), std::back_inserter(m_meshlets));
 
-		m_uniqueVertexIndices.reserve(m_uniqueVertexIndices.size() + uniqueVertexIndices.size());
-		std::copy(uniqueVertexIndices.begin(), uniqueVertexIndices.end(), std::back_inserter(m_uniqueVertexIndices));
+		//m_uniqueVertexIndices.reserve(m_uniqueVertexIndices.size() + uniqueVertexIndices.size());
+		//std::copy(uniqueVertexIndices.begin(), uniqueVertexIndices.end(), std::back_inserter(m_uniqueVertexIndices));
 
-		m_primitiveIndices.reserve(m_primitiveIndices.size() + primitiveIndices.size());
-		std::copy(primitiveIndices.begin(), primitiveIndices.end(), std::back_inserter(m_primitiveIndices));
+		//m_primitiveIndices.reserve(m_primitiveIndices.size() + primitiveIndices.size());
+		//std::copy(primitiveIndices.begin(), primitiveIndices.end(), std::back_inserter(m_primitiveIndices));
 
-		m_cullData.reserve(m_cullData.size() + cullData.size());
-		std::copy(cullData.begin(), cullData.end(), std::back_inserter(m_cullData));
+		//m_cullData.reserve(m_cullData.size() + cullData.size());
+		//std::copy(cullData.begin(), cullData.end(), std::back_inserter(m_cullData));
 
 		positionsL.reserve(positionsL.size() + positions.size());
 		std::copy(positions.begin(), positions.end(), std::back_inserter(positionsL));
@@ -1451,8 +1451,11 @@ void exportMesh(const char* fileName) {
 		normalsAndTangentsL.reserve(normalsAndTangentsL.size() + normalAndTangents.size());
 		std::copy(normalAndTangents.begin(), normalAndTangents.end(), std::back_inserter(normalsAndTangentsL));
 
-		m_classicIndices.reserve(m_classicIndices.size() + meshletizedTriangleIndices.size());
-		std::copy(meshletizedTriangleIndices.begin(), meshletizedTriangleIndices.end(), std::back_inserter(m_classicIndices));
+		//m_classicIndices.reserve(m_classicIndices.size() + meshletizedTriangleIndices.size());
+		//std::copy(meshletizedTriangleIndices.begin(), meshletizedTriangleIndices.end(), std::back_inserter(m_classicIndices));
+
+		m_classicIndices.reserve(m_classicIndices.size() + indices.size());
+		std::copy(indices.begin(), indices.end(), std::back_inserter(m_classicIndices));
 
 		std::cout << "Lod Mesh :" << lodIndex << std::endl;
 		std::cout << "Sub Mesh :" << subMeshCount << std::endl;
@@ -1483,12 +1486,12 @@ void exportMesh(const char* fileName) {
 		lodInfo.indexOffset = prevLodInfo.indexOffset + prevLodInfo.indexCount;
 	}
 
-	uint32 subMeshCount = m_meshletSubsets.size();
+	uint32 subMeshCount = m_subSets.size();
 	subMeshInfos.resize(subMeshCount);
 	for (uint32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 		SubMeshInfo& info = subMeshInfos[subMeshIndex];
 		info.materialSlotIndex = materialSlotIndices[subMeshIndex];
-		info.meshletCount = m_meshletSubsets[subMeshIndex].Count;
+		//info.meshletCount = m_meshletSubsets[subMeshIndex].Count;
 		info.triangleStripIndexCount = m_subSets[subMeshIndex].Count;
 	}
 
@@ -1502,26 +1505,26 @@ void exportMesh(const char* fileName) {
 		}
 	}
 
-	uint32 meshletCount = m_meshlets.size();
-	VectorArray<MeshletCullInfo> meshletsL(meshletCount);
-	for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
-		const CullData& cullData = m_cullData[meshletIndex];
-		MeshletCullInfo& info = meshletsL[meshletIndex];
-		info._aabbMax = Float3(cullData.BoundingBoxMax.x, cullData.BoundingBoxMax.y, cullData.BoundingBoxMax.z);
-		info._aabbMin = Float3(cullData.BoundingBoxMin.x, cullData.BoundingBoxMin.y, cullData.BoundingBoxMin.z);
-		info._apexOffset = cullData.ApexOffset;
-		memcpy(&info._normalAndCutoff, cullData.NormalCone, sizeof(uint32));
-	}
+	//uint32 meshletCount = m_meshlets.size();
+	//VectorArray<MeshletCullInfo> meshletsL(meshletCount);
+	//for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
+	//	const CullData& cullData = m_cullData[meshletIndex];
+	//	MeshletCullInfo& info = meshletsL[meshletIndex];
+	//	info._aabbMax = Float3(cullData.BoundingBoxMax.x, cullData.BoundingBoxMax.y, cullData.BoundingBoxMax.z);
+	//	info._aabbMin = Float3(cullData.BoundingBoxMin.x, cullData.BoundingBoxMin.y, cullData.BoundingBoxMin.z);
+	//	info._apexOffset = cullData.ApexOffset;
+	//	memcpy(&info._normalAndCutoff, cullData.NormalCone, sizeof(uint32));
+	//}
 
-	VectorArray<MeshletPrimitiveInfo> meshletPrimitiveL(meshletCount);
-	for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
-		const Meshlet& meshlet = m_meshlets[meshletIndex];
-		MeshletPrimitiveInfo& info = meshletPrimitiveL[meshletIndex];
-		info._vertexIndexOffset = meshlet.VertOffset;
-		info._vertexCount = meshlet.VertCount;
-		info._primitiveCount = meshlet.PrimCount;
-		info._primitiveOffset = meshlet.PrimOffset;
-	}
+	//VectorArray<MeshletPrimitiveInfo> meshletPrimitiveL(meshletCount);
+	//for (uint32 meshletIndex = 0; meshletIndex < meshletCount; ++meshletIndex) {
+	//	const Meshlet& meshlet = m_meshlets[meshletIndex];
+	//	MeshletPrimitiveInfo& info = meshletPrimitiveL[meshletIndex];
+	//	info._vertexIndexOffset = meshlet.VertOffset;
+	//	info._vertexCount = meshlet.VertCount;
+	//	info._primitiveCount = meshlet.PrimCount;
+	//	info._primitiveOffset = meshlet.PrimOffset;
+	//}
 
 	uint32 meshletVertexIndexCount = static_cast<uint32>(m_uniqueVertexIndices.size());
 	uint32 meshletPrimitiveCount = static_cast<uint32>(m_primitiveIndices.size());
@@ -1536,8 +1539,8 @@ void exportMesh(const char* fileName) {
 	uint32 subMeshSize = subMeshCount * sizeof(SubMeshInfo);
 	uint32 boundingBoxSize = sizeof(XMFLOAT3) * 2;
 	uint32 lodInfoSize = sizeof(LodInfo) * lodCount;
-	uint32 meshletPrimitiveSize = sizeof(MeshletPrimitiveInfo) * meshletCount;
-	uint32 meshletCullSize = sizeof(MeshletCullInfo) * meshletCount;
+	//uint32 meshletPrimitiveSize = sizeof(MeshletPrimitiveInfo) * meshletCount;
+	//uint32 meshletCullSize = sizeof(MeshletCullInfo) * meshletCount;
 	uint32 materialNameHashesSize = sizeof(ullong64) * materialCount;
 	uint32 classicIndexSize = sizeof(uint32) * classicIndexCount;
 

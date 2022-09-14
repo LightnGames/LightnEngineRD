@@ -9,7 +9,7 @@ struct OutputPS
 OutputPS main(VertexOut input, uint primitiveId : SV_PrimitiveID)
 {
     uint triangleId = input._triangleOffset + primitiveId;
-    uint packedAttribute = (input._materialParameterOffset << 18) | input._meshInstanceIndex;
+    uint packedAttribute = (input._materialIndex << 18) | input._meshInstanceIndex;
     OutputPS output;
     output._triangleId = uint2(triangleId, packedAttribute);
     output._shaderId = 0;

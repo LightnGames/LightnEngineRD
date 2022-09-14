@@ -30,3 +30,11 @@ float2 unpackTexCoords(uint packed)
     float div = UINT16_MAX / 8.0;
     return (float2(x, y) / div) - 4.0;
 }
+
+// Values used to linearize the Z buffer (http://www.humus.name/temp/Linearize%20depth.txt)
+float computeLinerDepth(float nonLinerDepth, float nearClip, float farClip)
+{
+    float farNear = farClip / nearClip;
+    float invFarNear = 1.0 - farNear;
+    return 1.0 / (invFarNear * nonLinerDepth + farNear);
+}

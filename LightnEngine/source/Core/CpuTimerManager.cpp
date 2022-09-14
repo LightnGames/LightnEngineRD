@@ -15,7 +15,7 @@ void CpuTimerManager::initialize() {
 }
 
 void CpuTimerManager::terminate() {
-	Memory::freeObjects(_cpuTimerAdditionalInfos);
+	Memory::deallocObjects(_cpuTimerAdditionalInfos);
 	CpuTimeStampManager::Get()->terminate();
 }
 
@@ -57,7 +57,7 @@ void CpuTimeStampManager::initialize() {
 }
 
 void CpuTimeStampManager::terminate() {
-	Memory::freeObjects(_cpuTimeStamps);
+	Memory::deallocObjects(_cpuTimeStamps);
 }
 
 void CpuTimeStampManager::update(u32 frameIndex) {

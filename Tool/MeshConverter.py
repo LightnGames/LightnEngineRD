@@ -1,6 +1,7 @@
 import sys, yaml, os.path, subprocess, struct, xxhash, glob
 import AssetDevelopmentConfig
 
+WORK_EXT  = ".meshi"
 OUTPUT_EXT = ".mesh"
 
 def convert(file_path):
@@ -36,6 +37,14 @@ def convert(file_path):
                 fout.write(struct.pack('<Q', material_path_hash))
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        glob_dirs = "%s\\**\\*.*" % AssetDevelopmentConfig.WORK_ROOT
+        target_paths = glob.glob(glob_dirs, recursive=True)
+        for target_path in target_paths:
+            file_name, ext = os.path.splitext(target_path)
+            if ext == WORK_EXT:
+                convert(target_path)
+
     args = sys.argv
     argc = len(args)
 

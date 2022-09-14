@@ -31,15 +31,19 @@ public:
 
 	void setPipelineSet(const PipelineSet* pipelineSet) { _pipelineSet = pipelineSet; }
 	void setParameterSet(const MaterialParameterSet& parameters) { _parameters = parameters; }
+	void setAssetPath(const char* assetPath) { _assetPath = assetPath; }
 	u8* getParameters() { return _parameters._parameters; }
 
 	template <class T>
 	const T* getParameter(u32 offset) const { return reinterpret_cast<T*>(_parameters._parameters + offset); }
+
 	const u8* getParameters() const { return _parameters._parameters; }
 	MaterialParameterSet* getParameterSet() { return &_parameters; }
 	const MaterialParameterSet* getParameterSet() const { return &_parameters; }
+	const char* getAssetPath() const { return _assetPath; }
 
 private:
+	const char* _assetPath = nullptr;
 	const PipelineSet* _pipelineSet = nullptr;
 	MaterialParameterSet _parameters;
 };
@@ -77,6 +81,7 @@ private:
 	VirtualArray::AllocationInfo* _materialAllocationInfos = nullptr;
 	Material* _materials = nullptr;
 
+	char** _assetPaths = nullptr;
 	u8* _enabledFlags = nullptr;
 	u64* _materialAssetPathHashes = nullptr;
 	UpdateInfos<Material> _materialCreateInfos;

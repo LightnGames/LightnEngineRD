@@ -31,7 +31,8 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     float3 boundsCenter = (meshInstance._aabbMin + meshInstance._aabbMax) / 2.0;
     float3 viewSpaceBoundsCenter = boundsCenter - _viewInfo._cameraPosition;
     float boundsDepth = length(viewSpaceBoundsCenter);
-    float screenRadius = meshInstance._boundsRadius / (_viewInfo._halfFovTan.y * boundsDepth);
+    float fovTan = _viewInfo._halfFovTan.y * 2.0;
+    float screenRadius = meshInstance._boundsRadius / (fovTan * boundsDepth);
     float screenDimeter = screenRadius * 2.0;
     float screenArea = screenDimeter * screenDimeter;
 	
@@ -67,6 +68,6 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
     {
         uint subMeshInstanceIndex = lodMeshInstance._subMeshInstanceOffset + i;
         SubMeshInstance subMeshInstance = _subMeshInstances.Load<SubMeshInstance>(sizeof(SubMeshInstance) * subMeshInstanceIndex);
-        _materialScreenPersentages.InterlockedMin(subMeshInstance._materialIndex * UINT32_SIZE_IN_BYTE, unorm16ScreenArea, dummyValue);
+        _materialScreenPersentages.InterlockedMax(subMeshInstance._materialIndex * UINT32_SIZE_IN_BYTE, unorm16ScreenArea, dummyValue);
     }
 }

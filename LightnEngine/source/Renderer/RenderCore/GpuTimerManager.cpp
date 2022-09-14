@@ -61,7 +61,7 @@ void GpuTimeStampManager::terminate() {
 	_commandQueue.terminate();
 	_commandListPool.terminate();
 
-	Memory::freeObjects(_gpuTimeStamps);
+	Memory::deallocObjects(_gpuTimeStamps);
 }
 
 void GpuTimeStampManager::update(u32 frameIndex, u32 timerCount) {
@@ -109,7 +109,7 @@ void GpuTimerManager::initialize() {
 }
 
 void GpuTimerManager::terminate() {
-	Memory::freeObjects(_gpuTimerAdditionalInfos);
+	Memory::deallocObjects(_gpuTimerAdditionalInfos);
 	GpuTimeStampManager::Get()->terminate();
 }
 

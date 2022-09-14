@@ -13,6 +13,7 @@
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuTimerManager.h>
 #include <Renderer/RenderCore/FrameResourceAllocator.h>
+#include <Renderer/RenderCore/DebugRenderer.h>
 
 namespace ltn {
 rhi::PipelineState _pipelineState;
@@ -87,6 +88,9 @@ void Renderer::initialize() {
 	FrameBufferAllocator::Get()->initialize();
 	FrameDescriptorAllocator::Get()->initialize();
 
+	// デバッグレンダラー
+	DebugRenderer::Get()->initialize();
+
 	// スワップチェーンのバックバッファを取得
 	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
 		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
@@ -127,6 +131,7 @@ void Renderer::initialize() {
 void Renderer::terminate() {
 	RenderDirector::Get()->terminate();
 
+	DebugRenderer::Get()->terminate();
 	FrameBufferAllocator::Get()->terminate();
 	FrameDescriptorAllocator::Get()->terminate();
 
@@ -159,6 +164,7 @@ void Renderer::update() {
 	PipelineStateReloader::Get()->update();
 	FrameBufferAllocator::Get()->reset();
 	FrameDescriptorAllocator::Get()->reset();
+	DebugRenderer::Get()->update();
 }
 
 void Renderer::render() {

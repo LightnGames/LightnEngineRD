@@ -12,7 +12,7 @@ void GpuShaderScene::initialize() {
 }
 
 void GpuShaderScene::terminate() {
-	Memory::freeObjects(_shaders);
+	Memory::deallocObjects(_shaders);
 }
 
 void GpuShaderScene::update() {

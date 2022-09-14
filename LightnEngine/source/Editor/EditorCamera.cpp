@@ -46,59 +46,65 @@ void EditorCamera::update() {
 	ImGui::SliderAngle("RotationRoll", reinterpret_cast<f32*>(&cameraRotation.z));
 	ImGui::End();
 
-	// マウス右クリックでの画面回転
-	static Vector2 prevMousePosition = Vector2(0, 0);
 	InputSystem* inputSystem = InputSystem::Get();
-	Vector2 currentMousePosition = inputSystem->getMousePosition();
-	if (inputSystem->getKey(InputSystem::KEY_CODE_RBUTTON)) {
-		constexpr f32 SCALE = 0.005f;
-		Vector2 distance = currentMousePosition - prevMousePosition;
-		cameraRotation.x += distance.getY() * SCALE;
-		cameraRotation.y += distance.getX() * SCALE;
+	
+	// マウス右クリックでの画面回転
+	{
+		static Vector2 prevMousePosition = Vector2(0, 0);
+		Vector2 currentMousePosition = inputSystem->getMousePosition();
+		if (inputSystem->getKey(InputSystem::KEY_CODE_RBUTTON)) {
+			constexpr f32 SCALE = 0.005f;
+			Vector2 distance = currentMousePosition - prevMousePosition;
+			cameraRotation.x += distance.getY() * SCALE;
+			cameraRotation.y += distance.getX() * SCALE;
+		}
+		prevMousePosition = currentMousePosition;
 	}
-	prevMousePosition = currentMousePosition;
-
-	Matrix4 cameraRotate = Matrix4::rotationXYZ(cameraRotation.x, cameraRotation.y, cameraRotation.z);
-	Vector3 rightDirection = cameraRotate.getCol(0).getVector3();
-	Vector3 upDirection = cameraRotate.getCol(1).getVector3();
-	Vector3 forwardDirection = cameraRotate.getCol(2).getVector3();
 
 	// W/A/S/D キーボードによる移動
-	Vector3 moveDirection = Vector3::Zero();
-	if (inputSystem->getKey(InputSystem::KEY_CODE_W)) {
-		moveDirection += forwardDirection;
-	}
+	Matrix4 cameraRotate = Matrix4::rotationXYZ(cameraRotation.x, cameraRotation.y, cameraRotation.z);
+	{
+		Vector3 rightDirection = cameraRotate.getCol(0).getVector3();
+		Vector3 upDirection = cameraRotate.getCol(1).getVector3();
+		Vector3 forwardDirection = cameraRotate.getCol(2).getVector3();
 
-	if (inputSystem->getKey(InputSystem::KEY_CODE_S)) {
-		moveDirection -= forwardDirection;
-	}
+		Vector3 moveDirection = Vector3::Zero();
+		if (inputSystem->getKey(InputSystem::KEY_CODE_W)) {
+			moveDirection += forwardDirection;
+		}
 
-	if (inputSystem->getKey(InputSystem::KEY_CODE_D)) {
-		moveDirection += rightDirection;
-	}
+		if (inputSystem->getKey(InputSystem::KEY_CODE_S)) {
+			moveDirection -= forwardDirection;
+		}
 
-	if (inputSystem->getKey(InputSystem::KEY_CODE_A)) {
-		moveDirection -= rightDirection;
-	}
+		if (inputSystem->getKey(InputSystem::KEY_CODE_D)) {
+			moveDirection += rightDirection;
+		}
 
-	if (inputSystem->getKey(InputSystem::KEY_CODE_E)) {
-		moveDirection += upDirection;
-	}
+		if (inputSystem->getKey(InputSystem::KEY_CODE_A)) {
+			moveDirection -= rightDirection;
+		}
 
-	if (inputSystem->getKey(InputSystem::KEY_CODE_Q)) {
-		moveDirection -= upDirection;
-	}
+		if (inputSystem->getKey(InputSystem::KEY_CODE_E)) {
+			moveDirection += upDirection;
+		}
 
-	constexpr f32 DEBUG_CAMERA_MOVE_SPEED = 0.15f;
-	moveDirection = moveDirection.normalize() * DEBUG_CAMERA_MOVE_SPEED;
-	cameraPosition.x += moveDirection.getX();
-	cameraPosition.y += moveDirection.getY();
-	cameraPosition.z += moveDirection.getZ();
+		if (inputSystem->getKey(InputSystem::KEY_CODE_Q)) {
+			moveDirection -= upDirection;
+		}
+
+		constexpr f32 DEBUG_CAMERA_MOVE_SPEED = 0.15f;
+		moveDirection = moveDirection.normalize() * DEBUG_CAMERA_MOVE_SPEED;
+		cameraPosition.x += moveDirection.getX();
+		cameraPosition.y += moveDirection.getY();
+		cameraPosition.z += moveDirection.getZ();
+	}
 
 	Camera* camera = _view->getCamera();
 	camera->_position = cameraPosition;
 	camera->_rotation = cameraRotation;
 	camera->_worldMatrix = cameraRotate * Matrix4::translationFromVector(Vector3(cameraPosition));
+	camera->_fov = DegToRad(60.0f);
 	_view->postUpdate();
 
 	ImGui::Begin("TestInfo");
@@ -107,6 +113,7 @@ void EditorCamera::update() {
 	rhi::QueryVideoMemoryInfo videoMemoryInfo = DeviceManager::Get()->getHardwareAdapter()->queryVideoMemoryInfo();
 	ImGui::Text("[VMEM info] %-14s / %-14s byte", ThreeDigiets(videoMemoryInfo._currentUsage).get(), ThreeDigiets(videoMemoryInfo._budget).get());
 
+	// GPU Perf 表示
 	{
 		ImGui::Separator();
 		GpuTimerManager* timerManager = GpuTimerManager::Get();
@@ -120,6 +127,7 @@ void EditorCamera::update() {
 		}
 	}
 
+	// CPU Perf 表示
 	{
 		ImGui::Separator();
 		CpuTimerManager* timerManager = CpuTimerManager::Get();

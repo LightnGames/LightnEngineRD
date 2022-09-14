@@ -26,6 +26,7 @@ void MaterialScene::initialize() {
 		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MATERIAL_CAPACITY);
 		_materialAssetPathHashes = allocation.allocateObjects<u64>(MATERIAL_CAPACITY);
 		_enabledFlags = allocation.allocateClearedObjects<u8>(MATERIAL_CAPACITY);
+		_assetPaths = allocation.allocateObjects<char*>(MATERIAL_CAPACITY);
 		});
 
 	MaterialParameterContainer::Get()->initialize();
@@ -56,6 +57,7 @@ void MaterialScene::lateUpdate() {
 		_materialAllocations.freeAllocation(_materialAllocationInfos[materialIndex]);
 		_enabledFlags[materialIndex] = 0;
 
+		Memory::deallocObjects(_assetPaths[materialIndex]);
 		MaterialParameterContainer::Get()->freeMaterialParameters(destroyMaterials[i]->getParameterSet());
 
 #if ENABLE_ZERO_CLEAR
@@ -90,6 +92,12 @@ const Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc
 	}
 
 	LTN_ASSERT(materialParameterSize < LTN_COUNTOF(materialParameters));
+
+	u32 assetPathLength = StrLength(desc._assetPath) + 1;
+	char*& assetPath = _assetPaths[allocationInfo._offset];
+	assetPath = Memory::allocObjects<char>(assetPathLength);
+	memcpy(assetPath, desc._assetPath, assetPathLength);
+	material->setAssetPath(assetPath);
 
 	const PipelineSet* pipelineSet = PipelineSetScene::Get()->findPipelineSet(pipelineSetHash);
 	LTN_ASSERT(pipelineSet != nullptr);
@@ -209,7 +217,7 @@ void MaterialParameterContainer::initialize() {
 
 void MaterialParameterContainer::terminate() {
 	_materialParameterAllocations.terminate();
-	Memory::freeObjects(_materialParameters);
+	Memory::deallocObjects(_materialParameters);
 }
 
 void MaterialParameterContainer::lateUpdate() {

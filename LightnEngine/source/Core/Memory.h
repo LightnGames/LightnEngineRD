@@ -10,7 +10,7 @@ public:
 	}
 
 	template<class T>
-	static void freeObjects(T* objects){
+	static void deallocObjects(T* objects){
 		delete[] objects;
 	}
 };

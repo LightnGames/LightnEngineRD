@@ -16,7 +16,7 @@ VertexOut main(VSInput input)
     VertexOut vertexOut;
     vertexOut._position = mul(worldPos, _viewInfo._matrixViewProj);
     vertexOut._meshInstanceIndex = subInfo._meshInstanceIndex;
-    vertexOut._materialParameterOffset = subInfo._materialParameterOffset / 4;
+    vertexOut._materialIndex = subInfo._materialIndex;
     vertexOut._triangleOffset = subInfo._triangleOffset;
     return vertexOut;
 }

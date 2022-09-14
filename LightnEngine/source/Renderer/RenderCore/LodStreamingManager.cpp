@@ -121,7 +121,7 @@ void LodStreamingManager::initialize() {
 		_materialScreenPersentages = allocation.allocateObjects<u32>(MaterialScene::MATERIAL_CAPACITY);
 		_textureStreamingLevels = allocation.allocateObjects<u8>(TextureScene::TEXTURE_CAPACITY);
 		_prevTextureStreamingLevels = allocation.allocateClearedObjects<u8>(TextureScene::TEXTURE_CAPACITY);
-	});
+		});
 	memset(_textureStreamingLevels, INVALID_TEXTURE_STREAMING_LEVEL, TextureScene::TEXTURE_CAPACITY);
 }
 
@@ -181,6 +181,28 @@ void LodStreamingManager::update() {
 
 	updateMeshStreaming();
 	updateTextureStreaming();
+
+	// マテリアルストリーミングステータス
+	{
+		constexpr char IMGUI_TEXT_FORMAT[] = "[%-3d] %-60s %-1.4f";
+		ImGui::Begin("MaterialStatus");
+
+		const u8* materialEnabledFlags = MaterialScene::Get()->getEnabledFlags();
+		for (u32 i = 0; i < MaterialScene::MATERIAL_CAPACITY; ++i) {
+			if (materialEnabledFlags[i] == 0) {
+				continue;
+			}
+
+			const Material* material = MaterialScene::Get()->getMaterial(i);
+			f32 screenPersentage = _materialScreenPersentages[i] / f32(UINT16_MAX);
+			if (_materialScreenPersentages[i] == 0) {
+				ImGui::TextDisabled(IMGUI_TEXT_FORMAT, i, material->getAssetPath(), 0.0f);
+			} else {
+				ImGui::Text(IMGUI_TEXT_FORMAT, i, material->getAssetPath(), screenPersentage);
+			}
+		}
+		ImGui::End();
+	}
 }
 
 void LodStreamingManager::copyReadbackBuffers(rhi::CommandList* commandList) {
@@ -210,7 +232,7 @@ void LodStreamingManager::clearBuffers(rhi::CommandList* commandList) {
 
 	// Material Screen Persentage
 	{
-		u32 clearValues[4] = { UINT32_MAX, UINT32_MAX ,UINT32_MAX ,UINT32_MAX };
+		u32 clearValues[4] = {};
 		rhi::GpuDescriptorHandle gpuDescriptor = _materialScreenPersentageUav._gpuHandle;
 		rhi::CpuDescriptorHandle cpuDescriptor = _materialScreenPersentageCpuUav._cpuHandle;
 		rhi::Resource* resource = _materialScreenPersentageGpuBuffer.getResource();
@@ -253,7 +275,7 @@ void LodStreamingManager::updateMeshStreaming() {
 			geometryResourceManager->loadLodMesh(mesh, minLodLevel, maxLodLevel + 1);
 			geometryResourceManager->updateMeshLodStreamRange(i, minLodLevel, maxLodLevel);
 			continue;
-		}
+	}
 
 		// 詳細 LOD Level 追加時
 		bool minLodAdded = minLodLevel < lodRange._beginLevel;
@@ -264,7 +286,7 @@ void LodStreamingManager::updateMeshStreaming() {
 #endif
 			geometryResourceManager->loadLodMesh(mesh, minLodLevel, lodRange._beginLevel);
 			geometryResourceManager->updateMeshLodStreamRange(i, minLodLevel, lodRange._endLevel);
-		}
+}
 
 		// 粗い LOD Level 追加時
 		bool maxLodAdded = maxLodLevel > lodRange._endLevel;
@@ -275,7 +297,7 @@ void LodStreamingManager::updateMeshStreaming() {
 #endif
 			geometryResourceManager->loadLodMesh(mesh, lodRange._endLevel + 1, maxLodLevel + 1);
 			geometryResourceManager->updateMeshLodStreamRange(i, lodRange._beginLevel, maxLodLevel);
-		}
+}
 
 		// 詳細 LOD Level 削除時
 		bool minLodRemoved = minLodLevel > lodRange._beginLevel;
@@ -324,7 +346,8 @@ void LodStreamingManager::updateMeshStreaming() {
 		bool meshInvalid = lodRange._beginLevel == INVALID_MESH_STREAMING_LEVEL || lodRange._endLevel == INVALID_MESH_STREAMING_LEVEL;
 		if (meshInvalid) {
 			ImGui::TextDisabled(IMGUI_TEXT_FORMAT, mesh->getAssetPath(), -1, -1, mesh->getLodMeshCount());
-		} else {
+		}
+		else {
 			ImGui::Text(IMGUI_TEXT_FORMAT, mesh->getAssetPath(), beginLodLevel, endLodLevel, mesh->getLodMeshCount());
 		}
 	}
@@ -379,7 +402,7 @@ void LodStreamingManager::updateTextureStreaming() {
 	}
 #endif
 
-	constexpr char IMGUI_TEXT_FORMAT[] = "%-65s %2d / %2d (%4d x %4d)";
+	constexpr char IMGUI_TEXT_FORMAT[] = "[%-3d] %-65s %2d / %2d (%4d x %4d)";
 	ImGui::Begin("TextureStreamingStatus");
 	for (u32 i = 0; i < TextureScene::TEXTURE_CAPACITY; ++i) {
 		if (textureEnableFlags[i] == 0) {
@@ -391,16 +414,17 @@ void LodStreamingManager::updateTextureStreaming() {
 		u32 mipCount = texture->getDdsHeader()->_mipMapCount;
 		bool textureInvalid = _textureStreamingLevels[i] == INVALID_TEXTURE_STREAMING_LEVEL;
 		if (textureInvalid) {
-			ImGui::TextDisabled(IMGUI_TEXT_FORMAT, texture->getAssetPath(), -1, mipCount, width, width);
-		} else {
-			ImGui::Text(IMGUI_TEXT_FORMAT, texture->getAssetPath(), _textureStreamingLevels[i], mipCount, width, width);
+			ImGui::TextDisabled(IMGUI_TEXT_FORMAT, i, texture->getAssetPath(), -1, mipCount, width, width);
+		}
+		else {
+			ImGui::Text(IMGUI_TEXT_FORMAT, i, texture->getAssetPath(), _textureStreamingLevels[i], mipCount, width, width);
 		}
 	}
 	ImGui::End();
 }
 
 void LodStreamingManager::computeTextureStreamingMipLevels(u32 materialIndex) {
-	if (_materialScreenPersentages[materialIndex] == UINT32_MAX) {
+	if (_materialScreenPersentages[materialIndex] == 0) {
 		return;
 	}
 
@@ -421,7 +445,7 @@ void LodStreamingManager::computeTextureStreamingMipLevels(u32 materialIndex) {
 		u32 screenWidth = app->getScreenWidth();
 		u64 sourceWidth = texture->getDdsHeader()->_width;
 		u32 targetWidth = u32(screenPersentage * screenWidth);
-		u8 requestMipLevel = 0;
+		u8 requestMipLevel = 1;
 		for (u32 i = 1; i < targetWidth; i *= 2) {
 			requestMipLevel++;
 		}

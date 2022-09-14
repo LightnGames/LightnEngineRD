@@ -242,22 +242,83 @@ struct Vector4 :public Vector {
 	}
 };
 
-struct Matrix4 {
-	Matrix4(const DirectX::XMMATRIX matrix) :_m(matrix) {}
+struct Color : public Vector {
+	Color() {
+		v = DirectX::XMVectorZero();
+	}
+
+	Color(DirectX::XMVECTOR v1) {
+		v = v1;
+	}
+
+	Color(f32 r, f32 g, f32 b, f32 a) {
+		v = DirectX::XMVectorSet(r, g, b, a);
+	}
+
+	Color4 getColor4() const {
+		Color4 result;
+		DirectX::XMStoreFloat4(&result, v);
+		return result;
+	}
+
+	static Color White() {
+		return Color(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+	static Color Black() {
+		return Color(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	static Color Gray18() {
+		return Color(0.18f, 0.18f, 0.18f, 1.0f);
+	}
+
+	static Color Red() {
+		return Color(1.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	static Color Green() {
+		return Color(0.0f, 1.0f, 0.0f, 1.0f);
+	}
+
+	static Color Blue() {
+		return Color(0.0f, 0.0f, 1.0f, 1.0f);
+	}
+
+	static Color DarkRed() {
+		return Color(0.5f, 0.0f, 0.0f, 1.0f);
+	}
+
+	static Color DarkGreen() {
+		return Color(0.0f, 0.5f, 0.0f, 1.0f);
+	}
+
+	static Color DarkBlue() {
+		return Color(0.0f, 0.0f, 0.5f, 1.0f);
+	}
+};
+
+struct Matrix4 :public Matrix {
+	Matrix4(const DirectX::XMMATRIX matrix) {
+		r[0] = matrix.r[0];
+		r[1] = matrix.r[1];
+		r[2] = matrix.r[2];
+		r[3] = matrix.r[3];
+	}
 
 	Matrix4() {
-		_m = DirectX::XMMatrixSet(
+		*this = DirectX::XMMatrixSet(
 			0.0f, 0.0f, 0.0f, 0.0f,
 			0.0f, 0.0f, 0.0f, 0.0f,
 			0.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 0.0f);
+			0.0f, 0.0f, 0.0f, 1.0f);
 	}
 	Matrix4(
 		f32 m11, f32 m12, f32 m13, f32 m14,
 		f32 m21, f32 m22, f32 m23, f32 m24,
 		f32 m31, f32 m32, f32 m33, f32 m34,
 		f32 m41, f32 m42, f32 m43, f32 m44) {
-		_m = DirectX::XMMatrixSet(
+		*this = DirectX::XMMatrixSet(
 			m11, m12, m13, m14,
 			m21, m22, m23, m24,
 			m31, m32, m33, m34,
@@ -265,33 +326,33 @@ struct Matrix4 {
 	}
 
 	Matrix4 transpose() const {
-		return DirectX::XMMatrixTranspose(_m);
+		return DirectX::XMMatrixTranspose(*this);
 	}
 
 	Matrix4 inverse() const {
-		return DirectX::XMMatrixInverse(nullptr, _m);
+		return DirectX::XMMatrixInverse(nullptr, *this);
 	}
 
 	Float4x4 getFloat4x4() const {
 		Float4x4 result;
-		DirectX::XMStoreFloat4x4(&result, _m);
+		DirectX::XMStoreFloat4x4(&result, *this);
 		return result;
 	}
 
 	Float4x3 getFloat4x3() const {
 		Float4x3 result;
-		DirectX::XMStoreFloat4x3(&result, _m);
+		DirectX::XMStoreFloat4x3(&result, *this);
 		return result;
 	}
 
 	Float3x4 getFloat3x4() const {
 		Float3x4 result;
-		DirectX::XMStoreFloat3x4(&result, _m);
+		DirectX::XMStoreFloat3x4(&result, *this);
 		return result;
 	}
 
 	Vector4 getCol(u32 index) const {
-		return _m.r[index];
+		return r[index];
 	}
 
 	Vector3 getTranslation() const {
@@ -300,6 +361,14 @@ struct Matrix4 {
 
 	static Matrix4 identity() {
 		return DirectX::XMMatrixIdentity();
+	}
+
+	static Matrix4 translateXYZ(f32 x, f32 y, f32 z) {
+		return DirectX::XMMatrixTranslation(x, y, z);
+	}
+
+	static Matrix4 translateXYZ(Vector3 v1) {
+		return DirectX::XMMatrixTranslationFromVector(v1);
 	}
 
 	static Matrix4 rotationX(f32 angle) {
@@ -318,6 +387,14 @@ struct Matrix4 {
 		return DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 	}
 
+	static Matrix4 scaleXYZ(f32 x, f32 y, f32 z) {
+		return DirectX::XMMatrixScaling(x, y, z);
+	}
+
+	static Matrix4 scaleXYZ(Vector3 v1) {
+		return DirectX::XMMatrixScalingFromVector(v1);
+	}
+
 	static Matrix4 translationFromVector(const Vector3& offset) {
 		return DirectX::XMMatrixTranslationFromVector(offset.v);
 	}
@@ -327,17 +404,15 @@ struct Matrix4 {
 	}
 
 	static Vector3 transform(const Vector3& v, const Matrix4& m) {
-		return DirectX::XMVector3Transform(v.v, m._m);
+		return DirectX::XMVector3Transform(v.v, m);
 	}
 
 	static Vector3 transformNormal(const Vector3& v, const Matrix4& m) {
-		return DirectX::XMVector3TransformNormal(v.v, m._m);
+		return DirectX::XMVector3TransformNormal(v.v, m);
 	}
 
 	Matrix4 operator *(const Matrix4& m1) const {
-		return DirectX::XMMatrixMultiply(_m, m1._m);
+		return DirectX::XMMatrixMultiply(*this, m1);
 	}
-
-	Matrix _m;
 };
 }

@@ -32,7 +32,7 @@ void GpuTextureManager::initialize() {
 void GpuTextureManager::terminate() {
 	update();
 	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_textureSrv);
-	Memory::freeObjects(_textures);
+	Memory::deallocObjects(_textures);
 	_defaultBlackTexture.terminate();
 }
 

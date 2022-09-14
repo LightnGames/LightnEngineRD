@@ -110,7 +110,7 @@ void EngineModuleManager::run() {
 
 		commonResource->initialize();
 		editorCamera.initialize();
-		level.initialize("fantasy_village\\level.level");
+		level.initialize("GohicHorror\\level.level");
 	}
 
 	while (app.update()) {

@@ -41,7 +41,7 @@ void ShaderScene::lateUpdate() {
 	for (u32 i = 0; i < destroyShaderCount; ++i) {
 		u32 shaderIndex = getShaderIndex(destroyShaders[i]);
 		_shaderAllocations.freeAllocation(_shaderAllocationInfos[shaderIndex]);
-		Memory::freeObjects(_shaderAssetPaths[i]);
+		Memory::deallocObjects(_shaderAssetPaths[i]);
 
 		if (destroyShaders[i]->_parameterSizeInByte != 0) {
 			_parameterAllocations.freeAllocation(_parameterAllocationInfos[shaderIndex]);

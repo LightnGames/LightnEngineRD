@@ -1,15 +1,14 @@
-import sys, yaml, os.path, subprocess, shutil
+import sys, yaml, os.path, subprocess, shutil, glob
 import AssetDevelopmentConfig
 
+WORK_EXT = [".TGA", ".BMP", ".PNG"]
 TEXCONV_PATH = "%s\\texconv\\texconv.exe" % AssetDevelopmentConfig.TOOL_ROOT
 DDS_EXT = ".dds"
 
-if __name__ == "__main__":
+def convert(file_paths):
     max_process = 64
-    args = sys.argv
-    argc = len(args)
-    remaining_count = argc - 1
-    loop_count = int(argc / max_process) + 1
+    remaining_count = len(file_paths)
+    loop_count = int(len(file_paths) / max_process) + 1
 
     for target_index in range(0, loop_count):
         target_count = min(max_process, remaining_count)
@@ -17,7 +16,7 @@ if __name__ == "__main__":
         print("target count: %d" % target_count)
         proc_list = []
         for arg_index in range(remaining_count, remaining_count + target_count):
-            texture_file_path = args[arg_index + 1]
+            texture_file_path = file_paths[arg_index]
 
             cmd = []
             cmd.append(TEXCONV_PATH)
@@ -37,8 +36,8 @@ if __name__ == "__main__":
             proc.wait()
 
     print("texture convert completed!")
-    for arg_index in range(1, argc):
-        file_path = args[arg_index]
+    for arg_index in range(0, len(file_paths)):
+        file_path = file_paths[arg_index]
         file_name = os.path.basename(file_path)
         file_name, file_ext = os.path.splitext(file_name)
         work_dir = os.path.dirname(file_path)
@@ -57,3 +56,17 @@ if __name__ == "__main__":
 
     # os.system("pause")
 
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        glob_dirs = "%s\\**\\*.*" % AssetDevelopmentConfig.WORK_ROOT
+        target_paths = glob.glob(glob_dirs, recursive=True)
+        convert_file_list = []
+        for target_path in target_paths:
+            file_name, file_ext = os.path.splitext(target_path)
+            if file_ext in WORK_EXT:
+                convert_file_list.append(target_path)
+        convert(convert_file_list)
+
+    args = sys.argv
+    argc = len(args)
+    convert(args[1:])

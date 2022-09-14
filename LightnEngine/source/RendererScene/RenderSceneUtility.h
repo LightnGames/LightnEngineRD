@@ -19,8 +19,8 @@ public:
 		_updateCount = 0;
 	}
 
-	static constexpr u32 STACK_COUNT_MAX = 256;
-	const T* _objects[STACK_COUNT_MAX];
+	static constexpr u32 STACK_COUNT_MAX = 1024;
+	const T* _objects[STACK_COUNT_MAX] = {};
 	u32 _updateCount = 0;
 };
 }

@@ -10,6 +10,7 @@
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
 #include <Renderer/RenderCore/ReleaseQueue.h>
+#include <Renderer/RenderCore/DebugRenderer.h>
 #include <Renderer/MeshRenderer/IndirectArgumentResource.h>
 #include <ThiredParty/ImGui/imgui.h>
 
@@ -32,6 +33,7 @@ void RenderDirector::update() {
 		"MeshInstanceLodLevels",
 		"MeshInstanceScreenPersentages",
 		"MeshInstanceIndex",
+		"MaterialScreenPersentages",
 		"WorldPosition",
 		"Texcoords",
 		"Primitive",
@@ -145,6 +147,16 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->shadingPass(desc);
+		}
+
+		// デバッグ描画
+		{
+			DebugRenderer::RenderDesc desc;
+			desc._commandList = commandList;
+			desc._viewCbv = renderViewScene->getViewCbv(i);
+			desc._viewDepthSrv = renderViewFrameResource._viewDepthSrv._gpuHandle;
+			desc._viewDepthGpuTexture = renderViewFrameResource._viewDepthTexture;
+			DebugRenderer::Get()->render(desc);
 		}
 
 		// 0 番ビューをメインビューとして設定

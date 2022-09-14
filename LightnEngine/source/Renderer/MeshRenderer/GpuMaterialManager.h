@@ -12,11 +12,13 @@ struct ShadingRootParam {
 		PIPELINE_SET_RANGE,
 		VIEW_INFO,
 		MATERIAL_PARAMETER,
+		MATERIAL_PARAMETER_OFFSET,
 		MESH,
 		MESH_INSTANCE,
 		MESH_INSTANCE_LOD_LEVEL,
 		MESH_INSTANCE_SCREEN_PERSENTAGE,
 		MESH_LOD_STREAMED_LEVEL,
+		MATERIAL_SCREEN_PERSENTAGE,
 		GEOMETRY_GLOBAL_OFFSET,
 		VERTEX_RESOURCE,
 		TRIANGLE_ATTRIBUTE,
@@ -47,11 +49,13 @@ public:
 	rhi::PipelineState* getShadingPassPipelineStates() { return _shadingPassPipelineStates; }
 	rhi::PipelineState* getDebugShadingPassPipelineStates() { return _debugVisualizePipelineStates; }
 	rhi::GpuDescriptorHandle getParameterGpuSrv() { return _parameterSrv._gpuHandle; }
+	rhi::GpuDescriptorHandle getParameterOffsetGpuSrv() { return _parameterOffsetSrv._gpuHandle; }
 
 	static GpuMaterialManager* Get();
 
 private:
 	void updateMaterialParameters();
+	void updateMaterialParameterOffsets();
 
 private:
 	rhi::RootSignature* _geometryPassRootSignatures = nullptr;
@@ -62,7 +66,9 @@ private:
 
 	const Shader* _debugVisualizeShader = nullptr;
 	GpuBuffer _parameterGpuBuffer;
+	GpuBuffer _parameterOffsetGpuBuffer;
 	DescriptorHandle _parameterSrv;
+	DescriptorHandle _parameterOffsetSrv;
 	ChunkAllocator _chunkAllocator;
 };
 }

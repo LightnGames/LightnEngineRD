@@ -1,6 +1,7 @@
 import sys, yaml, os.path, subprocess, struct, xxhash, glob
 import AssetDevelopmentConfig
 
+WORK_EXT  = ".mat"
 MAT_EXT = ".mto"
 
 PARAMETER_SIZE_TABLE = {'Float': 4, 'Float2': 8, 'Float3': 12, 'Float4': 16, 'Texture': 8}
@@ -59,6 +60,13 @@ def convert(file_path):
         print("Output -> %s" % output_path)
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        glob_dirs = "%s\\**\\*.*" % AssetDevelopmentConfig.WORK_ROOT
+        target_paths = glob.glob(glob_dirs, recursive=True)
+        for target_path in target_paths:
+            file_name, ext = os.path.splitext(target_path)
+            if ext == WORK_EXT:
+                convert(target_path)
     args = sys.argv
     argc = len(args)
 
