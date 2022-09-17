@@ -29,6 +29,18 @@ struct GpuCullingRootParam {
 	};
 };
 
+struct BuildIndirectArgumentRootParam {
+	enum {
+		BUILD_INFO,
+		MESH,
+		SUB_MESH_DRAW_COUNT,
+		SUB_MESH_DRAW_OFFSET,
+		GEOMETRY_GLOBAL_OFFSET,
+		INDIRECT_ARGUMENTS,
+		COUNT
+	};
+};
+
 class GpuCulling {
 public:
 	struct CullingDesc {
@@ -38,11 +50,17 @@ public:
 		IndirectArgumentResource* _indirectArgumentResource = nullptr;
 	};
 
+	struct BuildIndirectArgumentDesc {
+		rhi::CommandList* _commandList = nullptr;
+		IndirectArgumentResource* _indirectArgumentResource = nullptr;
+	};
+
 	void initialize();
 	void terminate();
 
 	void update();
 	void gpuCulling(const CullingDesc& desc);
+	void buildIndirectArgument(const BuildIndirectArgumentDesc& desc);
 
 	rhi::GpuDescriptorHandle getCullingInfoCbv() const { return _cullingInfoCbv._gpuHandle; }
 
@@ -51,6 +69,8 @@ public:
 private:
 	rhi::RootSignature _gpuCullingRootSignature;
 	rhi::PipelineState _gpuCullingPipelineState;
+	rhi::RootSignature _buildIndirectArgumentRootSignature;
+	rhi::PipelineState _buildIndirectArgumentPipelineState;
 
 	// TODO: GPUカリング専用のリソースではない
 	GpuBuffer _cullingInfoGpuBuffer;

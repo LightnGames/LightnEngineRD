@@ -89,7 +89,7 @@ void ComputeLod::computeLod(const ComputeLodDesc& desc) {
 
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
-	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsetsGpuSrv();
+	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshDrawOffsetsGpuSrv();
 	rhi::GpuDescriptorHandle meshLodLevelUav = lodStreamingManager->getMeshLodLevelGpuUav();
 	rhi::GpuDescriptorHandle materialLodLevelUav = lodStreamingManager->getMaterialScreenPersentageGpuUav();
 	rhi::GpuDescriptorHandle meshInstanceLodLevelUav = lodStreamingManager->getMeshInstanceLodLevelGpuUav();

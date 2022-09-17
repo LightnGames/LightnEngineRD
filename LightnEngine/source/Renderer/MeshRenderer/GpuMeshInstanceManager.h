@@ -36,9 +36,9 @@ public:
 	void terminate();
 	void update();
 
-	rhi::VertexBufferView getMeshInstanceIndexVertexBufferView() const;
+	rhi::VertexBufferView getSubMeshInstanceIndexVertexBufferView() const;
 	rhi::GpuDescriptorHandle getMeshInstanceGpuSrv() const { return _meshInstanceSrv._firstHandle._gpuHandle; }
-	rhi::GpuDescriptorHandle getSubMeshInstanceOffsetsGpuSrv() const { return _subMeshInstanceOffsetsSrv._gpuHandle; }
+	rhi::GpuDescriptorHandle getSubMeshDrawOffsetsGpuSrv() const { return _subMeshDrawOffsetsSrv._gpuHandle; }
 
 	const u32* getPipelineSetSubMeshInstanceCounts() const { return _pipelineSetSubMeshInstanceCounts; }
 	const u32* getPipelineSetSubMeshInstanceOffsets() const { return _pipelineSetSubMeshInstanceOffsets; }
@@ -50,10 +50,12 @@ private:
 	GpuBuffer _meshInstanceGpuBuffer;
 	GpuBuffer _lodMeshInstanceGpuBuffer;
 	GpuBuffer _subMeshInstanceGpuBuffer;
-	GpuBuffer _subMeshInstanceOffsetsGpuBuffer;
-	GpuBuffer _meshInstanceIndexGpuBuffer;
+	GpuBuffer _subMeshDrawOffsetsGpuBuffer;
+	GpuBuffer _subMeshInstanceIndexGpuBuffer;
 	DescriptorHandles _meshInstanceSrv;
-	DescriptorHandle _subMeshInstanceOffsetsSrv;
+	DescriptorHandle _subMeshDrawOffsetsSrv;
+	u32* _subMeshDrawOffsets = nullptr;
+	u32* _subMeshDrawCounts = nullptr;
 	u32* _pipelineSetSubMeshInstanceOffsets = nullptr;
 	u32* _pipelineSetSubMeshInstanceCounts = nullptr;
 	u32 _meshInstanceReserveCount = 0;

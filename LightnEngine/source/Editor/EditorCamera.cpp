@@ -123,7 +123,7 @@ void EditorCamera::update() {
 		for (u32 i = 0; i < timerCount; ++i) {
 			u32 offset = i * 2;
 			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
-			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
+			ImGui::Text("%-25s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
 		}
 	}
 
@@ -137,7 +137,7 @@ void EditorCamera::update() {
 		for (u32 i = 0; i < timerCount; ++i) {
 			u32 offset = i * 2;
 			f64 time = (timeStamps[offset + 1] - timeStamps[offset]) * gpuTickDelta;
-			ImGui::Text("%-20s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
+			ImGui::Text("%-25s %2.3f ms", timerManager->getGpuTimerAdditionalInfo(i)->_name, time);
 		}
 	}
 

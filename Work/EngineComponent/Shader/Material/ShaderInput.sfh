@@ -4,7 +4,6 @@ struct VSInput
     uint _normalTangent : NORMAL_TANGENT;
     uint _texcoord : TEXCOORD;
     uint _instanceIndex : INSTANCE_INDEX;
-    uint _instanceId : SV_InstanceId;
 };
 
 struct VertexOut

@@ -31,6 +31,7 @@ project "LightnEngine"
     includedirs { "../LightnEngine/source/" }
     libdirs { "../LightnEngine/lib/WinPixEventRuntime/" }
     files { "../LightnEngine/source/**.h", "../LightnEngine/source/**.c", "../LightnEngine/source/**.cpp" }
+    files { "../Work/EngineComponent/Shader/**.**"}
     flags { "MultiProcessorCompile" }
     prebuildcommands { "copy $(LTN_ROOT)\\LightnEngine\\lib\\WinPixEventRuntime\\WinPixEventRuntime.dll $(SolutionDir)bin\\$(Configuration)\\" }
 

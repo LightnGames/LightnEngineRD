@@ -56,6 +56,15 @@ struct GeometryGlobalOffsetInfo
     uint _indexOffset;
 };
 
+struct IndirectArgument
+{
+    uint _indexCountPerInstance;
+    uint _instanceCount;
+    uint _startIndexLocation;
+    int _baseVertexLocation;
+    uint _startInstanceLocation;
+};
+
 struct CullingInfo
 {
     uint _meshInstanceReserveCount;

@@ -1,15 +1,6 @@
 #include "../ViewInfo.sfh"
 #include "MeshDef.sfh"
 
-struct IndirectArgument
-{
-    uint _indexCountPerInstance;
-    uint _instanceCount;
-    uint _startIndexLocation;
-    int _baseVertexLocation;
-    uint _startInstanceLocation;
-};
-
 struct CullingResult
 {
     uint _testFrustumCullingSubMeshInstanceCount;
@@ -48,7 +39,7 @@ ByteAddressBuffer _subMeshes : register(t2);
 ByteAddressBuffer _meshInstances : register(t4);
 ByteAddressBuffer _lodMeshInstances : register(t5);
 ByteAddressBuffer _subMeshInstances : register(t6);
-ByteAddressBuffer _indirectArgumentOffsets : register(t7);
+ByteAddressBuffer _subMeshDrawOffsets : register(t7);
 ByteAddressBuffer _geometryGlobalOffsets : register(t8);
 ByteAddressBuffer _meshInstanceLodLevels : register(t9);
 ByteAddressBuffer _meshLodStreamRanges : register(t10);
@@ -56,10 +47,9 @@ ByteAddressBuffer _meshLodStreamRanges : register(t10);
 Texture2D<float> _hizTextures[] : register(t13);
 #endif
 
-RWByteAddressBuffer _indirectArguments : register(u0);
-RWByteAddressBuffer _countBuffer : register(u1);
-RWByteAddressBuffer _indirectArgumentSubInfos : register(u2);
-RWByteAddressBuffer _cullingResult : register(u3);
+RWByteAddressBuffer _subMeshDrawCounts : register(u0);
+RWByteAddressBuffer _indirectArgumentSubInfos : register(u1);
+RWByteAddressBuffer _cullingResult : register(u2);
 
 // 平面の法線方向に最も近いAABBのコーナーポイントを探す
 float3 getPositivePoint(float3 boundsMin, float3 boundsMax, float3 planeNormal)
@@ -137,27 +127,18 @@ void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_Di
         SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
         SubMeshInstance subMeshInstance = getSubMeshInstance(_subMeshInstances, subMeshInstanceIndex);
         
-        uint indirectArgumentMaterialArrayOffset = 0;
         uint currentCountIndex = 0;
-        _countBuffer.InterlockedAdd(indirectArgumentMaterialArrayOffset, 1, currentCountIndex);
+        _subMeshDrawCounts.InterlockedAdd(UINT32_SIZE_IN_BYTE * subMeshOffset, 1, currentCountIndex);
         
-        uint indirectArgumentMaterialOffset = _indirectArgumentOffsets.Load<uint>(sizeof(uint) * indirectArgumentMaterialArrayOffset);
-        uint indirectArgumentOffset = indirectArgumentMaterialOffset + currentCountIndex;
-		
-        IndirectArgument arguments;
-        arguments._indexCountPerInstance = subMesh._indexCount;
-        arguments._startIndexLocation = geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset;
-        arguments._instanceCount = 1;
-        arguments._startInstanceLocation = indirectArgumentOffset;
-        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset;
-        _indirectArguments.Store(sizeof(IndirectArgument) * indirectArgumentOffset, arguments);
+        uint subMeshDrawOffset = _subMeshDrawOffsets.Load(UINT32_SIZE_IN_BYTE * subMeshOffset);
+        uint subMeshDrawIndex = subMeshDrawOffset + currentCountIndex;
         
         IndirectArgumentSubInfo subInfo;
         subInfo._meshInstanceIndex = meshInstanceIndex;
         subInfo._materialIndex = subMeshInstance._materialIndex;
         subInfo._materialParameterOffset = subMeshInstance._materialParameterOffset;
-        subInfo._triangleOffset = arguments._startIndexLocation / 3;
-        _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * indirectArgumentOffset, subInfo);
+        subInfo._triangleOffset = (geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset) / 3;
+        _indirectArgumentSubInfos.Store(sizeof(IndirectArgumentSubInfo) * subMeshDrawIndex, subInfo);
     }
     
     // カリング情報集計

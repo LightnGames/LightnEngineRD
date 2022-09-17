@@ -35,21 +35,21 @@ void GpuMeshInstanceManager::initialize() {
 		_subMeshInstanceGpuBuffer.initialize(desc);
 		_subMeshInstanceGpuBuffer.setName("SubMeshInstances");
 
-		desc._sizeInByte = PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32);
-		_subMeshInstanceOffsetsGpuBuffer.initialize(desc);
-		_subMeshInstanceOffsetsGpuBuffer.setName("SubMeshInstanceOffsets");
+		desc._sizeInByte = MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY * sizeof(u32);
+		_subMeshDrawOffsetsGpuBuffer.initialize(desc);
+		_subMeshDrawOffsetsGpuBuffer.setName("SubMeshDrawOffsets");
 
 		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		desc._sizeInByte = MeshInstanceScene::MESH_INSTANCE_CAPACITY * sizeof(u32);
-		_meshInstanceIndexGpuBuffer.initialize(desc);
-		_meshInstanceIndexGpuBuffer.setName("MeshInstanceIndices");
+		desc._sizeInByte = MeshInstanceScene::SUB_MESH_INSTANCE_CAPACITY * sizeof(u32);
+		_subMeshInstanceIndexGpuBuffer.initialize(desc);
+		_subMeshInstanceIndexGpuBuffer.setName("MeshInstanceIndices");
 	}
 
 	// SRV
 	{
 		DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
 		_meshInstanceSrv = descriptorAllocator->allocate(3);
-		_subMeshInstanceOffsetsSrv = descriptorAllocator->allocate();
+		_subMeshDrawOffsetsSrv = descriptorAllocator->allocate();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -64,21 +64,25 @@ void GpuMeshInstanceManager::initialize() {
 		desc._buffer._numElements = _subMeshInstanceGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_subMeshInstanceGpuBuffer.getResource(), &desc, _meshInstanceSrv.get(2)._cpuHandle);
 
-		desc._buffer._numElements = _subMeshInstanceOffsetsGpuBuffer.getU32ElementCount();
-		device->createShaderResourceView(_subMeshInstanceOffsetsGpuBuffer.getResource(), &desc, _subMeshInstanceOffsetsSrv._cpuHandle);
+		desc._buffer._numElements = _subMeshDrawOffsetsGpuBuffer.getU32ElementCount();
+		device->createShaderResourceView(_subMeshDrawOffsetsGpuBuffer.getResource(), &desc, _subMeshDrawOffsetsSrv._cpuHandle);
 	}
 
 	{
 		_pipelineSetSubMeshInstanceCounts = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
 		_pipelineSetSubMeshInstanceOffsets = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memset(_pipelineSetSubMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memset(_pipelineSetSubMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_subMeshDrawCounts = Memory::allocObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
+		_subMeshDrawOffsets = Memory::allocObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
+		memset(_pipelineSetSubMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32));
+		memset(_pipelineSetSubMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32));
+		memset(_subMeshDrawCounts, 0, MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY * sizeof(u32));
+		memset(_subMeshDrawOffsets, 0, MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY * sizeof(u32));
 	}
 
 	{
 		VramUpdater* vramUpdater = VramUpdater::Get();
-		u32* indices = vramUpdater->enqueueUpdate<u32>(&_meshInstanceIndexGpuBuffer, 0, MeshInstanceScene::MESH_INSTANCE_CAPACITY);
-		for (u32 i = 0; i < MeshInstanceScene::MESH_INSTANCE_CAPACITY; ++i) {
+		u32* indices = vramUpdater->enqueueUpdate<u32>(&_subMeshInstanceIndexGpuBuffer, 0, MeshInstanceScene::SUB_MESH_INSTANCE_CAPACITY);
+		for (u32 i = 0; i < MeshInstanceScene::SUB_MESH_INSTANCE_CAPACITY; ++i) {
 			indices[i] = i;
 		}
 	}
@@ -86,12 +90,12 @@ void GpuMeshInstanceManager::initialize() {
 void GpuMeshInstanceManager::terminate() {
 	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
 	descriptorAllocator->free(_meshInstanceSrv);
-	descriptorAllocator->free(_subMeshInstanceOffsetsSrv);
+	descriptorAllocator->free(_subMeshDrawOffsetsSrv);
 	_meshInstanceGpuBuffer.terminate();
 	_lodMeshInstanceGpuBuffer.terminate();
 	_subMeshInstanceGpuBuffer.terminate();
-	_subMeshInstanceOffsetsGpuBuffer.terminate();
-	_meshInstanceIndexGpuBuffer.terminate();
+	_subMeshDrawOffsetsGpuBuffer.terminate();
+	_subMeshInstanceIndexGpuBuffer.terminate();
 
 	Memory::deallocObjects(_pipelineSetSubMeshInstanceCounts);
 	Memory::deallocObjects(_pipelineSetSubMeshInstanceOffsets);
@@ -153,8 +157,10 @@ void GpuMeshInstanceManager::update() {
 			gpuSubMeshInstance._materialIndex = materialIndex;
 			gpuSubMeshInstance._materialParameterOffset = materialParameterContainer->getMaterialParameterIndex(materialParameters);
 
+			u32 subMeshGlobalIndex = meshPool->getSubMeshGeometryIndex(mesh->getSubMesh(subMeshIndex));
 			u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(material->getPipelineSet());
 			_pipelineSetSubMeshInstanceCounts[pipelineSetIndex]++;
+			_subMeshDrawCounts[subMeshGlobalIndex]++;
 			updatePipelineSetOffset = true;
 		}
 
@@ -198,8 +204,11 @@ void GpuMeshInstanceManager::update() {
 		for (u32 subMeshIndex = 0; subMeshIndex < subMeshCount; ++subMeshIndex) {
 			const SubMeshInstance* subMeshInstance = meshInstance->getSubMeshInstance(subMeshIndex);
 			const Material* material = subMeshInstance->getMaterial();
+
+			u32 subMeshGlobalIndex = meshPool->getSubMeshGeometryIndex(mesh->getSubMesh(subMeshIndex));
 			u32 pipelineSetIndex = pipelineSetScene->getPipelineSetIndex(material->getPipelineSet());
 			_pipelineSetSubMeshInstanceCounts[pipelineSetIndex]--;
+			_subMeshDrawCounts[subMeshGlobalIndex]--;
 			updatePipelineSetOffset = true;
 		}
 
@@ -214,20 +223,26 @@ void GpuMeshInstanceManager::update() {
 
 	// サブメッシュインスタンスオフセットを VRAM アップロード
 	if (updatePipelineSetOffset) {
+		//u32 offset = 0;
+		//for (u32 i = 0; i < PipelineSetScene::PIPELINE_SET_CAPACITY; ++i) {
+		//	_pipelineSetSubMeshInstanceOffsets[i] = offset;
+		//	offset += _pipelineSetSubMeshInstanceCounts[i];
+		//}
+
 		u32 offset = 0;
-		for (u32 i = 0; i < PipelineSetScene::PIPELINE_SET_CAPACITY; ++i) {
-			_pipelineSetSubMeshInstanceOffsets[i] = offset;
-			offset += _pipelineSetSubMeshInstanceCounts[i];
+		for (u32 i = 0; i < MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY; ++i) {
+			_subMeshDrawOffsets[i] = offset;
+			offset += _subMeshDrawCounts[i];
 		}
-		u32* offsets = vramUpdater->enqueueUpdate<u32>(&_subMeshInstanceOffsetsGpuBuffer, 0, PipelineSetScene::PIPELINE_SET_CAPACITY);
-		memcpy(offsets, _pipelineSetSubMeshInstanceOffsets, sizeof(u32) * PipelineSetScene::PIPELINE_SET_CAPACITY);
+		u32* offsets = vramUpdater->enqueueUpdate<u32>(&_subMeshDrawOffsetsGpuBuffer, 0, MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
+		memcpy(offsets, _subMeshDrawOffsets, sizeof(u32) * MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
 	}
 }
 
-rhi::VertexBufferView GpuMeshInstanceManager::getMeshInstanceIndexVertexBufferView() const {
+rhi::VertexBufferView GpuMeshInstanceManager::getSubMeshInstanceIndexVertexBufferView() const {
 	rhi::VertexBufferView view;
-	view._bufferLocation = _meshInstanceIndexGpuBuffer.getGpuVirtualAddress();
-	view._sizeInBytes = _meshInstanceIndexGpuBuffer.getSizeInByte();
+	view._bufferLocation = _subMeshInstanceIndexGpuBuffer.getGpuVirtualAddress();
+	view._sizeInBytes = _subMeshInstanceIndexGpuBuffer.getSizeInByte();
 	view._strideInBytes = sizeof(u32);
 	return view;
 }

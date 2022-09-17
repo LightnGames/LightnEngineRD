@@ -292,7 +292,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	vertexBufferViews[0] = geometryResourceManager->getPositionVertexBufferView();
 	vertexBufferViews[1] = geometryResourceManager->getNormalTangentVertexBufferView();
 	vertexBufferViews[2] = geometryResourceManager->getTexcoordVertexBufferView();
-	vertexBufferViews[3] = gpuMeshInstanceManager->getMeshInstanceIndexVertexBufferView();
+	vertexBufferViews[3] = gpuMeshInstanceManager->getSubMeshInstanceIndexVertexBufferView();
 
 	IndirectArgumentResource* indirectArgumentResource = desc._indirectArgumentResource;
 	rhi::GpuDescriptorHandle indirectArgumentSubInfoSrv = indirectArgumentResource->_indirectArgumentSubInfoSrv._gpuHandle;
@@ -324,8 +324,8 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 		commandList->setVertexBuffers(0, LTN_COUNTOF(vertexBufferViews), vertexBufferViews);
 		commandList->setIndexBuffer(&indexBufferView);
 
-		u32 count = indirectArgumentCounts[i];
-		u32 offset = sizeof(gpu::IndirectArgument) * indirectArgumentOffsets[i];
+		u32 count = MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY;
+		u32 offset = sizeof(gpu::IndirectArgument) * i;
 		commandList->executeIndirect(&_commandSignature, count, indirectArgumentBuffer, offset, indirectArgumentCountBuffer, 0);
 	}
 }

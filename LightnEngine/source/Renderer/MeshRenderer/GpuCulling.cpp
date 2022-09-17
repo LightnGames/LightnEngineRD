@@ -33,8 +33,8 @@ void GpuCulling::initialize() {
 		rhi::DescriptorRange lodLevelSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);
 		rhi::DescriptorRange meshLodStreamRangeSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 10);
 		//rhi::DescriptorRange hizSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, gpu::HIERACHICAL_DEPTH_COUNT, 13);
-		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 3, 0);
-		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
+		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+		rhi::DescriptorRange cullingResultUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
 
 		rhi::RootParameter rootParameters[GpuCullingRootParam::COUNT] = {};
 		rootParameters[GpuCullingRootParam::CULLING_INFO].initializeDescriptorTable(1, &cullingInfoCbvRange, rhi::SHADER_VISIBILITY_ALL);
@@ -64,6 +64,46 @@ void GpuCulling::initialize() {
 		pipelineStateDesc._rootSignature = &_gpuCullingRootSignature;
 		pipelineStateDesc._cs = shader.getShaderByteCode();
 		_gpuCullingPipelineState.iniaitlize(pipelineStateDesc);
+
+		//PipelineStateReloader::ComputePipelineStateRegisterDesc reloaderDesc = {};
+		//reloaderDesc._desc = pipelineStateDesc;
+		//reloaderDesc._shaderPathHash = shaderPath.get();
+		//PipelineStateReloader::Get()->registerPipelineState(&_gpuCullingPipelineState, reloaderDesc);
+
+		shader.terminate();
+	}
+
+	// Build Indirect Argument
+	{
+		rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 0);
+		rhi::DescriptorRange subMeshDrawCountSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
+		rhi::DescriptorRange subMeshDrawOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
+		rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
+		rhi::DescriptorRange indirectArgumentUavRange(rhi::DESCRIPTOR_RANGE_TYPE_UAV, 2, 0);
+
+		rhi::RootParameter rootParameters[BuildIndirectArgumentRootParam::COUNT] = {};
+		rootParameters[BuildIndirectArgumentRootParam::BUILD_INFO].initializeConstant(0, 1, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParam::MESH].initializeDescriptorTable(1, &meshSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParam::SUB_MESH_DRAW_COUNT].initializeDescriptorTable(1, &subMeshDrawCountSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParam::SUB_MESH_DRAW_OFFSET].initializeDescriptorTable(1, &subMeshDrawOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_ALL);
+		rootParameters[BuildIndirectArgumentRootParam::INDIRECT_ARGUMENTS].initializeDescriptorTable(1, &indirectArgumentUavRange, rhi::SHADER_VISIBILITY_ALL);
+
+		rhi::RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+		_buildIndirectArgumentRootSignature.iniaitlize(rootSignatureDesc);
+
+		AssetPath shaderPath("EngineComponent\\Shader\\MeshRenderer\\BuildIndirectArgument.cso");
+		rhi::ShaderBlob shader;
+		shader.initialize(shaderPath.get());
+
+		rhi::ComputePipelineStateDesc pipelineStateDesc = {};
+		pipelineStateDesc._device = device;
+		pipelineStateDesc._rootSignature = &_buildIndirectArgumentRootSignature;
+		pipelineStateDesc._cs = shader.getShaderByteCode();
+		_buildIndirectArgumentPipelineState.iniaitlize(pipelineStateDesc);
 
 		//PipelineStateReloader::ComputePipelineStateRegisterDesc reloaderDesc = {};
 		//reloaderDesc._desc = pipelineStateDesc;
@@ -106,6 +146,9 @@ void GpuCulling::terminate() {
 	_gpuCullingPipelineState.terminate();
 	_gpuCullingRootSignature.terminate();
 
+	_buildIndirectArgumentPipelineState.terminate();
+	_buildIndirectArgumentRootSignature.terminate();
+
 	_cullingInfoGpuBuffer.terminate();
 
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
@@ -125,27 +168,18 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	IndirectArgumentResource* indirectArgumentResource = desc._indirectArgumentResource;
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
 	ScopedBarrierDesc barriers[] = {
-		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
-		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(indirectArgumentResource->_subMeshDrawCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
 		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentSubInfoGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
 		ScopedBarrierDesc(lodStreamingManager->getMeshInstanceLodLevelGpuBuffer(), rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
-	// Indirect Argument カウントバッファをクリア
+	// カウントバッファをクリア
 	{
 		u32 clearValues[4] = {};
-		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(1)._gpuHandle;
-		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCpuUav.get(1)._cpuHandle;
-		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
-		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
-	}
-
-	{
-		u32 clearValues[4] = {};
-		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(0)._gpuHandle;
-		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCpuUav.get(0)._cpuHandle;
-		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentGpuBuffer->getResource();
+		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_subIndirectArgumentUav.get(0)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_subMeshDrawCountCpuUav._cpuHandle;
+		rhi::Resource* resource = indirectArgumentResource->_subMeshDrawCountGpuBuffer->getResource();
 		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
 	}
 
@@ -157,7 +191,7 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	rhi::GpuDescriptorHandle meshLodStreamRangeSrv = GeometryResourceManager::Get()->getMeshLodStreamRangeGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
-	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshInstanceOffsetsGpuSrv();
+	rhi::GpuDescriptorHandle indirectArgumentOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshDrawOffsetsGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
 
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::CULLING_INFO, _cullingInfoCbv._gpuHandle);
@@ -165,7 +199,7 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH, meshSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE, meshInstanceSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENT_OFFSET, indirectArgumentOffsetSrv);
-	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENTS, indirectArgumentResource->_indirectArgumentUav._firstHandle._gpuHandle);
+	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::INDIRECT_ARGUMENTS, indirectArgumentResource->_subIndirectArgumentUav._firstHandle._gpuHandle);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_INSTANCE_LOD_LEVEL, meshInstanceLodLevelSrv);
 	commandList->setComputeRootDescriptorTable(GpuCullingRootParam::MESH_LOD_STREAM_RANGE, meshLodStreamRangeSrv);
@@ -175,6 +209,50 @@ void GpuCulling::gpuCulling(const CullingDesc& desc) {
 	u32 dispatchCount = RoundDivUp(meshInstanceReserveCount, 128u);
 	commandList->dispatch(dispatchCount, 1, 1);
 	//gpuCullingResource->resourceBarriersHizSrvToTexture(commandList);
+}
+
+void GpuCulling::buildIndirectArgument(const BuildIndirectArgumentDesc& desc) {
+	rhi::CommandList* commandList = desc._commandList;
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "BuildIndirectArgument");
+
+	IndirectArgumentResource* indirectArgumentResource = desc._indirectArgumentResource;
+	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
+	ScopedBarrierDesc barriers[] = {
+		ScopedBarrierDesc(indirectArgumentResource->_subMeshDrawCountGpuBuffer, rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+		ScopedBarrierDesc(indirectArgumentResource->_indirectArgumentCountGpuBuffer, rhi::RESOURCE_STATE_UNORDERED_ACCESS),
+	};
+	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
+
+	// カウントバッファをクリア
+	{
+		u32 clearValues[4] = {};
+		rhi::GpuDescriptorHandle gpuDescriptor = indirectArgumentResource->_indirectArgumentUav.get(1)._gpuHandle;
+		rhi::CpuDescriptorHandle cpuDescriptor = indirectArgumentResource->_indirectArgumentCountCpuUav._cpuHandle;
+		rhi::Resource* resource = indirectArgumentResource->_indirectArgumentCountGpuBuffer->getResource();
+		commandList->clearUnorderedAccessViewUint(gpuDescriptor, cpuDescriptor, resource, clearValues, 0, nullptr);
+	}
+
+	commandList->setComputeRootSignature(&_buildIndirectArgumentRootSignature);
+	commandList->setPipelineState(&_buildIndirectArgumentPipelineState);
+
+	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = GeometryResourceManager::Get()->getGeometryGlobalOffsetGpuSrv();
+	rhi::GpuDescriptorHandle meshLodStreamRangeSrv = GeometryResourceManager::Get()->getMeshLodStreamRangeGpuSrv();
+	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
+	rhi::GpuDescriptorHandle subMeshDrawOffsetSrv = GpuMeshInstanceManager::Get()->getSubMeshDrawOffsetsGpuSrv();
+	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
+
+	u32 lodMeshCount = MeshGeometryScene::LOD_MESH_GEOMETRY_CAPACITY;
+	commandList->setComputeRoot32BitConstants(BuildIndirectArgumentRootParam::BUILD_INFO, 1, &lodMeshCount, 0);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParam::MESH, meshSrv);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParam::SUB_MESH_DRAW_COUNT, indirectArgumentResource->_subMeshDrawCountSrv._gpuHandle);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParam::SUB_MESH_DRAW_OFFSET, subMeshDrawOffsetSrv);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParam::GEOMETRY_GLOBAL_OFFSET, geometryGlobalOffsetSrv);
+	commandList->setComputeRootDescriptorTable(BuildIndirectArgumentRootParam::INDIRECT_ARGUMENTS, indirectArgumentResource->_indirectArgumentUav._firstHandle._gpuHandle);
+
+	u32 dispatchCount = RoundDivUp(lodMeshCount, 128u);
+	commandList->dispatch(dispatchCount, 1, 1);
 }
 
 GpuCulling* GpuCulling::Get() {

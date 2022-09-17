@@ -97,6 +97,14 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			gpuCulling->gpuCulling(desc);
 		}
 
+		// Indirect Argument ビルド
+		{
+			GpuCulling::BuildIndirectArgumentDesc desc;
+			desc._commandList = commandList;
+			desc._indirectArgumentResource = &indirectArgumentResource;
+			gpuCulling->buildIndirectArgument(desc);
+		}
+
 		// シェーダー ID クリア
 		{
 			VisiblityBufferRenderer::ClearShaderIdDesc desc;
