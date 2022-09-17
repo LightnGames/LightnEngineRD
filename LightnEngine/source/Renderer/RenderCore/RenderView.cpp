@@ -15,13 +15,13 @@ RenderViewScene g_renderViewScene;
 void RenderViewScene::initialize() {
 	// デスクリプタのみ初期化時に確保しておく
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-	_viewCbv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ViewScene::VIEW_COUNT_MAX);
+	_viewCbv = descriptorAllocatorGroup->allocateSrvCbvUavGpu(ViewScene::VIEW_COUNT_MAX);
 }
 
 void RenderViewScene::terminate() {
 	update();
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_viewCbv);
+	descriptorAllocatorGroup->freeSrvCbvUavGpu(_viewCbv);
 }
 
 void RenderViewScene::update() {

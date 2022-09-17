@@ -77,22 +77,22 @@ FrameBufferAllocator* FrameBufferAllocator::Get() {
 }
 
 void FrameDescriptorAllocator::initialize() {
-	DescriptorAllocatorGroup* allocatorGroup = DescriptorAllocatorGroup::Get();
+	DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
-		_srvCbvUavGpuDescriptors[i] = allocatorGroup->getSrvCbvUavGpuAllocator()->allocate(ALLOCATION_CAPACITY);
-		_srvCbvUavCpuDescriptors[i] = allocatorGroup->getSrvCbvUavCpuAllocator()->allocate(ALLOCATION_CAPACITY);
-		_rtvGpuDescriptors[i] = allocatorGroup->getRtvAllocator()->allocate(ALLOCATION_CAPACITY);
-		_dsvGpuDescriptors[i] = allocatorGroup->getDsvAllocator()->allocate(ALLOCATION_CAPACITY);
+		_srvCbvUavGpuDescriptors[i] = allocator->allocateSrvCbvUavGpu(ALLOCATION_CAPACITY);
+		_srvCbvUavCpuDescriptors[i] = allocator->allocateSrvCbvUavCpu(ALLOCATION_CAPACITY);
+		_rtvGpuDescriptors[i] = allocator->allocateRtvGpu(ALLOCATION_CAPACITY);
+		_dsvGpuDescriptors[i] = allocator->allocateDsvGpu(ALLOCATION_CAPACITY);
 	}
 }
 
 void FrameDescriptorAllocator::terminate() {
-	DescriptorAllocatorGroup* allocatorGroup = DescriptorAllocatorGroup::Get();
+	DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
-		allocatorGroup->getSrvCbvUavGpuAllocator()->free(_srvCbvUavGpuDescriptors[i]);
-		allocatorGroup->getSrvCbvUavCpuAllocator()->free(_srvCbvUavCpuDescriptors[i]);
-		allocatorGroup->getRtvAllocator()->free(_rtvGpuDescriptors[i]);
-		allocatorGroup->getDsvAllocator()->free(_dsvGpuDescriptors[i]);
+		allocator->freeSrvCbvUavGpu(_srvCbvUavGpuDescriptors[i]);
+		allocator->freeSrvCbvUavCpu(_srvCbvUavCpuDescriptors[i]);
+		allocator->freeRtvGpu(_rtvGpuDescriptors[i]);
+		allocator->freeDsvGpu(_dsvGpuDescriptors[i]);
 	}
 }
 

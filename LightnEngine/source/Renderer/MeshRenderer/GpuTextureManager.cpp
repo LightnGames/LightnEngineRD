@@ -16,7 +16,7 @@ GpuTextureManager g_gpuTextureManager;
 void GpuTextureManager::initialize() {
 	CpuScopedPerf scopedPerf("GpuTextureManager");
 	_textures = Memory::allocObjects<GpuTexture>(TextureScene::TEXTURE_CAPACITY);
-	_textureSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate(TextureScene::TEXTURE_CAPACITY);
+	_textureSrv = DescriptorAllocatorGroup::Get()->allocateSrvCbvUavGpu(TextureScene::TEXTURE_CAPACITY);
 	for (u32 i = 0; i < REQUESTED_CREATE_SRV_CAPACITY; ++i) {
 		_requestedCreateSrvIndices[i] = REQUESTED_INVALID_INDEX;
 	}
@@ -31,7 +31,7 @@ void GpuTextureManager::initialize() {
 
 void GpuTextureManager::terminate() {
 	update();
-	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_textureSrv);
+	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_textureSrv);
 	Memory::deallocObjects(_textures);
 	_defaultBlackTexture.terminate();
 }

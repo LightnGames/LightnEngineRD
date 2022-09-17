@@ -126,8 +126,8 @@ void GpuCulling::initialize() {
 	}
 
 	{
-		DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-		_cullingInfoCbv = descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->allocate();
+		DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+		_cullingInfoCbv = descriptorAllocator->allocateSrvCbvUavGpu();
 
 		// CBV
 		{
@@ -151,8 +151,8 @@ void GpuCulling::terminate() {
 
 	_cullingInfoGpuBuffer.terminate();
 
-	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-	descriptorAllocatorGroup->getSrvCbvUavGpuAllocator()->free(_cullingInfoCbv);
+	DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+	descriptorAllocator->freeSrvCbvUavGpu(_cullingInfoCbv);
 }
 
 void GpuCulling::update() {

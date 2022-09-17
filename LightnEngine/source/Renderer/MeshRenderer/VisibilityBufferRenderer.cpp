@@ -64,9 +64,9 @@ void VisiblityBufferRenderer::initialize() {
 	{
 		// GPU visible
 		{
-			DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-			_buildShaderIdCbv = allocator->allocate();
-			_shadingCbv = allocator->allocate();
+			DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
+			_buildShaderIdCbv = allocator->allocateSrvCbvUavGpu();
+			_shadingCbv = allocator->allocateSrvCbvUavGpu();
 		}
 
 		// CBV
@@ -153,9 +153,9 @@ void VisiblityBufferRenderer::terminate() {
 	_commandSignature.terminate();
 
 	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		allocator->free(_buildShaderIdCbv);
-		allocator->free(_shadingCbv);
+		DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
+		allocator->freeSrvCbvUavGpu(_buildShaderIdCbv);
+		allocator->freeSrvCbvUavGpu(_shadingCbv);
 	}
 }
 

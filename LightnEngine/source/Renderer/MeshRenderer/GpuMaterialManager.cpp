@@ -41,8 +41,8 @@ void GpuMaterialManager::initialize() {
 	}
 
 	{
-		_parameterSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate();
-		_parameterOffsetSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate();
+		_parameterSrv = DescriptorAllocatorGroup::Get()->allocateSrvCbvUavGpu();
+		_parameterOffsetSrv = DescriptorAllocatorGroup::Get()->allocateSrvCbvUavGpu();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -68,8 +68,8 @@ void GpuMaterialManager::terminate() {
 	_parameterGpuBuffer.terminate();
 	_parameterOffsetGpuBuffer.terminate();
 	_chunkAllocator.free();
-	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_parameterSrv);
-	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_parameterOffsetSrv);
+	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_parameterSrv);
+	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_parameterOffsetSrv);
 }
 
 void GpuMaterialManager::update() {

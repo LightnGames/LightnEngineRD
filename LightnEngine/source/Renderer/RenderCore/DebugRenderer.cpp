@@ -126,8 +126,8 @@ void DebugRenderer::initialize() {
 
 	// line instance descriptor
 	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		_lineInstanceSrv = allocator->allocate();
+		DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
+		_lineInstanceSrv = allocator->allocateSrvCbvUavGpu();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_UNKNOWN;
@@ -141,8 +141,8 @@ void DebugRenderer::initialize() {
 
 	// box instance descriptor
 	{
-		DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		_boxInstanceSrv = allocator->allocate();
+		DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
+		_boxInstanceSrv = allocator->allocateSrvCbvUavGpu();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_UNKNOWN;
@@ -179,9 +179,9 @@ void DebugRenderer::terminate() {
 	_debugBoxPipelineState.terminate();
 	_rootSignature.terminate();
 
-	DescriptorAllocator* allocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-	allocator->free(_lineInstanceSrv);
-	allocator->free(_boxInstanceSrv);
+	DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
+	allocator->freeSrvCbvUavGpu(_lineInstanceSrv);
+	allocator->freeSrvCbvUavGpu(_boxInstanceSrv);
 }
 
 void DebugRenderer::render(const RenderDesc& desc) {

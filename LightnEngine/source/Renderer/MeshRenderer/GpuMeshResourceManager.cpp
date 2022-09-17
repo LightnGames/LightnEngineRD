@@ -36,7 +36,7 @@ void GpuMeshResourceManager::initialize() {
 
 	// SRV
 	{
-		_meshSrv = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->allocate(3);
+		_meshSrv = DescriptorAllocatorGroup::Get()->allocateSrvCbvUavGpu(3);
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -54,7 +54,7 @@ void GpuMeshResourceManager::initialize() {
 }
 
 void GpuMeshResourceManager::terminate() {
-	DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->free(_meshSrv);
+	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_meshSrv);
 	_meshGpuBuffer.terminate();
 	_lodMeshGpuBuffer.terminate();
 	_subMeshGpuBuffer.terminate();

@@ -64,10 +64,10 @@ void GeometryResourceManager::initialize() {
 
 	// SRV
 	{
-		DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		_geometryGlobalOffsetSrv = descriptorAllocator->allocate();
-		_meshLodStreamRangeSrv = descriptorAllocator->allocate();
-		_vertexResourceSrv = descriptorAllocator->allocate(3);
+		DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+		_geometryGlobalOffsetSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_meshLodStreamRangeSrv = descriptorAllocator->allocateSrvCbvUavGpu();
+		_vertexResourceSrv = descriptorAllocator->allocateSrvCbvUavGpu(3);
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -91,10 +91,10 @@ void GeometryResourceManager::initialize() {
 }
 
 void GeometryResourceManager::terminate() {
-	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-	descriptorAllocator->free(_geometryGlobalOffsetSrv);
-	descriptorAllocator->free(_meshLodStreamRangeSrv);
-	descriptorAllocator->free(_vertexResourceSrv);
+	DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+	descriptorAllocator->freeSrvCbvUavGpu(_geometryGlobalOffsetSrv);
+	descriptorAllocator->freeSrvCbvUavGpu(_meshLodStreamRangeSrv);
+	descriptorAllocator->freeSrvCbvUavGpu(_vertexResourceSrv);
 
 	Memory::deallocObjects(_meshStreamLodRanges);
 	Memory::deallocObjects(_geometryAllocationInfos);

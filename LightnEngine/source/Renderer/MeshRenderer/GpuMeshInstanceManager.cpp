@@ -47,9 +47,9 @@ void GpuMeshInstanceManager::initialize() {
 
 	// SRV
 	{
-		DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-		_meshInstanceSrv = descriptorAllocator->allocate(3);
-		_subMeshDrawOffsetsSrv = descriptorAllocator->allocate();
+		DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+		_meshInstanceSrv = descriptorAllocator->allocateSrvCbvUavGpu(3);
+		_subMeshDrawOffsetsSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
