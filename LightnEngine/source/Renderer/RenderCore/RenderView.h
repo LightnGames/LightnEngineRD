@@ -11,6 +11,7 @@ struct View {
 	Float4x4 _matrixView;
 	Float4x4 _matrixProj;
 	Float4x4 _matrixViewProj;
+	Float4x4 _matrixViewProjInv;
 	Float3 _cameraPosition;
 	u32 _padding1;
 	Float2 _nearAndFarClip;

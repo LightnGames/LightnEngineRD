@@ -61,7 +61,9 @@ public:
 		rhi::RootSignature* _rootSignatures = nullptr;
 		rhi::PipelineState* _pipelineStates = nullptr;
 		rhi::GpuDescriptorHandle _viewCbv;
+		rhi::GpuDescriptorHandle _viewDepthSrv;
 		rhi::CpuDescriptorHandle _viewRtv;
+		GpuTexture* _viewDepthGpuTexture = nullptr;
 		u32 _pipelineStateCount = 0;
 		u32 _debugVisualizeType = 0;
 		const u8* _enabledFlags = nullptr;

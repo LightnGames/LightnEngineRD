@@ -201,6 +201,7 @@ void VisiblityBufferRenderer::buildShaderId(const BuildShaderIdDesc& desc) {
 void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::CommandList* commandList = desc._commandList;
 	VisibilityBufferFrameResource* frameResource = desc._frameResource;
+	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "Shading Pass");
 
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
@@ -213,6 +214,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		ScopedBarrierDesc(geometryResourceManager->getIndexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getGeometryGlobalOffsetGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(lodStreamingManager->getMeshInstanceLodLevelGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(desc._viewDepthGpuTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
@@ -246,6 +248,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::PIPELINE_SET_INFO, 1, &i, 0);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_INFO, desc._viewCbv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_DEPTH, desc._viewDepthSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADING_INFO, _shadingCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, frameResource->_shaderRangeSrv._firstHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, frameResource->_triangleIdSrv._gpuHandle);

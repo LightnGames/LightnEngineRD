@@ -144,7 +144,9 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			VisiblityBufferRenderer::ShadingPassDesc desc;
 			desc._commandList = commandList;
 			desc._viewCbv = renderViewScene->getViewCbv(i);
+			desc._viewDepthSrv = renderViewFrameResource._viewDepthSrv._gpuHandle;
 			desc._viewRtv = renderViewFrameResource._viewRtv._cpuHandle;
+			desc._viewDepthGpuTexture = renderViewFrameResource._viewDepthTexture;
 			desc._rootSignatures = materialManager->getShadingPassRootSignatures();
 			desc._pipelineStates = materialManager->getShadingPassPipelineStates();
 			if (_debugVisualizeType > 0) {

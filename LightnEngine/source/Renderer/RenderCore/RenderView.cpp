@@ -137,11 +137,13 @@ void RenderViewScene::updateGpuView(const View& view, u32 viewIndex) {
 	Matrix4 viewMatrix = camera->_worldMatrix.inverse();
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(fov, aspectRate, nearClip, farClip);
 	Matrix4 viewProjectionMatrix = viewMatrix * projectionMatrix;
+	Matrix4 viewProjectionInvMatrix = viewProjectionMatrix.inverse();
 
 	gpu::View* gpuView = VramUpdater::Get()->enqueueUpdate<gpu::View>(&_viewConstantBuffers[viewIndex]);
 	gpuView->_matrixView = viewMatrix.transpose().getFloat4x4();
 	gpuView->_matrixProj = projectionMatrix.transpose().getFloat4x4();
 	gpuView->_matrixViewProj = viewProjectionMatrix.transpose().getFloat4x4();
+	gpuView->_matrixViewProjInv = viewProjectionInvMatrix.transpose().getFloat4x4();
 	gpuView->_cameraPosition = cameraPosition.getFloat3();
 	gpuView->_nearAndFarClip.x = nearClip;
 	gpuView->_nearAndFarClip.y = farClip;

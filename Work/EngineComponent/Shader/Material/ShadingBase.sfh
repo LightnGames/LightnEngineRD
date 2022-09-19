@@ -19,14 +19,28 @@ ByteAddressBuffer _vertexTexcoords : register(t9);
 ByteAddressBuffer _vertexIndices : register(t10);
 
 Texture2D<uint2> _triangleAttributes : register(t11);
+Texture2D<float> _viewDepth : register(t12);
 
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
 
+float3 ReconstructWorldPositionFromDepth(
+    in float2 pixelPosition,
+    in float depth,
+    in float4x4 inverseViewProjection)
+{
+    float2 textureCoord = pixelPosition / float2(_viewInfo._viewPortSize);
+    float4 projectedPosition = float4(
+        textureCoord.xy * 2.0 - float2(1.0, 1.0), depth, 1.0);
+
+    float4 position = mul(projectedPosition, inverseViewProjection);
+    return position.xyz / position.w;
+}
+
 PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
 {
     uint2 triangleAttributes = _triangleAttributes[pixelPosition];
-    
+
     uint meshInstanceIndex = triangleAttributes.y & 0x0000ffff;
     uint materialIndex = (triangleAttributes.y >> 18) & 0x0000ffff;
     uint currentLodLevel = _meshInstanceLodLevels.Load(meshInstanceIndex * UINT32_SIZE_IN_BYTE);

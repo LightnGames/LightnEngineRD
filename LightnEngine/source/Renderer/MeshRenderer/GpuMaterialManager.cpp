@@ -124,8 +124,9 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange geometryGlobalOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
 			rhi::DescriptorRange vertexResourceSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 3, 8);
 			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
-			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
-			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
+			rhi::DescriptorRange viewDepthSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
+			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
+			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 14);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
 
 			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
@@ -145,6 +146,7 @@ void GpuMaterialManager::update() {
 			rootParameters[ShadingRootParam::GEOMETRY_GLOBAL_OFFSET].initializeDescriptorTable(1, &geometryGlobalOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::VERTEX_RESOURCE].initializeDescriptorTable(1, &vertexResourceSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttibuteSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::VIEW_DEPTH].initializeDescriptorTable(1, &viewDepthSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::DEBUG_TYPE].initializeConstant(1, 1, rhi::SHADER_VISIBILITY_PIXEL);
 

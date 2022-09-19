@@ -4,6 +4,7 @@ struct ViewInfo
     float4x4 _matrixView;
     float4x4 _matrixProj;
     float4x4 _matrixViewProj;
+    float4x4 _matrixViewProjInv;
     float3 _cameraPosition;
     uint _padding1;
     float2 _nearAndFarClip;
