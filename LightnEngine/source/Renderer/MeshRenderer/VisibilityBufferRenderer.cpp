@@ -208,6 +208,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	ScopedBarrierDesc barriers[] = {
 		ScopedBarrierDesc(frameResource->_shaderIdDepth, rhi::RESOURCE_STATE_DEPTH_READ),
 		ScopedBarrierDesc(frameResource->_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		ScopedBarrierDesc(frameResource->_baryCentricsGpuTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getPositionVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getTexcoordVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
 		ScopedBarrierDesc(geometryResourceManager->getNormalTangentVertexGpuBuffer(), rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
@@ -252,6 +253,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADING_INFO, _shadingCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, frameResource->_shaderRangeSrv._firstHandle._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TRIANGLE_ATTRIBUTE, frameResource->_triangleIdSrv._gpuHandle);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::BARY_CENTRICS, frameResource->_baryCentricsSrv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VERTEX_RESOURCE, vertexResourceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH_INSTANCE, meshInstanceSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MESH, meshSrv);
@@ -308,7 +310,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "GeometryPass");
 
 	rhi::CpuDescriptorHandle dsv = desc._viewDsv;
-	commandList->setRenderTargets(2, frameResource->_triangleIdRtv._firstHandle._cpuHandle, &dsv);
+	commandList->setRenderTargets(3, frameResource->_triangleIdRtv._firstHandle._cpuHandle, &dsv);
 	commandList->clearDepthStencilView(dsv, rhi::CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -375,6 +377,13 @@ void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* command
 			_triangleShaderIdTexture = frameBufferAllocator->createGpuTexture(desc);
 			_triangleShaderIdTexture->setName("VisiblityBufferTriangleShaderId");
 		}
+
+		{
+			desc._format = rhi::FORMAT_R16G16_UNORM;
+			desc._optimizedClearValue = nullptr;
+			_baryCentricsGpuTexture = frameBufferAllocator->createGpuTexture(desc);
+			_baryCentricsGpuTexture->setName("VisiblityBufferBaryCentrics");
+		}
 	}
 
 	// Shader range
@@ -412,17 +421,19 @@ void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* command
 		FrameDescriptorAllocator* descriptorAllocator = FrameDescriptorAllocator::Get();
 
 		_shaderIdDsv = descriptorAllocator->allocateDsvGpu();
-		_triangleIdRtv = descriptorAllocator->allocateRtvGpu(2);
+		_triangleIdRtv = descriptorAllocator->allocateRtvGpu(3);
 		_triangleIdSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 		_shaderRangeSrv = descriptorAllocator->allocateSrvCbvUavGpu(2);
 		_shaderIdSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 		_shaderRangeUav = descriptorAllocator->allocateSrvCbvUavGpu(2);
 		_shaderRangeCpuUav = descriptorAllocator->allocateSrvCbvUavCpu(2);
+		_baryCentricsSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 
 		// RTV
 		{
 			device->createRenderTargetView(_triangleIdTexture->getResource(), _triangleIdRtv.get(0)._cpuHandle);
 			device->createRenderTargetView(_triangleShaderIdTexture->getResource(), _triangleIdRtv.get(1)._cpuHandle);
+			device->createRenderTargetView(_baryCentricsGpuTexture->getResource(), _triangleIdRtv.get(2)._cpuHandle);
 		}
 
 		// DSV
@@ -443,6 +454,7 @@ void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* command
 
 			device->createShaderResourceView(_triangleIdTexture->getResource(), nullptr, _triangleIdSrv._cpuHandle);
 			device->createShaderResourceView(_triangleShaderIdTexture->getResource(), nullptr, _shaderIdSrv._cpuHandle);
+			device->createShaderResourceView(_baryCentricsGpuTexture->getResource(), nullptr, _baryCentricsSrv._cpuHandle);
 		}
 
 		// UAV

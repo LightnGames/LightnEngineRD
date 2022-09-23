@@ -20,11 +20,13 @@ struct VisibilityBufferFrameResource {
 
 	GpuTexture* _triangleIdTexture = nullptr;
 	GpuTexture* _triangleShaderIdTexture = nullptr;
+	GpuTexture* _baryCentricsGpuTexture = nullptr;
 	GpuTexture* _shaderIdDepth = nullptr;
 	GpuBuffer* _shaderRangeBuffer[2] = {};// [min, max]
 
 	DescriptorHandles _triangleIdRtv;
 	DescriptorHandle _triangleIdSrv;
+	DescriptorHandle _baryCentricsSrv;
 	DescriptorHandle _shaderIdSrv;
 	DescriptorHandle _shaderIdDsv;
 	DescriptorHandles _shaderRangeSrv;

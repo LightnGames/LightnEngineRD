@@ -34,7 +34,12 @@ void RenderDirector::update() {
 		"MeshInstanceScreenPersentages",
 		"MeshInstanceIndex",
 		"MaterialScreenPersentages",
+		"LocalPosition",
 		"WorldPosition",
+		"LocalNormal",
+		"WorldNormal",
+		"LocalTangent",
+		"WorldTangent",
 		"Texcoords",
 		"Primitive",
 	};

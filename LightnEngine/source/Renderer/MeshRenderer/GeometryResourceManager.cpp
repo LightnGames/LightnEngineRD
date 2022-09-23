@@ -67,7 +67,7 @@ void GeometryResourceManager::initialize() {
 		DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
 		_geometryGlobalOffsetSrv = descriptorAllocator->allocateSrvCbvUavGpu();
 		_meshLodStreamRangeSrv = descriptorAllocator->allocateSrvCbvUavGpu();
-		_vertexResourceSrv = descriptorAllocator->allocateSrvCbvUavGpu(3);
+		_vertexResourceSrv = descriptorAllocator->allocateSrvCbvUavGpu(4);
 
 		rhi::ShaderResourceViewDesc desc = {};
 		desc._format = rhi::FORMAT_R32_TYPELESS;
@@ -85,8 +85,11 @@ void GeometryResourceManager::initialize() {
 		desc._buffer._numElements = _vertexTexcoordGpuBuffer.getU32ElementCount();
 		device->createShaderResourceView(_vertexTexcoordGpuBuffer.getResource(), &desc, _vertexResourceSrv.get(1)._cpuHandle);
 
+		desc._buffer._numElements = _vertexNormalTangentGpuBuffer.getU32ElementCount();
+		device->createShaderResourceView(_vertexNormalTangentGpuBuffer.getResource(), &desc, _vertexResourceSrv.get(2)._cpuHandle);
+
 		desc._buffer._numElements = _indexGpuBuffer.getU32ElementCount();
-		device->createShaderResourceView(_indexGpuBuffer.getResource(), &desc, _vertexResourceSrv.get(2)._cpuHandle);
+		device->createShaderResourceView(_indexGpuBuffer.getResource(), &desc, _vertexResourceSrv.get(3)._cpuHandle);
 	}
 }
 

@@ -54,8 +54,8 @@ FbxVector2 OctWrap(FbxVector2 v) {
 FbxVector2 Encode(FbxVector4 n) {
 	n /= (abs(n[0]) + abs(n[1]) + abs(n[2]));
 	FbxVector2 xy(n[0], n[1]);
-	xy = n[3] >= 0.0 ? xy : OctWrap(xy);
-	xy = xy * 0.5 + 0.5;;
+	xy = n[2] >= 0.0 ? xy : OctWrap(xy);
+	xy = xy * 0.5 + 0.5;
 	//n.xy = n.z >= 0.0 ? n.xy : OctWrap(n.xy);
 	//n.xy = n.xy * 0.5 + 0.5;
 	return xy;
