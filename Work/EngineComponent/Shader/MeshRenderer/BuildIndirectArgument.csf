@@ -1,0 +1,58 @@
+#include "MeshDef.sfh"
+#include "../ViewInfo.sfh"
+
+struct BuildInfo
+{
+    uint _lodMeshCount;
+};
+
+ConstantBuffer<BuildInfo> _buildInfo : register(b0);
+
+ByteAddressBuffer _meshes : register(t0);
+ByteAddressBuffer _lodMeshes : register(t1);
+ByteAddressBuffer _subMeshes : register(t2);
+ByteAddressBuffer _subMeshDrawCounts : register(t3);
+ByteAddressBuffer _subMeshDrawOffsets : register(t4);
+ByteAddressBuffer _geometryGlobalOffsets : register(t5);
+RWByteAddressBuffer _indirectArguments : register(u0);
+RWByteAddressBuffer _indirectArgumentCounts : register(u1);
+
+#define THREAD_NUM 128
+[numthreads(THREAD_NUM, 1, 1)]
+void main(uint gid : SV_GroupID, uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
+{
+    uint lodMeshIndex = dtid;
+    if (lodMeshIndex >= _buildInfo._lodMeshCount)
+    {
+        return;
+    }
+    
+    LodMesh lodMesh = getLodMesh(_lodMeshes, lodMeshIndex);
+    uint subMeshCount = lodMesh._subMeshCount;
+    GeometryGlobalOffsetInfo geometryGlobalOffsetInfo = getGeometryGlobalOffsetInfo(_geometryGlobalOffsets, lodMeshIndex);
+    
+    for (uint subMeshLocalIndex = 0; subMeshLocalIndex < subMeshCount; ++subMeshLocalIndex)
+    {
+        uint subMeshOffset = lodMesh._subMeshOffset + subMeshLocalIndex;
+        uint subMeshDrawOffset = _subMeshDrawOffsets.Load(UINT32_SIZE_IN_BYTE * subMeshOffset);
+        uint subMeshDrawCount = _subMeshDrawCounts.Load(UINT32_SIZE_IN_BYTE * subMeshOffset);
+        if (subMeshDrawCount == 0)
+        {
+            continue;
+        }
+        
+        SubMesh subMesh = getSubMesh(_subMeshes, subMeshOffset);
+		
+        uint currentCountIndex = 0;
+        uint pipelineSetIndex = 0;
+        _indirectArgumentCounts.InterlockedAdd(UINT32_SIZE_IN_BYTE * pipelineSetIndex, 1, currentCountIndex);
+        
+        IndirectArgument arguments;
+        arguments._indexCountPerInstance = subMesh._indexCount;
+        arguments._startIndexLocation = geometryGlobalOffsetInfo._indexOffset + subMesh._indexOffset;
+        arguments._instanceCount = subMeshDrawCount;
+        arguments._baseVertexLocation = geometryGlobalOffsetInfo._vertexOffset;
+        arguments._startInstanceLocation = subMeshDrawOffset;
+        _indirectArguments.Store(sizeof(IndirectArgument) * currentCountIndex, arguments);
+    }
+}

@@ -1,0 +1,25 @@
+#include "../ViewInfo.sfh"
+#include "Debug3dShaderInput.sfh"
+
+struct LineInstanceInfo
+{
+    float3 _startPosition;
+    float3 _endPosition;
+    float4 _color;
+};
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+StructuredBuffer<LineInstanceInfo> _lineInstanceInfos : register(t0);
+
+Debug3dPSInput main(Debug3dVSInput input){
+    Debug3dPSInput result = (Debug3dPSInput)0;
+    uint instanceId = input._InstanceId;
+    LineInstanceInfo info = _lineInstanceInfos[instanceId];
+
+    float3 position = lerp(info._startPosition, info._endPosition, (float)input._vertexId);
+    float4 worldPos = float4(position, 1);
+    result._position = mul(worldPos, _viewInfo._matrixViewProj);
+    result._color = info._color.rgb;
+
+    return result;
+}

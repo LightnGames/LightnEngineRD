@@ -5,9 +5,14 @@
 #define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_SCREEN_PERSENTAGE 2
 #define DEBUG_VISUALIZE_TYPE_MESH_INSTANCE_INDEX 3
 #define DEBUG_VISUALIZE_TYPE_MATERIAL_SCREEN_PERSENTAGE 4
-#define DEBUG_VISUALIZE_TYPE_WORLD_POSITION 5
-#define DEBUG_VISUALIZE_TYPE_TEXCOORDS 6
-#define DEBUG_VISUALIZE_TYPE_PRIMITIVE 7
+#define DEBUG_VISUALIZE_TYPE_LOCAL_POSITION 5
+#define DEBUG_VISUALIZE_TYPE_WORLD_POSITION 6
+#define DEBUG_VISUALIZE_TYPE_LOCAL_NORMAL 7
+#define DEBUG_VISUALIZE_TYPE_WORLD_NORMAL 8
+#define DEBUG_VISUALIZE_TYPE_LOCAL_TANGENT 9
+#define DEBUG_VISUALIZE_TYPE_WORLD_TANGENT 10
+#define DEBUG_VISUALIZE_TYPE_TEXCOORDS 11
+#define DEBUG_VISUALIZE_TYPE_PRIMITIVE 12
 
 struct Constant
 {
@@ -15,8 +20,8 @@ struct Constant
 };
 
 ConstantBuffer<Constant> _constant : register(b1);
-ByteAddressBuffer _meshInstanceScreenPersentages : register(t13);
-ByteAddressBuffer _materialScreenPersentages : register(t14);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t15);
+ByteAddressBuffer _materialScreenPersentages : register(t16);
 
 float4 main(float4 position : SV_Position) : SV_TARGET
 {
@@ -42,9 +47,29 @@ float4 main(float4 position : SV_Position) : SV_TARGET
                 float screenPersentages = float(_materialScreenPersentages.Load(primitiveInfo._materialIndex * UINT32_SIZE_IN_BYTE)) / float(UINT16_MAX);
                 return float4(heatMap(1.0 - screenPersentages), 1.0);
             }
+        case DEBUG_VISUALIZE_TYPE_LOCAL_POSITION:
+            {
+                return float4(primitiveInfo._localPosition / 10.0, 1);
+            }
         case DEBUG_VISUALIZE_TYPE_WORLD_POSITION:
             {
                 return float4(primitiveInfo._worldPosition / 20.0, 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_LOCAL_NORMAL:
+            {
+                return float4(primitiveInfo._localNormal * 0.5 + 0.5, 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_WORLD_NORMAL:
+            {
+                return float4(primitiveInfo._worldNormal * 0.5 + 0.5, 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_LOCAL_TANGENT:
+            {
+                return float4(primitiveInfo._localTangent * 0.5 + 0.5, 1);
+            }
+        case DEBUG_VISUALIZE_TYPE_WORLD_TANGENT:
+            {
+                return float4(primitiveInfo._worldTangent * 0.5 + 0.5, 1);
             }
         case DEBUG_VISUALIZE_TYPE_TEXCOORDS:
             {

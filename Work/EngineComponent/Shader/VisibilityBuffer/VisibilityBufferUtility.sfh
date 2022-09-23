@@ -2,7 +2,12 @@ struct PrimitiveInfo
 {
     uint _meshInstanceIndex;
     uint _materialIndex;
+    float3 _localPosition;
     float3 _worldPosition;
+    float3 _localNormal;
+    float3 _localTangent;
+    float3 _worldNormal;
+    float3 _worldTangent;
     float2 _texcoords;
     float2 _ddx;
     float2 _ddy;

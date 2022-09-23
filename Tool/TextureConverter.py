@@ -1,7 +1,8 @@
-import sys, yaml, os.path, subprocess, shutil, glob
-import AssetDevelopmentConfig
+import os
+import sys, os.path, subprocess, shutil, glob
+import AssetDevelopmentConfig, tempfile
 
-WORK_EXT = [".TGA", ".BMP", ".PNG"]
+WORK_EXT = [".TGA", ".BMP", ".PNG", ".DDS"]
 TEXCONV_PATH = "%s\\texconv\\texconv.exe" % AssetDevelopmentConfig.TOOL_ROOT
 DDS_EXT = ".dds"
 
@@ -10,49 +11,58 @@ def convert(file_paths):
     remaining_count = len(file_paths)
     loop_count = int(len(file_paths) / max_process) + 1
 
-    for target_index in range(0, loop_count):
-        target_count = min(max_process, remaining_count)
-        remaining_count -= target_count
-        print("target count: %d" % target_count)
-        proc_list = []
-        for arg_index in range(remaining_count, remaining_count + target_count):
-            texture_file_path = file_paths[arg_index]
+    with tempfile.TemporaryDirectory() as temp_directory_path:
+        for target_index in range(0, loop_count):
+            target_count = min(max_process, remaining_count)
+            remaining_count -= target_count
+            print("target count: %d" % target_count)
+            proc_list = []
+            for arg_index in range(remaining_count, remaining_count + target_count):
+                texture_file_path = file_paths[arg_index]
+                file_name = os.path.basename(texture_file_path)
 
-            cmd = []
-            cmd.append(TEXCONV_PATH)
-            cmd.append("-f")
-            cmd.append("BC7_UNORM_SRGB")
-            cmd.append("%s" % (texture_file_path.replace('\\', '/')))
-            cmd.append("-m")
-            cmd.append("0")
-            cmd.append("-y")
-            # cmd.append("-nogpu")
-            print(cmd)
+                format = "BC7_UNORM_SRGB"
+                if texture_file_path in "_CubeMap":
+                    format = "BC6H_UF16"
 
-            proc = subprocess.Popen(cmd)
-            proc_list.append(proc)
+                cmd = []
+                cmd.append(TEXCONV_PATH)
+                cmd.append("-f")
+                cmd.append(format)
+                cmd.append("%s" % (file_name))
+                cmd.append("-m")
+                cmd.append("0")
+                cmd.append("-y")
+                cmd.append("-o")
+                cmd.append(temp_directory_path)
+                # cmd.append("-nogpu")
+                print(cmd)
 
-        for proc in proc_list:
-            proc.wait()
+                proc = subprocess.Popen(cmd)
+                proc_list.append(proc)
 
-    print("texture convert completed!")
-    for arg_index in range(0, len(file_paths)):
-        file_path = file_paths[arg_index]
-        file_name = os.path.basename(file_path)
-        file_name, file_ext = os.path.splitext(file_name)
-        work_dir = os.path.dirname(file_path)
-        output_dir = work_dir.replace(AssetDevelopmentConfig.WORK_ROOT, AssetDevelopmentConfig.RESOURCE_ROOT)
-        output_name = file_name + DDS_EXT
-        output_path = os.path.join(output_dir, output_name)
+            for proc in proc_list:
+                proc.wait()
 
-        texture_work_dds_path = file_path.replace(file_ext, DDS_EXT)
+        print("texture convert completed!")
+        for arg_index in range(0, len(file_paths)):
+            file_path = file_paths[arg_index]
+            file_name = os.path.basename(file_path)
+            file_name, file_ext = os.path.splitext(file_name)
+            work_dir = os.path.dirname(file_path)
+            output_dir = work_dir.replace(AssetDevelopmentConfig.WORK_ROOT, AssetDevelopmentConfig.RESOURCE_ROOT)
+            output_name = file_name + DDS_EXT
+            output_path = os.path.join(output_dir, output_name)
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print("mkdir %s" % output_dir)
+            texture_work_dds_path = os.path.join(temp_directory_path, file_name + DDS_EXT)
+            # texture_work_dds_path = file_path.replace(file_ext, DDS_EXT)
 
-        copy_path = shutil.move(texture_work_dds_path, output_path)
-        print("move to %s" % copy_path)
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                print("mkdir %s" % output_dir)
+
+            copy_path = shutil.move(texture_work_dds_path, output_path)
+            print("move to %s" % copy_path)
 
     # os.system("pause")
 

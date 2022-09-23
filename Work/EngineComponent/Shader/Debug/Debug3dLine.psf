@@ -1,0 +1,16 @@
+#include "../ViewInfo.sfh"
+#include "Debug3dShaderInput.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+Texture2D<float> _depth : register(t0);
+SamplerState _pointSampler : register(s0);
+
+float4 main(Debug3dPSInput input) : SV_TARGET {
+    float viewDepth = _depth[input._position.xy];
+    if (viewDepth > input._position.z)
+    {
+        return float4(input._color, 1.0);
+    }
+    //return float4(screenPosition, 0, 1);
+    return float4(input._color, 0.18);
+}

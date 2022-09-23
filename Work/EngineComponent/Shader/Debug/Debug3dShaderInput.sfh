@@ -1,0 +1,11 @@
+struct Debug3dVSInput
+{
+    uint _vertexId : SV_VertexId;
+    uint _InstanceId : SV_InstanceID;
+};
+
+struct Debug3dPSInput
+{
+    float4 _position : SV_POSITION;
+    float3 _color : COLOR;
+};

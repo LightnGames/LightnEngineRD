@@ -31,10 +31,35 @@ float2 unpackTexCoords(uint packed)
     return (float2(x, y) / div) - 4.0;
 }
 
+float3 decodeOctahedron(uint packedVector)
+{  
+    float2 f = float2(packedVector & 0xff, (packedVector >> 8) & 0xff) / float2(UINT8_MAX, UINT8_MAX);
+    f = f * 2.0 - 1.0;
+
+// https://twitter.com/Stubbesaurus/status/937994790553227264
+    float3 n = float3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
+    float t = saturate(-n.z);
+    n.xy += n.xy >= 0.0 ? -t : t;
+    return normalize(n);
+}
+
 // Values used to linearize the Z buffer (http://www.humus.name/temp/Linearize%20depth.txt)
 float computeLinerDepth(float nonLinerDepth, float nearClip, float farClip)
 {
     float farNear = farClip / nearClip;
     float invFarNear = 1.0 - farNear;
     return 1.0 / (invFarNear * nonLinerDepth + farNear);
+}
+
+float3 reconstructWorldPositionFromDepth(
+    in float2 screenTextureCoord,
+    in float depth,
+    in float4x4 inverseViewProjection)
+{
+    float2 clipSpaceCoord = screenTextureCoord.xy * 2.0 - 1.0;
+    float4 projectedPosition = float4(clipSpaceCoord, depth, 1.0);
+    projectedPosition.y = -projectedPosition.y;
+
+    float4 position = mul(projectedPosition, inverseViewProjection);
+    return position.xyz / position.w;
 }

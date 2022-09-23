@@ -16,30 +16,21 @@ ByteAddressBuffer _geometryGlobalOffsets : register(t7);
 
 ByteAddressBuffer _vertexPositions : register(t8);
 ByteAddressBuffer _vertexTexcoords : register(t9);
-ByteAddressBuffer _vertexIndices : register(t10);
+ByteAddressBuffer _vertexNormalTangents : register(t10);
+ByteAddressBuffer _vertexIndices : register(t11);
 
-Texture2D<uint2> _triangleAttributes : register(t11);
-Texture2D<float> _viewDepth : register(t12);
+Texture2D<uint2> _triangleAttributes : register(t12);
+Texture2D<float2> _baryCentrics : register(t13);
+Texture2D<float> _viewDepth : register(t14);
 
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
 
-float3 ReconstructWorldPositionFromDepth(
-    in float2 pixelPosition,
-    in float depth,
-    in float4x4 inverseViewProjection)
-{
-    float2 textureCoord = pixelPosition / float2(_viewInfo._viewPortSize);
-    float4 projectedPosition = float4(
-        textureCoord.xy * 2.0 - float2(1.0, 1.0), depth, 1.0);
-
-    float4 position = mul(projectedPosition, inverseViewProjection);
-    return position.xyz / position.w;
-}
-
 PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
 {
     uint2 triangleAttributes = _triangleAttributes[pixelPosition];
+    float3 baryCentrics = float3(_baryCentrics[pixelPosition], 0.0);
+    baryCentrics.z = saturate(1.0 - baryCentrics.x - baryCentrics.y);
 
     uint meshInstanceIndex = triangleAttributes.y & 0x0000ffff;
     uint materialIndex = (triangleAttributes.y >> 18) & 0x0000ffff;
@@ -63,43 +54,44 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
             loadUint(_vertexIndices, triangleAttributes.x * 3 + 1) + geometryGlobalOffsetInfo._vertexOffset,
             loadUint(_vertexIndices, triangleAttributes.x * 3 + 2) + geometryGlobalOffsetInfo._vertexOffset
     );
-    const float3 PointLocal0 = loadFloat3(_vertexPositions, primitiveIndices.x);
-    const float3 PointLocal1 = loadFloat3(_vertexPositions, primitiveIndices.y);
-    const float3 PointLocal2 = loadFloat3(_vertexPositions, primitiveIndices.z);
+    float3 pointLocal0 = loadFloat3(_vertexPositions, primitiveIndices.x);
+    float3 pointLocal1 = loadFloat3(_vertexPositions, primitiveIndices.y);
+    float3 pointLocal2 = loadFloat3(_vertexPositions, primitiveIndices.z);
     
-    const float2 texcoords0 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.x));
-    const float2 texcoords1 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.y));
-    const float2 texcoords2 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.z));
+    float2 texcoords0 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.x));
+    float2 texcoords1 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.y));
+    float2 texcoords2 = unpackTexCoords(loadUint(_vertexTexcoords, primitiveIndices.z));
     
-    float4x3 matrixWorld = meshInstance._worldMatrix;
-    float3 pointToWorld0 = mul(float4(PointLocal0, 1), matrixWorld);
-    float3 pointToWorld1 = mul(float4(PointLocal1, 1), matrixWorld);
-    float3 pointToWorld2 = mul(float4(PointLocal2, 1), matrixWorld);
+    uint normalTangent0 = loadUint(_vertexNormalTangents, primitiveIndices.x);
+    uint normalTangent1 = loadUint(_vertexNormalTangents, primitiveIndices.y);
+    uint normalTangent2 = loadUint(_vertexNormalTangents, primitiveIndices.z);
     
-    const float4 PointClip0 = mul(float4(pointToWorld0, 1), _viewInfo._matrixViewProj);
-    const float4 PointClip1 = mul(float4(pointToWorld1, 1), _viewInfo._matrixViewProj);
-    const float4 PointClip2 = mul(float4(pointToWorld2, 1), _viewInfo._matrixViewProj);
+    float3 normal0 = decodeOctahedron(normalTangent0 & 0xffff);
+    float3 normal1 = decodeOctahedron(normalTangent1 & 0xffff);
+    float3 normal2 = decodeOctahedron(normalTangent2 & 0xffff);
     
-    float2 viewInvSize = float2(1.0, 1.0) / float2(_viewInfo._viewPortSize);
-    const float2 PixelClip = (pixelPosition + 0.5) * viewInvSize * float2(2, -2) + float2(-1, 1);
+    float3 tangent0 = decodeOctahedron((normalTangent0 >> 16) & 0xffff);
+    float3 tangent1 = decodeOctahedron((normalTangent1 >> 16) & 0xffff);
+    float3 tangent2 = decodeOctahedron((normalTangent2 >> 16) & 0xffff);
     
-    // Calculate perspective correct barycentric coordinates with screen derivatives
-    const Barycentrics Barycentrics = CalculateTriangleBarycentrics(PixelClip, PointClip0, PointClip1, PointClip2, viewInvSize);
+    float3 worldPosition = reconstructWorldPositionFromDepth(pixelPosition / float2(_viewInfo._viewPortSize), _viewDepth[pixelPosition], _viewInfo._matrixViewProjInv);
+    float3 localPosition = baryCentrics.x * pointLocal0 + baryCentrics.y * pointLocal1 + baryCentrics.z * pointLocal2;
+    float2 texcoords = baryCentrics.x * texcoords0 + baryCentrics.y * texcoords1 + baryCentrics.z * texcoords2;
+    float3 normal = baryCentrics.x * normal0 + baryCentrics.y * normal1 + baryCentrics.z * normal2;
+    float3 tangent = baryCentrics.x * tangent0 + baryCentrics.y * tangent1 + baryCentrics.z * tangent2;
     
-    float3 worldPosition = Barycentrics.UVW.x * pointToWorld0 + Barycentrics.UVW.y * pointToWorld1 + Barycentrics.UVW.z * pointToWorld2;
-    float2 texcoords = Barycentrics.UVW.x * texcoords0 + Barycentrics.UVW.y * texcoords1 + Barycentrics.UVW.z * texcoords2;
-    
-    float2 TexCoord10 = texcoords1 - texcoords0;
-    float2 TexCoord20 = texcoords2 - texcoords0;
-
-    float2 TexCoord = texcoords0 + Barycentrics.UVW.y * TexCoord10 + Barycentrics.UVW.z * TexCoord20;
-    float2 ddx = Barycentrics.UVW_dx.y * TexCoord10 + Barycentrics.UVW_dx.z * TexCoord20;
-    float2 ddy = Barycentrics.UVW_dy.y * TexCoord10 + Barycentrics.UVW_dy.z * TexCoord20;
+    float2 ddx = texcoords - QuadReadAcrossX(texcoords);
+    float2 ddy = texcoords - QuadReadAcrossY(texcoords);
     
     PrimitiveInfo primitiveInfo;
     primitiveInfo._meshInstanceIndex = meshInstanceIndex;
     primitiveInfo._materialIndex = materialIndex;
+    primitiveInfo._localPosition = localPosition;
     primitiveInfo._worldPosition = worldPosition;
+    primitiveInfo._localNormal = normal;
+    primitiveInfo._localTangent = tangent;
+    primitiveInfo._worldNormal = normalize(mul(normal, (float3x3) meshInstance._worldMatrix));
+    primitiveInfo._worldTangent = normalize(mul(tangent, (float3x3) meshInstance._worldMatrix));
     primitiveInfo._texcoords = texcoords;
     primitiveInfo._ddx = ddx;
     primitiveInfo._ddy = ddy;
