@@ -24,7 +24,7 @@ void ShaderScene::initialize() {
 		_parameterNameHashes = allocation.allocateObjects<u32>(SHADER_PARAMETER_CAPACITY);
 		_parameterOffsets = allocation.allocateObjects<u16>(SHADER_PARAMETER_CAPACITY);
 		_parameterTypes = allocation.allocateObjects<u8>(SHADER_PARAMETER_CAPACITY);
-		});
+	});
 }
 
 void ShaderScene::terminate() {

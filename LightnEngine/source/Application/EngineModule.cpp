@@ -23,6 +23,7 @@
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Shader.h>
 #include <RendererScene/Texture.h>
+#include <RendererScene/SkySphere.h>
 #include <RendererScene/CommonResource.h>
 
 namespace ltn {
@@ -38,6 +39,8 @@ void update() {
 	GeometryResourceManager::Get()->update();
 	GpuMaterialManager::Get()->update();
 	GpuCulling::Get()->update();
+
+	SkySphereScene::Get()->lateUpdate();
 	TextureScene::Get()->lateUpdate();
 	MaterialScene::Get()->lateUpdate();
 	MeshInstanceScene::Get()->lateUpdate();
@@ -80,6 +83,7 @@ void EngineModuleManager::run() {
 	GpuCulling* gpuCulling = GpuCulling::Get();
 	ComputeLod* computeLod = ComputeLod::Get();
 	VisiblityBufferRenderer* visibilityBufferRenderer = VisiblityBufferRenderer::Get();
+	SkySphereScene* skySphereScene = SkySphereScene::Get();
 	CommonResource* commonResource = CommonResource::Get();
 
 	{
@@ -107,6 +111,7 @@ void EngineModuleManager::run() {
 		gpuCulling->initialize();
 		computeLod->initialize();
 		visibilityBufferRenderer->initialize();
+		skySphereScene->initialize();
 
 		commonResource->initialize();
 		editorCamera.initialize();
@@ -135,6 +140,7 @@ void EngineModuleManager::run() {
 		app.terminate();
 		gpuMaterialManager->terminate();
 		gpuMeshInstanceManager->terminate();
+		skySphereScene->terminate();
 		visibilityBufferRenderer->terminate();
 		computeLod->terminate();
 		gpuCulling->terminate();
