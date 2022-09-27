@@ -16,6 +16,7 @@
 #include <Renderer/RenderCore/RenderView.h>
 #include <Renderer/RenderCore/GpuShader.h>
 #include <Renderer/RenderCore/LodStreamingManager.h>
+#include <Renderer/Lighting/SkySphereRenderer.h>
 #include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
@@ -83,6 +84,7 @@ void EngineModuleManager::run() {
 	GpuCulling* gpuCulling = GpuCulling::Get();
 	ComputeLod* computeLod = ComputeLod::Get();
 	VisiblityBufferRenderer* visibilityBufferRenderer = VisiblityBufferRenderer::Get();
+	SkySphereRenderer* skySphereRenderer = SkySphereRenderer::Get();
 	SkySphereScene* skySphereScene = SkySphereScene::Get();
 	CommonResource* commonResource = CommonResource::Get();
 
@@ -112,6 +114,7 @@ void EngineModuleManager::run() {
 		computeLod->initialize();
 		visibilityBufferRenderer->initialize();
 		skySphereScene->initialize();
+		skySphereRenderer->initialize();
 
 		commonResource->initialize();
 		editorCamera.initialize();
@@ -140,6 +143,7 @@ void EngineModuleManager::run() {
 		app.terminate();
 		gpuMaterialManager->terminate();
 		gpuMeshInstanceManager->terminate();
+		skySphereRenderer->terminate();
 		skySphereScene->terminate();
 		visibilityBufferRenderer->terminate();
 		computeLod->terminate();

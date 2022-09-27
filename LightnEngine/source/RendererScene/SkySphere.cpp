@@ -39,8 +39,10 @@ const SkySphere* SkySphereScene::createSkySphere(const CreatationDesc& desc) {
 	_skySphereAllocationInfos[allocationInfo._offset] = allocationInfo;
 
 	TextureScene* textureScene = TextureScene::Get();
-	TextureScene::TextureCreatationDesc textureCreateDesc;
+	TextureScene::TextureCreatationDesc textureCreateDesc = {};
+	textureCreateDesc._streamingDisabled = true;
 	textureCreateDesc._assetPath = desc._environmentTexturePath;
+	textureCreateDesc._textureType = Texture::CUBE_MAP;
 	const Texture* environmentTexture = textureScene->createTexture(textureCreateDesc);
 
 	textureCreateDesc._assetPath = desc._diffuseTexturePath;
@@ -51,8 +53,8 @@ const SkySphere* SkySphereScene::createSkySphere(const CreatationDesc& desc) {
 
 	SkySphere* skySphere = &_skySpheres[allocationInfo._offset];
 	skySphere->setEnvironmentTextuire(environmentTexture);
-	skySphere->setDiffuseTextuire(environmentTexture);
-	skySphere->setSupecularTextuire(environmentTexture);
+	skySphere->setDiffuseTextuire(diffuseTexture);
+	skySphere->setSupecularTextuire(supecularTexture);
 
 	_skySphereCreateInfos.push(skySphere);
 	return skySphere;

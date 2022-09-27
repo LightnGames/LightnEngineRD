@@ -899,19 +899,19 @@ struct ComputePipelineStateDesc {
 };
 
 struct StaticSamplerDesc {
-	Filter Filter;
-	TextureAddressMode AddressU;
-	TextureAddressMode AddressV;
-	TextureAddressMode AddressW;
-	f32 MipLODBias;
-	u32 MaxAnisotropy;
-	ComparisonFunc ComparisonFunc;
-	StaticBorderColor BorderColor;
-	f32 MinLOD;
-	f32 MaxLOD;
-	u32 ShaderRegister;
-	u32 RegisterSpace;
-	ShaderVisibility ShaderVisibility;
+	Filter _filter;
+	TextureAddressMode _addressU;
+	TextureAddressMode _addressV;
+	TextureAddressMode _addressW;
+	f32 _mipLODBias;
+	u32 _maxAnisotropy;
+	ComparisonFunc _comparisonFunc;
+	StaticBorderColor _borderColor;
+	f32 _minLOD;
+	f32 _maxLOD;
+	u32 _shaderRegister;
+	u32 _registerSpace;
+	ShaderVisibility _shaderVisibility;
 };
 
 struct RootSignatureDesc {

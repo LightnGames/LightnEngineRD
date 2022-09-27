@@ -50,7 +50,7 @@ void VramUpdater::enqueueUpdate(GpuTexture* dstTexture, GpuTexture* srcTexture, 
 	header._srcTexture = *srcTexture;
 	header._srcSubResourceIndex = srcSubResourceIndex;
 	header._dstSubResourceIndex = dstSubResourceIndex;
-	header._srcTextureUniqueMarker = srcTexture;
+	header._srcTextureUniqueMarker = reinterpret_cast<void*>(header._srcTexture.getResource()->getUniqueMarker());
 }
 
 void* VramUpdater::enqueueUpdate(GpuResource* dstBuffer, u32 dstOffset, u32 copySizeInByte) {
@@ -74,6 +74,7 @@ void* VramUpdater::enqueueUpdate(GpuTexture* dstTexture, u32 firstSubResourceInd
 	LTN_ASSERT(copySizeInByte > 0);
 	u32 headerIndex = _textureUpdateHeaderCount++; // atomic incriment
 	void* stagingBufferPtr = allocateUpdateBuffer(copySizeInByte, rhi::GetTextureBufferAligned(copySizeInByte));
+	LTN_ASSERT(stagingBufferPtr != nullptr);
 
 	TextureUpdateHeader& header = _textureUpdateHeaders[headerIndex];
 	header._dstTexture = dstTexture;
@@ -145,7 +146,7 @@ void VramUpdater::populateCommandList(rhi::CommandList* commandList) {
 	for (u32 headerIndex = 0; headerIndex < _textureCopyHeaderCount; ++headerIndex) {
 		TextureCopyHeader& header = _textureCopyHeaders[headerIndex];
 		// Src テクスチャはコピーを取ってあるのでユニークリソース識別子を利用
-		void* srcTextureUniqueMarker = reinterpret_cast<void*>(header._srcTexture.getResource()->getUniqueMarker());
+		void* srcTextureUniqueMarker = header._srcTextureUniqueMarker;
 		u32 srcResourceIndex = findUniqueResource(srcTextureUniqueMarker);
 		if (srcResourceIndex == UNKNOWN_RESOURCE_INDEX) {
 			barriers[barrierCount] = header._srcTexture.getTransitionBarrier(rhi::RESOURCE_STATE_COPY_SOURCE);

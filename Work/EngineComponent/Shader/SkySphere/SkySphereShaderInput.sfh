@@ -1,0 +1,5 @@
+struct PSInput
+{
+    float4 _position : SV_Position;
+    float3 _viewDirection : VIEW_DIRECTION;
+};

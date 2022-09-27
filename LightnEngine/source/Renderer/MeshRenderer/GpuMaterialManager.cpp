@@ -155,35 +155,35 @@ void GpuMaterialManager::update() {
 			rhi::StaticSamplerDesc staticSamplerDescs[2];
 			{
 				rhi::StaticSamplerDesc& samplerDesc = staticSamplerDescs[0];
-				samplerDesc.Filter = rhi::FILTER_ANISOTROPIC;
-				samplerDesc.AddressU = rhi::TEXTURE_ADDRESS_MODE_WRAP;
-				samplerDesc.AddressV = rhi::TEXTURE_ADDRESS_MODE_WRAP;
-				samplerDesc.AddressW = rhi::TEXTURE_ADDRESS_MODE_WRAP;
-				samplerDesc.MipLODBias = 0;
-				samplerDesc.MaxAnisotropy = 16;
-				samplerDesc.ComparisonFunc = rhi::COMPARISON_FUNC_NEVER;
-				samplerDesc.BorderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-				samplerDesc.MinLOD = 0.0f;
-				samplerDesc.MaxLOD = FLT_MAX;
-				samplerDesc.ShaderRegister = 0;
-				samplerDesc.RegisterSpace = 0;
-				samplerDesc.ShaderVisibility = rhi::SHADER_VISIBILITY_PIXEL;
+				samplerDesc._filter = rhi::FILTER_ANISOTROPIC;
+				samplerDesc._addressU = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc._addressV = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc._addressW = rhi::TEXTURE_ADDRESS_MODE_WRAP;
+				samplerDesc._mipLODBias = 0;
+				samplerDesc._maxAnisotropy = 16;
+				samplerDesc._comparisonFunc = rhi::COMPARISON_FUNC_NEVER;
+				samplerDesc._borderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+				samplerDesc._minLOD = 0.0f;
+				samplerDesc._maxLOD = FLT_MAX;
+				samplerDesc._shaderRegister = 0;
+				samplerDesc._registerSpace = 0;
+				samplerDesc._shaderVisibility = rhi::SHADER_VISIBILITY_PIXEL;
 			}
 			{
 				rhi::StaticSamplerDesc& samplerDesc = staticSamplerDescs[1];
-				samplerDesc.Filter = rhi::FILTER_MIN_MAG_MIP_LINEAR;
-				samplerDesc.AddressU = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.AddressV = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.AddressW = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
-				samplerDesc.MipLODBias = 0;
-				samplerDesc.MaxAnisotropy = 0;
-				samplerDesc.ComparisonFunc = rhi::COMPARISON_FUNC_NEVER;
-				samplerDesc.BorderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-				samplerDesc.MinLOD = 0.0f;
-				samplerDesc.MaxLOD = FLT_MAX;
-				samplerDesc.ShaderRegister = 1;
-				samplerDesc.RegisterSpace = 0;
-				samplerDesc.ShaderVisibility = rhi::SHADER_VISIBILITY_ALL;
+				samplerDesc._filter = rhi::FILTER_MIN_MAG_MIP_LINEAR;
+				samplerDesc._addressU = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc._addressV = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc._addressW = rhi::TEXTURE_ADDRESS_MODE_CLAMP;
+				samplerDesc._mipLODBias = 0;
+				samplerDesc._maxAnisotropy = 0;
+				samplerDesc._comparisonFunc = rhi::COMPARISON_FUNC_NEVER;
+				samplerDesc._borderColor = rhi::STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+				samplerDesc._minLOD = 0.0f;
+				samplerDesc._maxLOD = FLT_MAX;
+				samplerDesc._shaderRegister = 1;
+				samplerDesc._registerSpace = 0;
+				samplerDesc._shaderVisibility = rhi::SHADER_VISIBILITY_ALL;
 			}
 
 			rhi::RootSignatureDesc rootSignatureDesc = {};

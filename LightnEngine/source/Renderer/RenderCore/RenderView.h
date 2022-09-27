@@ -18,7 +18,11 @@ struct View {
 	Float2 _halfFovTan;
 	u32 _viewPortSize[2];
 	u32 _padding2[2];
+	Float3 _rightDirection;
+	u32 _padding3;
 	Float3 _upDirection;
+	u32 _padding4;
+	Float3 _forwardDirection;
 	u32 _debugVisualizeType;
 	Float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
 };

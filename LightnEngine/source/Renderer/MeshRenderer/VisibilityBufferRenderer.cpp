@@ -338,6 +338,7 @@ void VisiblityBufferRenderer::geometryPass(const GeometryPassDesc& desc) {
 VisiblityBufferRenderer* VisiblityBufferRenderer::Get() {
 	return &g_visibilityBufferRenderer;
 }
+
 void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* commandList) {
 	FrameBufferAllocator* frameBufferAllocator = FrameBufferAllocator::Get();
 	rhi::Device* device = DeviceManager::Get()->getDevice();

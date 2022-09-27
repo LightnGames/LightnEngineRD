@@ -22,14 +22,14 @@ def convert(file_paths):
                 file_name = os.path.basename(texture_file_path)
 
                 format = "BC7_UNORM_SRGB"
-                if texture_file_path in "_CubeMap":
+                if "_CubeMap" in file_name:
                     format = "BC6H_UF16"
 
                 cmd = []
                 cmd.append(TEXCONV_PATH)
                 cmd.append("-f")
                 cmd.append(format)
-                cmd.append("%s" % (file_name))
+                cmd.append("%s" % (texture_file_path))
                 cmd.append("-m")
                 cmd.append("0")
                 cmd.append("-y")

@@ -11,7 +11,9 @@ struct ViewInfo
     float2 _halfFovTan;
     uint2 _viewPortSize;
     uint2 _padding2;
+    float3 _rightDirection;
     float3 _upDirection;
+    float3 _forwardDirection;
     uint _debugVisualizeType;
     float4 _frustumPlanes[FRUSTUM_PLANE_COUNT];
 };

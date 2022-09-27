@@ -21,7 +21,7 @@ void GpuTextureManager::initialize() {
 		_requestedCreateSrvIndices[i] = REQUESTED_INVALID_INDEX;
 	}
 
-	createEmptyTexture(_defaultBlackTexture, 8, 8, rhi::FORMAT_BC1_UNORM_SRGB);
+	createEmptyTexture(_defaultBlackTexture, 8, 8, 1, rhi::FORMAT_BC1_UNORM_SRGB);
 
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 	for (u32 i = 0; i < REQUESTED_CREATE_SRV_CAPACITY; ++i) {
@@ -38,13 +38,20 @@ void GpuTextureManager::terminate() {
 
 void GpuTextureManager::update() {
 	TextureScene* textureScene = TextureScene::Get();
-	//const UpdateInfos<Texture>* textureCreateInfos = textureScene->getCreateInfos();
-	//u32 createCount = textureCreateInfos->getUpdateCount();
-	//auto createTextures = textureCreateInfos->getObjects();
-	//for (u32 i = 0; i < createCount; ++i) {
-	//	const DdsHeader* ddsHeader = createTextures[i]->getDdsHeader();
-	//	createTexture(createTextures[i], 0, ddsHeader->_mipMapCount);
-	//}
+	const UpdateInfos<Texture>* textureCreateInfos = textureScene->getCreateInfos();
+	u32 createCount = textureCreateInfos->getUpdateCount();
+	auto createTextures = textureCreateInfos->getObjects();
+	for (u32 i = 0; i < createCount; ++i) {
+		const Texture* texture = createTextures[i];
+
+		// テクスチャストリーミングが無効なテクスチャをロード
+		if (!texture->isStreamingDisabled()) {
+			continue;
+		}
+		const DdsHeader* ddsHeader = createTextures[i]->getDdsHeader();
+		createTexture(createTextures[i], 0, ddsHeader->_mipMapCount);
+		createTextureSrv(createTextures[i]);
+	}
 
 	const UpdateInfos<Texture>* textureDestroyInfos = textureScene->getDestroyInfos();
 	u32 destroyCount = textureDestroyInfos->getUpdateCount();
@@ -66,16 +73,14 @@ void GpuTextureManager::update() {
 
 		if (--_requestedCreateSrvTimers[i] == 0) {
 			// SRV 再生成
-			u32 textureIndex = _requestedCreateSrvIndices[i];
-			GpuTexture& gpuTexture = _textures[textureIndex];
-			rhi::Device* device = DeviceManager::Get()->getDevice();
-			device->createShaderResourceView(gpuTexture.getResource(), nullptr, _textureSrv.get(textureIndex)._cpuHandle);
+			const Texture* texture = TextureScene::Get()->getTexture(_requestedCreateSrvIndices[i]);
+			createTextureSrv(texture);
 			_requestedCreateSrvIndices[i] = REQUESTED_INVALID_INDEX;
 		}
 	}
 }
 
-void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format) {
+void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, u32 depth, rhi::Format format) {
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 	u32 mipLevel = u32(std::log2(Max(width, height)) + 1);
 	GpuTextureDesc textureDesc = {};
@@ -83,6 +88,7 @@ void GpuTextureManager::createEmptyTexture(GpuTexture& gpuTexture, u32 width, u3
 	textureDesc._format = format;
 	textureDesc._width = width;
 	textureDesc._height = height;
+	textureDesc._depthOrArraySize = depth;
 	textureDesc._mipLevels = mipLevel;
 	textureDesc._initialState = rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	textureDesc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
@@ -115,7 +121,7 @@ void GpuTextureManager::streamTexture(const Texture* texture, u32 currentStreamM
 
 		// 縮小後の新しいサイズの空テクスチャ作成
 		GpuTexture& gpuTexture = _textures[textureIndex];
-		createEmptyTexture(gpuTexture, width, width, oldGpuTexture.getResourceDesc()._format);
+		createEmptyTexture(gpuTexture, width, width, 1, oldGpuTexture.getResourceDesc()._format);
 		gpuTexture.setName(texture->getAssetPath());
 
 		// 古いテクスチャから縮小後の範囲だけテクスチャコピー
@@ -145,11 +151,27 @@ GpuTextureManager* GpuTextureManager::Get() {
 	return &g_gpuTextureManager;
 }
 
+void GpuTextureManager::createTextureSrv(const Texture* texture) {
+	u32 textureIndex = TextureScene::Get()->getTextureIndex(texture);
+	GpuTexture& gpuTexture = _textures[textureIndex];
+	rhi::Device* device = DeviceManager::Get()->getDevice();
+	rhi::ShaderResourceViewDesc overrideSrvDesc = {};
+	rhi::ShaderResourceViewDesc* srvDesc = nullptr;
+	if (texture->getTextureType() == Texture::CUBE_MAP) {
+		overrideSrvDesc._viewDimension = rhi::SRV_DIMENSION_TEXTURECUBE;
+		overrideSrvDesc._format = gpuTexture.getResourceDesc()._format;
+		overrideSrvDesc._textureCube._mipLevels = gpuTexture.getResourceDesc()._mipLevels;
+		srvDesc = &overrideSrvDesc;
+	}
+
+	device->createShaderResourceView(gpuTexture.getResource(), srvDesc, _textureSrv.get(textureIndex)._cpuHandle);
+}
+
 void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset, u32 loadMipCount) {
 	TextureScene* textureScene = TextureScene::Get();
 	rhi::Device* device = DeviceManager::Get()->getDevice();
 	VramUpdater* vramUpdater = VramUpdater::Get();
-	constexpr u32 SUBRESOURCE_COUNT_MAX = 16;
+	constexpr u32 SUBRESOURCE_COUNT_MAX = 96;
 	u32 textureIndex = textureScene->getTextureIndex(texture);
 
 	const DdsHeader* ddsHeader = texture->getDdsHeader();
@@ -172,7 +194,7 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 	u32 numberOfPlanes = device->getFormatPlaneCount(ddsHeaderDxt10._dxgiFormat);
 
 	bool is3dTexture = ddsHeaderDxt10._resourceDimension == rhi::RESOURCE_DIMENSION_TEXTURE3D;
-	bool isCubeMapTexture = false;
+	bool isCubeMapTexture = ddsHeaderDxt10._miscFlag & 0x4 /* RESOURCE_MISC_TEXTURECUBE */;
 
 	u32 mipOffset = beginMipOffset;
 	u32 mipCount = loadMipCount;
@@ -184,8 +206,12 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 	u32 mipBackLevelOffset = ddsMipCount - targetMipCount;
 	u32 mipFrontLevelOffset = mipOffset;
 
+	if (isCubeMapTexture) {
+		numArray *= 6;
+	}
+
 	GpuTexture& gpuTexture = _textures[textureIndex];
-	createEmptyTexture(gpuTexture, clampedWidth, clampedHeight, ddsHeaderDxt10._dxgiFormat);
+	createEmptyTexture(gpuTexture, clampedWidth, clampedHeight, numArray, ddsHeaderDxt10._dxgiFormat);
 	gpuTexture.setName(texture->getAssetPath());
 
 	// 最大解像度が指定してある場合、それ以外のピクセルを読み飛ばします。
@@ -198,16 +224,18 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 		rhi::PlacedSubresourceFootprint layouts[SUBRESOURCE_COUNT_MAX];
 		u32 numRows[SUBRESOURCE_COUNT_MAX];
 		u64 rowSizesInBytes[SUBRESOURCE_COUNT_MAX];
-		u32 numberOfResources = numArray * ddsMipCount * numberOfPlanes;
-		device->getCopyableFootprints(&resourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, nullptr);
+		u32 subResourceCount = numArray * ddsMipCount * numberOfPlanes;
+		LTN_ASSERT(subResourceCount < SUBRESOURCE_COUNT_MAX);
+
+		device->getCopyableFootprints(&resourceDesc, 0, subResourceCount, 0, layouts, numRows, rowSizesInBytes, nullptr);
 
 		u32 textureFileSeekSizeInbyte = 0;
 		for (u32 subResourceIndex = 0; subResourceIndex < mipBackLevelOffset; ++subResourceIndex) {
 			const rhi::PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
-			u32 rowSizeInBytes = u32(rowSizesInBytes[subResourceIndex]);
+			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];
 			u32 numRow = numRows[subResourceIndex];
 			u32 numSlices = layout._footprint._depth;
-			textureFileSeekSizeInbyte += sizeof(u8) * rowSizeInBytes * numRow * numSlices;
+			textureFileSeekSizeInbyte += u32(rowSizeInBytes) * numSlices * numRow;
 		}
 
 		LTN_ASSERT(textureFileSeekSizeInbyte > 0);
@@ -221,14 +249,16 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 		rhi::PlacedSubresourceFootprint layouts[SUBRESOURCE_COUNT_MAX];
 		u32 numRows[SUBRESOURCE_COUNT_MAX];
 		u64 rowSizesInBytes[SUBRESOURCE_COUNT_MAX];
-		u32 numberOfResources = numArray * targetMipCount * numberOfPlanes;
+		u32 subResourceCount = numArray * targetMipCount * numberOfPlanes;
+		LTN_ASSERT(subResourceCount < SUBRESOURCE_COUNT_MAX);
+
 		u64 requiredSize = 0;
-		device->getCopyableFootprints(&textureResourceDesc, 0, numberOfResources, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
+		device->getCopyableFootprints(&textureResourceDesc, 0, subResourceCount, 0, layouts, numRows, rowSizesInBytes, &requiredSize);
 
-		u32 clampedMipCount = Min(mipCount, ddsMipCount);
-		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, clampedMipCount, nullptr, u32(requiredSize));
+		u32 uploadSubResourceCount = Min(mipCount, ddsMipCount) * numArray;
+		void* pixelData = vramUpdater->enqueueUpdate(&gpuTexture, mipOffset, uploadSubResourceCount, nullptr, u32(requiredSize));
 
-		for (u32 subResourceIndex = 0; subResourceIndex < clampedMipCount; ++subResourceIndex) {
+		for (u32 subResourceIndex = 0; subResourceIndex < uploadSubResourceCount; ++subResourceIndex) {
 			const rhi::PlacedSubresourceFootprint& layout = layouts[subResourceIndex];
 			u8* data = reinterpret_cast<u8*>(pixelData) + layout._offset;
 			u64 rowSizeInBytes = rowSizesInBytes[subResourceIndex];

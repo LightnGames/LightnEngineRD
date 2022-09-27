@@ -42,13 +42,14 @@ public:
 	const UpdateInfos<SkySphere>* getDestroyInfos() const { return &_skySphereDestroyInfos; }
 
 	u32 getSkySphereIndex(const SkySphere* skySphere) const { return u32(skySphere - _skySpheres); }
+	const SkySphere* getSkySphere(u32 index) const { return &_skySpheres[index]; }
 
 	static SkySphereScene* Get();
 
 private:
 	SkySphere _skySpheres[SKY_SPHERE_CAPACITY] = {};
 	VirtualArray _skySphereAllocations;
-	VirtualArray::AllocationInfo* _skySphereAllocationInfos = nullptr;
+	VirtualArray::AllocationInfo _skySphereAllocationInfos[SKY_SPHERE_CAPACITY] = {};
 
 	UpdateInfos<SkySphere> _skySphereCreateInfos;
 	UpdateInfos<SkySphere> _skySphereDestroyInfos;

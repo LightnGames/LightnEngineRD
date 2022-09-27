@@ -57,6 +57,8 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 
 	Texture* texture = &_textures[allocationInfo._offset];
 	texture->setAssetPath(_textureAssetPaths[allocationInfo._offset]);
+	texture->setStreamingDisabled(desc._streamingDisabled);
+	texture->setTextureType(desc._textureType);
 
 #define MAKEFOURCC(ch0, ch1, ch2, ch3)                          \
                 ((DWORD)(BYTE)(ch0) | ((DWORD)(BYTE)(ch1) << 8) |   \

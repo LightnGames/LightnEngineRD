@@ -7,6 +7,7 @@
 #include <RendererScene/Mesh.h>
 #include <RendererScene/Texture.h>
 #include <RendererScene/MeshInstance.h>
+#include <RendererScene/SkySphere.h>
 
 namespace ltn {
 void Level::initialize(const char* levelFilePath) {
@@ -189,6 +190,12 @@ void Level::initialize(const char* levelFilePath) {
 	}
 
 	assetPath.closeFile();
+
+	SkySphereScene::CreatationDesc desc;
+	desc._environmentTexturePath = "GohicHorror//Texture//CubeMap//EnvEnvHDR_CubeMap.dds";
+	desc._diffuseTexturePath = "GohicHorror//Texture//CubeMap//EnvDiffuseHDR_CubeMap.dds";
+	desc._supecularTexturePath = "GohicHorror//Texture//CubeMap//EnvSpecularHDR_CubeMap.dds";
+	_skySphere = SkySphereScene::Get()->createSkySphere(desc);
 }
 
 void Level::terminate() {
@@ -200,6 +207,7 @@ void Level::terminate() {
 	TextureScene::Get()->destroyTextures(_textures, _levelHeader._textureCount);
 	MaterialScene::Get()->destroyMaterials(_materials, _levelHeader._materialCount);
 	MeshScene::Get()->destroyMeshes(_meshes, _levelHeader._meshCount);
+	SkySphereScene::Get()->destroySkySphere(_skySphere);
 
 	Memory::deallocObjects(_meshInstanceCounts);
 	Memory::deallocObjects(_meshInstances);

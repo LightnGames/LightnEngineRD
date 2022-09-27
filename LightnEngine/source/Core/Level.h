@@ -7,6 +7,7 @@ class Mesh;
 class MeshInstance;
 class Texture;
 class Material;
+class SkySphere;
 class Level {
 public:
 	struct LevelHeader {
@@ -27,6 +28,7 @@ private:
 	Mesh const** _meshes = nullptr;
 	Texture const** _textures = nullptr;
 	Material const** _materials = nullptr;
+	const SkySphere* _skySphere = nullptr;
 
 	u32 _meshCount = 0;
 	u32* _meshInstanceCounts = nullptr;

@@ -441,7 +441,9 @@ void LodStreamingManager::computeTextureStreamingMipLevels(u32 materialIndex) {
 		u32 screenWidth = app->getScreenWidth();
 		u64 sourceWidth = texture->getDdsHeader()->_width;
 		u32 targetWidth = u32(screenPersentage * screenWidth);
-		u8 requestMipLevel = 1;
+
+		constexpr u8 MIP_STREAMING_OFFSET = 0;
+		u8 requestMipLevel = 1 + MIP_STREAMING_OFFSET;
 		for (u32 i = 1; i < targetWidth; i *= 2) {
 			requestMipLevel++;
 		}

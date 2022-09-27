@@ -36,7 +36,7 @@ struct TextureCopyHeader {
 
 class VramUpdater {
 public:
-	static constexpr u32 STAGING_BUFFER_SIZE_IN_BYTE = 1024 * 1024 * 64; // 64MB
+	static constexpr u32 STAGING_BUFFER_SIZE_IN_BYTE = 1024 * 1024 * 128; // 128MB
 	static constexpr u32 BUFFER_HEADER_COUNT_MAX = 1024 * 4;
 	static constexpr u32 TEXTURE_HEADER_COUNT_MAX = 512;
 

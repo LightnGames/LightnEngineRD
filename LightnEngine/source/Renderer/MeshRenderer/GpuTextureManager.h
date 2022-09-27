@@ -15,14 +15,16 @@ public:
 	void requestCreateSrv(u32 textureIndex);
 
 	rhi::GpuDescriptorHandle getTextureGpuSrv() const { return _textureSrv._firstHandle._gpuHandle; }
+	rhi::GpuDescriptorHandle getTextureGpuSrv(u32 index) const { return _textureSrv.get(index)._gpuHandle; }
 	const GpuTexture* getTexture(u32 index) const { return &_textures[index]; }
 
 	static GpuTextureManager* Get();
 
 
 private:
+	void createTextureSrv(const Texture* texture);
 	void createTexture(const Texture* texture, u32 beginMipOffset, u32 loadMipCount);
-	void createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, rhi::Format format);
+	void createEmptyTexture(GpuTexture& gpuTexture, u32 width, u32 height, u32 depth, rhi::Format format);
 	void GpuTextureManager::copyTexture(GpuTexture* dstTexture, GpuTexture* srcTexture, u32 firstSubResource, u32 subResourceCount, s32 srcSubResourceOffset, s32 dstSubResourceOffset);
 
 private:

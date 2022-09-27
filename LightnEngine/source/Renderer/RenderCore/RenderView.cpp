@@ -133,8 +133,9 @@ void RenderViewScene::updateGpuView(const View& view, u32 viewIndex) {
 	f32 fov = camera->_fov;
 	f32 fovHalfTan = Tan(fov / 2.0f);
 	f32 aspectRate = view.getAspectRate();
-	Vector3 cameraPosition = camera->_worldMatrix.getCol(3).getVector3();
-	Matrix4 viewMatrix = camera->_worldMatrix.inverse();
+	Matrix4 cameraMatrix = camera->_worldMatrix;
+	Vector3 cameraPosition = cameraMatrix.getCol(3).getVector3();
+	Matrix4 viewMatrix = cameraMatrix.inverse();
 	Matrix4 projectionMatrix = Matrix4::perspectiveFovLH(fov, aspectRate, nearClip, farClip);
 	Matrix4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 	Matrix4 viewProjectionInvMatrix = viewProjectionMatrix.inverse();
@@ -151,10 +152,11 @@ void RenderViewScene::updateGpuView(const View& view, u32 viewIndex) {
 	gpuView->_halfFovTan.y = fovHalfTan;
 	gpuView->_viewPortSize[0] = view.getWidth();
 	gpuView->_viewPortSize[1] = view.getHeight();
-	gpuView->_upDirection = camera->_worldMatrix.getCol(1).getFloat3();
+	gpuView->_rightDirection = cameraMatrix.getCol(0).getFloat3();
+	gpuView->_upDirection = cameraMatrix.getCol(1).getFloat3();
+	gpuView->_forwardDirection = cameraMatrix.getCol(2).getFloat3();
 
 	// ビューフラスタムの平面情報
-	Matrix4 cameraMatrix = camera->_worldMatrix;
 	Vector3 sideForward = Vector3::Forward() * fovHalfTan * aspectRate;
 	Vector3 forward = Vector3::Forward() * fovHalfTan;
 	Vector3 rightNormal = Matrix4::transformNormal(Vector3::Right() + sideForward, cameraMatrix).normalize();

@@ -12,6 +12,7 @@
 #include <Renderer/RenderCore/ReleaseQueue.h>
 #include <Renderer/RenderCore/DebugRenderer.h>
 #include <Renderer/MeshRenderer/IndirectArgumentResource.h>
+#include <Renderer/Lighting/SkySphereRenderer.h>
 #include <ThiredParty/ImGui/imgui.h>
 
 namespace ltn {
@@ -162,6 +163,17 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			desc._frameResource = &visibilityBufferFrameResource;
 			visibilityBufferRenderer->shadingPass(desc);
+		}
+
+		// スカイ
+		{
+			SkySphereRenderer::RenderDesc desc;
+			desc._commandList = commandList;
+			desc._viewDepthGpuTexture = renderViewFrameResource._viewDepthTexture;
+			desc._viewRtv = renderViewFrameResource._viewRtv._cpuHandle;
+			desc._viewCbv = renderViewScene->getViewCbv(i);
+			desc._viewDsv = renderViewFrameResource._viewDsv._cpuHandle;
+			SkySphereRenderer::Get()->render(desc);
 		}
 
 		// デバッグ描画

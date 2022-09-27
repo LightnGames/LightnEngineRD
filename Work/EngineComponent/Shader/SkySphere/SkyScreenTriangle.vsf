@@ -1,0 +1,16 @@
+#include "../ViewInfo.sfh"
+#include "SkySphereShaderInput.sfh"
+
+ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+
+PSInput main(uint vertexId : SV_VertexId)
+{
+    PSInput result;
+    float x = vertexId % 3 == 0 ?  3 : -1;
+    float y = vertexId % 3 == 2 ?  3 : -1;
+    result._position = float4(x, y, 1.0, 1.0);
+    result._viewDirection = _viewInfo._forwardDirection +
+    _viewInfo._halfFovTan[0] * _viewInfo._rightDirection * x +
+    _viewInfo._halfFovTan[1] * _viewInfo._upDirection * y;
+    return result;
+}

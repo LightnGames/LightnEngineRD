@@ -36,15 +36,28 @@ class Texture {
 public:
 	static constexpr u32 TEXTURE_HEADER_SIZE_IN_BYTE = sizeof(DdsHeader) + sizeof(u32);
 
+	enum TextureType : u8 {
+		TEXTURE_1D,
+		TEXTURE_2D,
+		TEXTURE_3D,
+		CUBE_MAP
+	};
+
 	void setAssetPath(const char* assetPath) { _assetPath = assetPath; }
+	void setStreamingDisabled(bool disabled) { _streamingDisabled = disabled; }
+	void setTextureType(TextureType type) { _textureType = type; }
 	DdsHeader* getDdsHeader() { return &_ddsHeader; }
 
 	const char* getAssetPath() const { return _assetPath; }
 	const DdsHeader* getDdsHeader() const { return &_ddsHeader; }
+	TextureType getTextureType() const { return _textureType; }
+	bool isStreamingDisabled() const { return _streamingDisabled; }
 
 private:
 	DdsHeader _ddsHeader;
 	const char* _assetPath = nullptr;
+	u8 _streamingDisabled = 0;
+	TextureType _textureType = TEXTURE_2D;
 };
 
 class TextureScene {
@@ -57,6 +70,8 @@ public:
 
 	struct TextureCreatationDesc {
 		const char* _assetPath = nullptr;
+		bool _streamingDisabled = false;
+		Texture::TextureType _textureType = Texture::TEXTURE_2D;
 	};
 
 	const Texture* createTexture(const TextureCreatationDesc& desc);
