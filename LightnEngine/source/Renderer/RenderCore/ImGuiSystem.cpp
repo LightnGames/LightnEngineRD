@@ -47,10 +47,12 @@ void ImGuiSystem::initialize(const Desc& desc) {
 	allocatorDesc._flags = rhi::DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	_descriptorHeap.initialize(allocatorDesc);
 
+	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
+
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(desc._windowHandle);
-	ImGui_ImplDX12_Init(desc._device->_device, rhi::BACK_BUFFER_COUNT,
-		rhi::toD3d12(rhi::BACK_BUFFER_FORMAT), _descriptorHeap._descriptorHeap,
+	ImGui_ImplDX12_Init(desc._device->_device, rhi::BACK_BUFFER_FORMAT,
+		rhi::toD3d12(rhi::BACK_BUFFER_FORMAT), descriptorAllocator->getDescriptorHeap()->_descriptorHeap,
 		_descriptorHeap._descriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 		_descriptorHeap._descriptorHeap->GetGPUDescriptorHandleForHeapStart());
 

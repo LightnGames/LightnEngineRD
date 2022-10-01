@@ -1,0 +1,6 @@
+Texture2D<float4> _inputTexture : register(t0);
+
+float4 main(float4 position : SV_Position) : SV_TARGET
+{
+    return float4(_inputTexture[position.xy].rgb, 1.0);
+}

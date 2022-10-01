@@ -189,6 +189,7 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 		// 0 番ビューをメインビューとして設定
 		if (i == 0) {
 			renderViewScene->setMainViewGpuTexture(renderViewFrameResource._viewColorTexture);
+			renderViewScene->setMainViewGpuSrv(renderViewFrameResource._viewSrv);
 		}
 	}
 }

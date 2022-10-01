@@ -70,8 +70,10 @@ public:
 	rhi::ViewPort createViewPort(const View& view) const { return { 0,0, f32(view.getWidth()), f32(view.getHeight()), 0, 1 }; }
 	rhi::Rect createScissorRect(const View& view) const { return { 0,0, l32(view.getWidth()), l32(view.getHeight()) }; }
 
+	void setMainViewGpuSrv(DescriptorHandle srv) { _mainViewSrv = srv; }
 	void setMainViewGpuTexture(GpuTexture* texture) { _mainViewTexture = texture; }
 	GpuTexture* getMainViewTexture() { return _mainViewTexture; }
+	rhi::GpuDescriptorHandle getMainViewGpuSrv() const { return _mainViewSrv._gpuHandle; }
 
 	static RenderViewScene* Get();
 
@@ -81,6 +83,7 @@ private:
 
 private:
 	GpuTexture* _mainViewTexture = nullptr;
+	DescriptorHandle _mainViewSrv;
 	GpuBuffer _cullingResultReadbackBuffer[ViewScene::VIEW_COUNT_MAX];
 	GpuBuffer _viewConstantBuffers[ViewScene::VIEW_COUNT_MAX];
 	DescriptorHandles _viewCbv;

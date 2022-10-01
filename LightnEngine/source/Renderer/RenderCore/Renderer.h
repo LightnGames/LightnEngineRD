@@ -5,6 +5,12 @@
 #include <Renderer/RenderCore/CommandListPool.h>
 
 namespace ltn {
+struct CopyTextureRootParam {
+	enum {
+		INPUT_SRV,
+		COUNT,
+	};
+};
 class Renderer {
 public:
 	void initialize();
@@ -21,6 +27,9 @@ private:
 private:
 	rhi::SwapChain _swapChain;
 	rhi::CommandQueue _commandQueue;
+	rhi::RootSignature _copyToBackBufferRootSignature;
+	rhi::PipelineState _copyToBackBufferPipelineState;
+	DescriptorHandles _backBufferRtv;
 
 	u32 _frameIndex = 0;
 	u64 _fenceValues[rhi::BACK_BUFFER_COUNT] = {};

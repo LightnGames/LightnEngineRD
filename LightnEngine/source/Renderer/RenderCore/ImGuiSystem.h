@@ -1,6 +1,7 @@
 #pragma once
 #include <Renderer/RHI/Rhi.h>
 #include <ThiredParty/ImGui/imgui.h>
+#include <Renderer/RenderCore/DescriptorAllocator.h>
 
 namespace ltn {
 class ImGuiSystem {

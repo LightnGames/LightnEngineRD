@@ -70,7 +70,7 @@ void SkySphereRenderer::initialize() {
 		pipelineStateDesc._rootSignature = &_rootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
 		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R11G11B10_FLOAT;
 
 		_pipelineState.iniaitlize(pipelineStateDesc);
 		_pipelineState.setName("SkySpherePipelineState");

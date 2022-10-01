@@ -198,11 +198,12 @@ void RenderViewFrameResource::setUpFrameResource(const View* view, rhi::CommandL
 	FrameBufferAllocator* bufferAllocator = FrameBufferAllocator::Get();
 	// カラーテクスチャ
 	{
+		rhi::Format format = rhi::FORMAT_R11G11B10_FLOAT;
 		rhi::ClearValue optimizedClearValue = {};
-		optimizedClearValue._format = rhi::BACK_BUFFER_FORMAT;
+		optimizedClearValue._format = format;
 
 		FrameBufferAllocator::TextureCreatationDesc desc;
-		desc._format = rhi::BACK_BUFFER_FORMAT;
+		desc._format = format;
 		desc._optimizedClearValue = &optimizedClearValue;
 		desc._width = view->getWidth();
 		desc._height = view->getHeight();

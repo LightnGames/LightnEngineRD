@@ -92,10 +92,50 @@ void Renderer::initialize() {
 	DebugRenderer::Get()->initialize();
 
 	// スワップチェーンのバックバッファを取得
-	for (u32 backBufferIndex = 0; backBufferIndex < rhi::BACK_BUFFER_COUNT; ++backBufferIndex) {
-		GpuTexture& rtvTexture = _backBuffers[backBufferIndex];
-		rtvTexture.initializeFromBackbuffer(&_swapChain, backBufferIndex);
-		rtvTexture.setName("SwapChainBackBuffer[%d]", backBufferIndex);
+	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
+		GpuTexture& rtvTexture = _backBuffers[i];
+		rtvTexture.initializeFromBackbuffer(&_swapChain, i);
+		rtvTexture.setName("SwapChainBackBuffer[%d]", i);
+	}
+
+	{
+		rhi::DescriptorRange inputTextureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		rhi::RootParameter rootParameters[CopyTextureRootParam::COUNT] = {};
+		rootParameters[CopyTextureRootParam::INPUT_SRV].initializeDescriptorTable(1, &inputTextureSrvRange, rhi::SHADER_VISIBILITY_ALL);
+
+		rhi::RootSignatureDesc rootSignatureDesc = {};
+		rootSignatureDesc._device = device;
+		rootSignatureDesc._numParameters = LTN_COUNTOF(rootParameters);
+		rootSignatureDesc._parameters = rootParameters;
+		_copyToBackBufferRootSignature.iniaitlize(rootSignatureDesc);
+
+		AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
+		AssetPath pixelShaderPath("EngineComponent\\Shader\\Utility\\CopyTexture.pso");
+		rhi::ShaderBlob vertexShader;
+		rhi::ShaderBlob pixelShader;
+		vertexShader.initialize(vertexShaderPath.get());
+		pixelShader.initialize(pixelShaderPath.get());
+
+		rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
+		pipelineStateDesc._device = device;
+		pipelineStateDesc._vs = vertexShader.getShaderByteCode();
+		pipelineStateDesc._ps = pixelShader.getShaderByteCode();
+		pipelineStateDesc._numRenderTarget = 1;
+		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+		pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		pipelineStateDesc._rootSignature = &_copyToBackBufferRootSignature;
+		pipelineStateDesc._sampleDesc._count = 1;
+		_copyToBackBufferPipelineState.iniaitlize(pipelineStateDesc);
+		_copyToBackBufferPipelineState.setName("CopyToTexturePipelineState");
+
+		vertexShader.terminate();
+		pixelShader.terminate();
+	}
+
+	_backBufferRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
+	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
+		device->createRenderTargetView(_backBuffers[i].getResource(), _backBufferRtv.get(i)._cpuHandle);
 	}
 
 	//{
@@ -138,7 +178,10 @@ void Renderer::terminate() {
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
+	DescriptorAllocatorGroup::Get()->freeRtvGpu(_backBufferRtv);
 
+	_copyToBackBufferRootSignature.terminate();
+	_copyToBackBufferPipelineState.terminate();
 	//_pipelineState.terminate();
 	//_rootSignature.terminate();
 
@@ -182,7 +225,6 @@ void Renderer::render() {
 	// メイン描画
 	{
 		RenderDirector::Get()->render(commandList);
-		ImGuiSystem::Get()->render(commandList);
 	}
 
 	// View テクスチャからバックバッファにコピー
@@ -193,11 +235,24 @@ void Renderer::render() {
 		GpuTexture* backBuffer = &_backBuffers[_frameIndex];
 
 		ScopedBarrierDesc barriers[] = {
-			ScopedBarrierDesc(backBuffer, rhi::RESOURCE_STATE_COPY_DEST),
-			ScopedBarrierDesc(mainViewTexture, rhi::RESOURCE_STATE_COPY_SOURCE)
+			ScopedBarrierDesc(backBuffer, rhi::RESOURCE_STATE_RENDER_TARGET),
+			ScopedBarrierDesc(mainViewTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 		};
 		ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
-		commandList->copyResource(backBuffer->getResource(), mainViewTexture->getResource());
+
+		// これはいらんはず。IMGUIのカスタムデスクリプタヒープを何とかする
+		rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
+		commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
+
+		commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList->setGraphicsRootSignature(&_copyToBackBufferRootSignature);
+		commandList->setPipelineState(&_copyToBackBufferPipelineState);
+		commandList->setGraphicsRootDescriptorTable(CopyTextureRootParam::INPUT_SRV, renderViewScene->getMainViewGpuSrv());
+		commandList->setRenderTargets(1, _backBufferRtv.get(_frameIndex)._cpuHandle, nullptr);
+		commandList->drawInstanced(3, 1, 0, 0);
+
+		// 最後にデバッグ描画を乗せる
+		ImGuiSystem::Get()->render(commandList);
 	}
 
 	_commandQueue.executeCommandLists(1, &commandList);

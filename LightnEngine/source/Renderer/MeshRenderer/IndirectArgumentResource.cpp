@@ -28,6 +28,7 @@ void IndirectArgumentResource::setUpFrameResource(rhi::CommandList* commandList)
 		_subMeshDrawCountGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
 		_subMeshDrawCountGpuBuffer->setName("SubMeshDrawCounts");
 
+		desc._initialState = rhi::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		desc._sizeInByte = INDIRECT_ARGUMENT_CAPACITY * sizeof(gpu::IndirectArgumentSubInfo);
 		_indirectArgumentSubInfoGpuBuffer = frameBufferAllocator->createGpuBuffer(desc);
 		_indirectArgumentSubInfoGpuBuffer->setName("IndirectArgumentSubInfos");

@@ -252,7 +252,7 @@ void GpuMaterialManager::update() {
 			pipelineStateDesc._vs = vertexShader.getShaderByteCode();
 			pipelineStateDesc._ps = gpuShaderScene->getShader(pixelShaderIndex)->getShaderByteCode();
 			pipelineStateDesc._numRenderTarget = 1;
-			pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+			pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R11G11B10_FLOAT;
 			pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			pipelineStateDesc._rootSignature = &_shadingPassRootSignatures[pipelineSetIndex];
 			pipelineStateDesc._sampleDesc._count = 1;

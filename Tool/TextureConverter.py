@@ -24,6 +24,10 @@ def convert(file_paths):
                 format = "BC7_UNORM_SRGB"
                 if "_CubeMap" in file_name:
                     format = "BC6H_UF16"
+                if "_Normal" in file_name:
+                    format = "BC5_UNORM"
+                if "_RMAH" in file_name:
+                    format = "BC7_UNORM"
 
                 cmd = []
                 cmd.append(TEXCONV_PATH)
