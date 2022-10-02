@@ -60,13 +60,11 @@ void DebugRenderer::initialize() {
 		defaultPipelineStateDesc._device = device;
 		defaultPipelineStateDesc._ps = pixelShader.getShaderByteCode();
 		defaultPipelineStateDesc._numRenderTarget = 1;
-		defaultPipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+		defaultPipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R11G11B10_FLOAT;
 		defaultPipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_LINE;
 		defaultPipelineStateDesc._rootSignature = &_rootSignature;
 		defaultPipelineStateDesc._depthWriteMask = rhi::DEPTH_WRITE_MASK_ZERO;
 		defaultPipelineStateDesc._sampleDesc._count = 1;
-		defaultPipelineStateDesc._depthComparisonFunc = rhi::COMPARISON_FUNC_ALWAYS;
-		defaultPipelineStateDesc._dsvFormat = rhi::FORMAT_D16_UNORM;
 
 		rhi::RenderTargetBlendDesc& debugOcclusionBlendDesc = defaultPipelineStateDesc._blendDesc._renderTarget[0];
 		debugOcclusionBlendDesc._blendEnable = true;

@@ -78,7 +78,7 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 		DdsHeader* ddsHeader = texture->getDdsHeader();
 		assetPath.readFile(ddsHeader, sizeof(DdsHeader));
 		LTN_ASSERT(ddsHeader->_ddspf._flags & DDS_FOURCC);
-		LTN_ASSERT(MAKEFOURCC('D', 'X', '1', '0') == ddsHeader->_ddspf._fourCC);
+		//LTN_ASSERT(MAKEFOURCC('D', 'X', '1', '0') == ddsHeader->_ddspf._fourCC);
 		assetPath.closeFile();
 	}
 
