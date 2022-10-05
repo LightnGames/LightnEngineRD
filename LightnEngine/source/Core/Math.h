@@ -14,6 +14,7 @@ using Float3x4 = DirectX::XMFLOAT3X4;
 using Float2 = DirectX::XMFLOAT2;
 using Float3 = DirectX::XMFLOAT3;
 using Float4 = DirectX::XMFLOAT4;
+using Color3 = Float3;
 using Color4 = Float4;
 
 using Vector = DirectX::XMVECTORF32;
@@ -255,9 +256,19 @@ struct Color : public Vector {
 		v = DirectX::XMVectorSet(r, g, b, a);
 	}
 
+	Color(Color3 color) {
+		v = DirectX::XMVectorSet(color.x, color.y, color.z, 1.0f);
+	}
+
 	Color4 getColor4() const {
 		Color4 result;
 		DirectX::XMStoreFloat4(&result, v);
+		return result;
+	}
+
+	Color3 getColor3() const {
+		Color3 result;
+		DirectX::XMStoreFloat3(&result, v);
 		return result;
 	}
 

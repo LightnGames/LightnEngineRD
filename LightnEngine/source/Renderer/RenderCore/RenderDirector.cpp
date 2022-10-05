@@ -43,6 +43,8 @@ void RenderDirector::update() {
 		"WorldTangent",
 		"Texcoords",
 		"Primitive",
+		"DDX",
+		"DDY",
 	};
 	ImGui::Combo("Type", &_debugVisualizeType, names, LTN_COUNTOF(names));
 	ImGui::End();

@@ -40,21 +40,15 @@ void ImGuiSystem::initialize(const Desc& desc) {
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 
-	rhi::DescriptorHeapDesc allocatorDesc = {};
-	allocatorDesc._device = desc._device;
-	allocatorDesc._numDescriptors = desc._descriptorCount;
-	allocatorDesc._type = rhi::DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	allocatorDesc._flags = rhi::DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	_descriptorHeap.initialize(allocatorDesc);
-
 	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
+	_srv = descriptorAllocator->alloc();
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(desc._windowHandle);
-	ImGui_ImplDX12_Init(desc._device->_device, rhi::BACK_BUFFER_FORMAT,
-		rhi::toD3d12(rhi::BACK_BUFFER_FORMAT), descriptorAllocator->getDescriptorHeap()->_descriptorHeap,
-		_descriptorHeap._descriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-		_descriptorHeap._descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	ImGui_ImplDX12_Init(desc._device->_device, rhi::BACK_BUFFER_COUNT,
+		rhi::toD3d12(rhi::FORMAT_R8G8B8A8_UNORM), descriptorAllocator->getDescriptorHeap()->_descriptorHeap,
+		rhi::toD3d12(_srv._cpuHandle),
+		rhi::toD3d12(_srv._gpuHandle));
 
 	// Imgui レイアウト読み込み
 	char settingsFilePath[FILE_PATH_COUNT_MAX];
@@ -65,7 +59,7 @@ void ImGuiSystem::initialize(const Desc& desc) {
 }
 
 void ImGuiSystem::terminate() {
-	_descriptorHeap.terminate();
+	DescriptorAllocatorGroup::Get()->deallocSrvCbvUavGpu(_srv);
 
 	// Imgui レイアウト 保存
 	char settingsFilePath[FILE_PATH_COUNT_MAX];
@@ -95,8 +89,6 @@ void ImGuiSystem::render(rhi::CommandList* commandList) {
 	DEBUG_MARKER_CPU_GPU_SCOPED_TIMER(commandList, Color4(), "ImGui");
 	ImGui::Render();
 
-	rhi::DescriptorHeap* descriptorHeaps[] = { &_descriptorHeap };
-	commandList->setDescriptorHeaps(1, descriptorHeaps);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList->_commandList);
 
 	ImGuiIO& io = ImGui::GetIO();

@@ -24,11 +24,11 @@ void DescriptorAllocator::terminate() {
 	_allocationInfo.terminate();
 }
 
-DescriptorHandle DescriptorAllocator::allocate() {
-	return allocate(1)._firstHandle;
+DescriptorHandle DescriptorAllocator::alloc() {
+	return alloc(1)._firstHandle;
 }
 
-DescriptorHandles DescriptorAllocator::allocate(u32 count) {
+DescriptorHandles DescriptorAllocator::alloc(u32 count) {
 	VirtualArray::AllocationInfo allocationInfo = _allocationInfo.allocation(count);
 	u32 offset = u32(allocationInfo._offset) * _incrementSize;
 	DescriptorHandles descriptors = {};
@@ -40,11 +40,11 @@ DescriptorHandles DescriptorAllocator::allocate(u32 count) {
 	return descriptors;
 }
 
-void DescriptorAllocator::free(DescriptorHandle& descriptorHandle) {
+void DescriptorAllocator::dealloc(DescriptorHandle& descriptorHandle) {
 	_allocationInfo.freeAllocation(descriptorHandle._allocationInfo);
 }
 
-void DescriptorAllocator::free(DescriptorHandles& descriptorHandles) {
+void DescriptorAllocator::dealloc(DescriptorHandles& descriptorHandles) {
 	_allocationInfo.freeAllocation(descriptorHandles._firstHandle._allocationInfo);
 }
 

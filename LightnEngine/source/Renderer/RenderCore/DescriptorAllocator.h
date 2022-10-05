@@ -36,10 +36,10 @@ public:
 	void initialize(const rhi::DescriptorHeapDesc& desc);
 	void terminate();
 
-	DescriptorHandle allocate();
-	DescriptorHandles allocate(u32 count);
-	void free(DescriptorHandle& descriptorHandle);
-	void free(DescriptorHandles& descriptorHandles);
+	DescriptorHandle alloc();
+	DescriptorHandles alloc(u32 count);
+	void dealloc(DescriptorHandle& descriptorHandle);
+	void dealloc(DescriptorHandles& descriptorHandles);
 	void setName(const char* name);
 
 	rhi::DescriptorHeap* getDescriptorHeap() { return &_descriptorHeap; }
@@ -71,23 +71,23 @@ public:
 	DescriptorAllocator* getRtvAllocator() { return &_rtvAllocator; }
 	DescriptorAllocator* getDsvAllocator() { return &_dsvAllocator; }
 
-	DescriptorHandle allocateSrvCbvUavGpu() { return _srvCbvUavGpuAllocator.allocate(); }
-	DescriptorHandles allocateSrvCbvUavGpu(u32 count) { return _srvCbvUavGpuAllocator.allocate(count); }
-	DescriptorHandle allocateSrvCbvUavCpu() { return _srvCbvUavCpuAllocator.allocate(); }
-	DescriptorHandles allocateSrvCbvUavCpu(u32 count) { return _srvCbvUavCpuAllocator.allocate(count); }
-	DescriptorHandle allocateRtvGpu() { return _rtvAllocator.allocate(); }
-	DescriptorHandles allocateRtvGpu(u32 count) { return _rtvAllocator.allocate(count); }
-	DescriptorHandle allocateDsvGpu() { return _dsvAllocator.allocate(); }
-	DescriptorHandles allocateDsvGpu(u32 count) { return _dsvAllocator.allocate(count); }
+	DescriptorHandle allocateSrvCbvUavGpu() { return _srvCbvUavGpuAllocator.alloc(); }
+	DescriptorHandles allocateSrvCbvUavGpu(u32 count) { return _srvCbvUavGpuAllocator.alloc(count); }
+	DescriptorHandle allocateSrvCbvUavCpu() { return _srvCbvUavCpuAllocator.alloc(); }
+	DescriptorHandles allocateSrvCbvUavCpu(u32 count) { return _srvCbvUavCpuAllocator.alloc(count); }
+	DescriptorHandle allocateRtvGpu() { return _rtvAllocator.alloc(); }
+	DescriptorHandles allocateRtvGpu(u32 count) { return _rtvAllocator.alloc(count); }
+	DescriptorHandle allocateDsvGpu() { return _dsvAllocator.alloc(); }
+	DescriptorHandles allocateDsvGpu(u32 count) { return _dsvAllocator.alloc(count); }
 
-	void freeSrvCbvUavGpu(DescriptorHandle& descriptorHandle) { _srvCbvUavGpuAllocator.free(descriptorHandle); }
-	void freeSrvCbvUavGpu(DescriptorHandles& descriptorHandles) { _srvCbvUavGpuAllocator.free(descriptorHandles); }
-	void freeSrvCbvUavCpu(DescriptorHandle& descriptorHandle) { _srvCbvUavCpuAllocator.free(descriptorHandle); }
-	void freeSrvCbvUavCpu(DescriptorHandles& descriptorHandles) { _srvCbvUavCpuAllocator.free(descriptorHandles); }
-	void freeRtvGpu(DescriptorHandle& descriptorHandle) { _rtvAllocator.free(descriptorHandle); }
-	void freeRtvGpu(DescriptorHandles& descriptorHandles) { _rtvAllocator.free(descriptorHandles); }
-	void freeDsvGpu(DescriptorHandle& descriptorHandle) { _dsvAllocator.free(descriptorHandle); }
-	void freeDsvGpu(DescriptorHandles& descriptorHandles) { _dsvAllocator.free(descriptorHandles); }
+	void deallocSrvCbvUavGpu(DescriptorHandle& descriptorHandle) { _srvCbvUavGpuAllocator.dealloc(descriptorHandle); }
+	void deallocSrvCbvUavGpu(DescriptorHandles& descriptorHandles) { _srvCbvUavGpuAllocator.dealloc(descriptorHandles); }
+	void deallocSrvCbvUavCpu(DescriptorHandle& descriptorHandle) { _srvCbvUavCpuAllocator.dealloc(descriptorHandle); }
+	void deallocSrvCbvUavCpu(DescriptorHandles& descriptorHandles) { _srvCbvUavCpuAllocator.dealloc(descriptorHandles); }
+	void deallocRtvGpu(DescriptorHandle& descriptorHandle) { _rtvAllocator.dealloc(descriptorHandle); }
+	void deallocRtvGpu(DescriptorHandles& descriptorHandles) { _rtvAllocator.dealloc(descriptorHandles); }
+	void deallocDsvGpu(DescriptorHandle& descriptorHandle) { _dsvAllocator.dealloc(descriptorHandle); }
+	void deallocDsvGpu(DescriptorHandles& descriptorHandles) { _dsvAllocator.dealloc(descriptorHandles); }
 
 	static DescriptorAllocatorGroup* Get();
 

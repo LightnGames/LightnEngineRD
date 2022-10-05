@@ -31,7 +31,7 @@ void GpuTextureManager::initialize() {
 
 void GpuTextureManager::terminate() {
 	update();
-	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_textureSrv);
+	DescriptorAllocatorGroup::Get()->deallocSrvCbvUavGpu(_textureSrv);
 	Memory::deallocObjects(_textures);
 	_defaultBlackTexture.terminate();
 }
@@ -187,18 +187,25 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 	assetPath.openFile();
 	assetPath.seekSet(Texture::TEXTURE_HEADER_SIZE_IN_BYTE);
 
-	DdsHeaderDxt10 ddsHeaderDxt10;
-	assetPath.readFile(&ddsHeaderDxt10, sizeof(DdsHeaderDxt10));
-
 	u32 ddsMipCount = Max(ddsHeader->_mipMapCount, 1U);
-	u32 numberOfPlanes = device->getFormatPlaneCount(ddsHeaderDxt10._dxgiFormat);
+	u32 arraySize = 1;
+	rhi::Format format = rhi::FORMAT_UNKNOWN;
+	bool isCubeMapTexture = false;
+	bool is3dTexture = false;
+	{
+		DdsHeaderDxt10 ddsHeaderDxt10;
+		assetPath.readFile(&ddsHeaderDxt10, sizeof(DdsHeaderDxt10));
 
-	bool is3dTexture = ddsHeaderDxt10._resourceDimension == rhi::RESOURCE_DIMENSION_TEXTURE3D;
-	bool isCubeMapTexture = ddsHeaderDxt10._miscFlag & 0x4 /* RESOURCE_MISC_TEXTURECUBE */;
+		is3dTexture = ddsHeaderDxt10._resourceDimension == rhi::RESOURCE_DIMENSION_TEXTURE3D;
+		isCubeMapTexture = ddsHeaderDxt10._miscFlag & 0x4 /* RESOURCE_MISC_TEXTURECUBE */;
+		arraySize = ddsHeaderDxt10._arraySize;
+		format = ddsHeaderDxt10._dxgiFormat;
+	}
 
+	u32 numberOfPlanes = device->getFormatPlaneCount(format);
 	u32 mipOffset = beginMipOffset;
 	u32 mipCount = loadMipCount;
-	u32 numArray = is3dTexture ? 1 : ddsHeaderDxt10._arraySize;
+	u32 numArray = is3dTexture ? 1 : arraySize;
 	u32 targetMipCount = Min(mipOffset + mipCount, ddsMipCount);
 	u32 maxResolution = 1 << (targetMipCount - 1);
 	u32 clampedWidth = Min(ddsHeader->_width, maxResolution);
@@ -211,7 +218,7 @@ void GpuTextureManager::createTexture(const Texture* texture, u32 beginMipOffset
 	}
 
 	GpuTexture& gpuTexture = _textures[textureIndex];
-	createEmptyTexture(gpuTexture, clampedWidth, clampedHeight, numArray, ddsHeaderDxt10._dxgiFormat);
+	createEmptyTexture(gpuTexture, clampedWidth, clampedHeight, numArray, format);
 	gpuTexture.setName(texture->getAssetPath());
 
 	// 最大解像度が指定してある場合、それ以外のピクセルを読み飛ばします。

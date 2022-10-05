@@ -25,7 +25,7 @@ struct DeviceBase {
 	virtual void terminate() = 0;
 
 	virtual u32 getDescriptorHandleIncrementSize(DescriptorHeapType type) const = 0;
-	virtual void createRenderTargetView(Resource* resource, CpuDescriptorHandle destDescriptor) = 0;
+	virtual void createRenderTargetView(Resource* resource,const RenderTargetViewDesc* desc, CpuDescriptorHandle destDescriptor) = 0;
 	virtual void createDepthStencilView(Resource* resource, CpuDescriptorHandle destDescriptor) = 0;
 	virtual void createCommittedResource(HeapType heapType, HeapFlags heapFlags, const ResourceDesc& desc,
 		ResourceStates initialResourceState, const ClearValue* optimizedClearValue, Resource* dstResource) = 0;

@@ -55,7 +55,7 @@ void GpuMaterialManager::initialize() {
 		device->createShaderResourceView(_parameterOffsetGpuBuffer.getResource(), &desc, _parameterOffsetSrv._cpuHandle);
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_geometryPassRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
 		_shadingPassRootSignatures = allocation.allocateClearedObjects<rhi::RootSignature>(PipelineSetScene::PIPELINE_SET_CAPACITY);
 		_geometryPassPipelineStates = allocation.allocateClearedObjects<rhi::PipelineState>(PipelineSetScene::PIPELINE_SET_CAPACITY);
@@ -67,9 +67,9 @@ void GpuMaterialManager::initialize() {
 void GpuMaterialManager::terminate() {
 	_parameterGpuBuffer.terminate();
 	_parameterOffsetGpuBuffer.terminate();
-	_chunkAllocator.free();
-	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_parameterSrv);
-	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_parameterOffsetSrv);
+	_chunkAllocator.freeChunk();
+	DescriptorAllocatorGroup::Get()->deallocSrvCbvUavGpu(_parameterSrv);
+	DescriptorAllocatorGroup::Get()->deallocSrvCbvUavGpu(_parameterOffsetSrv);
 }
 
 void GpuMaterialManager::update() {
@@ -126,8 +126,12 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange triangleAttibuteSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
 			rhi::DescriptorRange baryCentricsSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
 			rhi::DescriptorRange viewDepthSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 14);
-			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 15);
-			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 16);
+			rhi::DescriptorRange lightSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 15);
+			rhi::DescriptorRange skyDiffuseSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 16);
+			rhi::DescriptorRange skySpecularSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 17);
+			rhi::DescriptorRange brdfSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 18);
+			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 19);
+			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 20);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
 
 			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
@@ -149,6 +153,10 @@ void GpuMaterialManager::update() {
 			rootParameters[ShadingRootParam::TRIANGLE_ATTRIBUTE].initializeDescriptorTable(1, &triangleAttibuteSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::BARY_CENTRICS].initializeDescriptorTable(1, &baryCentricsSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::VIEW_DEPTH].initializeDescriptorTable(1, &viewDepthSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::LIGHT].initializeDescriptorTable(1, &lightSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::SKY_DIFFUSE].initializeDescriptorTable(1, &skyDiffuseSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::SKY_SPECULAR].initializeDescriptorTable(1, &skySpecularSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::BRDF_LUT].initializeDescriptorTable(1, &brdfSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::DEBUG_TYPE].initializeConstant(1, 1, rhi::SHADER_VISIBILITY_PIXEL);
 

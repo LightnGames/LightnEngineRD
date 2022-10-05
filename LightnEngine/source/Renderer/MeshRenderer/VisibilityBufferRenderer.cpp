@@ -4,6 +4,7 @@
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/LodStreamingManager.h>
 #include <Renderer/RenderCore/FrameResourceAllocator.h>
+#include <Renderer/Lighting/GpuLight.h>
 #include <Renderer/MeshRenderer/GpuMaterialManager.h>
 #include <Renderer/MeshRenderer/GeometryResourceManager.h>
 #include <Renderer/MeshRenderer/GpuMeshResourceManager.h>
@@ -12,6 +13,8 @@
 #include <Renderer/MeshRenderer/IndirectArgumentResource.h>
 #include <Renderer/AssetReloader/PipelineStateReloader.h>
 #include <RendererScene/View.h>
+#include <RendererScene/Texture.h>
+#include <RendererScene/SkySphere.h>
 #include <Application/Application.h>
 #include "VisibilityBufferRenderer.h"
 
@@ -154,8 +157,8 @@ void VisiblityBufferRenderer::terminate() {
 
 	{
 		DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
-		allocator->freeSrvCbvUavGpu(_buildShaderIdCbv);
-		allocator->freeSrvCbvUavGpu(_shadingCbv);
+		allocator->deallocSrvCbvUavGpu(_buildShaderIdCbv);
+		allocator->deallocSrvCbvUavGpu(_shadingCbv);
 	}
 }
 
@@ -205,6 +208,8 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 	GeometryResourceManager* geometryResourceManager = GeometryResourceManager::Get();
 	LodStreamingManager* lodStreamingManager = LodStreamingManager::Get();
+	TextureScene* textureScene = TextureScene::Get();
+	GpuTextureManager* gpuTextureManager = GpuTextureManager::Get();
 	ScopedBarrierDesc barriers[] = {
 		ScopedBarrierDesc(frameResource->_shaderIdDepth, rhi::RESOURCE_STATE_DEPTH_READ),
 		ScopedBarrierDesc(frameResource->_triangleIdTexture, rhi::RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
@@ -219,6 +224,11 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	};
 	ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
+	const SkySphere* skySphere = SkySphereScene::Get()->getSkySphere(0);
+	u32 skyDiffuseCubeMapIndex = textureScene->getTextureIndex(skySphere->getDiffuseTexture());
+	u32 skySpecularCubeMapIndex = textureScene->getTextureIndex(skySphere->getSpecularTexture());
+	u32 brdfLutTextureIndex = textureScene->getTextureIndex(SkySphereScene::Get()->getBrdfLutTexture());
+
 	rhi::GpuDescriptorHandle vertexResourceSrv = geometryResourceManager->getVertexResourceGpuSrv();
 	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = geometryResourceManager->getGeometryGlobalOffsetGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceLodLevelSrv = lodStreamingManager->getMeshInstanceLodLevelGpuSrv();
@@ -227,9 +237,13 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::GpuDescriptorHandle materialScreenPersentageSrv = lodStreamingManager->getMaterialScreenPersentageGpuSrv();
 	rhi::GpuDescriptorHandle meshInstanceSrv = GpuMeshInstanceManager::Get()->getMeshInstanceGpuSrv();
 	rhi::GpuDescriptorHandle meshSrv = GpuMeshResourceManager::Get()->getMeshGpuSrv();
-	rhi::GpuDescriptorHandle textureSrv = GpuTextureManager::Get()->getTextureGpuSrv();
+	rhi::GpuDescriptorHandle textureSrv = gpuTextureManager->getTextureGpuSrv();
 	rhi::GpuDescriptorHandle materialParameterSrv = GpuMaterialManager::Get()->getParameterGpuSrv();
 	rhi::GpuDescriptorHandle materialParameterOffsetSrv = GpuMaterialManager::Get()->getParameterOffsetGpuSrv();
+	rhi::GpuDescriptorHandle lightSrv = GpuLightScene::Get()->getDirectionalLightGpuSrv();
+	rhi::GpuDescriptorHandle skyDiffuseSrv = gpuTextureManager->getTextureGpuSrv(skyDiffuseCubeMapIndex);
+	rhi::GpuDescriptorHandle skySpecularSrv = gpuTextureManager->getTextureGpuSrv(skySpecularCubeMapIndex);
+	rhi::GpuDescriptorHandle brdfLutSrv = gpuTextureManager->getTextureGpuSrv(brdfLutTextureIndex);
 
 	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
 	f32 clearColor[4] = {};
@@ -265,6 +279,10 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::TEXTURE, textureSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER, materialParameterSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::MATERIAL_PARAMETER_OFFSET, materialParameterOffsetSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::LIGHT, lightSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SKY_DIFFUSE, skyDiffuseSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SKY_SPECULAR, skySpecularSrv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::BRDF_LUT, brdfLutSrv);
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_TYPE, 1, &desc._debugVisualizeType, 0);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
@@ -432,9 +450,9 @@ void VisibilityBufferFrameResource::setUpFrameResource(rhi::CommandList* command
 
 		// RTV
 		{
-			device->createRenderTargetView(_triangleIdTexture->getResource(), _triangleIdRtv.get(0)._cpuHandle);
-			device->createRenderTargetView(_triangleShaderIdTexture->getResource(), _triangleIdRtv.get(1)._cpuHandle);
-			device->createRenderTargetView(_baryCentricsGpuTexture->getResource(), _triangleIdRtv.get(2)._cpuHandle);
+			device->createRenderTargetView(_triangleIdTexture->getResource(), nullptr, _triangleIdRtv.get(0)._cpuHandle);
+			device->createRenderTargetView(_triangleShaderIdTexture->getResource(), nullptr, _triangleIdRtv.get(1)._cpuHandle);
+			device->createRenderTargetView(_baryCentricsGpuTexture->getResource(), nullptr, _triangleIdRtv.get(2)._cpuHandle);
 		}
 
 		// DSV

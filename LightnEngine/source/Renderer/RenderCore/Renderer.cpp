@@ -122,7 +122,7 @@ void Renderer::initialize() {
 		pipelineStateDesc._vs = vertexShader.getShaderByteCode();
 		pipelineStateDesc._ps = pixelShader.getShaderByteCode();
 		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
+		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM_SRGB;
 		pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineStateDesc._rootSignature = &_copyToBackBufferRootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
@@ -133,9 +133,15 @@ void Renderer::initialize() {
 		pixelShader.terminate();
 	}
 
-	_backBufferRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
+	rhi::RenderTargetViewDesc desc = {};
+	desc._format = rhi::FORMAT_R8G8B8A8_UNORM_SRGB;
+	desc._viewDimension = rhi::RTV_DIMENSION_TEXTURE2D;
+
+	_backBufferSrgbRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
+	_backBufferLinerRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
-		device->createRenderTargetView(_backBuffers[i].getResource(), _backBufferRtv.get(i)._cpuHandle);
+		device->createRenderTargetView(_backBuffers[i].getResource(), &desc, _backBufferSrgbRtv.get(i)._cpuHandle);
+		device->createRenderTargetView(_backBuffers[i].getResource(), nullptr, _backBufferLinerRtv.get(i)._cpuHandle);
 	}
 
 	//{
@@ -178,7 +184,8 @@ void Renderer::terminate() {
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
-	DescriptorAllocatorGroup::Get()->freeRtvGpu(_backBufferRtv);
+	DescriptorAllocatorGroup::Get()->deallocRtvGpu(_backBufferSrgbRtv);
+	DescriptorAllocatorGroup::Get()->deallocRtvGpu(_backBufferLinerRtv);
 
 	_copyToBackBufferRootSignature.terminate();
 	_copyToBackBufferPipelineState.terminate();
@@ -240,18 +247,15 @@ void Renderer::render() {
 		};
 		ScopedBarrier scopedBarriers(commandList, barriers, LTN_COUNTOF(barriers));
 
-		// これはいらんはず。IMGUIのカスタムデスクリプタヒープを何とかする
-		rhi::DescriptorHeap* descriptorHeaps[] = { DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator()->getDescriptorHeap() };
-		commandList->setDescriptorHeaps(LTN_COUNTOF(descriptorHeaps), descriptorHeaps);
-
 		commandList->setPrimitiveTopology(rhi::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->setGraphicsRootSignature(&_copyToBackBufferRootSignature);
 		commandList->setPipelineState(&_copyToBackBufferPipelineState);
 		commandList->setGraphicsRootDescriptorTable(CopyTextureRootParam::INPUT_SRV, renderViewScene->getMainViewGpuSrv());
-		commandList->setRenderTargets(1, _backBufferRtv.get(_frameIndex)._cpuHandle, nullptr);
+		commandList->setRenderTargets(1, _backBufferSrgbRtv.get(_frameIndex)._cpuHandle, nullptr);
 		commandList->drawInstanced(3, 1, 0, 0);
 
 		// 最後にデバッグ描画を乗せる
+		commandList->setRenderTargets(1, _backBufferLinerRtv.get(_frameIndex)._cpuHandle, nullptr);
 		ImGuiSystem::Get()->render(commandList);
 	}
 

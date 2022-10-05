@@ -19,7 +19,7 @@ public:
 		_allocatedNumElements = 0;
 	}
 
-	T* allocate(u32 numElements = 1) {
+	T* alloc(u32 numElements = 1) {
 		LTN_ASSERT(_allocatedNumElements + numElements < _numElements);
 		u32 currentSizeInByte = _allocatedNumElements;
 		_allocatedNumElements += numElements;

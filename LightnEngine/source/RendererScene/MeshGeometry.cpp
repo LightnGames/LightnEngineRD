@@ -163,7 +163,7 @@ void MeshGeometryPool::initialize(const InitializetionDesc& desc) {
 		_subMeshAllocations.initialize(handleDesc);
 	}
 
-	_chunkAllocator.allocate([this, desc](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this, desc](ChunkAllocator::Allocation& allocation) {
 		_meshGeometries = allocation.allocateObjects<MeshGeometry>(desc._meshCount);
 		_lodMeshGeometries = allocation.allocateObjects<LodMeshGeometry>(desc._lodMeshCount);
 		_subMeshGeometries = allocation.allocateObjects<SubMeshGeometry>(desc._subMeshCount);
@@ -180,7 +180,7 @@ void MeshGeometryPool::terminate() {
 	_meshAllocations.terminate();
 	_lodMeshAllocations.terminate();
 	_subMeshAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 MeshGeometry* MeshGeometryPool::allocateMeshGeometry(const AllocationDesc& desc) {

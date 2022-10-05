@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/Math.h>
+#include <Core/ChunkAllocator.h>
 #include <Renderer/RenderCore/GpuBuffer.h>
 #include <Renderer/RenderCore/DescriptorAllocator.h>
 
@@ -59,5 +60,6 @@ private:
 	u32* _pipelineSetSubMeshInstanceOffsets = nullptr;
 	u32* _pipelineSetSubMeshInstanceCounts = nullptr;
 	u32 _meshInstanceReserveCount = 0;
+	ChunkAllocator _chunkAllocator;
 };
 }

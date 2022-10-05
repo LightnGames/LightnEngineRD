@@ -15,7 +15,7 @@ void ShaderScene::initialize() {
 		handleDesc._size = SHADER_PARAMETER_CAPACITY;
 		_parameterAllocations.initialize(handleDesc);
 	}
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_shaders = allocation.allocateClearedObjects<Shader>(SHADER_CAPACITY);
 		_shaderAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(SHADER_CAPACITY);
 		_shaderAssetPathHashes = allocation.allocateObjects<u64>(SHADER_CAPACITY);
@@ -32,7 +32,7 @@ void ShaderScene::terminate() {
 
 	_shaderAllocations.terminate();
 	_parameterAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 void ShaderScene::lateUpdate() {
@@ -70,8 +70,8 @@ const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 
 	// シェーダーパラメーター情報
 	if (desc._TEST_collectParameter) {
-		u32 parameterCount = 2;
-		u32 parameterSizeInByte = 20;
+		u32 parameterCount = 4;
+		u32 parameterSizeInByte = 28;
 		VirtualArray::AllocationInfo parameterAllocationInfo = _parameterAllocations.allocation(parameterCount);
 		_parameterAllocationInfos[allocationInfo._offset] = parameterAllocationInfo;
 
@@ -93,6 +93,16 @@ const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 		parameterNameHashes[1] = StrHash32("BaseColorTexture");
 		parameterOffsets[1] = 16;
 		parameterTypes[1] = Shader::PARAMETER_TYPE_TEXTURE;
+
+		// offset:20 size:4 NormalTextureIndex
+		parameterNameHashes[2] = StrHash32("NormalTexture");
+		parameterOffsets[2] = 20;
+		parameterTypes[2] = Shader::PARAMETER_TYPE_TEXTURE;
+
+		// offset:24 size:4 RMAHTextureIndex
+		parameterNameHashes[3] = StrHash32("RMAHTexture");
+		parameterOffsets[3] = 24;
+		parameterTypes[3] = Shader::PARAMETER_TYPE_TEXTURE;
 	}
 
 	_shaderAssetPathHashes[allocationInfo._offset] = shader->_assetPathHash;

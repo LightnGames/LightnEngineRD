@@ -13,7 +13,7 @@ void TextureScene::initialize() {
 	handleDesc._size = TEXTURE_CAPACITY;
 	_textureAllocations.initialize(handleDesc);
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_textures = allocation.allocateObjects<Texture>(TEXTURE_CAPACITY);
 		_textureAssetPathHashes = allocation.allocateObjects<u64>(TEXTURE_CAPACITY);
 		_textureAssetPaths = allocation.allocateObjects<char*>(TEXTURE_CAPACITY);
@@ -23,8 +23,9 @@ void TextureScene::initialize() {
 }
 
 void TextureScene::terminate() {
+	lateUpdate();
 	_textureAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 void TextureScene::lateUpdate() {
@@ -36,7 +37,7 @@ void TextureScene::lateUpdate() {
 		LTN_ASSERT(_textureEnabledFlags[textureIndex] == 1);
 		_textureAllocations.freeAllocation(_textureAllocationInfos[textureIndex]);
 		_textureEnabledFlags[textureIndex] = 0;
-		Memory::deallocObjects(_textureAssetPaths[i]);
+		Memory::deallocObjects(_textureAssetPaths[textureIndex]);
 
 		_textures[textureIndex] = Texture();
 	}
@@ -78,7 +79,7 @@ const Texture* TextureScene::createTexture(const TextureCreatationDesc& desc) {
 		DdsHeader* ddsHeader = texture->getDdsHeader();
 		assetPath.readFile(ddsHeader, sizeof(DdsHeader));
 		LTN_ASSERT(ddsHeader->_ddspf._flags & DDS_FOURCC);
-		//LTN_ASSERT(MAKEFOURCC('D', 'X', '1', '0') == ddsHeader->_ddspf._fourCC);
+		LTN_ASSERT(MAKEFOURCC('D', 'X', '1', '0') == ddsHeader->_ddspf._fourCC);
 		assetPath.closeFile();
 	}
 

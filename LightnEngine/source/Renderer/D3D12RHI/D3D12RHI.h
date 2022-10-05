@@ -33,7 +33,7 @@ struct Device :public DeviceBase {
 	void initialize(const DeviceDesc& desc) override;
 	void terminate() override;
 	u32 getDescriptorHandleIncrementSize(DescriptorHeapType type) const override;
-	void createRenderTargetView(Resource* resource, CpuDescriptorHandle destDescriptor) override;
+	void createRenderTargetView(Resource* resource, const RenderTargetViewDesc* desc, CpuDescriptorHandle destDescriptor) override;
 	void createDepthStencilView(Resource* resource, CpuDescriptorHandle destDescriptor) override;
 	void createCommittedResource(HeapType heapType, HeapFlags heapFlags, const ResourceDesc& desc,
 		ResourceStates initialResourceState, const ClearValue* optimizedClearValue, Resource* dstResource) override;
@@ -174,6 +174,16 @@ struct QueryHeap :public QueryHeapBase {
 };
 
 namespace {
+D3D12_CPU_DESCRIPTOR_HANDLE toD3d12(CpuDescriptorHandle handle) {
+	D3D12_CPU_DESCRIPTOR_HANDLE result = { handle._ptr };
+	return result;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE toD3d12(GpuDescriptorHandle handle) {
+	D3D12_GPU_DESCRIPTOR_HANDLE result = { handle._ptr };
+	return result;
+}
+
 DXGI_FORMAT toD3d12(Format format) {
 	return static_cast<DXGI_FORMAT>(format);
 }

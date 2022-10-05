@@ -54,7 +54,7 @@ void GpuMeshResourceManager::initialize() {
 }
 
 void GpuMeshResourceManager::terminate() {
-	DescriptorAllocatorGroup::Get()->freeSrvCbvUavGpu(_meshSrv);
+	DescriptorAllocatorGroup::Get()->deallocSrvCbvUavGpu(_meshSrv);
 	_meshGpuBuffer.terminate();
 	_lodMeshGpuBuffer.terminate();
 	_subMeshGpuBuffer.terminate();

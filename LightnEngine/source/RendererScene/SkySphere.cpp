@@ -15,16 +15,22 @@ void SkySphereScene::initialize() {
 		handleDesc._size = SKY_SPHERE_CAPACITY;
 		_skySphereAllocations.initialize(handleDesc);
 	}
+
+	TextureScene::TextureCreatationDesc textureCreateDesc = {};
+	textureCreateDesc._streamingDisabled = true;
+	textureCreateDesc._assetPath = "EngineComponent\\Texture\\Brdf.dds";
+	_brdfLutTexture = TextureScene::Get()->createTexture(textureCreateDesc);
 }
 
 void SkySphereScene::terminate() {
 	_skySphereAllocations.terminate();
+	TextureScene::Get()->destroyTexture(_brdfLutTexture);
 }
 
 void SkySphereScene::lateUpdate() {
-	u32 destroyShaderCount = _skySphereDestroyInfos.getUpdateCount();
+	u32 destroyCount = _skySphereDestroyInfos.getUpdateCount();
 	auto destroyShaders = _skySphereDestroyInfos.getObjects();
-	for (u32 i = 0; i < destroyShaderCount; ++i) {
+	for (u32 i = 0; i < destroyCount; ++i) {
 		u32 shaderIndex = getSkySphereIndex(destroyShaders[i]);
 		_skySphereAllocations.freeAllocation(_skySphereAllocationInfos[shaderIndex]);
 		_skySpheres[shaderIndex] = SkySphere();
@@ -66,7 +72,7 @@ void SkySphereScene::destroySkySphere(const SkySphere* skySphere) {
 	TextureScene* textureScene = TextureScene::Get();
 	textureScene->destroyTexture(skySphere->getEnvironmentTexture());
 	textureScene->destroyTexture(skySphere->getDiffuseTexture());
-	textureScene->destroyTexture(skySphere->getSupecularTexture());
+	textureScene->destroyTexture(skySphere->getSpecularTexture());
 }
 
 SkySphereScene* SkySphereScene::Get() {

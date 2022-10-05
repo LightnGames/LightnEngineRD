@@ -9,7 +9,7 @@ ViewScene g_viewScene;
 }
 
 void ViewScene::initialize() {
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_views = allocation.allocateClearedObjects<View>(VIEW_COUNT_MAX);
 		_viewStateFlags = allocation.allocateClearedObjects<u8>(VIEW_COUNT_MAX);
 		_viewEnabledFlags = allocation.allocateClearedObjects<u8>(VIEW_COUNT_MAX);
@@ -22,7 +22,7 @@ void ViewScene::terminate() {
 		LTN_ASSERT(_viewEnabledFlags[i] == 0);
 	}
 
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 void ViewScene::lateUpdate() {

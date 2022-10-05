@@ -3,6 +3,7 @@
 
 namespace ltn {
 class View;
+class DirectionalLight;
 class EditorCamera {
 public:
 	void initialize();
@@ -11,5 +12,6 @@ public:
 
 private:
 	View* _view = nullptr;
+	DirectionalLight* _directionalLight = nullptr;
 };
 }

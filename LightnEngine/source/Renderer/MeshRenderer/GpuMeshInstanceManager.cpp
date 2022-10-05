@@ -68,16 +68,12 @@ void GpuMeshInstanceManager::initialize() {
 		device->createShaderResourceView(_subMeshDrawOffsetsGpuBuffer.getResource(), &desc, _subMeshDrawOffsetsSrv._cpuHandle);
 	}
 
-	{
-		_pipelineSetSubMeshInstanceCounts = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		_pipelineSetSubMeshInstanceOffsets = Memory::allocObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
-		_subMeshDrawCounts = Memory::allocObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
-		_subMeshDrawOffsets = Memory::allocObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
-		memset(_pipelineSetSubMeshInstanceCounts, 0, PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32));
-		memset(_pipelineSetSubMeshInstanceOffsets, 0, PipelineSetScene::PIPELINE_SET_CAPACITY * sizeof(u32));
-		memset(_subMeshDrawCounts, 0, MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY * sizeof(u32));
-		memset(_subMeshDrawOffsets, 0, MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY * sizeof(u32));
-	}
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
+		_pipelineSetSubMeshInstanceCounts = allocation.allocateClearedObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_pipelineSetSubMeshInstanceOffsets = allocation.allocateClearedObjects<u32>(PipelineSetScene::PIPELINE_SET_CAPACITY);
+		_subMeshDrawCounts = allocation.allocateClearedObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
+		_subMeshDrawOffsets = allocation.allocateClearedObjects<u32>(MeshGeometryScene::SUB_MESH_GEOMETRY_CAPACITY);
+		});
 
 	{
 		VramUpdater* vramUpdater = VramUpdater::Get();
@@ -89,16 +85,14 @@ void GpuMeshInstanceManager::initialize() {
 }
 void GpuMeshInstanceManager::terminate() {
 	DescriptorAllocator* descriptorAllocator = DescriptorAllocatorGroup::Get()->getSrvCbvUavGpuAllocator();
-	descriptorAllocator->free(_meshInstanceSrv);
-	descriptorAllocator->free(_subMeshDrawOffsetsSrv);
+	descriptorAllocator->dealloc(_meshInstanceSrv);
+	descriptorAllocator->dealloc(_subMeshDrawOffsetsSrv);
 	_meshInstanceGpuBuffer.terminate();
 	_lodMeshInstanceGpuBuffer.terminate();
 	_subMeshInstanceGpuBuffer.terminate();
 	_subMeshDrawOffsetsGpuBuffer.terminate();
 	_subMeshInstanceIndexGpuBuffer.terminate();
-
-	Memory::deallocObjects(_pipelineSetSubMeshInstanceCounts);
-	Memory::deallocObjects(_pipelineSetSubMeshInstanceOffsets);
+	_chunkAllocator.freeChunk();
 }
 
 void GpuMeshInstanceManager::update() {

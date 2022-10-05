@@ -22,7 +22,7 @@ void MeshScene::initialize() {
 		_materialAllocations.initialize(handleDesc);
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_assetPathHashes = allocation.allocateObjects<u64>(MESH_CAPACITY);
 		_meshes = allocation.allocateObjects<Mesh>(MESH_CAPACITY);
 		_meshAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MESH_CAPACITY);
@@ -34,7 +34,7 @@ void MeshScene::initialize() {
 void MeshScene::terminate() {
 	_meshAllocations.terminate();
 	_materialAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 const Mesh* MeshScene::createMesh(const CreatationDesc& desc) {

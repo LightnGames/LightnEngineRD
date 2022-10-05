@@ -40,7 +40,7 @@ public:
 
 	using AllocateFunc = std::function<void(Allocation&)>;
 
-	void allocate(AllocateFunc func) {
+	void alloc(AllocateFunc func) {
 		Allocation al;
 
 		// 確保サイズを計算
@@ -55,7 +55,7 @@ public:
 		func(al);
 	};
 
-	void free() {
+	void freeChunk() {
 		Memory::deallocObjects(_ptr);
 	}
 

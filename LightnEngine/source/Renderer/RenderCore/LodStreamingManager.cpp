@@ -112,7 +112,7 @@ void LodStreamingManager::initialize() {
 		}
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_meshLodMinLevels = allocation.allocateClearedObjects<u32>(MeshGeometryScene::MESH_GEOMETRY_CAPACITY);
 		_meshLodMaxLevels = allocation.allocateClearedObjects<u32>(MeshGeometryScene::MESH_GEOMETRY_CAPACITY);
 		_meshScreenPersentages = allocation.allocateObjects<u32>(MeshGeometryScene::MESH_GEOMETRY_CAPACITY);
@@ -134,15 +134,15 @@ void LodStreamingManager::terminate() {
 	_materialScreenPersentageReadbackBuffer.terminate();
 
 	DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
-	descriptorAllocator->freeSrvCbvUavGpu(_meshLodLevelSrv);
-	descriptorAllocator->freeSrvCbvUavGpu(_meshLodLevelUav);
-	descriptorAllocator->freeSrvCbvUavGpu(_meshInstanceLodLevelSrv);
-	descriptorAllocator->freeSrvCbvUavGpu(_meshInstanceLodLevelUav);
-	descriptorAllocator->freeSrvCbvUavGpu(_materialScreenPersentageUav);
-	descriptorAllocator->freeSrvCbvUavGpu(_materialScreenPersentageSrv);
-	descriptorAllocator->freeSrvCbvUavCpu(_meshLodLevelCpuUav);
-	descriptorAllocator->freeSrvCbvUavCpu(_materialScreenPersentageCpuUav);
-	_chunkAllocator.free();
+	descriptorAllocator->deallocSrvCbvUavGpu(_meshLodLevelSrv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_meshLodLevelUav);
+	descriptorAllocator->deallocSrvCbvUavGpu(_meshInstanceLodLevelSrv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_meshInstanceLodLevelUav);
+	descriptorAllocator->deallocSrvCbvUavGpu(_materialScreenPersentageUav);
+	descriptorAllocator->deallocSrvCbvUavGpu(_materialScreenPersentageSrv);
+	descriptorAllocator->deallocSrvCbvUavCpu(_meshLodLevelCpuUav);
+	descriptorAllocator->deallocSrvCbvUavCpu(_materialScreenPersentageCpuUav);
+	_chunkAllocator.freeChunk();
 }
 
 void LodStreamingManager::update() {

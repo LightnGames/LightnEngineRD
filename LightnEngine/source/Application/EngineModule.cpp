@@ -17,6 +17,7 @@
 #include <Renderer/RenderCore/GpuShader.h>
 #include <Renderer/RenderCore/LodStreamingManager.h>
 #include <Renderer/Lighting/SkySphereRenderer.h>
+#include <Renderer/Lighting/GpuLight.h>
 #include <RendererScene/MeshGeometry.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/View.h>
@@ -25,6 +26,7 @@
 #include <RendererScene/Shader.h>
 #include <RendererScene/Texture.h>
 #include <RendererScene/SkySphere.h>
+#include <RendererScene/Light.h>
 #include <RendererScene/CommonResource.h>
 
 namespace ltn {
@@ -40,7 +42,9 @@ void update() {
 	GeometryResourceManager::Get()->update();
 	GpuMaterialManager::Get()->update();
 	GpuCulling::Get()->update();
+	GpuLightScene::Get()->update();
 
+	LightScene::Get()->lateUpdate();
 	SkySphereScene::Get()->lateUpdate();
 	TextureScene::Get()->lateUpdate();
 	MaterialScene::Get()->lateUpdate();
@@ -56,9 +60,6 @@ void render() {
 }
 
 void EngineModuleManager::run() {
-	// ƒƒ‚ƒŠƒŠ[ƒNŒŸo
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
 	ltn::win64app::Win64Application app;
 	EditorCamera editorCamera;
 	Level level;
@@ -86,6 +87,8 @@ void EngineModuleManager::run() {
 	VisiblityBufferRenderer* visibilityBufferRenderer = VisiblityBufferRenderer::Get();
 	SkySphereRenderer* skySphereRenderer = SkySphereRenderer::Get();
 	SkySphereScene* skySphereScene = SkySphereScene::Get();
+	LightScene* lightScene = LightScene::Get();
+	GpuLightScene* gpuLightScene = GpuLightScene::Get();
 	CommonResource* commonResource = CommonResource::Get();
 
 	{
@@ -115,6 +118,8 @@ void EngineModuleManager::run() {
 		visibilityBufferRenderer->initialize();
 		skySphereScene->initialize();
 		skySphereRenderer->initialize();
+		lightScene->initialize();
+		gpuLightScene->initialize();
 
 		commonResource->initialize();
 		editorCamera.initialize();
@@ -143,6 +148,8 @@ void EngineModuleManager::run() {
 		app.terminate();
 		gpuMaterialManager->terminate();
 		gpuMeshInstanceManager->terminate();
+		gpuLightScene->terminate();
+		lightScene->terminate();
 		skySphereRenderer->terminate();
 		skySphereScene->terminate();
 		visibilityBufferRenderer->terminate();

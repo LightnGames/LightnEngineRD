@@ -529,11 +529,11 @@ struct TexCubeArraySrv {
 	f32 _resourceMinLODClamp = 0;
 };
 
-struct Tex2dmsSrv {
+struct Tex2dMsSrv {
 	u32 _unusedFieldNothingToDefine = 0;
 };
 
-struct Tex2dmsArraySrv {
+struct Tex2dMsArraySrv {
 	u32 _firstArraySlice = 0;
 	u32 _arraySize = 0;
 };
@@ -555,6 +555,60 @@ enum SrvDimension {
 	SRV_DIMENSION_TEXTURECUBE = 9,
 	SRV_DIMENSION_TEXTURECUBEARRAY = 10,
 	SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE = 11
+};
+
+struct BufferRtv {
+	u64 _firstElement = 0;
+	u32 _numElements = 0;
+};
+
+struct Tex1dRtv {
+	u32 _mipSlice = 0;
+};
+
+struct Tex1dArrayRtv {
+	u32 _mipSlice = 0;
+	u32 _firstArraySlice = 0;
+	u32 _arraySize = 0;
+};
+
+struct tex2dRtv {
+	u32 _mipSlice = 0;
+	u32 _planeSlice = 0;
+};
+
+struct tex2dMsRtv {
+	u32 _unusedField_NothingToDefine = 0;
+};
+
+struct Tex2dArrayRtv {
+	u32 _mipSlice = 0;
+	u32 _firstArraySlice = 0;
+	u32 _arraySize = 0;
+	u32 _planeSlice = 0;
+};
+
+struct Tex2dMsArrayRtv {
+	u32 _firstArraySlice = 0;
+	u32 _arraySize = 0;
+};
+
+struct tex3dRtv {
+	u32 _mipSlice = 0;
+	u32 _firstWSlice = 0;
+	u32 _wSize = 0;
+};
+
+enum RtvDimension {
+	RTV_DIMENSION_UNKNOWN = 0,
+	RTV_DIMENSION_BUFFER = 1,
+	RTV_DIMENSION_TEXTURE1D = 2,
+	RTV_DIMENSION_TEXTURE1DARRAY = 3,
+	RTV_DIMENSION_TEXTURE2D = 4,
+	RTV_DIMENSION_TEXTURE2DARRAY = 5,
+	RTV_DIMENSION_TEXTURE2DMS = 6,
+	RTV_DIMENSION_TEXTURE2DMSARRAY = 7,
+	RTV_DIMENSION_TEXTURE3D = 8
 };
 
 enum InputClassFication {
@@ -1043,12 +1097,27 @@ struct ShaderResourceViewDesc {
 		Tex1dArraySrv _texture1DArray;
 		Tex2dSrv _texture2D;
 		Tex2dArraySrv _texture2DArray;
-		Tex2dmsSrv _texture2DMS;
-		Tex2dmsArraySrv _texture2DMSArray;
+		Tex2dMsSrv _texture2DMS;
+		Tex2dMsArraySrv _texture2DMSArray;
 		Tex3dSrv _texture3D;
 		TexCubeSrv _textureCube;
 		TexCubeArraySrv _textureCubeArray;
 		RayTracingAccelerationStructureSrv _raytracingAccelerationStructure;
+	};
+};
+
+struct RenderTargetViewDesc {
+	Format _format = FORMAT_UNKNOWN;
+	RtvDimension _viewDimension = RTV_DIMENSION_UNKNOWN;
+	union {
+		BufferRtv _buffer;
+		Tex1dRtv _texture1D;
+		Tex1dArrayRtv _texture1DArray;
+		tex2dRtv _texture2D;
+		Tex2dArrayRtv _texture2DArray;
+		tex2dMsRtv _texture2DMS;
+		Tex2dMsArrayRtv _texture2DMSArray;
+		tex3dRtv _texture3D;
 	};
 };
 

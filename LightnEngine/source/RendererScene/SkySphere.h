@@ -1,7 +1,6 @@
 #pragma once
 #include <Core/Type.h>
 #include <Core/VirturalArray.h>
-#include <Core/ChunkAllocator.h>
 #include "RenderSceneUtility.h"
 namespace ltn {
 class Texture;
@@ -13,7 +12,7 @@ public:
 
 	const Texture* getEnvironmentTexture() const { return _environmentTexture; }
 	const Texture* getDiffuseTexture() const { return _diffuseTexture; }
-	const Texture* getSupecularTexture() const { return _supecularTexture; }
+	const Texture* getSpecularTexture() const { return _supecularTexture; }
 
 private:
 	const Texture* _environmentTexture = nullptr;
@@ -43,6 +42,7 @@ public:
 
 	u32 getSkySphereIndex(const SkySphere* skySphere) const { return u32(skySphere - _skySpheres); }
 	const SkySphere* getSkySphere(u32 index) const { return &_skySpheres[index]; }
+	const Texture* getBrdfLutTexture() const { return _brdfLutTexture; }
 
 	static SkySphereScene* Get();
 
@@ -53,6 +53,7 @@ private:
 
 	UpdateInfos<SkySphere> _skySphereCreateInfos;
 	UpdateInfos<SkySphere> _skySphereDestroyInfos;
-	ChunkAllocator _chunkAllocator;
+
+	const Texture* _brdfLutTexture;
 };
 }

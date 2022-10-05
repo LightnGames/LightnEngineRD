@@ -89,10 +89,10 @@ void FrameDescriptorAllocator::initialize() {
 void FrameDescriptorAllocator::terminate() {
 	DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
-		allocator->freeSrvCbvUavGpu(_srvCbvUavGpuDescriptors[i]);
-		allocator->freeSrvCbvUavCpu(_srvCbvUavCpuDescriptors[i]);
-		allocator->freeRtvGpu(_rtvGpuDescriptors[i]);
-		allocator->freeDsvGpu(_dsvGpuDescriptors[i]);
+		allocator->deallocSrvCbvUavGpu(_srvCbvUavGpuDescriptors[i]);
+		allocator->deallocSrvCbvUavCpu(_srvCbvUavCpuDescriptors[i]);
+		allocator->deallocRtvGpu(_rtvGpuDescriptors[i]);
+		allocator->deallocDsvGpu(_dsvGpuDescriptors[i]);
 	}
 }
 

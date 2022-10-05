@@ -178,8 +178,8 @@ void DebugRenderer::terminate() {
 	_rootSignature.terminate();
 
 	DescriptorAllocatorGroup* allocator = DescriptorAllocatorGroup::Get();
-	allocator->freeSrvCbvUavGpu(_lineInstanceSrv);
-	allocator->freeSrvCbvUavGpu(_boxInstanceSrv);
+	allocator->deallocSrvCbvUavGpu(_lineInstanceSrv);
+	allocator->deallocSrvCbvUavGpu(_boxInstanceSrv);
 }
 
 void DebugRenderer::render(const RenderDesc& desc) {
@@ -221,14 +221,14 @@ void DebugRenderer::render(const RenderDesc& desc) {
 }
 
 void DebugRenderer::drawLine(Vector3 startPosition, Vector3 endPosition, Color color) {
-	LineInstance* line = _lineInstances.allocate();
+	LineInstance* line = _lineInstances.alloc();
 	line->_startPosition = startPosition.getFloat3();
 	line->_endPosition = endPosition.getFloat3();
 	line->_color = color.getColor4();
 }
 
 void DebugRenderer::drawBox(Matrix4 matrix, Color color) {
-	BoxInstance* box = _boxInstances.allocate();
+	BoxInstance* box = _boxInstances.alloc();
 	box->_matrixWorld = matrix.getFloat3x4();
 	box->_color = color.getColor4();
 }

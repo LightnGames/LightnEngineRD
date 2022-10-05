@@ -7,6 +7,7 @@
 #include <RendererScene/CommonResource.h>
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Mesh.h>
+#include <RendererScene/Light.h>
 
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GpuTimerManager.h>
@@ -23,10 +24,13 @@ void EditorCamera::initialize() {
 	Application* app = ApplicationSysytem::Get()->getApplication();
 	_view->setWidth(app->getScreenWidth());
 	_view->setHeight(app->getScreenHeight());
+
+	_directionalLight = LightScene::Get()->createDirectionalLight();
 }
 
 void EditorCamera::terminate() {
 	ViewScene::Get()->destroyView(_view);
+	LightScene::Get()->destroyDirectionalLight(_directionalLight);
 }
 
 void EditorCamera::update() {
@@ -142,5 +146,27 @@ void EditorCamera::update() {
 	}
 
 	ImGui::End();
+
+	struct DirectionalLightInfo {
+		Float3 _direction;
+		Color3 _color;
+		f32 _intensity;
+	};
+
+	auto lightInfo = DebugSerializedStructure<DirectionalLightInfo>("EditorLightInfo");
+	Float3& directionalLightRotation = lightInfo._direction;
+
+	ImGui::Begin("EditorLight");
+	ImGui::SliderAngle("RotationPitch", reinterpret_cast<f32*>(&directionalLightRotation.x));
+	ImGui::SliderAngle("RotationYaw", reinterpret_cast<f32*>(&directionalLightRotation.y));
+	ImGui::SliderAngle("RotationRoll", reinterpret_cast<f32*>(&directionalLightRotation.z));
+	ImGui::SliderFloat("Intensity", &lightInfo._intensity, 0.0f, 10.0f);
+	ImGui::ColorEdit3("Color", reinterpret_cast<f32*>(&lightInfo._color));
+	ImGui::End();
+
+	_directionalLight->setIntensity(lightInfo._intensity);
+	_directionalLight->setDirection(Matrix4::rotationXYZ(directionalLightRotation.x, directionalLightRotation.y, directionalLightRotation.z).getCol(2).getVector3());
+	_directionalLight->setColor(Color(lightInfo._color));
+	LightScene::Get()->postUpdateDirectionalLight(_directionalLight);
 }
 }

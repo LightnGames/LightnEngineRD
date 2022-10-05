@@ -13,6 +13,8 @@
 #define DEBUG_VISUALIZE_TYPE_WORLD_TANGENT 10
 #define DEBUG_VISUALIZE_TYPE_TEXCOORDS 11
 #define DEBUG_VISUALIZE_TYPE_PRIMITIVE 12
+#define DEBUG_VISUALIZE_TYPE_DDX 13
+#define DEBUG_VISUALIZE_TYPE_DDY 14
 
 struct Constant
 {
@@ -20,8 +22,8 @@ struct Constant
 };
 
 ConstantBuffer<Constant> _constant : register(b1);
-ByteAddressBuffer _meshInstanceScreenPersentages : register(t15);
-ByteAddressBuffer _materialScreenPersentages : register(t16);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t19);
+ByteAddressBuffer _materialScreenPersentages : register(t20);
 
 float4 main(float4 position : SV_Position) : SV_TARGET
 {
@@ -78,6 +80,14 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         case DEBUG_VISUALIZE_TYPE_PRIMITIVE:
             {
                 return float4(uniqueColor(_triangleAttributes[position.xy].x), 1.0);
+            }
+        case DEBUG_VISUALIZE_TYPE_DDX:
+            {
+                return float4(primitiveInfo._ddx, 0.0, 1.0);
+            }
+        case DEBUG_VISUALIZE_TYPE_DDY:
+            {
+                return float4(primitiveInfo._ddy, 0.0, 1.0);
             }
     }
     

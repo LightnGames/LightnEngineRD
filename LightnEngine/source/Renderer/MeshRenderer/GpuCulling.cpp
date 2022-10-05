@@ -152,7 +152,7 @@ void GpuCulling::terminate() {
 	_cullingInfoGpuBuffer.terminate();
 
 	DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
-	descriptorAllocator->freeSrvCbvUavGpu(_cullingInfoCbv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_cullingInfoCbv);
 }
 
 void GpuCulling::update() {

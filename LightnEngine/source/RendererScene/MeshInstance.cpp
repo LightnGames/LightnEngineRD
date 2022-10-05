@@ -23,7 +23,7 @@ void MeshInstancePool::initialize(const InitializetionDesc& desc) {
 		_subMeshInstanceAllocations.initialize(handleDesc);
 	}
 
-	_chunkAllocator.allocate([this, desc](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this, desc](ChunkAllocator::Allocation& allocation) {
 		_meshInstances = allocation.allocateObjects<MeshInstance>(desc._meshInstanceCount);
 		_lodMeshInstances = allocation.allocateObjects<LodMeshInstance>(desc._lodMeshInstanceCount);
 		_subMeshInstances = allocation.allocateObjects<SubMeshInstance>(desc._subMeshInstanceCount);
@@ -39,7 +39,7 @@ void MeshInstancePool::terminate() {
 	_lodMeshInstanceAllocations.terminate();
 	_subMeshInstanceAllocations.terminate();
 
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 MeshInstance* MeshInstancePool::allocateMeshInstances(const MeshAllocationDesc& desc, u32 instanceCount) {

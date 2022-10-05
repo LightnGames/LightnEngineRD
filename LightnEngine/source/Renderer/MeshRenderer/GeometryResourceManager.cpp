@@ -95,9 +95,9 @@ void GeometryResourceManager::initialize() {
 
 void GeometryResourceManager::terminate() {
 	DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
-	descriptorAllocator->freeSrvCbvUavGpu(_geometryGlobalOffsetSrv);
-	descriptorAllocator->freeSrvCbvUavGpu(_meshLodStreamRangeSrv);
-	descriptorAllocator->freeSrvCbvUavGpu(_vertexResourceSrv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_geometryGlobalOffsetSrv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_meshLodStreamRangeSrv);
+	descriptorAllocator->deallocSrvCbvUavGpu(_vertexResourceSrv);
 
 	Memory::deallocObjects(_meshStreamLodRanges);
 	Memory::deallocObjects(_geometryAllocationInfos);

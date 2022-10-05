@@ -53,8 +53,8 @@ public:
 private:
 	static constexpr u32 RELOAD_RREQUEST_COUNT_MAX = 32;
 
-	std::thread _socketReciveThread;
-	SOCKET _socket;
+	//std::thread _socketReciveThread;
+	//SOCKET _socket;
 
 	u32 _reloadRequestCount = 0;
 	u64 _reloadRequestShaderPathHashs[RELOAD_RREQUEST_COUNT_MAX];

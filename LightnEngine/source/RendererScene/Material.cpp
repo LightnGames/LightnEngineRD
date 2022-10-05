@@ -21,7 +21,7 @@ void MaterialScene::initialize() {
 		_materialAllocations.initialize(handleDesc);
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_materials = allocation.allocateObjects<Material>(MATERIAL_CAPACITY);
 		_materialAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(MATERIAL_CAPACITY);
 		_materialAssetPathHashes = allocation.allocateObjects<u64>(MATERIAL_CAPACITY);
@@ -37,7 +37,7 @@ void MaterialScene::terminate() {
 	lateUpdate();
 
 	_materialAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 
 	MaterialParameterContainer::Get()->terminate();
 	PipelineSetScene::Get()->terminate();
@@ -248,21 +248,19 @@ void PipelineSetScene::initialize() {
 		_pipelineSetAllocations.initialize(handleDesc);
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_pipelineSets = allocation.allocateObjects<PipelineSet>(PIPELINE_SET_CAPACITY);
 		_pipelineSetAllocationInfos = allocation.allocateObjects<VirtualArray::AllocationInfo>(PIPELINE_SET_CAPACITY);
 		_assetPathHashes = allocation.allocateObjects<u64>(PIPELINE_SET_CAPACITY);
-		_enabledFlags = allocation.allocateObjects<u8>(PIPELINE_SET_CAPACITY);
+		_enabledFlags = allocation.allocateClearedObjects<u8>(PIPELINE_SET_CAPACITY);
 		});
-
-	memset(_enabledFlags, 0, PIPELINE_SET_CAPACITY);
 }
 
 void PipelineSetScene::terminate() {
 	lateUpdate();
 
 	_pipelineSetAllocations.terminate();
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 
 void PipelineSetScene::lateUpdate() {

@@ -4,6 +4,8 @@ struct MaterialParameter
 {
     float4 _baseColor;
     uint _baseColorTextureIndex;
+    uint _normalTextureIndex;
+    uint _rmahTextureIndex;
 };
 
 float4 main(float4 position : SV_Position) : SV_TARGET
@@ -13,7 +15,75 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     uint materialParameterOffset = _materialParameterOffsets.Load(primitiveInfo._materialIndex * UINT32_SIZE_IN_BYTE);
     MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(materialParameterOffset);
     Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._baseColorTextureIndex)];
+    Texture2D normalTexture = _textures[NonUniformResourceIndex(materialParameter._normalTextureIndex)];
+    Texture2D rmahTexture = _textures[NonUniformResourceIndex(materialParameter._rmahTextureIndex)];
     
-    float3 baseColor = albedoTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
-    return materialParameter._baseColor * float4(baseColor, 1.0);
+    float3 diffuseColor = albedoTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
+    float3 normalColor = normalTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
+    float3 rmahColor = rmahTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
+    
+    float3 albedo = materialParameter._baseColor.rgb * diffuseColor;
+    
+    float3 normalVec = normalize(2 * normalColor - 1.0);
+    float3 binormal = cross(primitiveInfo._worldNormal, primitiveInfo._worldTangent);
+    float3x3 TBN = float3x3(primitiveInfo._worldTangent, binormal,
+      primitiveInfo._worldNormal);
+    float3 N = normalize(mul(normalVec, TBN));
+    //float3 N = primitiveInfo._worldNormal;
+    
+    const float3 Fdielectric = 0.04;
+    float cubeMapMipCount = 11;
+    float roughness = rmahColor.r;
+    float metalness = rmahColor.g;
+    float3 V = normalize(_viewInfo._cameraPosition - primitiveInfo._worldPosition);
+    float3 R = reflect(-V, N);
+    float3 F0 = lerp(Fdielectric, albedo, metalness);
+    float NoV = saturate(dot(N, V));
+    
+    float3 directionalLightColor = float3(0, 0, 0);
+    {
+        DirectionalLight directionalLight = _directionalLights.Load<DirectionalLight>(0);
+        float3 L = -directionalLight._direction;
+        float3 H = normalize(V + L);
+        float NoL = saturate(dot(N, L));
+        float3 radiance = directionalLight._color * directionalLight._intensity;
+
+        // Cook-Torrance BRDF
+        float NDF = distributionGGX(N, H, roughness);
+        float G = geometrySmith(N, V, L, roughness);
+        float3 F = fresnelSchlick(saturate(dot(H, V)), F0);
+        
+        float3 numerator = NDF * G * F;
+        float denominator = 4.0 * NoV * NoL + EPSILON;
+        float3 specular = numerator / denominator;
+        
+        float3 kS = F;
+        float3 kD = float3(1.0, 1.0, 1.0) - kS;
+        kD *= 1.0 - metalness;
+
+        directionalLightColor += (kD * albedo / PI + specular) * radiance * NoL;
+    }
+    
+    float diffuseIBLScale = 0.1;
+    float specularIBLScale = 0.2;
+    float3 diffuseIBLColor = float3(0, 0, 0);
+    float3 specularIBLColor = float3(0, 0, 0);
+    {
+        float3 F = fresnelSchlickRoughness(NoV, F0, roughness);
+        float3 kS = F;
+        float3 kD = 1.0 - kS;
+        kD *= 1.0 - metalness;
+        
+        diffuseIBLColor = _skyDiffuse.Sample(_linerSampler, N).rgb * kD * albedo;
+        
+        float3 specularIrradiance = _skySpecular.SampleLevel(_linerSampler, R, roughness * cubeMapMipCount).rgb;
+        float2 specularBRDF = _brdfLut.Sample(_linerSampler, float2(NoV, roughness)).rg;
+        specularIBLColor = specularIrradiance * (F * specularBRDF.x + specularBRDF.y);
+    }
+    
+    //float3 radiance = directionalLightColor + specularIBLColor;
+    float3 radiance = directionalLightColor + specularIBLColor * specularIBLScale + diffuseIBLColor * diffuseIBLScale;
+    float3 finalColor = ACESFilm(radiance);
+    //return float4(primitiveInfo._ddy.x, primitiveInfo._ddy.y, 0, 1);
+    return float4(finalColor, 1.0);
 }

@@ -22,6 +22,6 @@ public:
 	static ImGuiSystem* Get();
 
 private:
-	rhi::DescriptorHeap _descriptorHeap;
+	DescriptorHandle _srv;
 };
 }

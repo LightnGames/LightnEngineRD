@@ -26,7 +26,7 @@ void Level::initialize(const char* levelFilePath) {
 		LTN_ASSERT(strcmp(meshHeader, "RESH") == 0);
 	}
 
-	_chunkAllocator.allocate([this](ChunkAllocator::Allocation& allocation) {
+	_chunkAllocator.alloc([this](ChunkAllocator::Allocation& allocation) {
 		_meshGeometries = allocation.allocateObjects<const MeshGeometry*>(_levelHeader._meshGeometryCount);
 		_meshes = allocation.allocateObjects<const Mesh*>(_levelHeader._meshCount);
 		_textures = allocation.allocateObjects<const Texture*>(_levelHeader._textureCount);
@@ -212,6 +212,6 @@ void Level::terminate() {
 	Memory::deallocObjects(_meshInstanceCounts);
 	Memory::deallocObjects(_meshInstances);
 
-	_chunkAllocator.free();
+	_chunkAllocator.freeChunk();
 }
 }

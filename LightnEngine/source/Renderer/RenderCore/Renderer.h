@@ -29,7 +29,8 @@ private:
 	rhi::CommandQueue _commandQueue;
 	rhi::RootSignature _copyToBackBufferRootSignature;
 	rhi::PipelineState _copyToBackBufferPipelineState;
-	DescriptorHandles _backBufferRtv;
+	DescriptorHandles _backBufferSrgbRtv;
+	DescriptorHandles _backBufferLinerRtv;
 
 	u32 _frameIndex = 0;
 	u64 _fenceValues[rhi::BACK_BUFFER_COUNT] = {};

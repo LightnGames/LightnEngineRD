@@ -21,7 +21,7 @@ void RenderViewScene::initialize() {
 void RenderViewScene::terminate() {
 	update();
 	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
-	descriptorAllocatorGroup->freeSrvCbvUavGpu(_viewCbv);
+	descriptorAllocatorGroup->deallocSrvCbvUavGpu(_viewCbv);
 }
 
 void RenderViewScene::update() {
@@ -254,7 +254,7 @@ void RenderViewFrameResource::setUpFrameResource(const View* view, rhi::CommandL
 
 		rhi::Device* device = DeviceManager::Get()->getDevice();
 		device->createDepthStencilView(_viewDepthTexture->getResource(), _viewDsv._cpuHandle);
-		device->createRenderTargetView(_viewColorTexture->getResource(), _viewRtv._cpuHandle);
+		device->createRenderTargetView(_viewColorTexture->getResource(), nullptr, _viewRtv._cpuHandle);
 		device->createShaderResourceView(_viewColorTexture->getResource(), nullptr, _viewSrv._cpuHandle);
 
 		rhi::ShaderResourceViewDesc srvDesc = {};

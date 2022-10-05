@@ -6,6 +6,7 @@
 #define UINT16_MAX 65535
 #define UINT32_MAX 4294967295
 #define POS_NAN 0x7f800000
+#define PI 3.141592
 
 float3 heatMap(float unormValue)
 {

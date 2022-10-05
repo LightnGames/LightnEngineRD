@@ -46,9 +46,9 @@ uint16 EncodeUnorm(FbxVector2 vector) {
 }
 
 FbxVector2 OctWrap(FbxVector2 v) {
-	FbxVector2 signedV(v[0] >= 0.0f ? 1.0 : -1.0, v[1] >= 0.0f ? 1.0 : -1.0);
-	return (FbxVector2(1.0f - abs(v[0]), 1.0f - abs(v[1]))) * signedV;
-	//return (1.0 - abs(v.yx)) * (v.xy >= 0.0 ? 1.0 : -1.0);
+	float x = (1.0 - abs(v[1])) * (v[0] >= 0.0 ? 1.0 : -1.0);
+	float y = (1.0 - abs(v[0])) * (v[1] >= 0.0 ? 1.0 : -1.0);
+	return FbxVector2(x, y);
 }
 
 FbxVector2 Encode(FbxVector4 n) {

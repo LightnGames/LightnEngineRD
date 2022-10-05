@@ -146,16 +146,6 @@ ID3D12DescriptorHeap* toD3d12(DescriptorHeap* descriptorHeap) {
 	return descriptorHeap->_descriptorHeap;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE toD3d12(CpuDescriptorHandle handle) {
-	D3D12_CPU_DESCRIPTOR_HANDLE result = { handle._ptr };
-	return result;
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE toD3d12(GpuDescriptorHandle handle) {
-	D3D12_GPU_DESCRIPTOR_HANDLE result = { handle._ptr };
-	return result;
-}
-
 ID3D12GraphicsCommandList* toD3d12(CommandList* commandList) {
 	return commandList->_commandList;
 }
@@ -421,8 +411,12 @@ u32 Device::getDescriptorHandleIncrementSize(DescriptorHeapType type) const {
 	return _device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
 }
 
-void Device::createRenderTargetView(Resource* resource, CpuDescriptorHandle destDescriptor) {
-	_device->CreateRenderTargetView(toD3d12(resource), nullptr, toD3d12(destDescriptor));
+void Device::createRenderTargetView(Resource* resource, const RenderTargetViewDesc* desc, CpuDescriptorHandle destDescriptor) {
+	const D3D12_RENDER_TARGET_VIEW_DESC* descD3d12 = nullptr;
+	if (desc != nullptr) {
+		descD3d12 = reinterpret_cast<const D3D12_RENDER_TARGET_VIEW_DESC*>(desc);
+	}
+	_device->CreateRenderTargetView(toD3d12(resource), descD3d12, toD3d12(destDescriptor));
 }
 
 void Device::createDepthStencilView(Resource* resource, CpuDescriptorHandle destDescriptor) {
