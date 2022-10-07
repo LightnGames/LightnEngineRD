@@ -449,8 +449,8 @@ void LodStreamingManager::computeTextureStreamingMipLevels(u32 materialIndex) {
 		}
 
 		// 小さすぎるテクスチャを作成するとリソース作成できない場合があるため最小ミップレベルを指定
-		constexpr u8 MIN_STREAMING_MIP_LEVEL = 4;
-		_textureStreamingLevels[textureIndex] = Max(requestMipLevel, MIN_STREAMING_MIP_LEVEL);
+		constexpr u8 MIN_STREAMING_MIP_LEVEL = 3;
+		_textureStreamingLevels[textureIndex] = Clamp(MIN_STREAMING_MIP_LEVEL,u8(texture->getDdsHeader()->_mipMapCount), requestMipLevel);
 	}
 }
 }

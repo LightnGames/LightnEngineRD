@@ -70,6 +70,11 @@ const T& Min(const T& a, const T& b) {
 }
 
 template <class T>
+const T& Clamp(const T& a, const T& b, const T& c) {
+	return Min(Max(a, c), b);
+}
+
+template <class T>
 T RoundDivUp(const T& value, const T& divideValue) {
 	return (value / divideValue) + 1;
 }

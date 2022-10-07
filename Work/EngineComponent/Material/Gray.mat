@@ -4,3 +4,5 @@ Parameters :
         [Float4, [0.17, 0.17, 0.17, 1.0]]
     BaseColorTexture : 
         [Texture, EngineComponent\Texture\Checker.dds]
+    RoughnessScale : [Float, 1.0]
+    MetalnessScale : [Float, 1.0]

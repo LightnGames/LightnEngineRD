@@ -23,8 +23,8 @@ struct GeometryAllocationInfo {
 
 class GeometryResourceManager {
 public:
-	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 128;
-	static constexpr u32 INDEX_COUNT_MAX = 1024 * 256;
+	static constexpr u32 VERTEX_COUNT_MAX = 1024 * 256;
+	static constexpr u32 INDEX_COUNT_MAX = 1024 * 512;
 
 	struct MeshLodStreamRange {
 		u16 _beginLevel = 0xffff;

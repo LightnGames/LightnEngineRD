@@ -123,6 +123,21 @@ const Material* MaterialScene::createMaterial(const MaterialCreatationDesc& desc
 		u8 readParameterSize = 0;
 		u8* writePtr = materialParameterSet._parameters + pipelineSet->findMaterialParameterOffset(parameterNameHash);
 		switch (parameterType) {
+		case Shader::PARAMETER_TYPE_FLOAT:
+			writeParameterSize = sizeof(f32);
+			readParameterSize = sizeof(f32);
+			memcpy(writePtr, materialParameterReadPtr, writeParameterSize);
+			break;
+		case Shader::PARAMETER_TYPE_FLOAT2:
+			writeParameterSize = sizeof(Float2);
+			readParameterSize = sizeof(Float2);
+			memcpy(writePtr, materialParameterReadPtr, writeParameterSize);
+			break;
+		case Shader::PARAMETER_TYPE_FLOAT3:
+			writeParameterSize = sizeof(Float3);
+			readParameterSize = sizeof(Float3);
+			memcpy(writePtr, materialParameterReadPtr, writeParameterSize);
+			break;
 		case Shader::PARAMETER_TYPE_FLOAT4:
 			writeParameterSize = sizeof(Float4);
 			readParameterSize = sizeof(Float4);

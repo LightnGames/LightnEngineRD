@@ -70,8 +70,8 @@ const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 
 	// シェーダーパラメーター情報
 	if (desc._TEST_collectParameter) {
-		u32 parameterCount = 4;
-		u32 parameterSizeInByte = 28;
+		u32 parameterCount = 6;
+		u32 parameterSizeInByte = 36;
 		VirtualArray::AllocationInfo parameterAllocationInfo = _parameterAllocations.allocation(parameterCount);
 		_parameterAllocationInfos[allocationInfo._offset] = parameterAllocationInfo;
 
@@ -103,6 +103,16 @@ const Shader* ShaderScene::createShader(const CreatationDesc& desc) {
 		parameterNameHashes[3] = StrHash32("RMAHTexture");
 		parameterOffsets[3] = 24;
 		parameterTypes[3] = Shader::PARAMETER_TYPE_TEXTURE;
+
+		// offset:28 size:4 RoughnessScale
+		parameterNameHashes[4] = StrHash32("RoughnessScale");
+		parameterOffsets[4] = 28;
+		parameterTypes[4] = Shader::PARAMETER_TYPE_FLOAT;
+
+		// offset:32 size:4 MetalnessScale
+		parameterNameHashes[5] = StrHash32("MetalnessScale");
+		parameterOffsets[5] = 32;
+		parameterTypes[5] = Shader::PARAMETER_TYPE_FLOAT;
 	}
 
 	_shaderAssetPathHashes[allocationInfo._offset] = shader->_assetPathHash;
