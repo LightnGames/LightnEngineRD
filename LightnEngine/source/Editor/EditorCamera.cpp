@@ -8,6 +8,7 @@
 #include <RendererScene/MeshInstance.h>
 #include <RendererScene/Mesh.h>
 #include <RendererScene/Light.h>
+#include <RendererScene/SkySphere.h>
 
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/GpuTimerManager.h>
@@ -147,26 +148,51 @@ void EditorCamera::update() {
 
 	ImGui::End();
 
-	struct DirectionalLightInfo {
-		Float3 _direction;
-		Color3 _color;
-		f32 _intensity;
-	};
+	// ディレクショナルライト
+	{
+		struct DirectionalLightInfo {
+			Float3 _direction;
+			Color3 _color;
+			f32 _intensity;
+		};
 
-	auto lightInfo = DebugSerializedStructure<DirectionalLightInfo>("EditorLightInfo");
-	Float3& directionalLightRotation = lightInfo._direction;
+		auto lightInfo = DebugSerializedStructure<DirectionalLightInfo>("EditorLightInfo");
+		Float3& directionalLightRotation = lightInfo._direction;
 
-	ImGui::Begin("EditorLight");
-	ImGui::SliderAngle("RotationPitch", reinterpret_cast<f32*>(&directionalLightRotation.x));
-	ImGui::SliderAngle("RotationYaw", reinterpret_cast<f32*>(&directionalLightRotation.y));
-	ImGui::SliderAngle("RotationRoll", reinterpret_cast<f32*>(&directionalLightRotation.z));
-	ImGui::SliderFloat("Intensity", &lightInfo._intensity, 0.0f, 10.0f);
-	ImGui::ColorEdit3("Color", reinterpret_cast<f32*>(&lightInfo._color));
-	ImGui::End();
+		ImGui::Begin("EditorLight");
+		ImGui::SliderAngle("RotationPitch", reinterpret_cast<f32*>(&directionalLightRotation.x));
+		ImGui::SliderAngle("RotationYaw", reinterpret_cast<f32*>(&directionalLightRotation.y));
+		ImGui::SliderAngle("RotationRoll", reinterpret_cast<f32*>(&directionalLightRotation.z));
+		ImGui::SliderFloat("Intensity", &lightInfo._intensity, 0.0f, 10.0f);
+		ImGui::ColorEdit3("Color", reinterpret_cast<f32*>(&lightInfo._color));
+		ImGui::End();
 
-	_directionalLight->setIntensity(lightInfo._intensity);
-	_directionalLight->setDirection(Matrix4::rotationXYZ(directionalLightRotation.x, directionalLightRotation.y, directionalLightRotation.z).getCol(2).getVector3());
-	_directionalLight->setColor(Color(lightInfo._color));
-	LightScene::Get()->postUpdateDirectionalLight(_directionalLight);
+		_directionalLight->setIntensity(lightInfo._intensity);
+		_directionalLight->setDirection(Matrix4::rotationXYZ(directionalLightRotation.x, directionalLightRotation.y, directionalLightRotation.z).getCol(2).getVector3());
+		_directionalLight->setColor(Color(lightInfo._color));
+		LightScene::Get()->postUpdateDirectionalLight(_directionalLight);
+	}
+
+	// ディレクショナルライト
+	{
+		struct SkySphereInfo {
+			Color3 _color;
+			f32 _diffuseScale = 1.0f;
+			f32 _specularScale = 1.0f;
+		};
+
+		auto skySphereInfo = DebugSerializedStructure<SkySphereInfo>("EditorSkySphere");
+
+		ImGui::Begin("EditorSkySphere");
+		ImGui::SliderFloat("DiffuseScale", &skySphereInfo._diffuseScale, 0.0f, 3.0f);
+		ImGui::SliderFloat("SpecularScale", &skySphereInfo._specularScale, 0.0f, 3.0f);
+		ImGui::ColorEdit3("Color", reinterpret_cast<f32*>(&skySphereInfo._color));
+		ImGui::End();
+
+		SkySphere* skySphere = SkySphereScene::Get()->getSkySphere(0);
+		skySphere->setDiffuseScale(skySphereInfo._diffuseScale);
+		skySphere->setSpecularScale(skySphereInfo._specularScale);
+		SkySphereScene::Get()->postUpdateSkySphere(skySphere);
+	}
 }
 }

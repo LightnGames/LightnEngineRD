@@ -21,9 +21,9 @@ struct Constant
     uint _type;
 };
 
-ConstantBuffer<Constant> _constant : register(b1);
-ByteAddressBuffer _meshInstanceScreenPersentages : register(t19);
-ByteAddressBuffer _materialScreenPersentages : register(t20);
+ConstantBuffer<Constant> _constant : register(b3);
+ByteAddressBuffer _meshInstanceScreenPersentages : register(t18);
+ByteAddressBuffer _materialScreenPersentages : register(t19);
 
 float4 main(float4 position : SV_Position) : SV_TARGET
 {

@@ -5,6 +5,8 @@
 #include <Renderer/RenderCore/DeviceManager.h>
 #include <Renderer/RenderCore/RendererUtility.h>
 #include <Renderer/RenderCore/GpuTexture.h>
+#include <Renderer/RenderCore/GlobalVideoMemoryAllocator.h>
+#include <Renderer/RenderCore/VramUpdater.h>
 
 namespace ltn {
 namespace {
@@ -78,11 +80,56 @@ void SkySphereRenderer::initialize() {
 		vertexShader.terminate();
 		pixelShader.terminate();
 	}
+
+	// 定数バッファ
+	{
+		GpuBufferDesc desc = {};
+		desc._device = device;
+		desc._allocator = GlobalVideoMemoryAllocator::Get()->getAllocator();
+		desc._initialState = rhi::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		desc._sizeInByte = rhi::GetConstantBufferAligned(sizeof(gpu::SkySphere));
+		_skySphereConstantGpuBuffer.initialize(desc);
+		_skySphereConstantGpuBuffer.setName("SkySphere");
+	}
+
+	{
+		DescriptorAllocatorGroup* descriptorAllocator = DescriptorAllocatorGroup::Get();
+		_skySphereCbv = descriptorAllocator->allocateSrvCbvUavGpu(SkySphereScene::SKY_SPHERE_CAPACITY);
+
+		rhi::ConstantBufferViewDesc desc;
+		desc._bufferLocation = _skySphereConstantGpuBuffer.getGpuVirtualAddress();
+		desc._sizeInBytes = _skySphereConstantGpuBuffer.getSizeInByte();
+		device->createConstantBufferView(desc, _skySphereCbv.get(0)._cpuHandle);
+	}
 }
 
 void SkySphereRenderer::terminate() {
 	_rootSignature.terminate();
 	_pipelineState.terminate();
+
+	_skySphereConstantGpuBuffer.terminate();
+
+	DescriptorAllocatorGroup* descriptorAllocatorGroup = DescriptorAllocatorGroup::Get();
+	descriptorAllocatorGroup->deallocSrvCbvUavGpu(_skySphereCbv);
+}
+
+void SkySphereRenderer::update() {
+	VramUpdater* vramUpdater = VramUpdater::Get();
+	TextureScene* textureScene = TextureScene::Get();
+
+	SkySphereScene* skySphereScene = SkySphereScene::Get();
+	const UpdateInfos<SkySphere>* updateInfos = skySphereScene->getUpdateInfos();
+	u32 updateCount = updateInfos->getUpdateCount();
+	auto updateInstances = updateInfos->getObjects();
+	for (u32 i = 0; i < updateCount; ++i) {
+		const SkySphere* skySphere = updateInstances[i];
+		u32 skySphereIndex = skySphereScene->getSkySphereIndex(skySphere);
+		gpu::SkySphere* gpuSkySphere = vramUpdater->enqueueUpdate<gpu::SkySphere>(&_skySphereConstantGpuBuffer, skySphereIndex);
+		gpuSkySphere->_environmentColor = skySphere->getEnvironmentColor().getColor3();
+		gpuSkySphere->_diffuseScale = skySphere->getDiffuseScale();
+		gpuSkySphere->_specularScale = skySphere->getSpecularScale();
+		gpuSkySphere->_brdfLutTextureIndex = textureScene->getTextureIndex(SkySphereScene::Get()->getBrdfLutTexture());
+	}
 }
 
 void SkySphereRenderer::render(const RenderDesc& desc) {

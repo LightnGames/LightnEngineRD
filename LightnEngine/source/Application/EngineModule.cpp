@@ -43,6 +43,7 @@ void update() {
 	GpuMaterialManager::Get()->update();
 	GpuCulling::Get()->update();
 	GpuLightScene::Get()->update();
+	SkySphereRenderer::Get()->update();
 
 	LightScene::Get()->lateUpdate();
 	SkySphereScene::Get()->lateUpdate();

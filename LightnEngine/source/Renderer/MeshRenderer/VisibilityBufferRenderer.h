@@ -67,7 +67,8 @@ public:
 		rhi::CpuDescriptorHandle _viewRtv;
 		GpuTexture* _viewDepthGpuTexture = nullptr;
 		u32 _pipelineStateCount = 0;
-		u32 _debugVisualizeType = 0;
+		u32 _debugGeometryType = 0;
+		u32 _debugMaterialType = 0;
 		const u8* _enabledFlags = nullptr;
 	};
 

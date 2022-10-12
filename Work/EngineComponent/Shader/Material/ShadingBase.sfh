@@ -4,7 +4,25 @@
 #include "../VisibilityBuffer/VisibilityBufferUtility.sfh"
 #include "../Lighting/LightingDef.sfh"
 
+
+#define DEBUG_MATERIAL_TYPE_NONE 0
+#define DEBUG_MATERIAL_TYPE_BASE_COLOR 1
+#define DEBUG_MATERIAL_TYPE_NORMAL 2
+#define DEBUG_MATERIAL_TYPE_METALIC 3
+#define DEBUG_MATERIAL_TYPE_ROUGHNESS 4
+#define DEBUG_MATERIAL_TYPE_DIRECT_LIGHTING 5
+#define DEBUG_MATERIAL_TYPE_INDIRECT_LIGHTING 6
+#define DEBUG_MATERIAL_TYPE_INDIRECT_DIFFUSE 7
+#define DEBUG_MATERIAL_TYPE_INDIRECT_SPECULAR 8
+struct DebugMaterialType
+{
+    uint _type;
+};
+
+
 ConstantBuffer<ViewInfo> _viewInfo : register(b0);
+ConstantBuffer<SkySphere> _skySphere : register(b1);
+ConstantBuffer<DebugMaterialType> _debugMaterialType : register(b2);
 
 ByteAddressBuffer _materialParameters : register(t0);
 ByteAddressBuffer _materialParameterOffsets : register(t1);
@@ -27,7 +45,6 @@ Texture2D<float> _viewDepth : register(t14);
 ByteAddressBuffer _directionalLights : register(t15);
 TextureCube _skyDiffuse : register(t16);
 TextureCube _skySpecular : register(t17);
-Texture2D _brdfLut : register(t18);
 
 Texture2D _textures[] : register(t0, space1);
 SamplerState _anisotropicSampler : register(s0);
@@ -81,7 +98,13 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     float3 tangent1 = decodeOctahedron((normalTangent1 >> 16) & 0xffff);
     float3 tangent2 = decodeOctahedron((normalTangent2 >> 16) & 0xffff);
     
-    float3 worldPosition = reconstructWorldPositionFromDepth(pixelPosition / float2(_viewInfo._viewPortSize), _viewDepth[pixelPosition], _viewInfo._matrixViewProjInv);
+    float4x3 matrixWorld = meshInstance._worldMatrix;
+    float3 pointToWorld0 = mul(float4(pointLocal0, 1), matrixWorld);
+    float3 pointToWorld1 = mul(float4(pointLocal1, 1), matrixWorld);
+    float3 pointToWorld2 = mul(float4(pointLocal2, 1), matrixWorld);
+    
+    //float3 worldPosition = reconstructWorldPositionFromDepth(pixelPosition / float2(_viewInfo._viewPortSize), _viewDepth[pixelPosition], _viewInfo._matrixViewProjInv);
+    float3 worldPosition = baryCentrics.x * pointToWorld0 + baryCentrics.y * pointToWorld1 + baryCentrics.z * pointToWorld2;
     float3 localPosition = baryCentrics.x * pointLocal0 + baryCentrics.y * pointLocal1 + baryCentrics.z * pointLocal2;
     float2 texcoords = baryCentrics.x * texcoords0 + baryCentrics.y * texcoords1 + baryCentrics.z * texcoords2;
     float3 normal = baryCentrics.x * normal0 + baryCentrics.y * normal1 + baryCentrics.z * normal2;
@@ -90,12 +113,7 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     float2 ddx = texcoords - QuadReadAcrossX(texcoords);
     float2 ddy = texcoords - QuadReadAcrossY(texcoords);
     
-    {
-        float4x3 matrixWorld = meshInstance._worldMatrix;
-        float3 pointToWorld0 = mul(float4(pointLocal0, 1), matrixWorld);
-        float3 pointToWorld1 = mul(float4(pointLocal1, 1), matrixWorld);
-        float3 pointToWorld2 = mul(float4(pointLocal2, 1), matrixWorld);
-        
+    {   
         const float4 PointClip0 = mul(float4(pointToWorld0, 1), _viewInfo._matrixViewProj);
         const float4 PointClip1 = mul(float4(pointToWorld1, 1), _viewInfo._matrixViewProj);
         const float4 PointClip2 = mul(float4(pointToWorld2, 1), _viewInfo._matrixViewProj);
@@ -129,4 +147,14 @@ PrimitiveInfo getPrimitiveInfo(float2 pixelPosition)
     primitiveInfo._ddx = ddx;
     primitiveInfo._ddy = ddy;
     return primitiveInfo;
+}
+
+Texture2D getTexture(uint textureIndex)
+{
+    return _textures[NonUniformResourceIndex(textureIndex)];
+}
+
+float4 sampleTextureAnisotropic(Texture2D texture, PrimitiveInfo primitiveInfo)
+{
+    return texture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy);
 }

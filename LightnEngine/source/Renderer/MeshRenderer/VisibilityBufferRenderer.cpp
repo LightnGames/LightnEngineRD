@@ -12,6 +12,7 @@
 #include <Renderer/MeshRenderer/GpuTextureManager.h>
 #include <Renderer/MeshRenderer/IndirectArgumentResource.h>
 #include <Renderer/AssetReloader/PipelineStateReloader.h>
+#include <Renderer/Lighting/SkySphereRenderer.h>
 #include <RendererScene/View.h>
 #include <RendererScene/Texture.h>
 #include <RendererScene/SkySphere.h>
@@ -227,7 +228,6 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	const SkySphere* skySphere = SkySphereScene::Get()->getSkySphere(0);
 	u32 skyDiffuseCubeMapIndex = textureScene->getTextureIndex(skySphere->getDiffuseTexture());
 	u32 skySpecularCubeMapIndex = textureScene->getTextureIndex(skySphere->getSpecularTexture());
-	u32 brdfLutTextureIndex = textureScene->getTextureIndex(SkySphereScene::Get()->getBrdfLutTexture());
 
 	rhi::GpuDescriptorHandle vertexResourceSrv = geometryResourceManager->getVertexResourceGpuSrv();
 	rhi::GpuDescriptorHandle geometryGlobalOffsetSrv = geometryResourceManager->getGeometryGlobalOffsetGpuSrv();
@@ -243,7 +243,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 	rhi::GpuDescriptorHandle lightSrv = GpuLightScene::Get()->getDirectionalLightGpuSrv();
 	rhi::GpuDescriptorHandle skyDiffuseSrv = gpuTextureManager->getTextureGpuSrv(skyDiffuseCubeMapIndex);
 	rhi::GpuDescriptorHandle skySpecularSrv = gpuTextureManager->getTextureGpuSrv(skySpecularCubeMapIndex);
-	rhi::GpuDescriptorHandle brdfLutSrv = gpuTextureManager->getTextureGpuSrv(brdfLutTextureIndex);
+	rhi::GpuDescriptorHandle skySphereCbv = SkySphereRenderer::Get()->getSkySphereGpuCbv();
 
 	rhi::CpuDescriptorHandle rtv = desc._viewRtv;
 	f32 clearColor[4] = {};
@@ -263,6 +263,7 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 
 		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::PIPELINE_SET_INFO, 1, &i, 0);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_INFO, desc._viewCbv);
+		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SKY_SPHERE, skySphereCbv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::VIEW_DEPTH, desc._viewDepthSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SHADING_INFO, _shadingCbv._gpuHandle);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::PIPELINE_SET_RANGE, frameResource->_shaderRangeSrv._firstHandle._gpuHandle);
@@ -282,8 +283,8 @@ void VisiblityBufferRenderer::shadingPass(const ShadingPassDesc& desc) {
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::LIGHT, lightSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SKY_DIFFUSE, skyDiffuseSrv);
 		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::SKY_SPECULAR, skySpecularSrv);
-		commandList->setGraphicsRootDescriptorTable(ShadingRootParam::BRDF_LUT, brdfLutSrv);
-		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_TYPE, 1, &desc._debugVisualizeType, 0);
+		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_GEOMETRY_TYPE, 1, &desc._debugGeometryType, 0);
+		commandList->setGraphicsRoot32BitConstants(ShadingRootParam::DEBUG_MATERIAL_TYPE, 1, &desc._debugMaterialType, 0);
 
 		commandList->drawInstanced(6, _shadingQuadCount, 0, 0);
 	}

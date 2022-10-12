@@ -122,7 +122,7 @@ void Renderer::initialize() {
 		pipelineStateDesc._vs = vertexShader.getShaderByteCode();
 		pipelineStateDesc._ps = pixelShader.getShaderByteCode();
 		pipelineStateDesc._numRenderTarget = 1;
-		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM_SRGB;
+		pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
 		pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineStateDesc._rootSignature = &_copyToBackBufferRootSignature;
 		pipelineStateDesc._sampleDesc._count = 1;
@@ -133,45 +133,10 @@ void Renderer::initialize() {
 		pixelShader.terminate();
 	}
 
-	rhi::RenderTargetViewDesc desc = {};
-	desc._format = rhi::FORMAT_R8G8B8A8_UNORM_SRGB;
-	desc._viewDimension = rhi::RTV_DIMENSION_TEXTURE2D;
-
-	_backBufferSrgbRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
 	_backBufferLinerRtv = DescriptorAllocatorGroup::Get()->allocateRtvGpu(rhi::BACK_BUFFER_COUNT);
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
-		device->createRenderTargetView(_backBuffers[i].getResource(), &desc, _backBufferSrgbRtv.get(i)._cpuHandle);
 		device->createRenderTargetView(_backBuffers[i].getResource(), nullptr, _backBufferLinerRtv.get(i)._cpuHandle);
 	}
-
-	//{
-	//	AssetPath vertexShaderPath("EngineComponent\\Shader\\ScreenTriangle.vso");
-	//	AssetPath pixelShaderPath("EngineComponent\\Shader\\ScreenTriangle.pso");
-	//	rhi::ShaderBlob vertexShader;
-	//	rhi::ShaderBlob pixelShader;
-	//	vertexShader.initialize(vertexShaderPath.get());
-	//	pixelShader.initialize(pixelShaderPath.get());
-
-	//	rhi::RootSignatureDesc rootSignatureDesc = {};
-	//	rootSignatureDesc._device = device;
-	//	_rootSignature.iniaitlize(rootSignatureDesc);
-	//	_rootSignature.setName("RootSigScreenTriangle");
-
-	//	rhi::GraphicsPipelineStateDesc pipelineStateDesc = {};
-	//	pipelineStateDesc._device = device;
-	//	pipelineStateDesc._vs = vertexShader.getShaderByteCode();
-	//	pipelineStateDesc._ps = pixelShader.getShaderByteCode();
-	//	pipelineStateDesc._numRenderTarget = 1;
-	//	pipelineStateDesc._rtvFormats[0] = rhi::FORMAT_R8G8B8A8_UNORM;
-	//	pipelineStateDesc._topologyType = rhi::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	//	pipelineStateDesc._rootSignature = &_rootSignature;
-	//	pipelineStateDesc._sampleDesc._count = 1;
-	//	_pipelineState.iniaitlize(pipelineStateDesc);
-	//	_pipelineState.setName("PsoScreenTriangle");
-
-	//	vertexShader.terminate();
-	//	pixelShader.terminate();
-	//}
 }
 
 void Renderer::terminate() {
@@ -184,13 +149,10 @@ void Renderer::terminate() {
 	for (u32 i = 0; i < rhi::BACK_BUFFER_COUNT; ++i) {
 		_backBuffers[i].terminate();
 	}
-	DescriptorAllocatorGroup::Get()->deallocRtvGpu(_backBufferSrgbRtv);
 	DescriptorAllocatorGroup::Get()->deallocRtvGpu(_backBufferLinerRtv);
 
 	_copyToBackBufferRootSignature.terminate();
 	_copyToBackBufferPipelineState.terminate();
-	//_pipelineState.terminate();
-	//_rootSignature.terminate();
 
 	PipelineStateReloader::Get()->terminate();
 	ImGuiSystem::Get()->terminate();
@@ -251,11 +213,10 @@ void Renderer::render() {
 		commandList->setGraphicsRootSignature(&_copyToBackBufferRootSignature);
 		commandList->setPipelineState(&_copyToBackBufferPipelineState);
 		commandList->setGraphicsRootDescriptorTable(CopyTextureRootParam::INPUT_SRV, renderViewScene->getMainViewGpuSrv());
-		commandList->setRenderTargets(1, _backBufferSrgbRtv.get(_frameIndex)._cpuHandle, nullptr);
+		commandList->setRenderTargets(1, _backBufferLinerRtv.get(_frameIndex)._cpuHandle, nullptr);
 		commandList->drawInstanced(3, 1, 0, 0);
 
 		// 最後にデバッグ描画を乗せる
-		commandList->setRenderTargets(1, _backBufferLinerRtv.get(_frameIndex)._cpuHandle, nullptr);
 		ImGuiSystem::Get()->render(commandList);
 	}
 

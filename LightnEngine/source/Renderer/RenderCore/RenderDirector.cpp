@@ -29,7 +29,7 @@ void RenderDirector::terminate() {
 void RenderDirector::update() {
 	ImGui::Begin("DebugVisualize");
 
-	const char* names[] = {
+	const char* geometryMenuNames[] = {
 		"None",
 		"MeshInstanceLodLevels",
 		"MeshInstanceScreenPersentages",
@@ -46,7 +46,20 @@ void RenderDirector::update() {
 		"DDX",
 		"DDY",
 	};
-	ImGui::Combo("Type", &_debugVisualizeType, names, LTN_COUNTOF(names));
+
+	const char* materialMenuNames[] = {
+		"None",
+		"BaseColor",
+		"Normal",
+		"Metallic",
+		"Roughness",
+		"DirectLighting",
+		"IndirectLighting",
+		"IndirectDiffuse",
+		"IndirectSpecular",
+	};
+	ImGui::Combo("Geometry", &_debugGeometryVisualizeType, geometryMenuNames, LTN_COUNTOF(geometryMenuNames));
+	ImGui::Combo("Material", &_debugMaterialVisualizeType, materialMenuNames, LTN_COUNTOF(materialMenuNames));
 	ImGui::End();
 }
 
@@ -157,10 +170,11 @@ void RenderDirector::render(rhi::CommandList* commandList) {
 			desc._viewDepthGpuTexture = renderViewFrameResource._viewDepthTexture;
 			desc._rootSignatures = materialManager->getShadingPassRootSignatures();
 			desc._pipelineStates = materialManager->getShadingPassPipelineStates();
-			if (_debugVisualizeType > 0) {
+			if (_debugGeometryVisualizeType > 0) {
 				desc._pipelineStates = materialManager->getDebugShadingPassPipelineStates();
 			}
-			desc._debugVisualizeType = _debugVisualizeType;
+			desc._debugGeometryType = _debugGeometryVisualizeType;
+			desc._debugMaterialType = _debugMaterialVisualizeType;
 			desc._pipelineStateCount = PipelineSetScene::PIPELINE_SET_CAPACITY;
 			desc._enabledFlags = pipelineSetScene->getEnabledFlags();
 			desc._frameResource = &visibilityBufferFrameResource;

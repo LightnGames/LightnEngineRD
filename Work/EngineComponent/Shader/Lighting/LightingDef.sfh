@@ -4,6 +4,23 @@ struct DirectionalLight {
 	float3 _direction;
 };
 
+struct SkySphere
+{
+    float3 _environmentColor;
+    float _diffuseScale;
+    float _specularScale;
+    uint _brdfLutTextureIndex;
+};
+
+float3 applyTangentSpaceNormalMap(float3 tangentSpaceNormalMap, float3 normal, float3 tangent)
+{
+    tangentSpaceNormalMap.g = 1.0 - tangentSpaceNormalMap.g;
+    float3 normalVec = normalize(2 * tangentSpaceNormalMap - 1.0);
+    float3 binormal = cross(normal, tangent);
+    float3x3 TBN = float3x3(tangent, binormal, normal);
+    return normalize(mul(normalVec, TBN));
+}
+
 float3 ACESFilm(float3 x)
 {
     float a = 2.51f;

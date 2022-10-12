@@ -16,21 +16,17 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     
     uint materialParameterOffset = _materialParameterOffsets.Load(primitiveInfo._materialIndex * UINT32_SIZE_IN_BYTE);
     MaterialParameter materialParameter = _materialParameters.Load<MaterialParameter>(materialParameterOffset);
-    Texture2D albedoTexture = _textures[NonUniformResourceIndex(materialParameter._baseColorTextureIndex)];
-    Texture2D normalTexture = _textures[NonUniformResourceIndex(materialParameter._normalTextureIndex)];
-    Texture2D rmahTexture = _textures[NonUniformResourceIndex(materialParameter._rmahTextureIndex)];
+    Texture2D albedoTexture = getTexture(materialParameter._baseColorTextureIndex);
+    Texture2D normalTexture = getTexture(materialParameter._normalTextureIndex);
+    Texture2D rmahTexture = getTexture(materialParameter._rmahTextureIndex);
     
-    float3 diffuseColor = albedoTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
-    float3 normalColor = normalTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
-    float3 rmahColor = rmahTexture.SampleGrad(_anisotropicSampler, primitiveInfo._texcoords, primitiveInfo._ddx, primitiveInfo._ddy).rgb;
+    float3 diffuseColor = sampleTextureAnisotropic(albedoTexture, primitiveInfo).rgb;
+    float3 normalColor = sampleTextureAnisotropic(normalTexture, primitiveInfo).rgb;
+    float3 rmahColor = sampleTextureAnisotropic(rmahTexture, primitiveInfo).rgb;
     
     float3 albedo = materialParameter._baseColor.rgb * diffuseColor;
     
-    float3 normalVec = normalize(2 * normalColor - 1.0);
-    float3 binormal = cross(primitiveInfo._worldNormal, primitiveInfo._worldTangent);
-    float3x3 TBN = float3x3(primitiveInfo._worldTangent, binormal,
-      primitiveInfo._worldNormal);
-    float3 N = normalize(mul(normalVec, TBN));
+    float3 N = applyTangentSpaceNormalMap(normalColor, primitiveInfo._worldNormal, primitiveInfo._worldTangent);
     //float3 N = primitiveInfo._worldNormal;
     
     const float3 Fdielectric = 0.04;
@@ -66,8 +62,8 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         directionalLightColor += (kD * albedo / PI + specular) * radiance * NoL;
     }
     
-    float diffuseIBLScale = 0.1;
-    float specularIBLScale = 0.2;
+    float diffuseIBLScale = _skySphere._diffuseScale;
+    float specularIBLScale = _skySphere._specularScale;
     float3 diffuseIBLColor = float3(0, 0, 0);
     float3 specularIBLColor = float3(0, 0, 0);
     {
@@ -76,16 +72,75 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         float3 kD = 1.0 - kS;
         kD *= 1.0 - metalness;
         
-        diffuseIBLColor = _skyDiffuse.Sample(_linerSampler, N).rgb * kD * albedo;
+        diffuseIBLColor = _skyDiffuse.SampleLevel(_linerSampler, N, 8).rgb * kD * albedo;
         
+        Texture2D brdfLutTexture = getTexture(_skySphere._brdfLutTextureIndex);
         float3 specularIrradiance = _skySpecular.SampleLevel(_linerSampler, R, roughness * cubeMapMipCount).rgb;
-        float2 specularBRDF = _brdfLut.Sample(_linerSampler, float2(NoV, roughness)).rg;
+        float2 specularBRDF = brdfLutTexture.SampleGrad(_anisotropicSampler, float2(NoV, roughness), primitiveInfo._ddx, primitiveInfo._ddy).rg;
         specularIBLColor = specularIrradiance * (F * specularBRDF.x + specularBRDF.y);
     }
     
     //float3 radiance = directionalLightColor + specularIBLColor;
     float3 radiance = directionalLightColor + specularIBLColor * specularIBLScale + diffuseIBLColor * diffuseIBLScale;
-    float3 finalColor = ACESFilm(radiance);
+    float3 finalColor = radiance;
     //return float4(primitiveInfo._ddy.x, primitiveInfo._ddy.y, 0, 1);
+    
+    bool doToneMap = true;
+    switch (_debugMaterialType._type)
+    {
+        case DEBUG_MATERIAL_TYPE_NONE:
+            {
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_BASE_COLOR:
+            {
+                finalColor = albedo;
+                doToneMap = false;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_NORMAL:
+            {
+                finalColor = N * 0.5 + 0.5;
+                doToneMap = false;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_METALIC:
+            {
+                finalColor = float3(metalness, metalness, metalness);
+                doToneMap = false;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_ROUGHNESS:
+            {
+                finalColor = float3(roughness, roughness, roughness);
+                doToneMap = false;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_DIRECT_LIGHTING:
+            {
+                finalColor = directionalLightColor;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_INDIRECT_LIGHTING:
+            {
+                finalColor = diffuseIBLColor + specularIBLColor;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_INDIRECT_DIFFUSE:
+            {
+                finalColor = diffuseIBLColor;
+                break;
+            }
+        case DEBUG_MATERIAL_TYPE_INDIRECT_SPECULAR:
+            {
+                finalColor = specularIBLColor;
+                break;
+            }
+    }
+    
+    if (doToneMap)
+    {
+        finalColor = ACESFilm(finalColor);
+    }
     return float4(finalColor, 1.0);
 }

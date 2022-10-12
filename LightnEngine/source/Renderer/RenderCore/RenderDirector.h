@@ -11,6 +11,7 @@ public:
 
 	static RenderDirector* Get();
 private:
-	s32 _debugVisualizeType = 0;
+	s32 _debugGeometryVisualizeType = 0;
+	s32 _debugMaterialVisualizeType = 0;
 };
 }

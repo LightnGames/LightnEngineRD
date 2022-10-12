@@ -36,11 +36,11 @@ void SkySphereScene::lateUpdate() {
 		_skySpheres[shaderIndex] = SkySphere();
 	}
 
-	_skySphereCreateInfos.reset();
+	_skySphereUpdateInfos.reset();
 	_skySphereDestroyInfos.reset();
 }
 
-const SkySphere* SkySphereScene::createSkySphere(const CreatationDesc& desc) {
+SkySphere* SkySphereScene::createSkySphere(const CreatationDesc& desc) {
 	VirtualArray::AllocationInfo allocationInfo = _skySphereAllocations.allocation(1);
 	_skySphereAllocationInfos[allocationInfo._offset] = allocationInfo;
 
@@ -62,7 +62,7 @@ const SkySphere* SkySphereScene::createSkySphere(const CreatationDesc& desc) {
 	skySphere->setDiffuseTextuire(diffuseTexture);
 	skySphere->setSupecularTextuire(supecularTexture);
 
-	_skySphereCreateInfos.push(skySphere);
+	_skySphereUpdateInfos.push(skySphere);
 	return skySphere;
 }
 

@@ -115,6 +115,7 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange pipelineSetRangeCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
 
 			rhi::DescriptorRange viewInfoCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+			rhi::DescriptorRange skySphereCbvRange(rhi::DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 			rhi::DescriptorRange materialParameterSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 			rhi::DescriptorRange materialParameterOffsetSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 			rhi::DescriptorRange meshSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 2, 2);
@@ -129,9 +130,8 @@ void GpuMaterialManager::update() {
 			rhi::DescriptorRange lightSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 15);
 			rhi::DescriptorRange skyDiffuseSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 16);
 			rhi::DescriptorRange skySpecularSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 17);
-			rhi::DescriptorRange brdfSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 18);
-			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 19);
-			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 20);
+			rhi::DescriptorRange meshInstanceScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 18);
+			rhi::DescriptorRange materialScreenPersentageSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, 1, 19);
 			rhi::DescriptorRange textureSrvRange(rhi::DESCRIPTOR_RANGE_TYPE_SRV, TextureScene::TEXTURE_CAPACITY, 0, 1);
 
 			rhi::RootParameter rootParameters[ShadingRootParam::COUNT] = {};
@@ -140,6 +140,7 @@ void GpuMaterialManager::update() {
 			rootParameters[ShadingRootParam::PIPELINE_SET_INFO].initializeConstant(0, 1, rhi::SHADER_VISIBILITY_VERTEX);
 
 			rootParameters[ShadingRootParam::VIEW_INFO].initializeDescriptorTable(1, &viewInfoCbvRange, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::SKY_SPHERE].initializeDescriptorTable(1, &skySphereCbvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MATERIAL_PARAMETER].initializeDescriptorTable(1, &materialParameterSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MATERIAL_PARAMETER_OFFSET].initializeDescriptorTable(1, &materialParameterOffsetSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::MESH].initializeDescriptorTable(1, &meshSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
@@ -156,9 +157,9 @@ void GpuMaterialManager::update() {
 			rootParameters[ShadingRootParam::LIGHT].initializeDescriptorTable(1, &lightSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::SKY_DIFFUSE].initializeDescriptorTable(1, &skyDiffuseSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::SKY_SPECULAR].initializeDescriptorTable(1, &skySpecularSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
-			rootParameters[ShadingRootParam::BRDF_LUT].initializeDescriptorTable(1, &brdfSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
 			rootParameters[ShadingRootParam::TEXTURE].initializeDescriptorTable(1, &textureSrvRange, rhi::SHADER_VISIBILITY_PIXEL);
-			rootParameters[ShadingRootParam::DEBUG_TYPE].initializeConstant(1, 1, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::DEBUG_MATERIAL_TYPE].initializeConstant(2, 1, rhi::SHADER_VISIBILITY_PIXEL);
+			rootParameters[ShadingRootParam::DEBUG_GEOMETRY_TYPE].initializeConstant(3, 1, rhi::SHADER_VISIBILITY_PIXEL);
 
 			rhi::StaticSamplerDesc staticSamplerDescs[2];
 			{
